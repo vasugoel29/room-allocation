@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { CalendarDays, Clock, ListChecks, Snowflake, Projector, LogOut } from "lucide-react";
 import data from "../db.json";
 function ScheduleOptionForm({onSubmit}) {
   const handleLogout = () => {
@@ -44,16 +45,18 @@ function ScheduleOptionForm({onSubmit}) {
       <div style={{ width: "100%", maxWidth: "400px", display: "flex", justifyContent: "flex-end", marginBottom: "0.5rem" }}>
         <button
           onClick={handleLogout}
-          style={{ backgroundColor: '#444', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer' }}
+          style={{ backgroundColor: '#444', color: '#fff', border: 'none', borderRadius: '6px', padding: '0.5rem 1.5rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
         >
-          Logout
+          <LogOut size={18} /> Logout
         </button>
       </div>
       <form onSubmit={handleSubmit} style={{ maxWidth: "400px", width: "100%", backgroundColor: "#fff", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", padding: "2rem", borderRadius: "12px" }}>
         <h2 style={{ textAlign: "center", marginBottom: "1.5rem" }}>Scheduling Form</h2>
         
         <div style={{ marginBottom: "1.25rem" }}>
-          <label htmlFor="day" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Preferred Day:</label>
+          <label htmlFor="day" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <CalendarDays size={18} /> Preferred Day:
+          </label>
           <select id="day" name="day" value={formData.day} onChange={handleChange} required style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", fontSize: "1rem" }}>
             <option value="" disabled>Select a day</option>
             {options.days.map((day) => (
@@ -63,7 +66,9 @@ function ScheduleOptionForm({onSubmit}) {
         </div>
 
         <div style={{ marginBottom: "1.5rem" }}>
-          <label htmlFor="duration" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Duration:</label>
+          <label htmlFor="duration" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Clock size={18} /> Duration:
+          </label>
           <select id="duration" name="duration" value={formData.duration} onChange={handleChange} required style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", fontSize: "1rem" }}>
             <option value="" disabled>Select a duration</option>
             {options.durations.map((duration) => (
@@ -75,7 +80,9 @@ function ScheduleOptionForm({onSubmit}) {
         </div>
 
         <div style={{ marginBottom: "1.5rem" }}>
-          <label htmlFor="slot" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600" }}>Preferred Slot:</label>
+          <label htmlFor="slot" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <ListChecks size={18} /> Preferred Slot:
+          </label>
           <select
             id="slot"
             name="slot"
@@ -105,7 +112,7 @@ function ScheduleOptionForm({onSubmit}) {
               onChange={handleChange}
               style={{ width: "1.1em", height: "1.1em" }}
             />
-            AC
+            <Snowflake size={18} /> AC
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: "600" }}>
             <input
@@ -115,7 +122,7 @@ function ScheduleOptionForm({onSubmit}) {
               onChange={handleChange}
               style={{ width: "1.1em", height: "1.1em" }}
             />
-            Projector
+            <Projector size={18} /> Projector
           </label>
         </div>
 

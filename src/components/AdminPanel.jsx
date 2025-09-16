@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { LogOut, UserPlus, Trash2 } from "lucide-react";
 
 const AdminPanel = () => {
   const [users, setUsers] = useState([]);
@@ -120,9 +121,9 @@ const AdminPanel = () => {
         <h2 className="text-3xl font-bold text-gray-800">Admin Panel</h2>
         <button
           onClick={handleLogout}
-          className="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2 rounded font-semibold text-base shadow transition-colors"
+          className="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2 rounded font-semibold text-base shadow transition-colors flex items-center gap-2"
         >
-          Logout
+          <LogOut size={18} /> Logout
         </button>
       </div>
       <form onSubmit={handleCreate} className="mb-10 bg-white p-6 rounded-lg flex flex-col gap-4 shadow border border-gray-200">
@@ -170,10 +171,10 @@ const AdminPanel = () => {
         <div className="text-gray-500 text-sm mb-2">Email will be: {branch && year && section ? `${branch}_${year}_${section}@nsut.ac.in` : '(fill all fields)'}</div>
         <button
           type="submit"
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold mt-2 transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold mt-2 transition-colors flex items-center gap-2"
           disabled={creating}
         >
-          {creating ? "Creating..." : "Create User"}
+          <UserPlus size={18} /> {creating ? "Creating..." : "Create User"}
         </button>
       </form>
       {loading ? (
@@ -197,11 +198,11 @@ const AdminPanel = () => {
                     <td className="py-2 px-4 font-mono text-gray-800">{user.email}</td>
                     <td className="py-2 px-4">
                       <button
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded shadow"
+                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded shadow flex items-center gap-1"
                         onClick={() => handleDelete(user.email)}
                         disabled={user.email === "Admin@nsut.ac.in"}
                       >
-                        Delete
+                        <Trash2 size={16} /> Delete
                       </button>
                     </td>
                   </tr>

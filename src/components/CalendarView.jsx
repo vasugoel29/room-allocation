@@ -1,5 +1,6 @@
 import db from "../db.json";
 import React, { useState } from "react";
+import { LogOut, ArrowLeft, Snowflake, Projector } from "lucide-react";
 
 const days = db.days;
 const slots = db.slots;
@@ -77,15 +78,15 @@ export default function CalendarView({ availability = db.availability, rooms = d
       <div className="flex flex-row justify-between items-center mb-6 max-w-3xl mx-auto w-full">
         <button
           onClick={onBack}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded font-semibold text-base shadow transition-colors"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded font-semibold text-base shadow transition-colors flex items-center gap-2"
         >
-          Back to Selection
+          <ArrowLeft size={18} /> Back to Selection
         </button>
         <button
           onClick={handleLogout}
-          className="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2 rounded font-semibold text-base shadow transition-colors"
+          className="bg-gray-700 hover:bg-gray-800 text-white px-5 py-2 rounded font-semibold text-base shadow transition-colors flex items-center gap-2"
         >
-          Logout
+          <LogOut size={18} /> Logout
         </button>
       </div>
   <div className="border border-gray-200 rounded-xl overflow-hidden shadow-md bg-white">
@@ -157,9 +158,11 @@ export default function CalendarView({ availability = db.availability, rooms = d
                             rooms[room].features.sort().map(feature => (
                               <span
                                 key={feature}
-                                className="text-xs px-3 py-1 rounded-full select-none"
+                                className="text-xs px-3 py-1 rounded-full select-none flex items-center gap-1"
                                 style={{ background: getFeatureColor(feature), color: '#333', fontWeight: 500 }}
                               >
+                                {feature === 'AC' && <Snowflake size={14} />}
+                                {feature === 'Projector' && <Projector size={14} />}
                                 {feature}
                               </span>
                             ))

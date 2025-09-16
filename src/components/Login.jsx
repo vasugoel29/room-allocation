@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import Signup from "./Signup";
+// import Signup from "./Signup";
+import { Mail, Lock, LogIn, UserPlus } from "lucide-react";
 
 const Login = ({ onLogin }) => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showSignup, setShowSignup] = useState(false);
+  // const [showSignup, setShowSignup] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
@@ -29,18 +30,16 @@ const Login = ({ onLogin }) => {
     }
   };
 
-  if (showSignup) {
-    return <Signup onBack={() => setShowSignup(false)} />;
-  }
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-900">
       <div className="bg-gray-800 rounded-lg shadow-lg p-8 w-full max-w-sm">
-        <h2 className="text-2xl font-bold text-center text-white mb-6">Login</h2>
+  <h2 className="text-2xl font-bold text-center text-white mb-6 flex items-center justify-center gap-2"><LogIn size={22}/>Login</h2>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-gray-300 mb-1" htmlFor="email">
-              Email
+            <label className="text-gray-300 mb-1 flex items-center gap-1" htmlFor="email">
+              <Mail size={16}/> Email
             </label>
             <input
               id="email"
@@ -53,8 +52,8 @@ const Login = ({ onLogin }) => {
             />
           </div>
           <div>
-            <label className="block text-gray-300 mb-1" htmlFor="password">
-              Password
+            <label className="text-gray-300 mb-1 flex items-center gap-1" htmlFor="password">
+              <Lock size={16}/> Password
             </label>
             <input
               id="password"
@@ -69,21 +68,12 @@ const Login = ({ onLogin }) => {
           {error && <div className="text-red-400 text-sm text-center">{error}</div>}
           <button
             type="submit"
-            className="w-full py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+            className="w-full py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors flex items-center justify-center gap-2"
           >
-            Login
+            <LogIn size={18}/> Login
           </button>
         </form>
-        <p className="text-center text-gray-400 mt-4">
-          Don't have an account?{" "}
-          <button
-            onClick={() => setShowSignup(true)}
-            className="text-blue-500 hover:underline"
-            type="button"
-          >
-            Sign Up
-          </button>
-        </p>
+
       </div>
     </div>
   );
