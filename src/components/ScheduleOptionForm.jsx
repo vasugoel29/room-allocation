@@ -14,15 +14,13 @@ function ScheduleOptionForm({onSubmit}) {
     projector: false
   });
 
-  // Generate durations dynamically in intervals of 1 hour
-  const durations = Array.from({ length: 8 }, (_, i) => i + 1); // [1,2,3,4,5,6,7,8]
+  const durations = Array.from({ length: 8 }, (_, i) => i + 1); 
   const [options, setOptions] = useState({
     days: data.days || [],
     durations,
     slots: data.slots || []
   });
 
-  // Use slot keys from db.json for selection
   const availableSlots = options.slots;
 
   const handleChange = (e) => {
