@@ -1,5 +1,7 @@
 
 
+
+import { useState } from "react";
 import db from "../db.json";
 
 const slots = db.slots;
@@ -14,6 +16,8 @@ function getFeatureColor(feature) {
 }
 
 function SlotView({ day, availability, onBack }) {
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [showBookButton, setShowBookButton] = useState(null);
   const { day: selectedDay, slot: selectedSlot, ac, projector } = availability || {};
   const rooms = db.rooms;
   const avail = db.availability;
@@ -56,24 +60,63 @@ function SlotView({ day, availability, onBack }) {
           {availableRooms.length > 0 ? (
             availableRooms.map((room) => {
               const features = rooms[room]?.features || [];
+              const isSelected = selectedRoom === room;
               return (
-                <div key={room} className="flex items-center justify-between w-full bg-gray-800 rounded-lg px-4 py-2">
-                  <span className="text-gray-200 font-medium" style={{ minWidth: 120 }}>{room}</span>
-                  <div className="flex flex-wrap gap-2 justify-end flex-1">
-                    {features.length > 0 ? (
-                      features.sort().map((feature) => (
-                        <span
-                          key={feature}
-                          className="text-xs px-3 py-1 rounded-full select-none"
-                          style={{ background: getFeatureColor(feature), color: '#333', fontWeight: 500 }}
-                        >
-                          {feature}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-gray-500 italic text-xs select-none">No features</span>
-                    )}
+                <div key={room} className="relative flex items-center group" style={{ minHeight: 48 }}>
+                  <div
+                    className={`flex items-center justify-between bg-gray-800 rounded-lg px-4 py-2 mb-1 cursor-pointer transition-all duration-300 w-full ${isSelected ? 'ring-2 ring-blue-400 shadow-lg' : ''}`}
+                    style={{
+                      maxWidth: isSelected ? 'calc(100% - 140px)' : '100%',
+                      minWidth: 220,
+                      zIndex: 1,
+                      transition: 'max-width 0.3s cubic-bezier(0.4,0,0.2,1)'
+                    }}
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedRoom(null);
+                        setShowBookButton(null);
+                      } else {
+                        setSelectedRoom(room);
+                        setTimeout(() => setShowBookButton(room), 250);
+                      }
+                    }}
+                  >
+                    <span className="text-gray-200 font-medium" style={{ minWidth: 120 }}>{room}</span>
+                    <div className="flex flex-wrap gap-2 justify-end flex-1">
+                      {features.length > 0 ? (
+                        features.sort().map((feature) => (
+                          <span
+                            key={feature}
+                            className="text-xs px-3 py-1 rounded-full select-none"
+                            style={{ background: getFeatureColor(feature), color: '#333', fontWeight: 500 }}
+                          >
+                            {feature}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-gray-500 italic text-xs select-none">No features</span>
+                      )}
+                    </div>
                   </div>
+                  {isSelected && showBookButton === room && (
+                    <div
+                      className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center"
+                      style={{
+                        marginLeft: 12,
+                        zIndex: 2,
+                        opacity: isSelected && showBookButton === room ? 1 : 0,
+                        transition: 'opacity 0.4s cubic-bezier(0.4,0,0.2,1)',
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <button
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded font-semibold shadow transition-all duration-300"
+                        onClick={() => alert(`Room ${room} booked!`)}
+                      >
+                        Book Room
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })

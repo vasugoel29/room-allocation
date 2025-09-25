@@ -52,7 +52,7 @@ function ScheduleOptionForm({onSubmit}) {
         <h2 style={{ textAlign: "center", marginBottom: "1.5rem" }}>Scheduling Form</h2>
         
         <div style={{ marginBottom: "1.25rem" }}>
-          <label htmlFor="day" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label htmlFor="day" style={{ marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <CalendarDays size={18} /> Preferred Day:
           </label>
           <select id="day" name="day" value={formData.day} onChange={handleChange} required style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", fontSize: "1rem" }}>
@@ -64,7 +64,7 @@ function ScheduleOptionForm({onSubmit}) {
         </div>
 
         <div style={{ marginBottom: "1.5rem" }}>
-          <label htmlFor="duration" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label htmlFor="duration" style={{ marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Clock size={18} /> Duration:
           </label>
           <select id="duration" name="duration" value={formData.duration} onChange={handleChange} required style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", border: "1px solid #ccc", fontSize: "1rem" }}>
@@ -78,7 +78,7 @@ function ScheduleOptionForm({onSubmit}) {
         </div>
 
         <div style={{ marginBottom: "1.5rem" }}>
-          <label htmlFor="slot" style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <label htmlFor="slot" style={{ marginBottom: "0.5rem", fontWeight: "600", display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <ListChecks size={18} /> Preferred Slot:
           </label>
           <select

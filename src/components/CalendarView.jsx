@@ -28,6 +28,8 @@ function getFeatureColor(feature) {
 
 export default function CalendarView({ availability = db.availability, rooms = db.rooms, preferences, onBack }) {
   const [overlay, setOverlay] = useState(null); // { day, slot, rooms: [] }
+  const [selectedOverlayRoom, setSelectedOverlayRoom] = useState(null);
+  const [showBookButton, setShowBookButton] = useState(null);
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.reload();
@@ -150,28 +152,64 @@ export default function CalendarView({ availability = db.availability, rooms = d
                       }
                       return getFeatureRank(fa) - getFeatureRank(fb);
                     })
-                    .map(room => (
-                      <div key={room} className="flex items-center justify-between bg-gray-100 rounded-lg px-4 py-2">
-                        <span className="font-semibold text-gray-800">{room}</span>
-                        <div className="flex gap-2">
-                          {(rooms[room]?.features || []).length > 0 ? (
-                            rooms[room].features.sort().map(feature => (
-                              <span
-                                key={feature}
-                                className="text-xs px-3 py-1 rounded-full select-none flex items-center gap-1"
-                                style={{ background: getFeatureColor(feature), color: '#333', fontWeight: 500 }}
+                    .map(room => {
+                      const isSelected = selectedOverlayRoom === room;
+                      return (
+                        <div key={room} className="relative flex items-center group" style={{ minHeight: 44 }}>
+                          <div
+                            className="flex items-center justify-between bg-gray-100 rounded-lg px-4 py-2 cursor-pointer transition-all duration-300 w-full"
+                            style={{
+                              maxWidth: isSelected ? 'calc(100% - 130px)' : '100%',
+                              minWidth: 120,
+                              zIndex: 1,
+                              transition: 'max-width 0.3s cubic-bezier(0.4,0,0.2,1)'
+                            }}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedOverlayRoom(null);
+                                setShowBookButton(null);
+                              } else {
+                                setSelectedOverlayRoom(room);
+                                setTimeout(() => setShowBookButton(room), 220);
+                              }
+                            }}
+                          >
+                            <span className="font-semibold text-gray-800">{room}</span>
+                            <div className="flex gap-2">
+                              {(rooms[room]?.features || []).length > 0 ? (
+                                rooms[room].features.sort().map(feature => (
+                                  <span
+                                    key={feature}
+                                    className="text-xs px-3 py-1 rounded-full select-none flex items-center gap-1"
+                                    style={{ background: getFeatureColor(feature), color: '#333', fontWeight: 500 }}
+                                  >
+                                    {feature === 'AC' && <Snowflake size={14} />}
+                                    {feature === 'Projector' && <Projector size={14} />}
+                                    {feature}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-gray-500 italic text-xs select-none">No features</span>
+                              )}
+                            </div>
+                          </div>
+                          {isSelected && showBookButton === room && (
+                            <div
+                              className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center"
+                              style={{ marginLeft: 12, zIndex: 2, transition: 'opacity 0.3s cubic-bezier(0.4,0,0.2,1)', opacity: isSelected ? 1 : 0 }}
+                              onClick={e => e.stopPropagation()}
+                            >
+                              <button
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded font-semibold shadow transition-all duration-300"
+                                onClick={() => alert(`Room ${room} booked!`)}
                               >
-                                {feature === 'AC' && <Snowflake size={14} />}
-                                {feature === 'Projector' && <Projector size={14} />}
-                                {feature}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-gray-500 italic text-xs select-none">No features</span>
+                                Book Room
+                              </button>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                 </div>
               </div>
             </div>
