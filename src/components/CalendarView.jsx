@@ -1,9 +1,10 @@
-import db from "../db.json";
-import React, { useState } from "react";
+// import db from "../db.json";
+
 import { LogOut, ArrowLeft, Snowflake, Projector } from "lucide-react";
 
-const days = db.days;
-const slots = db.slots;
+import { useEffect, useState } from "react";
+
+const API_BASE = "http://localhost:4000";
 
 // Assign random colors to features
 const featureColors = {};
@@ -26,10 +27,37 @@ function getFeatureColor(feature) {
   return featureColors[feature];
 }
 
-export default function CalendarView({ availability = db.availability, rooms = db.rooms, preferences, onBack }) {
+export default function CalendarView({ preferences, onBack }) {
   const [overlay, setOverlay] = useState(null); // { day, slot, rooms: [] }
   const [selectedOverlayRoom, setSelectedOverlayRoom] = useState(null);
   const [showBookButton, setShowBookButton] = useState(null);
+  const [days, setDays] = useState([]);
+  const [slots, setSlots] = useState([]);
+  const [rooms, setRooms] = useState({});
+  const [availability, setAvailability] = useState({});
+
+  useEffect(() => {
+    async function fetchData() {
+      const availRes = await fetch(`${API_BASE}/available-rooms/all`);
+      const availData = await availRes.json();
+      setAvailability(availData);
+      const daysArr = Object.keys(availData);
+      setDays(daysArr);
+      setSlots(daysArr.length > 0 ? Object.keys(availData[daysArr[0]]) : []);
+      // Collect all room features from all slots/days
+      const roomMap = {};
+      for (const day of daysArr) {
+        for (const slot of Object.keys(availData[day])) {
+          availData[day][slot].forEach(r => {
+            roomMap[r.roomId] = { features: r.features };
+          });
+        }
+      }
+      setRooms(roomMap);
+    }
+    fetchData();
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     window.location.reload();
@@ -201,7 +229,22 @@ export default function CalendarView({ availability = db.availability, rooms = d
                             >
                               <button
                                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded font-semibold shadow transition-all duration-300"
-                                onClick={() => alert(`Room ${room} booked!`)}
+                                onClick={async () => {
+                                  const today = new Date();
+                                  const dateStr = today.toISOString().slice(0, 10);
+                                  const slotVal = overlay?.slot;
+                                  const res = await fetch(`${API_BASE}/book-room`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ date: dateStr, slot: slotVal, roomId: room })
+                                  });
+                                  if (res.ok) {
+                                    alert(`${room} booked!`);
+                                  } else {
+                                    const err = await res.json();
+                                    alert(`Booking failed: ${err.error || 'Unknown error'}`);
+                                  }
+                                }}
                               >
                                 Book Room
                               </button>
@@ -241,7 +284,7 @@ export default function CalendarView({ availability = db.availability, rooms = d
                   if (consecutiveSlots.length > 0) {
                     if (slot === consecutiveSlots[0]) {
                       const roomsInAllSlots = consecutiveSlots.reduce((acc, s, idx) => {
-                        const roomsAtSlot = availability[day]?.[s] || [];
+                        const roomsAtSlot = (availability[day]?.[s] || []).map(r => r.roomId);
                         if (idx === 0) return roomsAtSlot;
                         return acc.filter((room) => roomsAtSlot.includes(room));
                       }, []);
@@ -250,7 +293,7 @@ export default function CalendarView({ availability = db.availability, rooms = d
                       roomsAvailable = [];
                     }
                   } else {
-                    roomsAvailable = availability[day]?.[slot] || [];
+                    roomsAvailable = (availability[day]?.[slot] || []).map(r => r.roomId);
                   }
 
                   let filteredRooms = roomsAvailable;

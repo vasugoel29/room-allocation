@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CalendarDays, Clock, ListChecks, Snowflake, Projector, LogOut } from "lucide-react";
-import data from "../db.json";
+// import data from "../db.json";
 function ScheduleOptionForm({onSubmit}) {
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -16,10 +16,23 @@ function ScheduleOptionForm({onSubmit}) {
 
   const durations = Array.from({ length: 8 }, (_, i) => i + 1); 
   const [options, setOptions] = useState({
-    days: data.days || [],
+    days: [],
     durations,
-    slots: data.slots || []
+    slots: []
   });
+
+  useEffect(() => {
+    async function fetchOptions() {
+      // Fetch days and slots from API
+      const API_BASE = "http://localhost:4000"; // Change if backend runs elsewhere
+      const res = await fetch(`${API_BASE}/available-rooms/all`);
+      const data = await res.json();
+      const days = Object.keys(data);
+      const slots = days.length > 0 ? Object.keys(data[days[0]]) : [];
+      setOptions({ days, durations, slots });
+    }
+    fetchOptions();
+  }, []);
 
   const availableSlots = options.slots;
 

@@ -1,11 +1,9 @@
 
 
 
-import { useState } from "react";
-import db from "../db.json";
+import { useEffect, useState } from "react";
 
-const slots = db.slots;
-const days = db.days;
+// slots and days will be fetched from API
 
 function getFeatureColor(feature) {
   // Simple color assignment for features
@@ -19,8 +17,25 @@ function SlotView({ day, availability, onBack }) {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showBookButton, setShowBookButton] = useState(null);
   const { day: selectedDay, slot: selectedSlot, ac, projector } = availability || {};
-  const rooms = db.rooms;
-  const avail = db.availability;
+  const [rooms, setRooms] = useState({});
+  const [avail, setAvail] = useState({});
+
+  useEffect(() => {
+    // Fetch rooms and availability from API
+    const API_BASE = "http://localhost:4000"; // Change if backend runs elsewhere
+    async function fetchData() {
+      const roomsRes = await fetch(`${API_BASE}/available-rooms/all`);
+      const roomsData = await roomsRes.json();
+      setAvail(roomsData);
+      // Fetch room features
+      const featuresRes = await fetch(`${API_BASE}/available-rooms?day=${selectedDay}&slot=${selectedSlot}`);
+      const featuresData = await featuresRes.json();
+      const roomMap = {};
+      featuresData.forEach(r => { roomMap[r.roomId] = { features: r.features }; });
+      setRooms(roomMap);
+    }
+    fetchData();
+  }, [selectedDay, selectedSlot]);
 
 
   // Feature ranking: AC+Projector > AC > Projector > None
@@ -31,7 +46,7 @@ function SlotView({ day, availability, onBack }) {
     return 4;
   }
 
-  const availableRooms = (avail[selectedDay]?.[selectedSlot] || [])
+  const availableRooms = (avail[selectedDay]?.[selectedSlot]?.map(r => r.roomId) || [])
     .filter(room => {
       const features = rooms[room]?.features || [];
       if (ac && !features.includes("AC")) return false;
@@ -111,7 +126,33 @@ function SlotView({ day, availability, onBack }) {
                     >
                       <button
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded font-semibold shadow transition-all duration-300"
-                        onClick={() => alert(`Room ${room} booked!`)}
+                        onClick={async () => {
+                          const API_BASE = "http://localhost:4000";
+                          const today = new Date();
+                          // Use current date for booking, or let user select
+                          const dateStr = today.toISOString().slice(0, 10);
+                          const res = await fetch(`${API_BASE}/book-room`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ date: dateStr, slot: selectedSlot, roomId: room })
+                          });
+                          if (res.ok) {
+                            alert(`Room ${room} booked!`);
+                            // Refetch availability and room features after booking
+                            const API_BASE = "http://localhost:4000";
+                            const roomsRes = await fetch(`${API_BASE}/available-rooms/all`);
+                            const roomsData = await roomsRes.json();
+                            setAvail(roomsData);
+                            const featuresRes = await fetch(`${API_BASE}/available-rooms?day=${selectedDay}&slot=${selectedSlot}`);
+                            const featuresData = await featuresRes.json();
+                            const roomMap = {};
+                            featuresData.forEach(r => { roomMap[r.roomId] = { features: r.features }; });
+                            setRooms(roomMap);
+                          } else {
+                            const err = await res.json();
+                            alert(`Booking failed: ${err.error || 'Unknown error'}`);
+                          }
+                        }}
                       >
                         Book Room
                       </button>
