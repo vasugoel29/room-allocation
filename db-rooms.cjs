@@ -23,7 +23,9 @@ async function getSlots() {
 
 async function getAvailability(day, slot) {
   const result = await db.query('SELECT room_id FROM availability WHERE day = $1 AND slot = $2', [day, slot]);
-  return result.rows.map(r => r.room_id);
+  const availableRooms = result.rows.map(r => r.room_id);
+  console.log(`[db-rooms] getAvailability: day=${day}, slot=${slot}, availableRooms=`, availableRooms);
+  return availableRooms;
 }
 
 async function getAllAvailability() {
@@ -51,7 +53,9 @@ async function addBooking({ date, slot, roomId }) {
     [date, slot, roomId]
   );
   // Remove room from availability
-  await db.query('DELETE FROM availability WHERE day = $1 AND slot = $2 AND room_id = $3', [getDayFromDate(date), slot, roomId]);
+  const day = getDayFromDate(date);
+  const delRes = await db.query('DELETE FROM availability WHERE day = $1 AND slot = $2 AND room_id = $3 RETURNING room_id', [day, slot, roomId]);
+  console.log(`[db-rooms] addBooking: Removed from availability:`, delRes.rows);
   return result.rows[0];
 }
 

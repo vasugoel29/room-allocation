@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+:root {
+  --bg-primary: #0a0a0c;
+  --bg-secondary: #16161a;
+  --accent: #6366f1;
+  --accent-hover: #4f46e5;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --success: #10b981;
+  --error: #ef4444;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+.glass {
+  background: rgba(22, 22, 26, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.3);
+}
+
+/* Calendar Styles */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: 100px repeat(6, 1fr);
+  border: 1px solid var(--border);
+}
+
+.calendar-cell {
+  border: 0.5px solid var(--border);
+  min-height: 60px;
+  padding: 4px;
+}
+
+.slot-booked {
+  background: rgba(99, 102, 241, 0.2);
+  border-left: 3px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.75rem;
+}

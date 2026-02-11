@@ -1,181 +1,140 @@
+import React, { useState } from 'react';
+import { Mail, Lock, User, UserPlus, ShieldCheck, ArrowLeft } from 'lucide-react';
 
-
-import React, { useState } from "react";
-
-
-const Signup = () => {
-  const [form, setForm] = useState({
-    name: "",
-    studentId: "",
-    email: "",
-    password: "",
-  });
-  const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState("");
-  // Admin credentials for registration (hardcoded for demo, replace with secure method in production)
-  const adminEmail = "Admin@nsut.ac.in";
-  const adminPassword = "adminpass"; // Set this to your real admin password
-
-  // Minimalist dark theme styling with TailwindCSS
-  const inputClass =
-    "w-full px-4 py-2 rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:border-blue-500 placeholder-gray-500";
-  const labelClass = "block mb-1 text-gray-300";
-  const errorClass = "text-red-500 text-xs mt-1";
-
-  const validate = () => {
-    const newErrors = {};
-    if (!form.name.trim()) newErrors.name = "Name is required.";
-    if (!form.studentId.trim()) newErrors.studentId = "Student ID is required.";
-    if (!form.email.trim()) {
-      newErrors.email = "Email is required.";
-    } else if (
-      !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(form.email)
-    ) {
-      newErrors.email = "Invalid email format.";
-    }
-    if (!form.password) {
-      newErrors.password = "Password is required.";
-    } else if (form.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters.";
-    }
-    return newErrors;
-  };
-
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+const Signup = ({ onSignupSuccess, onBackToLogin }) => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('VIEWER');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("");
-    const validationErrors = validate();
-    setErrors(validationErrors);
-    if (Object.keys(validationErrors).length === 0) {
-      try {
-        const res = await fetch("/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            adminEmail,
-            adminPassword,
-            email: form.email,
-            password: form.password
-          })
-        });
-        const data = await res.json();
-        if (res.ok && data.success) {
-          setStatus("Registration successful! You can now log in.");
-          setForm({ name: "", studentId: "", email: "", password: "" });
-        } else {
-          setStatus(data.error || "Registration failed");
-        }
-      } catch (err) {
-        setStatus("Network error");
+    setError('');
+    setLoading(true);
+
+    try {
+      const res = await fetch('http://localhost:4000/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password, role })
+      });
+      
+      const data = await res.json();
+      if (res.ok) {
+        onSignupSuccess();
+      } else {
+        setError(data.error || 'Signup failed');
       }
+    } catch (err) {
+      setError('Connection to server failed');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    window.location.reload();
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="w-full max-w-md flex justify-end mb-2">
-        <button
-          onClick={handleLogout}
-          className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded font-semibold"
+    <div className="min-h-screen flex items-center justify-center bg-[#0a0a0c] p-4 relative overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-600/10 blur-[120px] rounded-full"></div>
+      
+      <div className="relative w-full max-w-sm glass rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300 text-slate-200">
+        <button 
+          onClick={onBackToLogin}
+          className="absolute top-6 left-6 p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors"
         >
-          Logout
+          <ArrowLeft size={20} />
         </button>
-      </div>
-      <form
-        className="bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md"
-        onSubmit={handleSubmit}
-        autoComplete="off"
-      >
-        <h2 className="text-2xl font-semibold text-gray-100 mb-6 text-center">
-          Sign Up
-        </h2>
-        <div className="mb-4">
-          <label className={labelClass} htmlFor="name">
-            Name
-          </label>
-          <input
-            id="name"
-            name="name"
-            type="text"
-            className={inputClass}
-            value={form.name}
-            onChange={handleChange}
-            autoComplete="off"
-            placeholder="Enter your name"
-          />
-          {errors.name && <div className={errorClass}>{errors.name}</div>}
+
+        <div className="text-center space-y-2">
+          <div className="inline-flex p-3 bg-indigo-600/10 rounded-2xl text-indigo-400 mb-2">
+            <UserPlus size={32} />
+          </div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Create Account</h2>
+          <p className="text-slate-400 text-sm">Join the Room Allocation System</p>
         </div>
-        <div className="mb-4">
-          <label className={labelClass} htmlFor="studentId">
-            Student ID
-          </label>
-          <input
-            id="studentId"
-            name="studentId"
-            type="text"
-            className={inputClass}
-            value={form.studentId}
-            onChange={handleChange}
-            autoComplete="off"
-            placeholder="Enter your student ID"
-          />
-          {errors.studentId && (
-            <div className={errorClass}>{errors.studentId}</div>
-          )}
-        </div>
-        <div className="mb-4">
-          <label className={labelClass} htmlFor="email">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            className={inputClass}
-            value={form.email}
-            onChange={handleChange}
-            autoComplete="off"
-            placeholder="Enter your email"
-          />
-          {errors.email && <div className={errorClass}>{errors.email}</div>}
-        </div>
-        <div className="mb-6">
-          <label className={labelClass} htmlFor="password">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            className={inputClass}
-            value={form.password}
-            onChange={handleChange}
-            autoComplete="off"
-            placeholder="Enter your password"
-          />
-          {errors.password && (
-            <div className={errorClass}>{errors.password}</div>
-          )}
-        </div>
-        <button
-          type="submit"
-          className="w-full py-2 rounded bg-blue-600 hover:bg-blue-700 text-white font-semibold transition"
-        >
-          Sign Up
-        </button>
-        {status && (
-          <div className={status.includes("success") ? "text-green-400 text-center mt-4" : "text-red-400 text-center mt-4"}>{status}</div>
+
+        {error && (
+          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+            {error}
+          </div>
         )}
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+              <User size={16} className="text-slate-500" />
+              Full Name
+            </label>
+            <input
+              type="text"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+              <Mail size={16} className="text-slate-500" />
+              Email Address
+            </label>
+            <input
+              type="email"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all"
+              placeholder="name@cras.edu"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+              <Lock size={16} className="text-slate-500" />
+              Password
+            </label>
+            <input
+              type="password"
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all font-light"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
+              <ShieldCheck size={16} className="text-slate-500" />
+              Account Type
+            </label>
+            <select 
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all appearance-none"
+            >
+              <option value="VIEWER" className="bg-slate-900">Viewer (Read Only)</option>
+              <option value="STUDENT_REP" className="bg-slate-900">Student Representative (Can Book)</option>
+            </select>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-500/20 mt-4"
+          >
+            {loading ? 'Creating Account...' : (
+              <>
+                <UserPlus size={20} />
+                Create Account
+              </>
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

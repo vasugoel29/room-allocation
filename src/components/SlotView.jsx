@@ -16,26 +16,31 @@ function getFeatureColor(feature) {
 function SlotView({ day, availability, onBack }) {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showBookButton, setShowBookButton] = useState(null);
-  const { day: selectedDay, slot: selectedSlot, ac, projector } = availability || {};
+  const { slot: selectedSlot, ac, projector } = availability || {};
   const [rooms, setRooms] = useState({});
   const [avail, setAvail] = useState({});
+  // Always use today's date
+  const today = new Date();
+  const dateStr = today.toISOString().slice(0, 10);
+  const weekdayMap = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayDay = weekdayMap[today.getDay()];
 
   useEffect(() => {
-    // Fetch rooms and availability from API
-    const API_BASE = "http://localhost:4000"; // Change if backend runs elsewhere
+    // Fetch rooms and availability for today from API
+    const API_BASE = "http://localhost:4000";
     async function fetchData() {
       const roomsRes = await fetch(`${API_BASE}/available-rooms/all`);
       const roomsData = await roomsRes.json();
       setAvail(roomsData);
-      // Fetch room features
-      const featuresRes = await fetch(`${API_BASE}/available-rooms?day=${selectedDay}&slot=${selectedSlot}`);
+      // Fetch room features for today
+      const featuresRes = await fetch(`${API_BASE}/available-rooms?day=${todayDay}&slot=${selectedSlot}`);
       const featuresData = await featuresRes.json();
       const roomMap = {};
       featuresData.forEach(r => { roomMap[r.roomId] = { features: r.features }; });
       setRooms(roomMap);
     }
     fetchData();
-  }, [selectedDay, selectedSlot]);
+  }, [selectedSlot, todayDay]);
 
 
   // Feature ranking: AC+Projector > AC > Projector > None
@@ -46,7 +51,8 @@ function SlotView({ day, availability, onBack }) {
     return 4;
   }
 
-  const availableRooms = (avail[selectedDay]?.[selectedSlot]?.map(r => r.roomId) || [])
+  // Only show rooms available for today
+  const availableRooms = (avail[todayDay]?.[selectedSlot]?.map(r => r.roomId) || [])
     .filter(room => {
       const features = rooms[room]?.features || [];
       if (ac && !features.includes("AC")) return false;
@@ -69,7 +75,7 @@ function SlotView({ day, availability, onBack }) {
       </button>
       <div className="bg-gray-900 p-6 rounded-md shadow-sm">
         <h3 className="font-semibold mb-4 text-gray-200">
-          Room Availability for {selectedSlot} on {selectedDay}
+          Room Availability for {selectedSlot} on {todayDay}
         </h3>
         <div className="flex flex-col gap-2 w-full">
           {availableRooms.length > 0 ? (
@@ -128,9 +134,7 @@ function SlotView({ day, availability, onBack }) {
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded font-semibold shadow transition-all duration-300"
                         onClick={async () => {
                           const API_BASE = "http://localhost:4000";
-                          const today = new Date();
-                          // Use current date for booking, or let user select
-                          const dateStr = today.toISOString().slice(0, 10);
+                          // Always use today's date for booking
                           const res = await fetch(`${API_BASE}/book-room`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -139,11 +143,10 @@ function SlotView({ day, availability, onBack }) {
                           if (res.ok) {
                             alert(`Room ${room} booked!`);
                             // Refetch availability and room features after booking
-                            const API_BASE = "http://localhost:4000";
                             const roomsRes = await fetch(`${API_BASE}/available-rooms/all`);
                             const roomsData = await roomsRes.json();
                             setAvail(roomsData);
-                            const featuresRes = await fetch(`${API_BASE}/available-rooms?day=${selectedDay}&slot=${selectedSlot}`);
+                            const featuresRes = await fetch(`${API_BASE}/available-rooms?day=${todayDay}&slot=${selectedSlot}`);
                             const featuresData = await featuresRes.json();
                             const roomMap = {};
                             featuresData.forEach(r => { roomMap[r.roomId] = { features: r.features }; });
