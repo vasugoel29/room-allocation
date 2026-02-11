@@ -20,8 +20,8 @@ function RoomFilter({ filters, setFilters }) {
         
         <div className="space-y-4">
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-slate-300 flex items-center gap-2">
-              <Users size={16} className="text-slate-500" />
+            <label className="text-sm font-medium text-slate-600 flex items-center gap-2">
+              <Users size={16} className="text-slate-400" />
               Min Capacity
             </label>
             <input 
@@ -30,7 +30,7 @@ function RoomFilter({ filters, setFilters }) {
               value={filters.capacity}
               onChange={handleChange}
               placeholder="e.g. 30"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500/50 transition-colors"
+              className="w-full bg-black/5 border border-black/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-400"
             />
           </div>
 
@@ -44,11 +44,11 @@ function RoomFilter({ filters, setFilters }) {
                    onChange={handleChange}
                    className="sr-only peer"
                  />
-                 <div className="w-10 h-5 bg-white/10 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
-                 <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform"></div>
+                 <div className="w-10 h-5 bg-black/10 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
+                 <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform shadow-sm"></div>
                </div>
-               <span className="text-sm text-slate-300 group-hover:text-white transition-colors flex items-center gap-2">
-                 <Wind size={16} className="text-slate-500" />
+               <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors flex items-center gap-2 font-medium">
+                 <Wind size={16} className="text-slate-400" />
                  AC Required
                </span>
              </label>
@@ -62,11 +62,11 @@ function RoomFilter({ filters, setFilters }) {
                    onChange={handleChange}
                    className="sr-only peer"
                  />
-                 <div className="w-10 h-5 bg-white/10 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
-                 <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform"></div>
+                 <div className="w-10 h-5 bg-black/10 rounded-full peer peer-checked:bg-indigo-600 transition-colors"></div>
+                 <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform shadow-sm"></div>
                </div>
-               <span className="text-sm text-slate-300 group-hover:text-white transition-colors flex items-center gap-2">
-                 <Monitor size={16} className="text-slate-500" />
+               <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors flex items-center gap-2 font-medium">
+                 <Monitor size={16} className="text-slate-400" />
                  Projector
                </span>
              </label>

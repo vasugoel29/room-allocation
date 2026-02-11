@@ -67,23 +67,23 @@ function BookingModal({ slot, rooms, bookings, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-white/40 backdrop-blur-sm" onClick={onClose}></div>
       
-      <div className="relative w-full max-w-lg glass rounded-3xl p-8 shadow-2xl border border-white/10">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-white/5 rounded-full text-slate-400 hover:text-white transition-colors">
+      <div className="relative w-full max-w-lg glass rounded-3xl p-8 shadow-2xl border border-black/5">
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 transition-colors">
           <X size={24} />
         </button>
 
-        <h3 className="text-2xl font-bold text-white mb-2 flex items-center gap-3">
+        <h3 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-3">
           Book Room
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 capitalize">
+          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 capitalize">
             {slot.day} @ {slot.hour}:00
           </span>
         </h3>
-        <p className="text-slate-400 mb-8">Secure your slot in one of the available rooms.</p>
+        <p className="text-slate-500 mb-8">Secure your slot in one of the available rooms.</p>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-3">
+          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-3 font-medium">
             <AlertCircle size={18} />
             {error}
           </div>
@@ -91,39 +91,44 @@ function BookingModal({ slot, rooms, bookings, onClose, onSuccess }) {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Select Room</label>
-            <select 
-              value={selectedRoom} 
-              onChange={(e) => setSelectedRoom(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors appearance-none"
-            >
-              <option value="" className="bg-slate-900">Choose a room...</option>
-              {rooms.map(room => {
-                const booking = getRoomBooking(room.id);
-                return (
-                  <option key={room.id} value={room.id} className="bg-slate-900" disabled={!!booking}>
-                    {room.name} ({room.capacity} seats, {room.building})
-                    {booking ? ` - Booked by ${booking.user_name}` : ''}
-                  </option>
-                );
-              })}
-            </select>
+            <label className="text-sm font-semibold text-slate-700">Select Room</label>
+            <div className="relative">
+              <select 
+                value={selectedRoom} 
+                onChange={(e) => setSelectedRoom(e.target.value)}
+                className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all appearance-none pr-10"
+              >
+                <option value="" className="bg-white">Choose a room...</option>
+                {rooms.map(room => {
+                  const booking = getRoomBooking(room.id);
+                  return (
+                    <option key={room.id} value={room.id} className="bg-white" disabled={!!booking}>
+                      {room.name} ({room.capacity} seats, {room.building})
+                      {booking ? ` - Booked by ${booking.user_name}` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">Purpose</label>
+            <label className="text-sm font-semibold text-slate-700">Purpose</label>
             <textarea 
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="e.g. Special Class, Club Meeting"
-              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors h-24 resize-none"
+              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all h-24 resize-none placeholder:text-slate-400"
             />
           </div>
 
           <button 
             type="submit" 
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-500/20 mt-4"
+            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20 mt-4 active:scale-[0.98]"
           >
             {loading ? 'Processing...' : (
               <>

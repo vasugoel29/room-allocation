@@ -23,9 +23,14 @@ function App() {
   useEffect(() => {
     if (user) {
       fetchRooms();
-      fetchBookings();
     }
   }, [filters, user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchBookings();
+    }
+  }, [user]);
 
   const fetchRooms = async () => {
     try {
@@ -33,7 +38,11 @@ function App() {
       const res = await fetch(`http://localhost:4000/api/rooms?${query}`);
       if (res.status === 401) return handleLogout();
       const data = await res.json();
-      setRooms(data);
+      if (Array.isArray(data)) {
+        setRooms(data);
+      } else {
+        console.error('Expected array of rooms, got:', data);
+      }
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
@@ -74,23 +83,23 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-slate-200 flex">
+    <div className="h-screen bg-bg-primary text-text-primary flex overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-72 glass border-r border-white/10 p-6 flex flex-col gap-8">
-        <div className="flex items-center gap-3 text-indigo-400">
+      <aside className="w-72 glass border-r border-black/5 p-6 flex flex-col gap-8">
+        <div className="flex items-center gap-3 text-indigo-600">
           <CalendarIcon size={32} />
-          <h1 className="text-xl font-bold tracking-tight text-white">CRAS</h1>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900">CRAS</h1>
         </div>
 
         <RoomFilter filters={filters} setFilters={setFilters} />
 
-        <div className="mt-auto pt-6 border-t border-white/10">
+        <div className="mt-auto pt-6 border-t border-black/5">
           <div className="flex items-center justify-between">
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-white truncate">{user.name}</p>
-              <p className="text-[10px] text-indigo-400 uppercase tracking-widest font-bold">{user.role}</p>
+              <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
+              <p className="text-[10px] text-indigo-600 uppercase tracking-widest font-bold">{user.role}</p>
             </div>
-            <button onClick={handleLogout} className="p-2.5 hover:bg-white/5 rounded-xl text-slate-400 hover:text-white transition-colors border border-transparent hover:border-white/10">
+            <button onClick={handleLogout} className="p-2.5 hover:bg-black/5 rounded-xl text-slate-500 hover:text-slate-900 transition-colors border border-transparent hover:border-black/5">
               <LogOut size={18} />
             </button>
           </div>
@@ -98,27 +107,28 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="flex justify-between items-center mb-10">
+      <main className="flex-1 p-6 overflow-hidden flex flex-col">
+        <header className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-3xl font-bold text-white mb-2">Room Schedule</h2>
-            <p className="text-slate-400">Manage and book campus rooms in real-time.</p>
+            <h2 className="text-2xl font-bold text-slate-900 mb-0.5">Room Schedule</h2>
+            <p className="text-slate-500 text-xs">Manage and book campus rooms in real-time.</p>
           </div>
           <div className="flex gap-4">
              <button 
               onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 bg-black/5 hover:bg-black/10 border border-black/5 rounded-xl text-xs font-medium transition-all"
              >
-               <History size={18} />
+               <History size={16} />
                History
              </button>
           </div>
         </header>
 
-        <section className="glass rounded-3xl p-6 shadow-2xl overflow-hidden">
+        <section className="glass rounded-2xl p-4 shadow-lg overflow-hidden flex-1">
           <Calendar 
             bookings={bookings} 
             rooms={rooms} 
+            filters={filters}
             onSlotClick={(slot) => {
               setSelectedSlot(slot);
               setIsModalOpen(true);

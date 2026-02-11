@@ -90,9 +90,11 @@ app.get('/api/rooms', async (req, res) => {
   }
 
   try {
+    console.log('Fetching rooms with query:', query, 'params:', params);
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (err) {
+    console.error('Room fetch error:', err);
     res.status(500).json({ error: 'Failed to fetch rooms' });
   }
 });
