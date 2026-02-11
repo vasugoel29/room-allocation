@@ -1,38 +1,13 @@
 {
-  "name": "room-all",
+  "name": "cras-root",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.1.13",
-    "bcrypt": "^6.0.0",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "lucide-react": "^0.544.0",
-    "pg": "^8.16.3",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "react-icons": "^5.5.0",
-    "tailwindcss": "^4.1.13"
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
   },
   "devDependencies": {
-    "@eslint/js": "^9.33.0",
-    "@types/react": "^19.1.10",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^5.0.0",
-    "baseline-browser-mapping": "^2.9.19",
-    "eslint": "^9.33.0",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.20",
-    "globals": "^16.3.0",
-    "vite": "^7.1.2"
+    "concurrently": "^8.2.2"
   }
 }
