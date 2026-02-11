@@ -1,13 +1,63 @@
-# React + Vite
+# CRAS: Campus Room Allocation System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A premium, modern room booking platform for campuses, featuring real-time availability tracking, atomic booking transactions, and a glassmorphism dark-themed UI.
 
-Currently, two official plugins are available:
+## 📁 Project Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+The codebase is organized into a clean mono-repo style structure:
 
-## Expanding the ESLint configuration
+```text
+room-all/
+├── backend/            # Express.js server & PostgreSQL logic
+│   ├── src/            # API routes and database controllers
+│   ├── sql/            # Database schema and seed scripts
+│   └── package.json    # Backend-specific dependencies
+├── frontend/           # React + Vite application
+│   ├── src/            # UI components and CSS
+│   └── package.json    # Frontend-specific dependencies
+├── docs/               # Technical requirements and PRD
+├── docker-compose.yml  # PostgreSQL database container config
+└── package.json        # Root-level orchestration scripts
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# room-allocation
+## 🚀 Getting Started
+
+### Prerequisites
+
+- **Node.js**: (v18+)
+- **Docker & Docker Compose**: For the database.
+
+### Setup & Installation
+
+1. **Install Dependencies**:
+   Run this from the root folder to install all packages for both frontend and backend:
+   ```bash
+   npm run install:all
+   ```
+
+2. **Start the Database**:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Run the Application**:
+   Start both the backend and frontend simultaneously from the root:
+   ```bash
+   npm run dev
+   ```
+   - **Frontend**: `http://localhost:5173`
+   - **Backend**: `http://localhost:4000`
+
+## ✨ Core Features
+
+- **🔐 Robust Auth**: JWT-based authentication with a secure Signup/Login flow.
+- **📅 Visual Calendar**: Real-time room schedule with "Booked by" owner visibility.
+- **📜 Booking History**: Unified view of all past and upcoming reservations.
+- **🛡️ Secure Transactions**: PostgreSQL atomic operations to prevent double-booking.
+- **🎨 Premium UI**: Modern dark theme using Tailwind CSS and glassmorphism effects.
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 19, Vite, Tailwind CSS, Lucide Icons.
+- **Backend**: Node.js, Express, JSONWebToken, Bcrypt.
+- **Database**: PostgreSQL (Dockerized).
