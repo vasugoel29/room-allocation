@@ -99,15 +99,20 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                 className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all appearance-none pr-10"
               >
                 <option value="" className="bg-white">Choose a room...</option>
-                {rooms.map(room => {
-                  const booking = getRoomBooking(room.id);
-                  return (
-                    <option key={room.id} value={room.id} className="bg-white" disabled={!!booking}>
-                      {room.name} ({room.capacity} seats, {room.building})
-                      {booking ? ` - Booked by ${booking.user_name}` : ''}
-                    </option>
-                  );
-                })}
+                {rooms
+                  .filter(room => {
+                    const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
+                    return av ? av.is_available : true;
+                  })
+                  .map(room => {
+                    const booking = getRoomBooking(room.id);
+                    return (
+                      <option key={room.id} value={room.id} className="bg-white" disabled={!!booking}>
+                        {room.name} ({room.capacity} seats, {room.building})
+                        {booking ? ` - Booked by ${booking.user_name}` : ''}
+                      </option>
+                    );
+                  })}
               </select>
               <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>

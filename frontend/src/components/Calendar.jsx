@@ -53,7 +53,8 @@ function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
                       {rooms
                         .filter(room => {
                           const av = availability?.find(a => a.room_id === room.id && a.day === day && a.hour === hour);
-                          return av ? av.is_available : true;
+                          const booking = getBooking(day, hour, room.id);
+                          return (av ? av.is_available : true) && !booking;
                         })
                         .sort((a, b) => {
                           const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
