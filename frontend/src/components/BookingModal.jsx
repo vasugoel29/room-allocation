@@ -1,11 +1,21 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
 
-function BookingModal({ slot, rooms, onClose, onSuccess }) {
+function BookingModal({ slot, rooms, bookings, onClose, onSuccess }) {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const getRoomBooking = (roomId) => {
+    const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+    return bookings?.find(b => {
+      const bStart = new Date(b.start_time);
+      const bDayIndex = bStart.getDay();
+      const bHour = bStart.getHours();
+      return bDayIndex === dayMap[slot.day] && bHour === slot.hour && b.room_id === roomId;
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,16 +34,8 @@ function BookingModal({ slot, rooms, onClose, onSuccess }) {
     const targetDate = new Date();
     targetDate.setDate(date.getDate() + diff);
     
-    // Format as YYYY-MM-DD HH:mm:ss (Local Time)
-    const formatDate = (d, h) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day} ${String(h).padStart(2, '0')}:00:00`;
-    };
-
-    const start_time = formatDate(targetDate, slot.hour);
-    const end_time = formatDate(targetDate, slot.hour + 1);
+    const start_time = new Date(targetDate.setHours(slot.hour, 0, 0, 0)).toISOString();
+    const end_time = new Date(targetDate.setHours(slot.hour + 1, 0, 0, 0)).toISOString();
 
     try {
       const res = await fetch('http://localhost:4000/api/bookings', {
@@ -96,11 +98,15 @@ function BookingModal({ slot, rooms, onClose, onSuccess }) {
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-colors appearance-none"
             >
               <option value="" className="bg-slate-900">Choose a room...</option>
-              {rooms.map(room => (
-                <option key={room.id} value={room.id} className="bg-slate-900">
-                  {room.name} ({room.capacity} seats, {room.building})
-                </option>
-              ))}
+              {rooms.map(room => {
+                const booking = getRoomBooking(room.id);
+                return (
+                  <option key={room.id} value={room.id} className="bg-slate-900" disabled={!!booking}>
+                    {room.name} ({room.capacity} seats, {room.building})
+                    {booking ? ` - Booked by ${booking.user_name}` : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

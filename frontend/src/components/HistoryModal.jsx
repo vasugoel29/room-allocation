@@ -51,7 +51,15 @@ const HistoryModal = ({ bookings, onClose }) => {
                         </div>
                       </td>
                       <td className="py-4 px-4 text-slate-300">
-                        {new Date(booking.start_time).toLocaleDateString()} at {new Date(booking.start_time).getHours()}:00
+                        {new Date(booking.start_time).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric',
+                          weekday: 'short'
+                        })} at {new Date(booking.start_time).toLocaleTimeString('en-US', { 
+                          hour: 'numeric', 
+                          minute: '2-digit',
+                          hour12: true 
+                        })}
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2 text-indigo-400">

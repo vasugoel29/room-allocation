@@ -131,6 +131,7 @@ function App() {
         <BookingModal 
           slot={selectedSlot} 
           rooms={rooms} 
+          bookings={bookings}
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);

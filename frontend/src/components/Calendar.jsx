@@ -8,8 +8,8 @@ function Calendar({ bookings, rooms, onSlotClick }) {
     const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
     return bookings.find(b => {
       const bStart = new Date(b.start_time);
-      const bDayIndex = bStart.getUTCDay();
-      const bHour = bStart.getUTCHours();
+      const bDayIndex = bStart.getDay();
+      const bHour = bStart.getHours();
       return bDayIndex === dayMap[day] && bHour === hour && b.room_id === roomId;
     });
   };
