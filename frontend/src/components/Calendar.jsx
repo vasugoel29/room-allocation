@@ -3,7 +3,7 @@ import { Filter } from 'lucide-react';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
-function Calendar({ bookings, rooms, filters, onSlotClick }) {
+function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
   const getBooking = (day, hour, roomId) => {
     const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
     return bookings.find(b => {
@@ -51,6 +51,10 @@ function Calendar({ bookings, rooms, filters, onSlotClick }) {
                   >
                     <div className="flex flex-col gap-1">
                       {rooms
+                        .filter(room => {
+                          const av = availability?.find(a => a.room_id === room.id && a.day === day && a.hour === hour);
+                          return av ? av.is_available : true;
+                        })
                         .sort((a, b) => {
                           const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                           return score(b) - score(a);

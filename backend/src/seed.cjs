@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
 
 const pool = new Pool({
   user: 'roomuser',
@@ -10,13 +9,13 @@ const pool = new Pool({
 });
 
 async function seed() {
-  console.log('Starting heavy random seeding (High Occupancy)...');
+  console.log('Starting heavy random seeding (High Occupancy + Initial Availability)...');
   
   try {
-    // Clear existing bookings
+    // Clear existing
     await pool.query('DELETE FROM bookings');
+    await pool.query('DELETE FROM room_availability');
     
-    // Get rooms and users
     const roomsRes = await pool.query('SELECT id FROM rooms');
     const usersRes = await pool.query('SELECT id FROM users');
     
@@ -24,42 +23,41 @@ async function seed() {
     const userIds = usersRes.rows.map(u => u.id);
     
     if (roomIds.length === 0 || userIds.length === 0) {
-      console.error('No rooms or users found. Please run initial migrations first.');
+      console.error('No rooms or users found.');
       return;
     }
 
     const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-    const PURPOSES = [
-      'Core Lecture', 'Lab Session', 'Department Meeting', 
-      'Guest Speaker', 'Final Exam', 'Seminar', 'Project Review',
-      'Advanced Calculus', 'Digital Circuits', 'Operating Systems',
-      'Physics Lab', 'Staff Meeting', 'Interview Cycle'
-    ];
+    const PURPOSES = ['Lecture', 'Lab', 'Meeting', 'Exam', 'Study', 'Seminar'];
 
     const now = new Date();
     const currentDay = now.getDay() || 7;
     
-    let count = 0;
+    let bookingCount = 0;
+    let availabilityCount = 0;
+
     for (const dayStr of DAYS) {
       const dayMap = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
       const targetDay = dayMap[dayStr];
       const diff = targetDay - currentDay;
-      
       const targetDate = new Date();
       targetDate.setDate(now.getDate() + diff);
 
       for (const hour of HOURS) {
-        // High occupancy: 80% chance that multiple rooms are booked
-        if (Math.random() < 0.9) {
-          // Book 60% - 90% of available rooms in this slot
-          const occupancyRate = 0.6 + (Math.random() * 0.3);
-          const numToBook = Math.floor(roomIds.length * occupancyRate);
-          
-          const shuffledRooms = [...roomIds].sort(() => 0.5 - Math.random());
-          const selectedRooms = shuffledRooms.slice(0, numToBook);
+        // 1. Seed Initial Availability (University Schedule)
+        // Scarce availability: Only 20% chance a room is "Available" according to Uni
+        for (const roomId of roomIds) {
+          const isAvailable = Math.random() < 0.2; 
+          await pool.query(
+            'INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, $3, $4)',
+            [roomId, dayStr, hour, isAvailable]
+          );
+          availabilityCount++;
 
-          for (const roomId of selectedRooms) {
+          // 2. Seed Bookings ONLY for Available rooms
+          // If available, high chance it's already booked (High demand)
+          if (isAvailable && Math.random() < 0.7) {
             const userId = userIds[Math.floor(Math.random() * userIds.length)];
             const purpose = PURPOSES[Math.floor(Math.random() * PURPOSES.length)];
             
@@ -72,13 +70,13 @@ async function seed() {
               'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose) VALUES ($1, $2, $3, $4, $5)',
               [roomId, start.toISOString(), end.toISOString(), userId, purpose]
             );
-            count++;
+            bookingCount++;
           }
         }
       }
     }
 
-    console.log(`Successfully seeded ${count} pre-existing bookings (High Occupancy)!`);
+    console.log(`Seeded ${availabilityCount} availability slots and ${bookingCount} bookings!`);
   } catch (err) {
     console.error('Seeding failed:', err);
   } finally {

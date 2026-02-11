@@ -14,6 +14,7 @@ function App() {
   });
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [availability, setAvailability] = useState([]);
   const [filters, setFilters] = useState({ capacity: '', ac: false, projector: false });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -29,6 +30,7 @@ function App() {
   useEffect(() => {
     if (user) {
       fetchBookings();
+      fetchAvailability();
     }
   }, [user]);
 
@@ -56,6 +58,17 @@ function App() {
       setBookings(data);
     } catch (err) {
       console.error('Fetch bookings failed', err);
+    }
+  };
+
+  const fetchAvailability = async () => {
+    try {
+      const res = await fetch('http://localhost:4000/api/availability');
+      if (res.status === 401) return handleLogout();
+      const data = await res.json();
+      setAvailability(data);
+    } catch (err) {
+      console.error('Fetch availability failed', err);
     }
   };
 
@@ -128,6 +141,7 @@ function App() {
           <Calendar 
             bookings={bookings} 
             rooms={rooms} 
+            availability={availability}
             filters={filters}
             onSlotClick={(slot) => {
               setSelectedSlot(slot);
@@ -142,6 +156,7 @@ function App() {
           slot={selectedSlot} 
           rooms={rooms} 
           bookings={bookings}
+          availability={availability}
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);

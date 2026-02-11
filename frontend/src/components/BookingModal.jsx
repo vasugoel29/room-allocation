@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
 
-function BookingModal({ slot, rooms, bookings, onClose, onSuccess }) {
+function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess }) {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');

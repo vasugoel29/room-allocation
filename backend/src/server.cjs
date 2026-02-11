@@ -99,6 +99,15 @@ app.get('/api/rooms', async (req, res) => {
   }
 });
 
+app.get('/api/availability', async (req, res) => {
+  try {
+    const result = await db.query('SELECT * FROM room_availability');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch availability' });
+  }
+});
+
 // --- Booking Routes ---
 app.get('/api/bookings', async (req, res) => {
   try {
