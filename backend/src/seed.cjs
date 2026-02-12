@@ -1,4 +1,6 @@
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 
 const pool = new Pool({
   user: 'roomuser',
@@ -9,76 +11,112 @@ const pool = new Pool({
 });
 
 async function seed() {
-  console.log('Starting heavy random seeding (High Occupancy + Initial Availability)...');
+  console.log('Starting Real Data Seeding (from scraper JSON)...');
   
   try {
-    // Clear existing
-    await pool.query('DELETE FROM bookings');
-    await pool.query('DELETE FROM room_availability');
-    
-    const roomsRes = await pool.query('SELECT id FROM rooms');
-    const usersRes = await pool.query('SELECT id FROM users');
-    
-    const roomIds = roomsRes.rows.map(r => r.id);
-    const userIds = usersRes.rows.map(u => u.id);
-    
-    if (roomIds.length === 0 || userIds.length === 0) {
-      console.error('No rooms or users found.');
+    const dataPath = path.join(__dirname, '..', 'rooms_complete_data.json');
+    if (!fs.existsSync(dataPath)) {
+      console.error('Data file not found at:', dataPath);
       return;
     }
-
-    const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
-    const PURPOSES = ['Lecture', 'Lab', 'Meeting', 'Exam', 'Study', 'Seminar'];
-
-    const now = new Date();
-    const currentDay = now.getDay() || 7;
     
-    let bookingCount = 0;
-    let availabilityCount = 0;
+    const rawData = fs.readFileSync(dataPath, 'utf8');
+    const universityData = JSON.parse(rawData);
+    
+    // Clear everything
+    await pool.query('DELETE FROM bookings');
+    await pool.query('DELETE FROM room_availability');
+    await pool.query('DELETE FROM rooms');
+    
+    // Get users for dummy bookings later
+    const usersRes = await pool.query('SELECT id FROM users');
+    const userIds = usersRes.rows.map(u => u.id);
 
-    for (const dayStr of DAYS) {
-      const dayMap = { 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
-      const targetDay = dayMap[dayStr];
-      const diff = targetDay - currentDay;
-      const targetDate = new Date();
-      targetDate.setDate(now.getDate() + diff);
+    const DAYS_MAP = {
+      'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6
+    };
 
-      for (const hour of HOURS) {
-        // 1. Seed Initial Availability (University Schedule)
-        // Scarce availability: Only 20% chance a room is "Available" according to Uni
-        for (const roomId of roomIds) {
-          const isAvailable = Math.random() < 0.2; 
+    let roomsInserted = 0;
+    let availabilityInserted = 0;
+    
+    for (const roomObj of universityData.rooms) {
+      // 1. Insert Room
+      const roomName = roomObj.room;
+      // Assign realistic random attributes since JSON doesn't have them
+      const capacity = [30, 40, 60, 80, 100, 120][Math.floor(Math.random() * 6)];
+      const hasAc = Math.random() < 0.4;
+      const hasProjector = Math.random() < 0.7;
+      
+      const newRoom = await pool.query(
+        'INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+        [roomName, 'Campus Hub', Math.floor(Math.random() * 8) + 1, capacity, hasAc, hasProjector]
+      );
+      const roomId = newRoom.rows[0].id;
+      roomsInserted++;
+
+      // 2. Process Schedule
+      for (const [dayStr, slots] of Object.entries(roomObj.schedule)) {
+        if (!DAYS_MAP[dayStr]) continue;
+
+        for (const slot of slots) {
+          // Parse "T108:00-09:00" -> hour 8
+          // The JSON slots are like T1, T2, ... T13
+          const hourMatch = slot.time_slot.match(/T\d+(\d{2}):00/);
+          if (!hourMatch) continue;
+          const hour = parseInt(hourMatch[1]);
+          
+          if (hour < 8 || hour > 17) continue; // Only keep standard calendar hours
+
+          // Standard university classes make a room UNAVAILABLE for user booking
+          const isAvailable = !slot.is_occupied;
+          
           await pool.query(
-            'INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, $3, $4)',
+            `INSERT INTO room_availability (room_id, day, hour, is_available) 
+             VALUES ($1, $2, $3, $4)
+             ON CONFLICT (room_id, day, hour) 
+             DO UPDATE SET is_available = room_availability.is_available AND EXCLUDED.is_available`,
             [roomId, dayStr, hour, isAvailable]
           );
-          availabilityCount++;
-
-          // 2. Seed Bookings ONLY for Available rooms
-          // If available, high chance it's already booked (High demand)
-          if (isAvailable && Math.random() < 0.7) {
-            const userId = userIds[Math.floor(Math.random() * userIds.length)];
-            const purpose = PURPOSES[Math.floor(Math.random() * PURPOSES.length)];
-            
-            const start = new Date(targetDate);
-            start.setHours(hour, 0, 0, 0);
-            const end = new Date(targetDate);
-            end.setHours(hour + 1, 0, 0, 0);
-
-            await pool.query(
-              'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose) VALUES ($1, $2, $3, $4, $5)',
-              [roomId, start.toISOString(), end.toISOString(), userId, purpose]
-            );
-            bookingCount++;
-          }
+          availabilityInserted++;
         }
       }
     }
 
-    console.log(`Seeded ${availabilityCount} availability slots and ${bookingCount} bookings!`);
+    console.log(`Seeded ${roomsInserted} real rooms and ${availabilityInserted} availability records!`);
+    
+    // 3. Add random simulation bookings for FREE slots to show active system
+    console.log('Simulating existing user bookings on free slots...');
+    let bookingCount = 0;
+    const now = new Date();
+    const currentDay = now.getDay() || 7;
+
+    const freeSlotsRes = await pool.query('SELECT * FROM room_availability WHERE is_available = TRUE');
+    const PURPOSES = ['Study Group', 'Project Collab', 'Club Activity', 'Mock Interview', 'Peer Reading'];
+
+    for (const slot of freeSlotsRes.rows) {
+      if (Math.random() < 0.25) { // 25% of truly free slots already booked by students
+        const userId = userIds[Math.floor(Math.random() * userIds.length)];
+        const targetDay = DAYS_MAP[slot.day];
+        const diff = targetDay - currentDay;
+        const targetDate = new Date();
+        targetDate.setDate(now.getDate() + diff);
+        
+        const start = new Date(targetDate);
+        start.setHours(slot.hour, 0, 0, 0);
+        const end = new Date(targetDate);
+        end.setHours(slot.hour + 1, 0, 0, 0);
+
+        await pool.query(
+          'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose) VALUES ($1, $2, $3, $4, $5)',
+          [slot.room_id, start.toISOString(), end.toISOString(), userId, PURPOSES[Math.floor(Math.random() * PURPOSES.length)]]
+        );
+        bookingCount++;
+      }
+    }
+    console.log(`Successfully added ${bookingCount} simulation bookings.`);
+
   } catch (err) {
-    console.error('Seeding failed:', err);
+    console.error('Seeding error:', err);
   } finally {
     await pool.end();
   }
