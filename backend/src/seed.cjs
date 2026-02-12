@@ -41,7 +41,11 @@ async function seed() {
     
     for (const roomObj of universityData.rooms) {
       // 1. Insert Room
-      const roomName = roomObj.room;
+      const roomName = roomObj.room; // e.g. "5000", "5102"
+      const building = '5th Block';
+      // Floor is the second digit of the name (e.g. 50xx -> Floor 0, 51xx -> Floor 1)
+      const floor = parseInt(roomName.charAt(1)) || 0;
+      
       // Assign realistic random attributes since JSON doesn't have them
       const capacity = [30, 40, 60, 80, 100, 120][Math.floor(Math.random() * 6)];
       const hasAc = Math.random() < 0.4;
@@ -49,7 +53,7 @@ async function seed() {
       
       const newRoom = await pool.query(
         'INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-        [roomName, 'Campus Hub', Math.floor(Math.random() * 8) + 1, capacity, hasAc, hasProjector]
+        [roomName, building, floor, capacity, hasAc, hasProjector]
       );
       const roomId = newRoom.rows[0].id;
       roomsInserted++;

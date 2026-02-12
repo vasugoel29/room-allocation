@@ -5,7 +5,9 @@
   "main": "src/server.cjs",
   "scripts": {
     "start": "node src/server.cjs",
-    "dev": "node src/server.cjs"
+    "dev": "node src/server.cjs",
+    "seed": "node src/seed.cjs",
+    "unseed": "node src/unseed.cjs"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
