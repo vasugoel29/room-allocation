@@ -35,7 +35,7 @@ function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
   };
 
   return (
-    <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)]">
+    <div className="overflow-x-auto overflow-y-auto flex-1">
       <div className="min-w-[800px]">
         {/* Header */}
         <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-black/5 bg-white/90 backdrop-blur-md sticky top-0 z-30 shadow-sm">

@@ -5,7 +5,7 @@
   "main": "src/server.cjs",
   "scripts": {
     "start": "node src/server.cjs",
-    "dev": "node src/server.cjs",
+    "dev": "nodemon src/server.cjs",
     "seed": "node src/seed.cjs",
     "unseed": "node src/unseed.cjs",
     "test": "jest"
@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "jest": "^30.2.0",
+    "nodemon": "^3.1.11",
     "supertest": "^7.2.2"
   }
 }

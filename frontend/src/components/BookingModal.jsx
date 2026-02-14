@@ -8,6 +8,22 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
   const [loading, setLoading] = useState(false);
 
   const [isSemester, setIsSemester] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedTerm, setDebouncedTerm] = useState('');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (searchTerm.length < 2) {
+      setDebouncedTerm('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDebouncedTerm(searchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const selectedRoomData = rooms.find(r => String(r.id) === String(selectedRoom));
 
   const getRoomBooking = (roomId) => {
     const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
@@ -128,31 +144,71 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700">Select Room</label>
               <div className="relative">
-                <select 
-                  value={selectedRoom} 
-                  onChange={(e) => setSelectedRoom(e.target.value)}
-                  className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all appearance-none pr-10"
-                >
-                  <option value="" className="bg-white">Choose a room...</option>
-                  {rooms
-                    .filter(room => {
-                      const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
-                      return av ? av.is_available : true;
-                    })
-                    .map(room => {
-                      const booking = getRoomBooking(room.id);
-                      const facilities = [room.has_projector ? '🎥' : '', room.has_ac ? '❄️' : ''].filter(Boolean).join(' ');
-                      return (
-                        <option key={room.id} value={room.id} className="bg-white" disabled={!!booking}>
-                          {room.name} {facilities} | {room.capacity} seats ({room.building})
-                          {booking ? ` - Booked by ${booking.user_name}` : ''}
-                        </option>
-                      );
-                    })}
-                </select>
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <div className="relative">
+                  <input
+                    type="text"
+                    placeholder={selectedRoomData ? selectedRoomData.name : "Type to search room (min 2 chars)..."}
+                    value={searchTerm}
+                    onFocus={() => setIsDropdownOpen(true)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setIsDropdownOpen(true);
+                    }}
+                    className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all pr-10"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
                 </div>
+
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-black/5 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    {rooms
+                      .filter(room => {
+                        const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
+                        const matchesSearch = !debouncedTerm || room.name.toLowerCase().includes(debouncedTerm.toLowerCase()) || room.building?.toLowerCase().includes(debouncedTerm.toLowerCase());
+                        return (av ? av.is_available : true) && matchesSearch;
+                      })
+                      .map(room => {
+                        const booking = getRoomBooking(room.id);
+                        const facilities = [room.has_projector ? '🎥' : '', room.has_ac ? '❄️' : ''].filter(Boolean).join(' ');
+                        const isSelected = String(selectedRoom) === String(room.id);
+                        
+                        return (
+                          <div
+                            key={room.id}
+                            onClick={() => {
+                              if (!booking) {
+                                setSelectedRoom(room.id);
+                                setIsDropdownOpen(false);
+                                setSearchTerm('');
+                              }
+                            }}
+                            className={`p-4 cursor-pointer border-b border-black/[0.03] last:border-0 transition-colors flex items-center justify-between ${booking ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-indigo-50/50'} ${isSelected ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''}`}
+                          >
+                            <div className="flex flex-col gap-0.5 max-w-[70%]">
+                              <span className="font-bold text-slate-900 truncate flex items-center gap-2">
+                                {room.name}
+                                {isSelected && <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">Selected</span>}
+                              </span>
+                              <span className="text-[10px] text-slate-500 truncate">{room.building} • {room.capacity} seats</span>
+                              {booking && <span className="text-[9px] text-red-500 font-medium italic">Booked by {booking.user_name}</span>}
+                            </div>
+                            <div className="flex gap-2 items-center">
+                              <div className="flex gap-1 opacity-80 text-xs">
+                                {facilities}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {rooms.filter(r => !debouncedTerm || r.name.toLowerCase().includes(debouncedTerm.toLowerCase())).length === 0 && (
+                      <div className="p-8 text-center text-slate-400 text-sm">
+                        No rooms found matching "{searchTerm}"
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

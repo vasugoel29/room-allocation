@@ -202,16 +202,25 @@ app.post('/api/bookings', authenticate, requireRole('STUDENT_REP'), async (req, 
 
     // Check User conflict (One user -> one room per slot)
     const userConflict = await client.query(
-      `SELECT * FROM bookings 
-       WHERE created_by = $1 AND status = 'ACTIVE' 
-       AND tstzrange(start_time, end_time) && tstzrange($2::timestamptz, $3::timestamptz)`,
+      `SELECT b.*, r.name as room_name 
+       FROM bookings b
+       JOIN rooms r ON b.room_id = r.id
+       WHERE b.created_by = $1 AND b.status = 'ACTIVE' 
+       AND tstzrange(b.start_time, b.end_time) && tstzrange($2::timestamptz, $3::timestamptz)`,
       [userId, start_time, end_time]
     );
 
     if (userConflict.rows.length > 0) {
-      logger.info('Conflict: User busy', { user_id: userId, start_time });
+      logger.info('Conflict: User busy', { 
+        user_id: userId, 
+        start_time, 
+        conflicting_booking: userConflict.rows[0].id,
+        conflicting_status: userConflict.rows[0].status
+      });
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: 'You already have another booking during this time' });
+      return res.status(409).json({ 
+        error: `You already have another booking during this time in Room ${userConflict.rows[0].room_name}` 
+      });
     }
 
     const query = 'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose, is_semester_booking) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *';
@@ -263,16 +272,18 @@ app.post('/api/bookings/semester', authenticate, requireRole('STUDENT_REP'), asy
 
         // Check User conflict
         const userConflict = await client.query(
-          `SELECT * FROM bookings 
-           WHERE created_by = $1 AND status = 'ACTIVE' 
-           AND tstzrange(start_time, end_time) && tstzrange($2::timestamptz, $3::timestamptz)`,
+          `SELECT b.*, r.name as room_name 
+           FROM bookings b
+           JOIN rooms r ON b.room_id = r.id
+           WHERE b.created_by = $1 AND b.status = 'ACTIVE' 
+           AND tstzrange(b.start_time, b.end_time) && tstzrange($2::timestamptz, $3::timestamptz)`,
           [userId, currentStart.toISOString(), currentEnd.toISOString()]
         );
 
         if (userConflict.rows.length > 0) {
           logger.info('Semester Conflict: User busy', { user_id: userId, week: i, start_time: currentStart.toISOString() });
           await client.query('ROLLBACK');
-          return res.status(409).json({ error: `User busy at week ${i+1}. Semester booking failed.` });
+          return res.status(409).json({ error: `User busy at week ${i+1} in Room ${userConflict.rows[0].room_name}. Semester booking failed.` });
         }
 
         await client.query(

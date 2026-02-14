@@ -159,7 +159,7 @@ function App() {
           </div>
         </header>
 
-        <section className="glass rounded-2xl p-4 shadow-lg flex-1">
+        <section className="glass rounded-2xl p-4 shadow-lg flex-1 flex flex-col overflow-hidden">
           <Calendar 
             bookings={bookings} 
             rooms={rooms} 
