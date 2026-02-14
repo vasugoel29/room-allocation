@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Calendar from './components/Calendar';
 import RoomFilter from './components/RoomFilter';
 import BookingModal from './components/BookingModal';
@@ -6,6 +6,7 @@ import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon } from 'lucide-react';
+import { api } from './utils/api';
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -22,23 +23,16 @@ function App() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    if (user) {
-      fetchRooms();
-    }
-  }, [filters, user]);
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  }, []);
 
-  useEffect(() => {
-    if (user) {
-      fetchBookings();
-      fetchAvailability();
-    }
-  }, [user]);
-
-  const fetchRooms = async () => {
+  const fetchRooms = useCallback(async () => {
     try {
       const query = new URLSearchParams(filters).toString();
-      const res = await fetch(`http://localhost:4000/api/rooms?${query}`);
+      const res = await api.get(`/rooms?${query}`);
       if (res.status === 401) return handleLogout();
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -49,35 +43,42 @@ function App() {
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
-  };
+  }, [filters, handleLogout]);
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/bookings');
+      const res = await api.get('/bookings');
       if (res.status === 401) return handleLogout();
       const data = await res.json();
       setBookings(data);
     } catch (err) {
       console.error('Fetch bookings failed', err);
     }
-  };
+  }, [handleLogout]);
 
-  const fetchAvailability = async () => {
+  const fetchAvailability = useCallback(async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/availability');
+      const res = await api.get('/availability');
       if (res.status === 401) return handleLogout();
       const data = await res.json();
       setAvailability(data);
     } catch (err) {
       console.error('Fetch availability failed', err);
     }
-  };
+  }, [handleLogout]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-  };
+  useEffect(() => {
+    if (user) {
+      fetchRooms();
+    }
+  }, [user, fetchRooms]);
+
+  useEffect(() => {
+    if (user) {
+      fetchBookings();
+      fetchAvailability();
+    }
+  }, [user, fetchBookings, fetchAvailability]);
 
   if (!user) {
     if (isSigningUp) {

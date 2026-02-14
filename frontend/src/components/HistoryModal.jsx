@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Clock, User, Hash, Trash2, AlertCircle } from 'lucide-react';
+import { api } from '../utils/api';
 
 const HistoryModal = ({ bookings, onClose, onSuccess }) => {
   const [filterMe, setFilterMe] = useState(false);
@@ -21,19 +22,14 @@ const HistoryModal = ({ bookings, onClose, onSuccess }) => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`http://localhost:4000/api/bookings/${bookingId}/cancel`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const res = await api.patch(`/bookings/${bookingId}/cancel`);
       if (res.ok) {
         onSuccess?.();
       } else {
         const data = await res.json();
         setError(data.error || 'Cancellation failed');
       }
-    } catch (err) {
+    } catch {
       setError('Connection error');
     } finally {
       setLoading(false);

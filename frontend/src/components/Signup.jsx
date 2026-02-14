@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, User, UserPlus, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { api } from '../utils/api';
 
 const Signup = ({ onSignupSuccess, onBackToLogin }) => {
   const [name, setName] = useState('');
@@ -15,11 +16,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password, role })
-      });
+      const res = await api.post('/auth/signup', { name, email, password, role });
       
       const data = await res.json();
       if (res.ok) {
@@ -27,7 +24,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
       } else {
         setError(data.error || 'Signup failed');
       }
-    } catch (err) {
+    } catch {
       setError('Connection to server failed');
     } finally {
       setLoading(false);

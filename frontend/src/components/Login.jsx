@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
+import { api } from '../utils/api';
 
 const Login = ({ onLogin, onShowSignup }) => {
   const [email, setEmail] = useState('');
@@ -13,11 +14,7 @@ const Login = ({ onLogin, onShowSignup }) => {
     setLoading(true);
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const res = await api.post('/auth/login', { email, password });
       
       const data = await res.json();
       if (res.ok && data.token) {
@@ -27,7 +24,7 @@ const Login = ({ onLogin, onShowSignup }) => {
       } else {
         setError(data.error || 'Invalid credentials');
       }
-    } catch (err) {
+    } catch {
       setError('Connection to server failed');
     } finally {
       setLoading(false);

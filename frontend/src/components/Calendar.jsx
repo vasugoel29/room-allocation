@@ -3,7 +3,7 @@ import { Filter } from 'lucide-react';
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
-function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
+function Calendar({ bookings, rooms, availability, onSlotClick }) {
   const getCurrentWeekDates = () => {
     const now = new Date();
     const currentDay = now.getDay() || 7;

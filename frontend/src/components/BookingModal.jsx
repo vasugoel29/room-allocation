@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { api } from '../utils/api';
 
 function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess }) {
   const [selectedRoom, setSelectedRoom] = useState('');
@@ -26,7 +27,6 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
   const selectedRoomData = rooms.find(r => String(r.id) === String(selectedRoom));
 
   const getRoomBooking = (roomId) => {
-    const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
     return bookings?.find(b => {
       const bStatus = b.status || 'ACTIVE';
       if (bStatus !== 'ACTIVE') return false;
@@ -47,19 +47,14 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
 
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/bookings/${booking.id}/cancel`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+      const res = await api.patch(`/bookings/${booking.id}/cancel`);
       if (res.ok) {
         onSuccess();
       } else {
         const data = await res.json();
         setError(data.error || 'Cancellation failed');
       }
-    } catch (err) {
+    } catch {
       setError('Connection error');
     } finally {
       setLoading(false);
@@ -84,22 +79,15 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
     endDate.setHours(slot.hour + 1);
     const end_time = endDate.toISOString();
 
-    const endpoint = isSemester ? 'http://localhost:4000/api/bookings/semester' : 'http://localhost:4000/api/bookings';
+    const endpoint = isSemester ? '/bookings/semester' : '/bookings';
 
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          room_id: selectedRoom,
-          start_time,
-          end_time,
-          purpose,
-          is_semester: isSemester
-        })
+      const res = await api.post(endpoint, {
+        room_id: selectedRoom,
+        start_time,
+        end_time,
+        purpose,
+        is_semester: isSemester
       });
 
       const data = await res.json();
@@ -108,7 +96,7 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
       } else {
         setError(data.error || 'Booking failed');
       }
-    } catch (err) {
+    } catch {
       setError('Connection error');
     } finally {
       setLoading(false);
