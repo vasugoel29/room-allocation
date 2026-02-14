@@ -6,6 +6,10 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "lint": "npm run lint --prefix frontend",
+    "test": "npm run test --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build": "npm run lint && npm run test && npm run build:frontend",
     "seed": "npm run seed --prefix backend",
     "unseed": "npm run unseed --prefix backend"
   },
