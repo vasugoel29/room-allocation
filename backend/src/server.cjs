@@ -97,7 +97,6 @@ app.get('/api/rooms', async (req, res) => {
   }
 
   try {
-    console.log('Fetching rooms with query:', query, 'params:', params);
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (err) {
@@ -211,12 +210,7 @@ app.post('/api/bookings', authenticate, requireRole('STUDENT_REP'), async (req, 
     );
 
     if (userConflict.rows.length > 0) {
-      logger.info('Conflict: User busy', { 
-        user_id: userId, 
-        start_time, 
-        conflicting_booking: userConflict.rows[0].id,
-        conflicting_status: userConflict.rows[0].status
-      });
+      logger.info('Conflict: User busy', { user_id: userId, start_time });
       await client.query('ROLLBACK');
       return res.status(409).json({ 
         error: `You already have another booking during this time in Room ${userConflict.rows[0].room_name}` 
@@ -225,7 +219,6 @@ app.post('/api/bookings', authenticate, requireRole('STUDENT_REP'), async (req, 
 
     const query = 'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose, is_semester_booking) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *';
     const values = [room_id, start_time, end_time, userId, purpose, is_semester];
-    console.log('Executing query:', query, 'with values:', values);
     const insertResult = await client.query(query, values);
 
     await client.query('COMMIT');
@@ -281,9 +274,9 @@ app.post('/api/bookings/semester', authenticate, requireRole('STUDENT_REP'), asy
         );
 
         if (userConflict.rows.length > 0) {
-          logger.info('Semester Conflict: User busy', { user_id: userId, week: i, start_time: currentStart.toISOString() });
+          logger.info('Semester Conflict: User busy', { user_id: userId, week: i });
           await client.query('ROLLBACK');
-          return res.status(409).json({ error: `User busy at week ${i+1} in Room ${userConflict.rows[0].room_name}. Semester booking failed.` });
+          return res.status(409).json({ error: `User busy at week ${i+1} in Room ${userConflict.rows[0].room_name}` });
         }
 
         await client.query(
