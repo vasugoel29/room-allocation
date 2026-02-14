@@ -11,6 +11,12 @@ const Login = ({ onLogin, onShowSignup }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!email.toLowerCase().endsWith('@nsut.ac.in')) {
+      setError('Only NSUT emails (@nsut.ac.in) are accepted');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -60,7 +66,7 @@ const Login = ({ onLogin, onShowSignup }) => {
             <input
               type="email"
               className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400"
-              placeholder="name@cras.edu"
+              placeholder="rollno@nsut.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
