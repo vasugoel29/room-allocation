@@ -9,12 +9,12 @@ The codebase is organized into a clean mono-repo style structure:
 ```text
 room-all/
 ├── backend/            # Express.js server & PostgreSQL logic
-│   ├── src/            # API routes and database controllers
-│   ├── sql/            # Database schema and seed scripts
-│   └── package.json    # Backend-specific dependencies
+│   ├── src/            # server.cjs, seed.cjs, unseed.cjs
+│   ├── sql/            # schema_v2.sql (Source of Truth)
+│   └── package.json    # Features nodemon for auto-reload
 ├── frontend/           # React + Vite application
-│   ├── src/            # UI components and CSS
-│   └── package.json    # Frontend-specific dependencies
+│   ├── src/            # App.jsx, components/, index.css
+│   └── package.json    # Vite configuration
 ├── docs/               # Technical requirements and PRD
 ├── docker-compose.yml  # PostgreSQL database container config
 └── package.json        # Root-level orchestration scripts
@@ -51,8 +51,9 @@ room-all/
 ## ✨ Core Features
 
 - **🔐 Robust Auth**: JWT-based authentication with a secure Signup/Login flow.
+- **🔍 Searchable Picker**: Debounced (300ms) room search in the booking modal.
 - **📅 Visual Calendar**: Real-time room schedule with "Booked by" owner visibility.
-- **📜 Booking History**: Unified view of all past and upcoming reservations.
+- **📜 Booking History**: Unified view of all past and upcoming reservations with direct cancellation.
 - **🛡️ Secure Transactions**: PostgreSQL atomic operations to prevent double-booking.
 - **🎨 Premium UI**: Modern dark theme using Tailwind CSS and glassmorphism effects.
 
