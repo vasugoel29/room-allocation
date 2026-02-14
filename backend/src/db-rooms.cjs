@@ -3,12 +3,8 @@
 const db = require('./db.cjs');
 
 async function getRooms() {
-  const result = await db.query('SELECT room_id, features FROM rooms');
-  const rooms = {};
-  for (const row of result.rows) {
-    rooms[row.room_id] = { features: row.features };
-  }
-  return rooms;
+  const result = await db.query('SELECT id, name, building, floor, capacity, has_ac, has_projector FROM rooms');
+  return result.rows;
 }
 
 async function getDays() {
@@ -46,16 +42,17 @@ async function getBookings() {
   return result.rows;
 }
 
-async function addBooking({ date, slot, roomId }) {
-  // Insert booking
+async function addBooking({ date, slot, roomId, createdBy, purpose, isSemester = false }) {
+  // Construct start/end time
+  const start = new Date(date);
+  start.setHours(parseInt(slot), 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(parseInt(slot) + 1, 0, 0, 0);
+
   const result = await db.query(
-    'INSERT INTO bookings (date, slot, room_id) VALUES ($1, $2, $3) RETURNING *',
-    [date, slot, roomId]
+    'INSERT INTO bookings (room_id, created_by, start_time, end_time, purpose, is_semester_booking) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+    [roomId, createdBy, start.toISOString(), end.toISOString(), purpose, isSemester]
   );
-  // Remove room from availability
-  const day = getDayFromDate(date);
-  const delRes = await db.query('DELETE FROM availability WHERE day = $1 AND slot = $2 AND room_id = $3 RETURNING room_id', [day, slot, roomId]);
-  console.log(`[db-rooms] addBooking: Removed from availability:`, delRes.rows);
   return result.rows[0];
 }
 

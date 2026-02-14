@@ -1,9 +1,29 @@
 import { Filter } from 'lucide-react';
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
 function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
+  const getCurrentWeekDates = () => {
+    const now = new Date();
+    const currentDay = now.getDay() || 7;
+    
+    // If today is Saturday (6) or Sunday (7/0), shift to next week (Monday)
+    const offset = currentDay >= 6 ? 7 : 0;
+    
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - currentDay + 1 + offset);
+    
+    return DAYS.map((day, i) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+      return { 
+        day, 
+        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        fullDate: date
+      };
+    });
+  };
   const getBooking = (day, hour, roomId) => {
     const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
     return bookings.find(b => {
@@ -15,14 +35,15 @@ function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto overflow-y-auto max-h-[calc(100vh-250px)]">
       <div className="min-w-[800px]">
         {/* Header */}
-        <div className="grid grid-cols-[100px_repeat(6,1fr)] border-b border-black/5">
-          <div className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Time</div>
-          {DAYS.map(day => (
-            <div key={day} className="p-4 text-center text-sm font-bold text-slate-800 border-l border-black/5">
-              {day}
+        <div className="grid grid-cols-[100px_repeat(5,1fr)] border-b border-black/5 bg-white/90 backdrop-blur-md sticky top-0 z-30 shadow-sm">
+          <div className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-center bg-slate-50/50">Time</div>
+          {getCurrentWeekDates().map(({ day, date }) => (
+            <div key={day} className="p-4 text-center border-l border-black/5 flex flex-col gap-0.5">
+              <span className="text-sm font-bold text-slate-800">{day}</span>
+              <span className="text-[10px] text-slate-400 font-medium">{date}</span>
             </div>
           ))}
         </div>
@@ -39,7 +60,7 @@ function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
             </div>
           ) : (
             HOURS.map(hour => (
-              <div key={hour} className="grid grid-cols-[100px_repeat(6,1fr)] group">
+              <div key={hour} className="grid grid-cols-[100px_repeat(5,1fr)] group">
                 <div className="p-4 text-xs font-medium text-slate-400 border-r border-black/5 flex items-center justify-center bg-black/[0.01]">
                   {hour}:00
                 </div>
@@ -47,7 +68,11 @@ function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
                   <div 
                     key={day} 
                     className="p-1 border-b border-l border-black/5 min-h-[64px] hover:bg-black/[0.01] transition-colors cursor-pointer relative"
-                    onClick={() => onSlotClick({ day, hour })}
+                    onClick={() => {
+                      const weekDates = getCurrentWeekDates();
+                      const dateObj = weekDates.find(d => d.day === day)?.fullDate;
+                      onSlotClick({ day, hour, date: dateObj });
+                    }}
                   >
                     <div className="flex flex-col gap-1">
                       {rooms
@@ -60,30 +85,24 @@ function Calendar({ bookings, rooms, availability, filters, onSlotClick }) {
                           const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                           return score(b) - score(a);
                         })
-                        .slice(0, 3).map(room => { 
+                        .slice(0, 2).map(room => { 
                           const booking = getBooking(day, hour, room.id);
-                          let bgColor = 'bg-white border-slate-200 text-slate-600 shadow-sm';
-                          let textColor = 'text-white';
-
-                          if (room.has_ac && room.has_projector) {
-                            bgColor = booking ? 'bg-violet-900 border-violet-950 shadow-inner' : 'bg-violet-500 border-violet-600';
-                          } else if (room.has_ac) {
-                            bgColor = booking ? 'bg-blue-900 border-blue-950 shadow-inner' : 'bg-blue-500 border-blue-600';
-                          } else if (room.has_projector) {
-                            bgColor = booking ? 'bg-amber-900 border-amber-950 shadow-inner' : 'bg-amber-500 border-amber-600';
-                          } else if (booking) {
-                            bgColor = 'bg-slate-800 border-slate-900 shadow-inner';
-                          } else {
-                            textColor = 'text-slate-600';
-                          }
+                          const bgColor = booking ? 'bg-slate-100 border-slate-200 text-slate-400 shadow-inner opacity-70' : 'bg-white border-slate-200 text-slate-600 shadow-sm';
+                          const textColor = booking ? 'text-slate-400' : 'text-slate-600';
 
                           return (
                             <div 
                               key={room.id} 
-                              className={`text-[9px] px-1.5 py-1 rounded-md border transition-all truncate hover:brightness-105 active:scale-95 ${bgColor} ${textColor} ${booking ? 'opacity-90' : 'font-medium'}`}
+                              className={`text-[9px] px-1.5 py-1 rounded-md border transition-all truncate hover:brightness-105 active:scale-95 ${bgColor} ${textColor} ${booking ? '' : 'font-medium'}`}
                             >
-                              <span className={booking ? 'font-normal italic' : 'font-bold'}>{room.name}</span>
-                              <span className="ml-1 opacity-90 text-[8px]">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={booking ? 'font-normal italic' : 'font-bold'}>{room.name}</span>
+                                <div className="flex gap-0.5 opacity-80">
+                                  {room.has_projector && <span>🎥</span>}
+                                  {room.has_ac && <span>❄️</span>}
+                                </div>
+                              </div>
+                              <span className="opacity-90 text-[8px]">
                                 {booking ? `(${booking.user_name})` : `(${room.capacity})`}
                               </span>
                             </div>

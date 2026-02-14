@@ -97,6 +97,8 @@ async function seed() {
     const freeSlotsRes = await pool.query('SELECT * FROM room_availability WHERE is_available = TRUE');
     const PURPOSES = ['Study Group', 'Project Collab', 'Club Activity', 'Mock Interview', 'Peer Reading'];
 
+    const usedUserSlots = new Set();
+
     for (const slot of freeSlotsRes.rows) {
       if (Math.random() < 0.25) { // 25% of truly free slots already booked by students
         const userId = userIds[Math.floor(Math.random() * userIds.length)];
@@ -109,6 +111,10 @@ async function seed() {
         start.setHours(slot.hour, 0, 0, 0);
         const end = new Date(targetDate);
         end.setHours(slot.hour + 1, 0, 0, 0);
+
+        const slotKey = `${userId}-${start.toISOString()}`;
+        if (usedUserSlots.has(slotKey)) continue;
+        usedUserSlots.add(slotKey);
 
         await pool.query(
           'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose) VALUES ($1, $2, $3, $4, $5)',

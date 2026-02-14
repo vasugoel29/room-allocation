@@ -5,7 +5,7 @@ import BookingModal from './components/BookingModal';
 import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
-import { LogOut, Calendar as CalendarIcon, History } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon } from 'lucide-react';
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -20,6 +20,7 @@ function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -96,12 +97,25 @@ function App() {
   }
 
   return (
-    <div className="h-screen bg-bg-primary text-text-primary flex overflow-hidden">
+    <div className="h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
+      {/* Sidebar Overlay for Mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-72 glass border-r border-black/5 p-6 flex flex-col gap-8">
-        <div className="flex items-center gap-3 text-indigo-600">
-          <CalendarIcon size={32} />
-          <h1 className="text-xl font-bold tracking-tight text-slate-900">CRAS</h1>
+      <aside className={`fixed inset-y-0 left-0 w-72 glass border-r border-black/5 p-6 flex flex-col gap-8 z-50 transition-transform duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center justify-between text-indigo-600">
+          <div className="flex items-center gap-3">
+            <CalendarIcon size={32} />
+            <h1 className="text-xl font-bold tracking-tight text-slate-900">CRAS</h1>
+          </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="p-2 lg:hidden text-slate-400 hover:text-slate-900">
+             <CloseIcon size={24} />
+          </button>
         </div>
 
         <RoomFilter filters={filters} setFilters={setFilters} />
@@ -120,24 +134,32 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 overflow-hidden flex flex-col">
+      <main className="flex-1 p-4 lg:p-6 overflow-y-auto flex flex-col w-full">
         <header className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-0.5">Room Schedule</h2>
-            <p className="text-slate-500 text-xs">Manage and book campus rooms in real-time.</p>
+          <div className="flex items-center gap-4">
+            <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 lg:hidden bg-white border border-black/5 rounded-xl text-slate-600 shadow-sm"
+            >
+                <Menu size={24} />
+            </button>
+            <div>
+              <h2 className="text-xl lg:text-2xl font-bold text-slate-900 mb-0.5">Room Schedule</h2>
+              <p className="text-slate-500 text-[10px] lg:text-xs">Manage and book campus rooms in real-time.</p>
+            </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-2 lg:gap-4">
              <button 
               onClick={() => setIsHistoryOpen(true)}
               className="flex items-center gap-2 px-3 py-1.5 bg-black/5 hover:bg-black/10 border border-black/5 rounded-xl text-xs font-medium transition-all"
              >
                <History size={16} />
-               History
+               <span className="hidden sm:inline">History</span>
              </button>
           </div>
         </header>
 
-        <section className="glass rounded-2xl p-4 shadow-lg overflow-hidden flex-1">
+        <section className="glass rounded-2xl p-4 shadow-lg flex-1">
           <Calendar 
             bookings={bookings} 
             rooms={rooms} 
@@ -169,6 +191,7 @@ function App() {
         <HistoryModal 
           bookings={bookings} 
           onClose={() => setIsHistoryOpen(false)} 
+          onSuccess={fetchBookings}
         />
       )}
     </div>
