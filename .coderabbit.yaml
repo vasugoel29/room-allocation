@@ -1,10 +1,11 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # CodeRabbit Configuration
 # Documentation: https://docs.coderabbit.ai/
 
 language: en-US
 
 reviews:
-  profile: chill
+  profile: assertive
   request_changes_workflow: false
   high_level_summary: true
   collapse_walkthrough: false
@@ -17,16 +18,16 @@ reviews:
       - "backend/server.log"
       - "package-lock.json"
       - ".gemini/**"
+      
+  instructions: >
+    This project is a Room Allocation System using a unified ES Modules (ESM) architecture.
+    
+    Key architectural patterns to enforce:
+    1. Backend logic must be modularized into services (backend/src/services) and middlewares (backend/src/middleware).
+    2. Database transactions must be atomic and handled via the postgres client in the service layer.
+    3. Frontend API calls must use the centralized utility in `frontend/src/utils/api.js`.
+    4. Ensure all new files follow the ESM (.js) standard with proper named/default exports.
+    5. Check for proper error handling and JSON logging consistency using the backend logger utility.
 
 chat:
   enabled: true
-
-instructions: >
-  This project is a Room Allocation System using a unified ES Modules (ESM) architecture.
-  
-  Key architectural patterns to enforce:
-  1. Backend logic must be modularized into services (backend/src/services) and middlewares (backend/src/middleware).
-  2. Database transactions must be atomic and handled via the postgres client in the service layer.
-  3. Frontend API calls must use the centralized utility in `frontend/src/utils/api.js`.
-  4. Ensure all new files follow the ESM (.js) standard with proper named/default exports.
-  5. Check for proper error handling and JSON logging consistency using the backend logger utility.
