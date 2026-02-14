@@ -1,7 +1,7 @@
-const request = require('supertest');
-const app = require('../src/server.cjs');
-const db = require('../src/db.cjs');
-const jwt = require('jsonwebtoken');
+import request from 'supertest';
+import app from '../src/server.js';
+import * as db from '../src/db.js';
+import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = 'your_jwt_secret';
 let token;

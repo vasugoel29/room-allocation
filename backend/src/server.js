@@ -1,14 +1,14 @@
-const express = require('express');
-const cors = require('cors');
-const bodyParser = require('body-parser');
-const db = require('./db.cjs');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+import * as db from './db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Modular Imports
-const logger = require('./utils/logger.cjs');
-const { authenticate, requireRole, JWT_SECRET } = require('./middleware/auth.cjs');
-const bookingService = require('./services/bookingService.cjs');
+import logger from './utils/logger.js';
+import { authenticate, requireRole, JWT_SECRET } from './middleware/auth.js';
+import * as bookingService from './services/bookingService.js';
 
 const app = express();
 app.use(cors());
@@ -215,4 +215,4 @@ app.patch('/api/bookings/:id', authenticate, requireRole('STUDENT_REP'), async (
 
 if (process.env.NODE_ENV !== 'test') { app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); }
 
-module.exports = app;
+export default app;

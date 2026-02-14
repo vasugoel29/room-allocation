@@ -5,4 +5,4 @@ const logger = {
   warn: (action, data) => console.warn(JSON.stringify({ timestamp: new Date(), level: 'WARN', action, ...data }))
 };
 
-module.exports = logger;
+export default logger;

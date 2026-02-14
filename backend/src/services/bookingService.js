@@ -1,4 +1,4 @@
-const logger = require('../utils/logger.cjs');
+import logger from '../utils/logger.js';
 
 /**
  * Handles the logic for creating a single booking
@@ -91,7 +91,7 @@ async function createSemesterBooking(client, { room_id, start_time, end_time, pu
   return { data: { status: 'Success', message: 'Semester booking confirmed for 15 weeks' }, status: 201 };
 }
 
-module.exports = {
+export {
   createBooking,
   createSemesterBooking
 };

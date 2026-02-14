@@ -1,8 +1,9 @@
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = 'your_jwt_secret';
+import jwt from 'jsonwebtoken';
+
+export const JWT_SECRET = 'your_jwt_secret';
 
 // Middleware to check JWT and role
-function authenticate(req, res, next) {
+export function authenticate(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing or invalid token' });
@@ -17,7 +18,7 @@ function authenticate(req, res, next) {
   }
 }
 
-function requireRole(role) {
+export function requireRole(role) {
   return (req, res, next) => {
     // STUDENT_REP handles everything for now
     if (req.user.role !== role && req.user.role !== 'STUDENT_REP') { 
@@ -26,9 +27,3 @@ function requireRole(role) {
     next();
   };
 }
-
-module.exports = {
-  authenticate,
-  requireRole,
-  JWT_SECRET
-};

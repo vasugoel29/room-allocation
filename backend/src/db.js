@@ -1,6 +1,7 @@
-// db.cjs
+// db.js
 // Handles PostgreSQL connection using node-postgres (pg)
-const { Pool } = require('pg');
+import pkg from 'pg';
+const { Pool } = pkg;
 
 const pool = new Pool({
   user: 'roomuser',
@@ -10,7 +11,5 @@ const pool = new Pool({
   port: 5432,
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool,
-};
+export const query = (text, params) => pool.query(text, params);
+export { pool };
