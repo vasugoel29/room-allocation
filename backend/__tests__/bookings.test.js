@@ -37,7 +37,6 @@ afterAll(async () => {
   await db.pool.end();
 });
 
-
 describe('Booking Constraints', () => {
   test('Should reject backdated booking', async () => {
     const pastDate = new Date();

@@ -18,6 +18,9 @@ const PORT = 4000;
 
 app.get('/', (req, res) => res.json({ status: 'ok', version: '1.2 (Refactored)' }));
 
+// Lightweight health check endpoint
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
+
 // --- Auth Routes ---
 app.post('/api/auth/signup', async (req, res) => {
   const { name, email, password, role } = req.body;

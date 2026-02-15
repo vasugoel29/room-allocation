@@ -88,10 +88,12 @@ function App() {
   }, [user, fetchBookings, fetchAvailability]);
 
   useEffect(() => {
+    if (user) return; // Skip if already logged in (authenticated fetches will handle it)
+
     const checkConnection = async () => {
       try {
-        const res = await api.get('/rooms');
-        if (!res.ok && res.status !== 401) throw new Error('Backend unresponsive');
+        const res = await api.get('/health');
+        if (!res.ok) throw new Error('Backend unresponsive');
         setBackendError(null);
       } catch (err) {
         console.error('Backend connection check failed:', err);
@@ -99,7 +101,7 @@ function App() {
       }
     };
     checkConnection();
-  }, []);
+  }, [user]);
 
   if (backendError) {
     return (
@@ -109,6 +111,7 @@ function App() {
           <h2 className="text-2xl font-bold text-slate-900">Connection Error</h2>
           <p className="text-slate-600">{backendError}</p>
           <button 
+            type="button"
             onClick={() => window.location.reload()} 
             className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"
           >

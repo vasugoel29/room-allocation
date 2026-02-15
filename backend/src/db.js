@@ -9,6 +9,7 @@ const pool = new Pool({
   database: 'roomdb',
   password: 'roompass',
   port: 5432,
+  connectionTimeoutMillis: 5000, // Terminate connection attempt after 5 seconds
 });
 
 export const query = (text, params) => pool.query(text, params);
