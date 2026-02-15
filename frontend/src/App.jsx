@@ -28,6 +28,7 @@ function App() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [backendError, setBackendError] = useState(null);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
@@ -85,6 +86,38 @@ function App() {
       fetchAvailability();
     }
   }, [user, fetchBookings, fetchAvailability]);
+
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const res = await api.get('/rooms');
+        if (!res.ok && res.status !== 401) throw new Error('Backend unresponsive');
+        setBackendError(null);
+      } catch (err) {
+        console.error('Backend connection check failed:', err);
+        setBackendError('Cannot connect to server. Please ensure the backend is running.');
+      }
+    };
+    checkConnection();
+  }, []);
+
+  if (backendError) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bg-primary p-4">
+        <div className="glass p-8 rounded-3xl max-w-md text-center space-y-4 border border-red-100">
+          <div className="text-red-500 text-4xl mb-4">⚠️</div>
+          <h2 className="text-2xl font-bold text-slate-900">Connection Error</h2>
+          <p className="text-slate-600">{backendError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     if (isSigningUp) {

@@ -13,15 +13,26 @@ const pool = new Pool({
 
 export const query = (text, params) => pool.query(text, params);
 
-// Connection test
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('Error acquiring client', err.stack);
-  } else {
+/**
+ * Tests the database connection and logs the result
+ */
+export async function testDbConnection() {
+  try {
+    const client = await pool.connect();
     console.log('Database connected successfully');
-    release();
+    client.release();
+    return true;
+  } catch (err) {
+    console.error('Database connection failed:', err.stack);
+    return false;
   }
-});
+}
+
+// Auto-check on import (opt-in/guarded)
+if (process.env.NODE_ENV !== 'test') {
+  testDbConnection();
+}
 
 export { pool };
+
 

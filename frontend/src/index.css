@@ -1,15 +1,17 @@
 @import "tailwindcss";
+@source "./**/*.{js,jsx,ts,tsx}";
+@source "../index.html";
 
-:root {
-  --bg-primary: #f8fafc;
-  --bg-secondary: #ffffff;
-  --accent: #6366f1;
-  --accent-hover: #4f46e5;
-  --text-primary: #0f172a;
-  --text-secondary: #64748b;
-  --border: rgba(0, 0, 0, 0.05);
-  --success: #10b981;
-  --error: #ef4444;
+@theme {
+  --color-bg-primary: #f8fafc;
+  --color-bg-secondary: #ffffff;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-border: rgba(0, 0, 0, 0.05);
+  --color-success: #10b981;
+  --color-error: #ef4444;
 }
 
 body {
