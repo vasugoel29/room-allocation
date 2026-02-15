@@ -10,12 +10,18 @@ import { api } from './utils/api';
 
 function App() {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved && saved !== 'undefined' ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('user');
+      return saved && saved !== 'undefined' ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error('Error parsing user from localStorage:', e);
+      return null;
+    }
   });
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
+
   const [filters, setFilters] = useState({ capacity: '', ac: false, projector: false });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
