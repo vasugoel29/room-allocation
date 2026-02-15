@@ -18,14 +18,17 @@ export const query = (text, params) => pool.query(text, params);
  * Tests the database connection and logs the result
  */
 export async function testDbConnection() {
+  let client;
   try {
-    const client = await pool.connect();
+    client = await pool.connect();
+    await client.query('SELECT 1'); // Validate full query path
     console.log('Database connected successfully');
-    client.release();
     return true;
   } catch (err) {
-    console.error('Database connection failed:', err.stack);
+    console.error('Database connection failed:', err);
     return false;
+  } finally {
+    if (client) client.release();
   }
 }
 

@@ -88,8 +88,6 @@ function App() {
   }, [user, fetchBookings, fetchAvailability]);
 
   useEffect(() => {
-    if (user) return; // Skip if already logged in (authenticated fetches will handle it)
-
     const checkConnection = async () => {
       try {
         const res = await api.get('/health');
@@ -100,8 +98,13 @@ function App() {
         setBackendError('Cannot connect to server. Please ensure the backend is running.');
       }
     };
+
     checkConnection();
-  }, [user]);
+    
+    // Poll every 30 seconds to monitor backend health
+    const interval = setInterval(checkConnection, 30000);
+    return () => clearInterval(interval);
+  }, []); // Run regardless of user state
 
   if (backendError) {
     return (

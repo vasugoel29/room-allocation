@@ -18,8 +18,16 @@ const PORT = 4000;
 
 app.get('/', (req, res) => res.json({ status: 'ok', version: '1.2 (Refactored)' }));
 
-// Lightweight health check endpoint
-app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok' }));
+// Lightweight health check endpoint with database verification
+app.get('/api/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.status(200).json({ status: 'ok', db: 'connected' });
+  } catch (err) {
+    console.error('Health check failed (DB):', err);
+    res.status(503).json({ status: 'error', db: 'disconnected' });
+  }
+});
 
 // --- Auth Routes ---
 app.post('/api/auth/signup', async (req, res) => {
