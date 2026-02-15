@@ -29,6 +29,7 @@ function App() {
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [backendError, setBackendError] = useState(null);
+  const prevBackendError = React.useRef(null);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
@@ -92,10 +93,22 @@ function App() {
       try {
         const res = await api.get('/health');
         if (!res.ok) throw new Error('Backend unresponsive');
+        
+        // Transition from error to healthy
+        if (prevBackendError.current && user) {
+          console.log('Backend recovered! Refreshing data...');
+          fetchRooms();
+          fetchBookings();
+          fetchAvailability();
+        }
+        
         setBackendError(null);
+        prevBackendError.current = null;
       } catch (err) {
         console.error('Backend connection check failed:', err);
-        setBackendError('Cannot connect to server. Please ensure the backend is running.');
+        const errMsg = 'Cannot connect to server. Please ensure the backend is running.';
+        setBackendError(errMsg);
+        prevBackendError.current = errMsg;
       }
     };
 
@@ -104,7 +117,7 @@ function App() {
     // Poll every 30 seconds to monitor backend health
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
-  }, []); // Run regardless of user state
+  }, [user, fetchRooms, fetchBookings, fetchAvailability]); // Include dependencies for recovery logic
 
   if (backendError) {
     return (

@@ -1,6 +1,5 @@
-// db.js
-// Handles PostgreSQL connection using node-postgres (pg)
 import pkg from 'pg';
+import logger from './utils/logger.js';
 const { Pool } = pkg;
 
 const pool = new Pool({
@@ -34,7 +33,18 @@ export async function testDbConnection() {
 
 // Auto-check on import (opt-in/guarded)
 if (process.env.NODE_ENV !== 'test') {
-  testDbConnection();
+  (async () => {
+    try {
+      const isConnected = await testDbConnection();
+      if (!isConnected) {
+        logger.error('Startup failed: Database connection could not be established', new Error('Database connection failed'));
+        process.exit(1);
+      }
+    } catch (err) {
+      logger.error('Startup failed: Error during database connection test', err);
+      process.exit(1);
+    }
+  })();
 }
 
 export { pool };

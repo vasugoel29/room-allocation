@@ -1,9 +1,10 @@
 import React from "react";
 
-const ErrorFallback = ({ onReset }) => (
+const ErrorFallback = ({ error, onReset }) => (
   <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
     <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Something went wrong.</h1>
-    <p style={{ color: '#64748b', marginBottom: '2rem' }}>Please try resetting or refreshing the page.</p>
+    <p style={{ color: '#ef4444', marginBottom: '0.5rem', fontWeight: 'bold' }}>Error Details:</p>
+    <p style={{ color: '#64748b', marginBottom: '2rem', fontStyle: 'italic' }}>{error?.message || 'Unknown error'}</p>
     <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
       <button 
         type="button"
@@ -42,11 +43,13 @@ const ErrorFallback = ({ onReset }) => (
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null, resetKey: 0 };
     this.resetErrorBoundary = this.resetErrorBoundary.bind(this);
   }
 
-  static getDerivedStateFromError() { return { hasError: true }; }
+  static getDerivedStateFromError(error) { 
+    return { hasError: true, error }; 
+  }
 
   componentDidCatch(error, errorInfo) {
     const isDev = import.meta.env.DEV;
@@ -66,14 +69,30 @@ class ErrorBoundary extends React.Component {
   }
 
   resetErrorBoundary() {
-    this.setState({ hasError: false });
+    if (this.props.onReset) {
+      this.props.onReset();
+    }
+    this.setState(prev => ({ 
+      hasError: false, 
+      error: null, 
+      resetKey: prev.resetKey + 1 
+    }));
   }
 
   render() {
     if (this.state.hasError) {
-      return <ErrorFallback onReset={this.resetErrorBoundary} />;
+      return (
+        <ErrorFallback 
+          error={this.state.error} 
+          onReset={this.resetErrorBoundary} 
+        />
+      );
     }
-    return this.props.children;
+    return (
+      <React.Fragment key={this.state.resetKey}>
+        {this.props.children}
+      </React.Fragment>
+    );
   }
 }
 
