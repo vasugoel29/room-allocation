@@ -213,6 +213,22 @@ app.patch('/api/bookings/:id', authenticate, requireRole('STUDENT_REP'), async (
   }
 });
 
-if (process.env.NODE_ENV !== 'test') { app.listen(PORT, () => console.log(`Server running on port ${PORT}`)); }
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception thrown:', err);
+  process.exit(1);
+});
+
+if (process.env.NODE_ENV !== 'test') { 
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  }).on('error', (err) => {
+    console.error('Server failed to start:', err);
+  });
+}
+
 
 export default app;

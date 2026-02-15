@@ -12,4 +12,16 @@ const pool = new Pool({
 });
 
 export const query = (text, params) => pool.query(text, params);
+
+// Connection test
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('Error acquiring client', err.stack);
+  } else {
+    console.log('Database connected successfully');
+    release();
+  }
+});
+
 export { pool };
+
