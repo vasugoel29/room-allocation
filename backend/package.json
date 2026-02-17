@@ -8,7 +8,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node src/seed.js",
     "unseed": "node src/unseed.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

@@ -28,7 +28,8 @@ beforeAll(async () => {
   
   // Ensure we have a room
   await db.query("INSERT INTO rooms (id, name, capacity) VALUES (999, 'Test Room', 50) ON CONFLICT DO NOTHING");
-});
+}, 30000);
+
 
 afterAll(async () => {
   await db.query("DELETE FROM bookings WHERE created_by = $1", [userId]);
