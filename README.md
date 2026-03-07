@@ -64,6 +64,15 @@ The root repository includes a unified pipeline for quality control and deployme
   npm run test
   ```
 
+## 🌍 Free Deployment
+
+CRAS is architected to be deployed entirely for free using generous cloud tiers:
+- **Database**: [Neon.tech](https://neon.tech/) (Free Serverless PostgreSQL)
+- **Backend API**: [Render.com](https://render.com/) (Free Node Web Service)
+- **Frontend App**: [Vercel](https://vercel.com/) (Free Static Hosting)
+
+Please see the [Deployment Guide](./deployment_guide.md) for step-by-step instructions on hooking these services up securely.
+
 ## ✨ Core Features
 
 - **🔐 Robust Auth**: JWT-based authentication with a secure Signup/Login flow.
