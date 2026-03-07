@@ -132,7 +132,7 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                         onSlotClick({ day, hour, date: dateObj });
                       }}
                     >
-                      <div className="flex flex-col gap-2 p-1 h-full overflow-hidden">
+                      <div className={`gap-2 p-1 h-full overflow-hidden ${viewMode === 'day' ? 'grid grid-cols-3' : 'flex flex-col'}`}>
                           {rooms
                           .filter(room => {
                             const avNode = availability?.find(a => a.room_id === room.id && a.day === day && a.hour === hour);
@@ -149,7 +149,7 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                             const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                             return score(b) - score(a);
                           })
-                          .slice(0, 2).map(room => { 
+                          .slice(0, viewMode === 'day' ? 6 : 2).map(room => { 
                             const booking = getBooking(day, hour, room.id);
                             return (
                               <div 
