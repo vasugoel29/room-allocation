@@ -19,7 +19,7 @@ async function seed() {
   console.log('Starting Real Data Seeding (from scraper JSON)...');
   
   try {
-    const dataPath = path.join(__dirname, '..', 'rooms_complete_data.json');
+    const dataPath = path.join(__dirname, '..', '..', 'rooms_complete_data_updated.json');
     if (!fs.existsSync(dataPath)) {
       console.error('Data file not found at:', dataPath);
       return;
@@ -51,10 +51,13 @@ async function seed() {
       // Floor is the second digit of the name (e.g. 50xx -> Floor 0, 51xx -> Floor 1)
       const floor = parseInt(roomName.charAt(1)) || 0;
       
-      // Assign realistic random attributes since JSON doesn't have them
-      const capacity = [30, 40, 60, 80, 100, 120][Math.floor(Math.random() * 6)];
-      const hasAc = Math.random() < 0.4;
-      const hasProjector = Math.random() < 0.7;
+      const metadata = roomObj.metadata || {};
+      const hasAc = metadata.has_ac ?? false;
+      const hasProjector = metadata.has_projector ?? false;
+      const size = metadata.size || 'standard';
+      
+      // Assign capacity based on size
+      const capacity = size === 'small' ? 20 : [40, 60, 80, 100, 120][Math.floor(Math.random() * 5)];
       
       const newRoom = await pool.query(
         'INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
