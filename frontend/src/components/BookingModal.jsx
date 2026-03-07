@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { X, CheckCircle, AlertCircle, Wind, Monitor } from 'lucide-react';
 import { api } from '../utils/api';
+import { AppContext } from '../context/AppContext';
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
-function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess }) {
+function BookingModal({ slot, onClose, onSuccess }) {
+  const { rooms, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
   const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || '');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
@@ -74,6 +76,9 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
     try {
       const res = await api.patch(`/bookings/${booking.id}/cancel`);
       if (res.ok) {
+        fetchRooms();
+        fetchBookings();
+        fetchAvailability();
         onSuccess();
       } else {
         const data = await res.json();
@@ -121,6 +126,9 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
 
       const data = await res.json();
       if (res.ok) {
+        fetchRooms();
+        fetchBookings();
+        fetchAvailability();
         onSuccess();
       } else {
         setError(data.error || 'Booking failed');
@@ -193,7 +201,6 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                         })
                         .map(room => {
                           const booking = getRoomBooking(room.id);
-                          const facilities = [room.has_projector ? '🎥' : '', room.has_ac ? '❄️' : ''].filter(Boolean).join(' ');
                           const isSelected = String(selectedRoom) === String(room.id);
                           
                           return (

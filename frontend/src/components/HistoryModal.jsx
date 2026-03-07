@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { X, Clock, User, Hash, Trash2, AlertCircle } from 'lucide-react';
 import { api } from '../utils/api';
+import { AppContext } from '../context/AppContext';
 
-const HistoryModal = ({ bookings, onClose, onSuccess }) => {
-  const user = JSON.parse(localStorage.getItem('user'));
+const HistoryModal = ({ onClose }) => {
+  const { user, bookings, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
   const [filterMe, setFilterMe] = useState(user?.role !== 'admin');
   const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST
   const [loading, setLoading] = useState(false);
@@ -58,7 +59,9 @@ const HistoryModal = ({ bookings, onClose, onSuccess }) => {
     try {
       const res = await api.patch(`/bookings/${bookingId}/cancel`);
       if (res.ok) {
-        onSuccess?.();
+        fetchRooms();
+        fetchBookings();
+        fetchAvailability();
       } else {
         const data = await res.json();
         setError(data.error || 'Cancellation failed');
@@ -180,7 +183,7 @@ const HistoryModal = ({ bookings, onClose, onSuccess }) => {
                         {booking.purpose || 'No purpose'}
                       </td>
                       <td className="py-4 px-4 text-right">
-                        {String(booking.created_by) === String(user?.id) && (
+                        {String(booking.created_by) === String(user?.id) && (booking.status || 'ACTIVE') === 'ACTIVE' && new Date(booking.end_time) > now && (
                           <button 
                             onClick={() => handleCancel(booking.id)}
                             disabled={loading}

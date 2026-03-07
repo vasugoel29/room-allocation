@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useContext } from 'react';
 import Calendar from './components/Calendar';
 import RoomFilter from './components/RoomFilter';
 import BookingModal from './components/BookingModal';
@@ -6,146 +6,16 @@ import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
-import { api } from './utils/api';
+import { AppContext } from './context/AppContext';
 
 function App() {
-  const [user, setUser] = useState(() => {
-    try {
-      const saved = localStorage.getItem('user');
-      return saved && saved !== 'undefined' ? JSON.parse(saved) : null;
-    } catch (e) {
-      console.error('Error parsing user from localStorage:', e);
-      return null;
-    }
-  });
-  const [rooms, setRooms] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [availability, setAvailability] = useState([]);
-
-  const [filters, setFilters] = useState({ ac: false, projector: false });
+  const { user, theme, setTheme, viewMode, setViewMode, backendError, handleLogout } = useContext(AppContext);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
-  // New States
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
-  const [viewMode, setViewMode] = useState('week'); // 'week' | 'day'
-  
-  const initialDay = useMemo(() => {
-    const now = new Date();
-    const day = now.getDay(); // 0 (Sun) - 6 (Sat)
-    const hour = now.getHours();
-    
-    // Days mapping: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
-    // We only use Mon-Fri in our DAYS array
-    const DAYS_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    
-    if (day === 0 || day === 6) return 'Mon'; // Weekend -> Monday
-    if (hour >= 18) { // After 6 PM
-        if (day === 5) return 'Mon'; // Friday night -> Monday
-        return DAYS_ORDER[day]; // day=1 (Mon) -> Mon is 0, Tue is 1. so day=1 -> next is Tue (index 1)
-    }
-    return DAYS_ORDER[day - 1]; // Before 6 PM on weekday
-  }, []);
-
-  const [selectedDay, setSelectedDay] = useState(initialDay);
-  const [backendError, setBackendError] = useState(null);
-  const prevBackendError = React.useRef(null);
-
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-  }, []);
-
-  const fetchRooms = useCallback(async () => {
-    try {
-      const query = new URLSearchParams(filters).toString();
-      const res = await api.get(`/rooms?${query}`);
-      if (res.status === 401) return handleLogout();
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setRooms(data);
-      } else {
-        console.error('Expected array of rooms, got:', data);
-      }
-    } catch (err) {
-      console.error('Fetch rooms failed', err);
-    }
-  }, [filters, handleLogout]);
-
-  const fetchBookings = useCallback(async () => {
-    try {
-      const res = await api.get('/bookings');
-      if (res.status === 401) return handleLogout();
-      const data = await res.json();
-      setBookings(data);
-    } catch (err) {
-      console.error('Fetch bookings failed', err);
-    }
-  }, [handleLogout]);
-
-  const fetchAvailability = useCallback(async () => {
-    try {
-      const res = await api.get('/availability');
-      if (res.status === 401) return handleLogout();
-      const data = await res.json();
-      setAvailability(data);
-    } catch (err) {
-      console.error('Fetch availability failed', err);
-    }
-  }, [handleLogout]);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    if (user) {
-      fetchRooms();
-    }
-  }, [user, fetchRooms]);
-
-  useEffect(() => {
-    if (user) {
-      fetchBookings();
-      fetchAvailability();
-    }
-  }, [user, fetchBookings, fetchAvailability]);
-
-  useEffect(() => {
-    const checkConnection = async () => {
-      try {
-        const res = await api.get('/health');
-        if (!res.ok) throw new Error('Backend unresponsive');
-        
-        // Transition from error to healthy
-        if (prevBackendError.current && user) {
-          console.log('Backend recovered! Refreshing data...');
-          fetchRooms();
-          fetchBookings();
-          fetchAvailability();
-        }
-        
-        setBackendError(null);
-        prevBackendError.current = null;
-      } catch (err) {
-        console.error('Backend connection check failed:', err);
-        const errMsg = 'Cannot connect to server. Please ensure the backend is running.';
-        setBackendError(errMsg);
-        prevBackendError.current = errMsg;
-      }
-    };
-
-    checkConnection();
-    
-    // Poll every 30 seconds to monitor backend health
-    const interval = setInterval(checkConnection, 30000);
-    return () => clearInterval(interval);
-  }, [user, fetchRooms, fetchBookings, fetchAvailability]); // Include dependencies for recovery logic
 
   if (backendError) {
     return (
@@ -177,7 +47,6 @@ function App() {
     }
     return (
       <Login 
-        onLogin={(userData) => setUser(userData)} 
         onShowSignup={() => setIsSigningUp(true)} 
       />
     );
@@ -205,7 +74,7 @@ function App() {
           </button>
         </div>
 
-        <RoomFilter filters={filters} setFilters={setFilters} />
+        <RoomFilter />
 
         <div className="mt-auto pt-6 border-t border-black/5">
           <div className="flex items-center justify-between">
@@ -271,13 +140,6 @@ function App() {
 
         <section className="glass rounded-2xl p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
           <Calendar 
-            bookings={bookings} 
-            rooms={rooms} 
-            availability={availability}
-            filters={filters}
-            viewMode={viewMode}
-            selectedDay={selectedDay}
-            onDayChange={setSelectedDay}
             onSlotClick={(slot) => {
               setSelectedSlot(slot);
               setIsModalOpen(true);
@@ -289,24 +151,16 @@ function App() {
       {isModalOpen && (
         <BookingModal 
           slot={selectedSlot} 
-          rooms={rooms} 
-          bookings={bookings}
-          availability={availability}
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
-            fetchRooms(); // Prevent hard refresh requirement for new rooms
-            fetchBookings();
-            fetchAvailability();
           }}
         />
       )}
 
       {isHistoryOpen && (
         <HistoryModal 
-          bookings={bookings} 
           onClose={() => setIsHistoryOpen(false)} 
-          onSuccess={fetchBookings}
         />
       )}
     </div>

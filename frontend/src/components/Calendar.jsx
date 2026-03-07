@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Filter, Wind, Monitor } from 'lucide-react';
+import { AppContext } from '../context/AppContext';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
-function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayChange, onSlotClick }) {
+function Calendar({ onSlotClick }) {
+  const { bookings, rooms, availability, viewMode, selectedDay, setSelectedDay } = useContext(AppContext);
+  const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -38,24 +41,30 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
     return DAYS.map((day, i) => {
       const date = new Date(monday);
       date.setDate(monday.getDate() + i);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const dayNum = String(date.getDate()).padStart(2, '0');
       return { 
         day, 
         date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        fullDate: date
+        fullDate: date,
+        dateStr: `${year}-${month}-${dayNum}`
       };
     });
   };
 
   const weekDates = getCurrentWeekDates();
-  const displayDays = viewMode === 'day' ? [selectedDay] : DAYS;
+  const displayDays = viewMode === 'day' ? [selectedDay] : weekDates.map(d => d.dateStr);
 
-  const getBooking = (day, hour, roomId) => {
-    const dayMap = { 'Sun': 0, 'Mon': 1, 'Tue': 2, 'Wed': 3, 'Thu': 4, 'Fri': 5, 'Sat': 6 };
+  const getBooking = (dateStr, hour, roomId) => {
     return bookings.find(b => {
       const bStart = new Date(b.start_time);
-      const bDayIndex = bStart.getDay();
+      const bYear = bStart.getFullYear();
+      const bMonth = String(bStart.getMonth() + 1).padStart(2, '0');
+      const bDate = String(bStart.getDate()).padStart(2, '0');
+      const bLocalStr = `${bYear}-${bMonth}-${bDate}`;
       const bHour = bStart.getHours();
-      return bDayIndex === dayMap[day] && bHour === hour && b.room_id === roomId;
+      return bLocalStr === dateStr && bHour === hour && b.room_id === roomId;
     });
   };
 
@@ -63,11 +72,11 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
     <div className="flex flex-col flex-1 overflow-hidden w-full relative">
       {viewMode === 'day' && (
         <div className="flex gap-2 p-2 mb-2 bg-black/5 rounded-xl self-center">
-          {DAYS.map(day => (
+          {weekDates.map(({ day, dateStr }) => (
             <button
-              key={day}
-              onClick={() => onDayChange(day)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedDay === day ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:bg-bg-secondary/50'}`}
+              key={dateStr}
+              onClick={() => onDayChange(dateStr)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedDay === dateStr ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:bg-bg-secondary/50'}`}
             >
               {day}
             </button>
@@ -80,8 +89,8 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
           {/* Header */}
           <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm ${viewMode === 'day' ? 'grid-cols-[120px_1fr]' : 'grid-cols-[120px_repeat(5,1fr)]'}`}>
             <div className="p-4 text-base font-bold text-text-secondary uppercase tracking-widest flex items-center justify-center bg-bg-primary/50">Time</div>
-            {weekDates.filter(d => displayDays.includes(d.day)).map(({ day, date }) => (
-              <div key={day} className="p-4 text-center border-l border-border flex flex-col gap-1">
+            {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
+              <div key={dateStr} className="p-4 text-center border-l border-border flex flex-col gap-1">
                 <span className="text-2xl font-black text-text-primary uppercase tracking-tighter">{day}</span>
                 <span className="text-sm text-text-secondary font-bold">{date}</span>
               </div>
@@ -123,24 +132,28 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                   <div className="p-4 text-lg font-black text-text-secondary uppercase border-r border-border flex items-center justify-center bg-bg-primary/10">
                     {hour}:00
                   </div>
-                  {displayDays.map(day => (
+                  {displayDays.map(dateStr => {
+                    const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
+                    const dayLabel = currentWeekDay ? currentWeekDay.day : 'Unknown';
+                    
+                    return (
                     <div 
-                      key={day} 
+                      key={dateStr} 
                       className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full min-h-[80px]"
                       onClick={() => {
-                        const dateObj = weekDates.find(d => d.day === day)?.fullDate;
-                        onSlotClick({ day, hour, date: dateObj });
+                        const dateObj = currentWeekDay?.fullDate;
+                        onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
                     >
                       <div className={`gap-2 p-1 h-full overflow-hidden ${viewMode === 'day' ? 'grid grid-cols-3' : 'flex flex-col'}`}>
                           {rooms
                           .filter(room => {
-                            const avNode = availability?.find(a => a.room_id === room.id && a.day === day && a.hour === hour);
+                            const avNode = availability?.find(a => a.room_id === room.id && a.day === dayLabel && a.hour === hour);
                             return avNode ? avNode.is_available : true;
                           })
                           .sort((a, b) => {
-                            const aBooked = !!getBooking(day, hour, a.id);
-                            const bBooked = !!getBooking(day, hour, b.id);
+                            const aBooked = !!getBooking(dateStr, hour, a.id);
+                            const bBooked = !!getBooking(dateStr, hour, b.id);
                             
                             // 1. Unbooked first
                             if (aBooked !== bBooked) return aBooked ? 1 : -1;
@@ -150,15 +163,15 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                             return score(b) - score(a);
                           })
                           .slice(0, viewMode === 'day' ? 6 : 2).map(room => { 
-                            const booking = getBooking(day, hour, room.id);
+                            const booking = getBooking(dateStr, hour, room.id);
                             return (
                               <div 
                                 key={room.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (!booking) {
-                                    const dateObj = weekDates.find(d => d.day === day)?.fullDate;
-                                    onSlotClick({ day, hour, date: dateObj, room_id: room.id });
+                                    const dateObj = currentWeekDay?.fullDate;
+                                    onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                   }
                                 }}
                                 className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px]' : ''} transform transition-all text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
@@ -181,7 +194,7 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                           })}
                         </div>
                     </div>
-                  ))}
+                  );})}
                 </div>
               ))
             )}

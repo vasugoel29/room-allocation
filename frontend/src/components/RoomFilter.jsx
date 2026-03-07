@@ -1,6 +1,9 @@
+import { useContext } from 'react';
 import { Filter, Wind, Monitor } from 'lucide-react';
+import { AppContext } from '../context/AppContext';
 
-function RoomFilter({ filters, setFilters }) {
+function RoomFilter() {
+  const { filters, setFilters } = useContext(AppContext);
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFilters(prev => ({
