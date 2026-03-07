@@ -8,7 +8,10 @@ import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins in this case since Vercel previews can be dynamic
+  credentials: true,
+}));
 app.use(bodyParser.json());
 
 const PORT = 4000;
