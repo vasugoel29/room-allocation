@@ -2,25 +2,22 @@ import pkg from 'pg';
 import logger from './utils/logger.js';
 const { Pool } = pkg;
 
-const isProd = process.env.NODE_ENV === 'production' || process.env.DATABASE_URL;
-
-const poolConfig = isProd
-  ? { 
-      connectionString: process.env.DATABASE_URL,
-      ssl: { rejectUnauthorized: false }
-    }
-  : {
-      user: 'roomuser',
-      host: 'localhost',
-      database: 'roomdb',
-      password: 'roompass',
-      port: 5432,
-    };
-
-const pool = new Pool({
-  ...poolConfig,
-  connectionTimeoutMillis: 5000,
-});
+const pool = new Pool(
+  process.env.DATABASE_URL 
+    ? {
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 5000,
+      }
+    : {
+        user: 'roomuser',
+        host: 'localhost',
+        database: 'roomdb',
+        password: 'roompass',
+        port: 5432,
+        connectionTimeoutMillis: 5000,
+      }
+);
 
 export const query = (text, params) => pool.query(text, params);
 
