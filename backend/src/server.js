@@ -9,7 +9,9 @@ import bookingRoutes from './routes/bookingRoutes.js';
 
 const app = express();
 app.use(cors({
-  origin: true, // Allow all origins in this case since Vercel previews can be dynamic
+  origin: ['http://localhost:5173', 'https://cras-frontend.vercel.app', process.env.VITE_API_URL],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
 app.use(bodyParser.json());
