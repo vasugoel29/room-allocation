@@ -164,8 +164,13 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                                 className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px]' : ''} transform transition-all text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
                                 title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
                               >
-                                <div className="flex items-center gap-2 overflow-hidden">
-                                  <span className={`font-black truncate ${booking ? 'text-text-secondary' : ''}`}>{room.name}</span>
+                                <div className="flex flex-col overflow-hidden">
+                                  <span className={`font-black truncate ${booking ? 'text-text-secondary text-sm' : ''}`}>{room.name}</span>
+                                  {booking && (
+                                    <span className="text-[10px] text-text-secondary/70 truncate leading-none">
+                                      Booked by: {booking.user_name}
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex flex-col items-center gap-1 ml-2 flex-shrink-0 opacity-80">
                                   <Wind size={12} className={room.has_ac ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500'} />
