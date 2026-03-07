@@ -2,22 +2,33 @@ import pkg from 'pg';
 import logger from './utils/logger.js';
 const { Pool } = pkg;
 
-const pool = new Pool(
-  process.env.DATABASE_URL 
-    ? {
-        connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false },
-        connectionTimeoutMillis: 5000,
-      }
-    : {
-        user: 'roomuser',
-        host: 'localhost',
-        database: 'roomdb',
-        password: 'roompass',
-        port: 5432,
-        connectionTimeoutMillis: 5000,
-      }
-);
+let poolConfig = {
+  user: 'roomuser',
+  host: 'localhost',
+  database: 'roomdb',
+  password: 'roompass',
+  port: 5432,
+  connectionTimeoutMillis: 5000,
+};
+
+if (process.env.DATABASE_URL) {
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    poolConfig = {
+      user: url.username,
+      password: url.password,
+      host: url.hostname,
+      port: url.port || 5432,
+      database: url.pathname.slice(1),
+      ssl: { rejectUnauthorized: false },
+      connectionTimeoutMillis: 5000,
+    };
+  } catch (error) {
+    logger.error('Failed to parse DATABASE_URL', error);
+  }
+}
+
+const pool = new Pool(poolConfig);
 
 export const query = (text, params) => pool.query(text, params);
 
