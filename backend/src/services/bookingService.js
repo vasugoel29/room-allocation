@@ -3,7 +3,9 @@ import logger from '../utils/logger.js';
 /**
  * Handles the logic for creating a single booking
  */
-async function createBooking(client, { room_id, start_time, end_time, purpose, is_semester }, userId) {
+async function createBooking(client, reqData, userId) {
+  const { room_id, start_time, end_time, purpose, is_semester } = reqData;
+
   // Check Room conflict
   const roomConflict = await client.query(
     `SELECT * FROM bookings 
@@ -39,6 +41,47 @@ async function createBooking(client, { room_id, start_time, end_time, purpose, i
   const values = [room_id, start_time, end_time, userId, purpose, is_semester];
   const result = await client.query(query, values);
   
+  // Reschedule Logic: Free up another room for this specific slot
+  const { reschedule_room_name } = reqData;
+  if (reschedule_room_name) {
+    // 1. Find or create the room
+    let resRoomRes = await client.query('SELECT id FROM rooms WHERE UPPER(name) = UPPER($1)', [reschedule_room_name]);
+    let resRoomId;
+    
+    if (resRoomRes.rows.length === 0) {
+      // Create room if not exists
+      const newResRoom = await client.query(
+        'INSERT INTO rooms (name, building, floor, capacity) VALUES ($1, $2, $3, $4) RETURNING id',
+        [reschedule_room_name, 'Unknown', 0, 40]
+      );
+      resRoomId = newResRoom.rows[0].id;
+    } else {
+      resRoomId = resRoomRes.rows[0].id;
+    }
+
+    // 2. Mark as available for specific day and hour
+    const { reschedule_day, reschedule_hour } = reqData;
+    let dayName, hour;
+
+    if (reschedule_day && reschedule_hour !== undefined) {
+      dayName = reschedule_day;
+      hour = parseInt(reschedule_hour);
+    } else {
+      const dateObj = new Date(start_time);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      dayName = days[dateObj.getDay()];
+      hour = dateObj.getHours();
+    }
+
+    await client.query(
+      `INSERT INTO room_availability (room_id, day, hour, is_available) 
+       VALUES ($1, $2, $3, TRUE)
+       ON CONFLICT (room_id, day, hour) DO UPDATE SET is_available = TRUE`,
+      [resRoomId, dayName, hour]
+    );
+    logger.info('Reschedule: Freed up room', { reschedule_room_name, dayName, hour });
+  }
+
   return { data: result.rows[0], status: 201 };
 }
 

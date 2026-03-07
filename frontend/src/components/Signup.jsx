@@ -41,37 +41,37 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
     <div className="min-h-screen flex items-center justify-center bg-bg-primary p-4 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
       
-      <div className="relative w-full max-w-sm glass rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300 border border-black/5">
+      <div className="relative w-full max-w-sm bg-bg-secondary border border-border rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300">
         <button 
           onClick={onBackToLogin}
-          className="absolute top-6 left-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 transition-colors"
+          className="absolute top-6 left-6 p-2 hover:bg-bg-primary rounded-full text-text-secondary hover:text-text-primary transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
 
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-indigo-50 rounded-2xl text-indigo-600 mb-2">
+          <div className="inline-flex p-3 bg-accent/10 rounded-2xl text-accent mb-2">
             <UserPlus size={32} />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Create Account</h2>
-          <p className="text-slate-500 text-sm">Join the Room Allocation System</p>
+          <h2 className="text-3xl font-bold text-text-primary tracking-tight">Create Account</h2>
+          <p className="text-text-secondary text-sm font-medium">Join the Room Allocation System</p>
         </div>
 
         {error && (
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm font-medium">
+          <div className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <User size={16} className="text-slate-400" />
+            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <User size={16} className="text-text-secondary/50" />
               Full Name
             </label>
             <input
               type="text"
-              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400"
+              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
               placeholder="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -80,13 +80,13 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Mail size={16} className="text-slate-400" />
+            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <Mail size={16} className="text-text-secondary/50" />
               Email Address
             </label>
             <input
               type="email"
-              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400"
+              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
               placeholder="rollno@nsut.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -95,13 +95,13 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Lock size={16} className="text-slate-400" />
+            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <Lock size={16} className="text-text-secondary/50" />
               Password
             </label>
             <input
               type="password"
-              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400 font-light"
+              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30 font-light"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -110,20 +110,20 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <ShieldCheck size={16} className="text-slate-400" />
+            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <ShieldCheck size={16} className="text-text-secondary/50" />
               Account Type
             </label>
             <div className="relative">
               <select 
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all appearance-none pr-10"
+                className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all appearance-none pr-10"
               >
-                <option value="VIEWER" className="bg-white">Viewer (Read Only)</option>
-                <option value="STUDENT_REP" className="bg-white">Student Representative (Can Book)</option>
+                <option value="VIEWER" className="bg-bg-secondary">Viewer (Read Only)</option>
+                <option value="STUDENT_REP" className="bg-bg-secondary">Student Representative (Can Book)</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary/50">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
             </div>
@@ -132,7 +132,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 mt-4 active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 mt-4 active:scale-[0.98]"
           >
             {loading ? 'Creating Account...' : (
               <>
