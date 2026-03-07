@@ -1,4 +1,6 @@
-const BASE_URL = '/api';
+// Allow Vercel to override the base URL by using environment variables.
+// In local dev, it falls back to '/api' which uses the proxy in vite.config.js.
+const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
  * Standardized API fetch wrapper
