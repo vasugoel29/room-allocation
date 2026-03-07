@@ -17,5 +17,8 @@
     "concurrently": "^8.2.2",
     "eslint": "^9.39.2",
     "eslint-plugin-react": "^7.37.5"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
   }
 }

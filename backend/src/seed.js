@@ -4,22 +4,24 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const pool = new Pool({
-  user: 'roomuser',
-  host: 'localhost',
-  database: 'roomdb',
-  password: 'roompass',
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 async function seed() {
   console.log('Starting Real Data Seeding (from scraper JSON)...');
   
   try {
-    const dataPath = path.join(__dirname, '..', '..', 'rooms_complete_data_updated.json');
+    const dataPath = path.join(__dirname, '..', 'scripts', 'rooms_complete_data_updated.json');
     if (!fs.existsSync(dataPath)) {
       console.error('Data file not found at:', dataPath);
       return;
