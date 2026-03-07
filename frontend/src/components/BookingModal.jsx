@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Wind, Monitor } from 'lucide-react';
 import { api } from '../utils/api';
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
 function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess }) {
-  const [selectedRoom, setSelectedRoom] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || '');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -147,17 +147,21 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                   <div className="relative">
                     <input
                       type="text"
-                      placeholder={selectedRoomData ? selectedRoomData.name : "Search..."}
+                      readOnly
+                      placeholder={selectedRoomData ? selectedRoomData.name : "Select a room..."}
                       value={searchTerm}
-                      onFocus={() => setIsDropdownOpen(true)}
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
                         setIsDropdownOpen(true);
                       }}
-                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm"
+                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30"
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50">
-                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <div 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </div>
                   </div>
 
@@ -197,11 +201,10 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                                   </span>
                                 )}
                               </div>
-                              <div className="flex gap-2 items-center">
-                                <div className="text-sm">
-                                  {facilities}
-                                </div>
-                              </div>
+                               <div className="flex gap-2 items-center opacity-80">
+                                 {room.has_ac && <Wind size={14} className="text-accent" />}
+                                 {room.has_projector && <Monitor size={14} className="text-accent" />}
+                               </div>
                             </div>
                           );
                         })}
@@ -216,13 +219,13 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                   <select 
                     value={bookingType}
                     onChange={(e) => setBookingType(e.target.value)}
-                    className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all appearance-none cursor-pointer shadow-sm pr-10"
+                    className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm font-medium text-text-primary focus:outline-none focus:border-accent transition-all appearance-none cursor-pointer shadow-sm pr-10 hover:bg-bg-secondary/30"
                   >
                     <option value="EXTRA">Extra Booking</option>
                     <option value="RESCHEDULE">Reschedule</option>
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </div>
                 </div>
               </div>
@@ -237,12 +240,12 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                        <select 
                          value={rescheduleDay}
                          onChange={(e) => setRescheduleDay(e.target.value)}
-                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8"
+                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8 hover:bg-bg-primary/50"
                        >
                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <option key={d} value={d}>{d}</option>)}
                        </select>
                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
-                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                        </div>
                      </div>
                   </div>
@@ -252,12 +255,12 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                        <select 
                          value={rescheduleHour}
                          onChange={(e) => setRescheduleHour(parseInt(e.target.value))}
-                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8"
+                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8 hover:bg-bg-primary/50"
                        >
                          {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
                        </select>
                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
-                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                        </div>
                      </div>
                   </div>
