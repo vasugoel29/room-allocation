@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Calendar from './components/Calendar';
 import RoomFilter from './components/RoomFilter';
 import BookingModal from './components/BookingModal';
 import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
-import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
 import { api } from './utils/api';
 
 function App() {
@@ -22,12 +22,35 @@ function App() {
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
 
-  const [filters, setFilters] = useState({ capacity: '', ac: false, projector: false });
+  const [filters, setFilters] = useState({ ac: false, projector: false });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
+  // New States
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [viewMode, setViewMode] = useState('week'); // 'week' | 'day'
+  
+  const initialDay = useMemo(() => {
+    const now = new Date();
+    const day = now.getDay(); // 0 (Sun) - 6 (Sat)
+    const hour = now.getHours();
+    
+    // Days mapping: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
+    // We only use Mon-Fri in our DAYS array
+    const DAYS_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    
+    if (day === 0 || day === 6) return 'Mon'; // Weekend -> Monday
+    if (hour >= 18) { // After 6 PM
+        if (day === 5) return 'Mon'; // Friday night -> Monday
+        return DAYS_ORDER[day]; // day=1 (Mon) -> Mon is 0, Tue is 1. so day=1 -> next is Tue (index 1)
+    }
+    return DAYS_ORDER[day - 1]; // Before 6 PM on weekday
+  }, []);
+
+  const [selectedDay, setSelectedDay] = useState(initialDay);
   const [backendError, setBackendError] = useState(null);
   const prevBackendError = React.useRef(null);
 
@@ -74,6 +97,11 @@ function App() {
       console.error('Fetch availability failed', err);
     }
   }, [handleLogout]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   useEffect(() => {
     if (user) {
@@ -156,7 +184,7 @@ function App() {
   }
 
   return (
-    <div className="h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
+    <div className="w-full h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
         <div 
@@ -170,9 +198,9 @@ function App() {
         <div className="flex items-center justify-between text-indigo-600">
           <div className="flex items-center gap-3">
             <CalendarIcon size={32} />
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">CRAS</h1>
+            <h1 className="text-xl font-bold tracking-tight text-text-primary">CRAS</h1>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 lg:hidden text-slate-400 hover:text-slate-900">
+          <button onClick={() => setIsSidebarOpen(false)} className="p-2 lg:hidden text-text-secondary hover:text-text-primary">
              <CloseIcon size={24} />
           </button>
         </div>
@@ -182,10 +210,10 @@ function App() {
         <div className="mt-auto pt-6 border-t border-black/5">
           <div className="flex items-center justify-between">
             <div className="overflow-hidden">
-              <p className="text-sm font-medium text-slate-900 truncate">{user.name}</p>
-              <p className="text-[10px] text-indigo-600 uppercase tracking-widest font-bold">{user.role}</p>
+              <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
+              <p className="text-[10px] text-accent uppercase tracking-widest font-bold">{user.role}</p>
             </div>
-            <button onClick={handleLogout} className="p-2.5 hover:bg-black/5 rounded-xl text-slate-500 hover:text-slate-900 transition-colors border border-transparent hover:border-black/5">
+            <button onClick={handleLogout} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-text-secondary hover:text-text-primary transition-colors border border-transparent hover:border-border">
               <LogOut size={18} />
             </button>
           </div>
@@ -193,37 +221,63 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 lg:p-6 overflow-y-auto flex flex-col w-full">
-        <header className="flex justify-between items-center mb-6">
+      <main className="flex-1 p-2 lg:p-4 overflow-hidden flex flex-col w-full">
+        <header className="flex justify-between items-center mb-4 px-2">
           <div className="flex items-center gap-4">
             <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 lg:hidden bg-white border border-black/5 rounded-xl text-slate-600 shadow-sm"
+                className="p-2 lg:hidden bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm"
             >
                 <Menu size={24} />
             </button>
             <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-slate-900 mb-0.5">Room Schedule</h2>
-              <p className="text-slate-500 text-[10px] lg:text-xs">Manage and book campus rooms in real-time.</p>
+              <h2 className="text-xl lg:text-2xl font-bold text-text-primary mb-0.5">Room Schedule</h2>
+              <p className="text-text-secondary text-[10px] lg:text-xs">Manage and book campus rooms in real-time.</p>
             </div>
           </div>
           <div className="flex gap-2 lg:gap-4">
              <button 
+              onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+              className="p-2.5 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all shadow-sm"
+              title="Toggle Theme"
+             >
+               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+             </button>
+
+             <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm">
+               <button 
+                onClick={() => setViewMode('week')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+               >
+                 <LayoutGrid size={14} /> Week
+               </button>
+               <button 
+                onClick={() => setViewMode('day')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+               >
+                 <Maximize2 size={14} /> Day
+               </button>
+             </div>
+
+             <button 
               onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-black/5 hover:bg-black/10 border border-black/5 rounded-xl text-xs font-medium transition-all"
+              className="flex items-center gap-2 px-3 py-1.5 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-xs font-medium text-text-secondary hover:text-text-primary transition-all shadow-sm"
              >
                <History size={16} />
-               <span className="hidden sm:inline">History</span>
+               <span className="hidden sm:inline">{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
              </button>
           </div>
         </header>
 
-        <section className="glass rounded-2xl p-4 shadow-lg flex-1 flex flex-col overflow-hidden">
+        <section className="glass rounded-2xl p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
           <Calendar 
             bookings={bookings} 
             rooms={rooms} 
             availability={availability}
             filters={filters}
+            viewMode={viewMode}
+            selectedDay={selectedDay}
+            onDayChange={setSelectedDay}
             onSlotClick={(slot) => {
               setSelectedSlot(slot);
               setIsModalOpen(true);
@@ -241,7 +295,9 @@ function App() {
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
+            fetchRooms(); // Prevent hard refresh requirement for new rooms
             fetchBookings();
+            fetchAvailability();
           }}
         />
       )}

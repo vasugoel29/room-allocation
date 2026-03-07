@@ -128,7 +128,7 @@ app.post('/api/bookings', authenticate, requireRole('STUDENT_REP'), async (req, 
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
-    const result = await bookingService.createBooking(client, { room_id, start_time, end_time, purpose, is_semester }, userId);
+    const result = await bookingService.createBooking(client, { room_id, start_time, end_time, purpose, is_semester, reschedule_room_name: req.body.reschedule_room_name }, userId);
     
     if (result.error) {
       await client.query('ROLLBACK');

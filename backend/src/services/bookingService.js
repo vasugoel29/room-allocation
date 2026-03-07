@@ -3,7 +3,9 @@ import logger from '../utils/logger.js';
 /**
  * Handles the logic for creating a single booking
  */
-async function createBooking(client, { room_id, start_time, end_time, purpose, is_semester }, userId) {
+async function createBooking(client, reqData, userId) {
+  const { room_id, start_time, end_time, purpose, is_semester } = reqData;
+
   // Check Room conflict
   const roomConflict = await client.query(
     `SELECT * FROM bookings 
@@ -39,6 +41,71 @@ async function createBooking(client, { room_id, start_time, end_time, purpose, i
   const values = [room_id, start_time, end_time, userId, purpose, is_semester];
   const result = await client.query(query, values);
   
+  // Reschedule Logic: Free up another room for this specific slot
+  const { reschedule_room_name } = reqData;
+  if (reschedule_room_name) {
+    // 1. Find or create the room
+    let resRoomRes = await client.query('SELECT id FROM rooms WHERE UPPER(name) = UPPER($1)', [reschedule_room_name]);
+    let resRoomId;
+    
+    if (resRoomRes.rows.length === 0) {
+      // Calculate building from first digit (e.g. "5" -> "5th Block") robustly
+      const safeRoomName = String(reschedule_room_name || '').trim();
+      const firstDigit = safeRoomName.charAt(0);
+      const building = /^\d$/.test(firstDigit) ? `${firstDigit}th Block` : 'Unknown';
+
+      // Create room if not exists
+      const newResRoom = await client.query(
+        'INSERT INTO rooms (name, building, floor, capacity) VALUES ($1, $2, $3, $4) RETURNING id',
+        [safeRoomName, building, 0, 40]
+      );
+      resRoomId = newResRoom.rows[0].id;
+
+      // Ensure it's unavailable everywhere else by default (Mon-Fri, 8-17)
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      const defaultHours = Array.from({ length: 10 }, (_, i) => i + 8);
+      
+      const availabilityPromises = [];
+      for (const d of days) {
+        for (const h of defaultHours) {
+          availabilityPromises.push(
+            client.query(
+              'INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, $3, FALSE)',
+              [resRoomId, d, h]
+            )
+          );
+        }
+      }
+      // Await all insertions to prevent race conditions
+      await Promise.all(availabilityPromises);
+      
+    } else {
+      resRoomId = resRoomRes.rows[0].id;
+    }
+
+    // 2. Mark as available for specific day and hour
+    const { reschedule_day, reschedule_hour } = reqData;
+    let dayName, hour;
+
+    if (reschedule_day && reschedule_hour !== undefined) {
+      dayName = reschedule_day;
+      hour = parseInt(reschedule_hour);
+    } else {
+      const dateObj = new Date(start_time);
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      dayName = days[dateObj.getDay()];
+      hour = dateObj.getHours();
+    }
+
+    await client.query(
+      `INSERT INTO room_availability (room_id, day, hour, is_available) 
+       VALUES ($1, $2, $3, TRUE)
+       ON CONFLICT (room_id, day, hour) DO UPDATE SET is_available = TRUE`,
+      [resRoomId, dayName, hour]
+    );
+    logger.info('Reschedule: Freed up room', { reschedule_room_name, dayName, hour });
+  }
+
   return { data: result.rows[0], status: 201 };
 }
 

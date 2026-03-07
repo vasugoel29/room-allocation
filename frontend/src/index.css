@@ -5,29 +5,76 @@
 @theme {
   --color-bg-primary: #f8fafc;
   --color-bg-secondary: #ffffff;
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
   --color-text-primary: #0f172a;
   --color-text-secondary: #64748b;
   --color-border: rgba(0, 0, 0, 0.05);
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
   --color-success: #10b981;
   --color-error: #ef4444;
+
+  /* Dark Mode Overrides */
+  --color-dark-bg-primary: #0f172a;
+  --color-dark-bg-secondary: #1e293b;
+  --color-dark-text-primary: #f8fafc;
+  --color-dark-text-secondary: #94a3b8;
+  --color-dark-border: rgba(255, 255, 255, 0.1);
+}
+
+.dark {
+  --color-bg-primary: var(--color-dark-bg-primary);
+  --color-bg-secondary: var(--color-dark-bg-secondary);
+  --color-text-primary: var(--color-dark-text-primary);
+  --color-text-secondary: var(--color-dark-text-secondary);
+  --color-border: var(--color-dark-border);
+}
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  font-weight: 500;
+  font-size: 16px; /* Increased base font size */
 }
 
 body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
   background-color: var(--color-bg-primary);
   color: var(--color-text-primary);
-  font-family: 'Inter', sans-serif;
-  margin: 0;
   -webkit-font-smoothing: antialiased;
-  overflow: hidden; /* Fix viewport extension */
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .glass {
-  background: rgba(255, 255, 255, 0.7);
+  background: color-mix(in srgb, var(--color-bg-secondary), transparent 30%);
   backdrop-filter: blur(12px);
   border: 1px solid var(--color-border);
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+/* Custom Scrollbar for better visibility in Dark Mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+.dark .glass {
+  background: rgba(30, 41, 59, 0.7);
 }
 
 .card-hover {

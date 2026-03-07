@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Wind, Monitor } from 'lucide-react';
 import { api } from '../utils/api';
 
+const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
+
 function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess }) {
-  const [selectedRoom, setSelectedRoom] = useState('');
+  const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || '');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -12,6 +14,13 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isDayOpen, setIsDayOpen] = useState(false);
+  const [isHourOpen, setIsHourOpen] = useState(false);
+  const [isRescheduleRoomOpen, setIsRescheduleRoomOpen] = useState(false);
+  const [rescheduleSearchTerm, setRescheduleSearchTerm] = useState('');
+  const [rescheduleDebouncedTerm, setRescheduleDebouncedTerm] = useState('');
 
   React.useEffect(() => {
     if (searchTerm.length < 2) {
@@ -23,6 +32,22 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  React.useEffect(() => {
+    if (rescheduleSearchTerm.length < 2) {
+      setRescheduleDebouncedTerm('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRescheduleDebouncedTerm(rescheduleSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [rescheduleSearchTerm]);
+
+  const [bookingType, setBookingType] = useState('EXTRA'); // 'EXTRA' | 'RESCHEDULE'
+  const [rescheduleRoom, setRescheduleRoom] = useState('');
+  const [rescheduleDay, setRescheduleDay] = useState(slot.day);
+  const [rescheduleHour, setRescheduleHour] = useState(slot.hour);
 
   const selectedRoomData = rooms.find(r => String(r.id) === String(selectedRoom));
 
@@ -64,6 +89,7 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selectedRoom) return setError('Please select a room');
+    if (bookingType === 'RESCHEDULE' && !rescheduleRoom) return setError('Please specify the room being freed up');
     
     setLoading(true);
     setError('');
@@ -86,8 +112,11 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
         room_id: selectedRoom,
         start_time,
         end_time,
-        purpose,
-        is_semester: isSemester
+        purpose: bookingType === 'RESCHEDULE' ? `Reschedule: ${purpose}` : purpose,
+        is_semester: isSemester,
+        reschedule_room_name: bookingType === 'RESCHEDULE' ? rescheduleRoom : null,
+        reschedule_day: bookingType === 'RESCHEDULE' ? rescheduleDay : null,
+        reschedule_hour: bookingType === 'RESCHEDULE' ? rescheduleHour : null
       });
 
       const data = await res.json();
@@ -105,131 +134,301 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-white/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
       
-      <div className="relative w-full max-w-lg glass rounded-3xl p-8 shadow-2xl border border-black/5">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 transition-colors">
+      <div className="relative w-full max-w-xl glass dark:bg-slate-800 rounded-[2rem] p-8 shadow-2xl border border-black/5">
+        <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
           <X size={24} />
         </button>
 
-        <h3 className="text-2xl font-bold text-slate-900 mb-2 flex items-center gap-3">
+        <h3 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-4">
           Book Room
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-600 capitalize">
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-accent/10 text-accent capitalize">
             {slot.day} @ {slot.hour}:00
           </span>
         </h3>
-        <p className="text-slate-500 mb-8">Secure your slot in one of the available rooms.</p>
+        <p className="text-text-secondary mb-6 text-sm">Secure your slot in one of the available rooms.</p>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-3 font-medium">
-            <AlertCircle size={18} />
+          <div className="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm flex items-center gap-3 font-medium">
+            <AlertCircle size={20} />
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-slate-700">Select Room</label>
-              <div className="relative">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-text-primary">Select Room</label>
                 <div className="relative">
-                  <input
-                    type="text"
-                    placeholder={selectedRoomData ? selectedRoomData.name : "Type to search room (min 2 chars)..."}
-                    value={searchTerm}
-                    onFocus={() => setIsDropdownOpen(true)}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setIsDropdownOpen(true);
-                    }}
-                    className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all pr-10"
-                  />
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      readOnly
+                      placeholder={selectedRoomData ? selectedRoomData.name : "Select a room..."}
+                      value={searchTerm}
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setIsDropdownOpen(true);
+                      }}
+                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30"
+                    />
+                    <div 
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
                   </div>
-                </div>
 
-                {isDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-black/5 rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                    {rooms
-                      .filter(room => {
-                        const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
-                        const matchesSearch = !debouncedTerm || room.name.toLowerCase().includes(debouncedTerm.toLowerCase()) || room.building?.toLowerCase().includes(debouncedTerm.toLowerCase());
-                        return (av ? av.is_available : true) && matchesSearch;
-                      })
-                      .map(room => {
-                        const booking = getRoomBooking(room.id);
-                        const facilities = [room.has_projector ? '🎥' : '', room.has_ac ? '❄️' : ''].filter(Boolean).join(' ');
-                        const isSelected = String(selectedRoom) === String(room.id);
-                        
-                        return (
-                          <div
-                            key={room.id}
-                            onClick={() => {
-                              if (!booking) {
-                                setSelectedRoom(room.id);
-                                setIsDropdownOpen(false);
-                                setSearchTerm('');
-                              }
-                            }}
-                            className={`p-4 cursor-pointer border-b border-black/[0.03] last:border-0 transition-colors flex items-center justify-between ${booking ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-indigo-50/50'} ${isSelected ? 'bg-indigo-50 border-l-4 border-l-indigo-500' : ''}`}
-                          >
-                            <div className="flex flex-col gap-0.5 max-w-[70%]">
-                              <span className="font-bold text-slate-900 truncate flex items-center gap-2">
-                                {room.name}
-                                {isSelected && <span className="text-[10px] bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">Selected</span>}
-                              </span>
-                              <span className="text-[10px] text-slate-500 truncate">{room.building} • {room.capacity} seats</span>
-                              {booking && <span className="text-[9px] text-red-500 font-medium italic">Booked by {booking.user_name}</span>}
-                            </div>
-                            <div className="flex gap-2 items-center">
-                              <div className="flex gap-1 opacity-80 text-xs">
-                                {facilities}
+                  {isDropdownOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                      {rooms
+                        .filter(room => {
+                          const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
+                          const matchesSearch = !debouncedTerm || room.name.toLowerCase().includes(debouncedTerm.toLowerCase()) || room.building?.toLowerCase().includes(debouncedTerm.toLowerCase());
+                          return (av ? av.is_available : true) && matchesSearch;
+                        })
+                        .map(room => {
+                          const booking = getRoomBooking(room.id);
+                          const facilities = [room.has_projector ? '🎥' : '', room.has_ac ? '❄️' : ''].filter(Boolean).join(' ');
+                          const isSelected = String(selectedRoom) === String(room.id);
+                          
+                          return (
+                            <div
+                              key={room.id}
+                              onClick={() => {
+                                if (!booking) {
+                                  setSelectedRoom(room.id);
+                                  setIsDropdownOpen(false);
+                                  setSearchTerm('');
+                                }
+                              }}
+                              className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center justify-between ${booking ? 'opacity-50 cursor-not-allowed bg-bg-primary/50' : 'hover:bg-accent/5'} ${isSelected ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
+                            >
+                              <div className="flex flex-col gap-0.5 max-w-[70%]">
+                                <span className="font-bold text-base text-text-primary truncate flex items-center gap-2">
+                                  {room.name}
+                                </span>
+                                <span className="text-xs text-text-secondary truncate font-medium">{room.building}</span>
+                                {booking && (
+                                  <span className="text-sm text-red-600 font-black italic bg-red-50 px-2 py-0.5 rounded-md mt-1 w-fit">
+                                    Occupied by {booking.user_name}
+                                  </span>
+                                )}
                               </div>
+                               <div className="flex gap-2 items-center opacity-80">
+                                 {room.has_ac && <Wind size={14} className="text-accent" />}
+                                 {room.has_projector && <Monitor size={14} className="text-accent" />}
+                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    {rooms.filter(r => !debouncedTerm || r.name.toLowerCase().includes(debouncedTerm.toLowerCase())).length === 0 && (
-                      <div className="p-8 text-center text-slate-400 text-sm">
-                        No rooms found matching "{searchTerm}"
-                      </div>
-                    )}
+                          );
+                        })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-text-primary">Booking Type</label>
+                <div className="relative">
+                  <div className="relative cursor-pointer" onClick={() => setIsTypeOpen(!isTypeOpen)}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={bookingType === 'EXTRA' ? 'Extra Booking' : 'Reschedule'}
+                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm font-medium text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30 pointer-events-none"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50">
+                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isTypeOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
                   </div>
-                )}
+
+                  {isTypeOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                      {[
+                        { id: 'EXTRA', label: 'Extra Booking' },
+                        { id: 'RESCHEDULE', label: 'Reschedule' }
+                      ].map(type => (
+                        <div
+                          key={type.id}
+                          onClick={() => {
+                            setBookingType(type.id);
+                            setIsTypeOpen(false);
+                          }}
+                          className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center gap-2 ${bookingType === type.id ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
+                        >
+                          {type.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100/50">
+            {bookingType === 'RESCHEDULE' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-bg-primary/50 p-4 rounded-xl border border-border shadow-inner">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                     <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Day to free up</label>
+                     <div className="relative">
+                       <div className="relative cursor-pointer" onClick={() => setIsDayOpen(!isDayOpen)}>
+                         <input
+                           type="text"
+                           readOnly
+                           value={rescheduleDay}
+                           className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm cursor-pointer pr-8 hover:bg-bg-primary/50 pointer-events-none"
+                         />
+                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
+                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDayOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                         </div>
+                       </div>
+                       
+                       {isDayOpen && (
+                         <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
+                             <div
+                               key={d}
+                               onClick={() => {
+                                 setRescheduleDay(d);
+                                 setIsDayOpen(false);
+                               }}
+                               className={`px-3 py-2.5 cursor-pointer border-b border-border last:border-0 transition-colors text-sm ${rescheduleDay === d ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
+                             >
+                               {d}
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                  </div>
+                  <div className="space-y-1.5">
+                     <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Slot to free up</label>
+                     <div className="relative">
+                       <div className="relative cursor-pointer" onClick={() => setIsHourOpen(!isHourOpen)}>
+                         <input
+                           type="text"
+                           readOnly
+                           value={`${rescheduleHour}:00`}
+                           className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm cursor-pointer pr-8 hover:bg-bg-primary/50 pointer-events-none"
+                         />
+                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
+                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isHourOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                         </div>
+                       </div>
+                       
+                       {isHourOpen && (
+                         <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                           {HOURS.map(h => (
+                             <div
+                               key={h}
+                               onClick={() => {
+                                 setRescheduleHour(h);
+                                 setIsHourOpen(false);
+                               }}
+                               className={`px-3 py-2.5 cursor-pointer border-b border-border last:border-0 transition-colors text-sm ${rescheduleHour === h ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
+                             >
+                               {h}:00
+                             </div>
+                           ))}
+                         </div>
+                       )}
+                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-text-primary">Which room is being freed up?</label>
+                  <div className="relative">
+                    <div className="relative cursor-pointer">
+                      <input
+                        type="text"
+                        placeholder="Search or enter room..."
+                        value={isRescheduleRoomOpen ? rescheduleSearchTerm : (rescheduleRoom || '')}
+                        onClick={() => setIsRescheduleRoomOpen(!isRescheduleRoomOpen)}
+                        onChange={(e) => {
+                          setRescheduleSearchTerm(e.target.value);
+                          setRescheduleRoom(e.target.value);
+                          setIsRescheduleRoomOpen(true);
+                        }}
+                        className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-primary/30"
+                      />
+                      <div 
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
+                        onClick={() => setIsRescheduleRoomOpen(!isRescheduleRoomOpen)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isRescheduleRoomOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    </div>
+
+                    {isRescheduleRoomOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                        {rooms
+                          .filter(room => {
+                            if (!rescheduleDebouncedTerm) return true;
+                            return room.name.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase()) || 
+                                   room.building?.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase());
+                          })
+                          .map(room => (
+                            <div
+                              key={room.id}
+                              onClick={() => {
+                                setRescheduleRoom(room.name);
+                                setRescheduleSearchTerm(room.name);
+                                setIsRescheduleRoomOpen(false);
+                              }}
+                              className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center justify-between hover:bg-accent/5 ${rescheduleRoom === room.name ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
+                            >
+                              <div className="flex flex-col gap-0.5 max-w-[70%]">
+                                <span className="font-bold text-base text-text-primary truncate flex items-center gap-2">{room.name}</span>
+                                <span className="text-xs text-text-secondary truncate font-medium">{room.building}</span>
+                              </div>
+                              <div className="flex gap-2 items-center opacity-80">
+                                {room.has_ac && <Wind size={14} className="text-accent" />}
+                                {room.has_projector && <Monitor size={14} className="text-accent" />}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-xl border border-accent/20">
                 <input 
                     type="checkbox" 
                     id="semesterBooking"
                     checked={isSemester}
                     onChange={(e) => setIsSemester(e.target.checked)}
-                    className="w-5 h-5 rounded-lg border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                    className="w-5 h-5 rounded border-accent text-accent focus:ring-accent"
                 />
-                <label htmlFor="semesterBooking" className="text-sm font-medium text-indigo-900 cursor-pointer">
+                <label htmlFor="semesterBooking" className="text-sm font-bold text-text-primary cursor-pointer leading-tight">
                     Book for entire semester (15 weeks)
-                    <p className="text-[10px] text-indigo-600/70 font-normal">Requires all slots to be free across weeks.</p>
+                    <p className="text-[10px] text-accent/70 font-medium mt-0.5">Requires all slots to be free across weeks.</p>
                 </label>
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Purpose</label>
+            <label className="text-xs font-bold text-text-primary uppercase tracking-wider">Purpose Details</label>
             <textarea 
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="e.g. Special Class, Club Meeting"
-              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all h-24 resize-none placeholder:text-slate-400"
+              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all h-20 resize-none placeholder:text-text-secondary/40 shadow-sm"
             />
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-4 pt-2">
               <button 
                 type="submit" 
                 disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-2xl font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+                className="flex-[2] flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
               >
                 {loading ? 'Processing...' : (
                   <>
@@ -243,7 +442,7 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                   type="button"
                   onClick={handleCancel}
                   disabled={loading}
-                  className="px-6 border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-2xl font-bold transition-all flex items-center gap-2"
+                  className="flex-1 border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-3"
                 >
                   <X size={20} />
                   Cancel

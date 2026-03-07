@@ -42,30 +42,30 @@ const Login = ({ onLogin, onShowSignup }) => {
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
       
-      <div className="relative w-full max-w-sm glass rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300 border border-black/5">
+      <div className="relative w-full max-w-sm bg-bg-secondary border border-border rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-indigo-50 rounded-2xl text-indigo-600 mb-2">
+          <div className="inline-flex p-3 bg-accent/10 rounded-2xl text-accent mb-2">
             <ShieldCheck size={32} />
           </div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Welcome Back</h2>
-          <p className="text-slate-500 text-sm">Sign in to manage your bookings</p>
+          <h2 className="text-3xl font-bold text-text-primary tracking-tight">Welcome Back</h2>
+          <p className="text-text-secondary text-sm font-medium">Sign in to manage your bookings</p>
         </div>
 
         {error && (
-          <div className="p-4 rounded-2xl bg-red-50 border border-red-100 text-red-600 text-sm animate-in slide-in-from-top-2 font-medium">
+          <div className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm animate-in slide-in-from-top-2 font-medium">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Mail size={16} className="text-slate-400" />
+            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <Mail size={16} className="text-text-secondary/50" />
               Email Address
             </label>
             <input
               type="email"
-              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400"
+              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
               placeholder="rollno@nsut.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -74,13 +74,13 @@ const Login = ({ onLogin, onShowSignup }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
-              <Lock size={16} className="text-slate-400" />
+            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
+              <Lock size={16} className="text-text-secondary/50" />
               Password
             </label>
             <input
               type="password"
-              className="w-full bg-black/5 border border-black/5 rounded-xl px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 transition-all placeholder:text-slate-400"
+              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -91,7 +91,7 @@ const Login = ({ onLogin, onShowSignup }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+            className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 active:scale-[0.98]"
           >
             {loading ? 'Authenticating...' : (
               <>
@@ -103,11 +103,11 @@ const Login = ({ onLogin, onShowSignup }) => {
         </form>
 
         <div className="text-center pt-4">
-          <p className="text-sm text-slate-500 font-medium">
+          <p className="text-sm text-text-secondary font-medium">
             Don't have an account?{' '}
             <button 
               onClick={onShowSignup}
-              className="text-indigo-600 hover:text-indigo-700 font-bold transition-colors underline underline-offset-4"
+              className="text-accent hover:text-accent-hover font-bold transition-colors underline underline-offset-4"
             >
               Sign up
             </button>

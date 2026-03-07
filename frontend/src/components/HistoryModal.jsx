@@ -3,18 +3,52 @@ import { X, Clock, User, Hash, Trash2, AlertCircle } from 'lucide-react';
 import { api } from '../utils/api';
 
 const HistoryModal = ({ bookings, onClose, onSuccess }) => {
-  const [filterMe, setFilterMe] = useState(false);
+  const user = JSON.parse(localStorage.getItem('user'));
+  const [filterMe, setFilterMe] = useState(user?.role !== 'admin');
+  const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const user = JSON.parse(localStorage.getItem('user'));
 
-  // Only show ACTIVE bookings as requested
-  const activeBookings = bookings.filter(b => (b.status || 'ACTIVE') === 'ACTIVE');
+  const now = new Date();
+  
+  // Today range
+  const todayStart = new Date(now);
+  todayStart.setHours(0,0,0,0);
+  const todayEnd = new Date(now);
+  todayEnd.setHours(23,59,59,999);
 
-  const filteredBookings = activeBookings.filter(b => {
+  // This Week range (Mon-Sun)
+  const curr = new Date(now);
+  const first = curr.getDate() - (curr.getDay() === 0 ? 6 : curr.getDay() - 1); // Monday
+  const last = first + 6; // Sunday
+  const weekStart = new Date(curr.setDate(first));
+  weekStart.setHours(0,0,0,0);
+  const weekEnd = new Date(curr.setDate(last));
+  weekEnd.setHours(23,59,59,999);
+
+  const filteredBookings = bookings.filter(b => {
+    // 1. Role/Owner filter
     if (filterMe && String(b.created_by) !== String(user?.id)) return false;
+
+    const bStart = new Date(b.start_time);
+    const bEnd = new Date(b.end_time);
+
+    // 2. Status filter: For Today/Week, only show ACTIVE. For Past, show all.
+    if (timeFilter !== 'PAST' && (b.status || 'ACTIVE') !== 'ACTIVE') return false;
+
+    // 3. Time filter
+    if (timeFilter === 'TODAY') {
+      return bStart >= todayStart && bStart <= todayEnd;
+    }
+    if (timeFilter === 'WEEK') {
+      return bStart >= weekStart && bStart <= weekEnd;
+    }
+    if (timeFilter === 'PAST') {
+      return bEnd < now;
+    }
+
     return true;
-  });
+  }).sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
 
   const handleCancel = async (bookingId) => {
     if (!window.confirm('Are you sure you want to cancel this booking?')) return;
@@ -45,8 +79,8 @@ const HistoryModal = ({ bookings, onClose, onSuccess }) => {
         <div className="p-8 border-b border-black/5 bg-black/[0.01]">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">Booking History</h2>
-              <p className="text-slate-500 text-sm">Review active room reservations.</p>
+              <h2 className="text-2xl font-bold text-slate-900 mb-1">{user?.role === 'admin' ? 'Booking History' : 'My Bookings'}</h2>
+              <p className="text-slate-500 text-sm">{user?.role === 'admin' ? 'Review active room reservations.' : 'Track your active room reservations.'}</p>
             </div>
             <button 
               onClick={onClose}
@@ -57,19 +91,39 @@ const HistoryModal = ({ bookings, onClose, onSuccess }) => {
           </div>
 
           <div className="flex flex-wrap gap-4 items-center justify-between">
-             <button 
-                onClick={() => setFilterMe(!filterMe)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${filterMe ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border-black/5 text-slate-600 hover:border-black/10'}`}
-             >
-                {filterMe ? 'My Bookings ✓' : 'My Bookings'}
-             </button>
+             <div className="flex bg-black/5 p-1 rounded-2xl border border-black/5">
+                {[
+                  { id: 'TODAY', label: 'Today' },
+                  { id: 'WEEK', label: 'This Week' },
+                  { id: 'PAST', label: 'Past' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setTimeFilter(f.id)}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${timeFilter === f.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+             </div>
 
-             {error && (
-                <div className="text-red-500 text-xs flex items-center gap-1 font-medium bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                    <AlertCircle size={14} />
-                    {error}
-                </div>
-             )}
+             <div className="flex items-center gap-4">
+                {user?.role === 'admin' && (
+                  <button 
+                      onClick={() => setFilterMe(!filterMe)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${filterMe ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border-black/5 text-slate-600 hover:border-black/10'}`}
+                  >
+                      {filterMe ? 'My Bookings ✓' : 'My Bookings'}
+                  </button>
+                )}
+
+                {error && (
+                    <div className="text-red-500 text-xs flex items-center gap-1 font-medium bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                        <AlertCircle size={14} />
+                        {error}
+                    </div>
+                )}
+             </div>
           </div>
         </div>
 
@@ -80,7 +134,7 @@ const HistoryModal = ({ bookings, onClose, onSuccess }) => {
               <div className="inline-flex p-4 bg-black/5 rounded-2xl text-slate-400 mb-4">
                 <Clock size={40} />
               </div>
-              <p className="text-slate-500 font-medium">No active bookings found.</p>
+              <p className="text-slate-500 font-medium">No {timeFilter.toLowerCase() === 'past' ? '' : 'active'} bookings found for this period.</p>
             </div>
           ) : (
             <div className="space-y-4">
