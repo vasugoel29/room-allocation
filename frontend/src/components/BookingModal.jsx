@@ -212,14 +212,19 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
 
               <div className="space-y-2">
                 <label className="text-sm font-bold text-text-primary">Booking Type</label>
-                <select 
-                  value={bookingType}
-                  onChange={(e) => setBookingType(e.target.value)}
-                  className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all appearance-none cursor-pointer shadow-sm"
-                >
-                  <option value="EXTRA">Extra Booking</option>
-                  <option value="RESCHEDULE">Reschedule</option>
-                </select>
+                <div className="relative">
+                  <select 
+                    value={bookingType}
+                    onChange={(e) => setBookingType(e.target.value)}
+                    className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all appearance-none cursor-pointer shadow-sm pr-10"
+                  >
+                    <option value="EXTRA">Extra Booking</option>
+                    <option value="RESCHEDULE">Reschedule</option>
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -228,23 +233,33 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                      <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Day to free up</label>
-                     <select 
-                       value={rescheduleDay}
-                       onChange={(e) => setRescheduleDay(e.target.value)}
-                       className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent shadow-sm"
-                     >
-                       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <option key={d} value={d}>{d}</option>)}
-                     </select>
+                     <div className="relative">
+                       <select 
+                         value={rescheduleDay}
+                         onChange={(e) => setRescheduleDay(e.target.value)}
+                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8"
+                       >
+                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <option key={d} value={d}>{d}</option>)}
+                       </select>
+                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
+                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                       </div>
+                     </div>
                   </div>
                   <div className="space-y-1.5">
                      <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Slot to free up</label>
-                     <select 
-                       value={rescheduleHour}
-                       onChange={(e) => setRescheduleHour(parseInt(e.target.value))}
-                       className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:border-accent shadow-sm"
-                     >
-                       {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
-                     </select>
+                     <div className="relative">
+                       <select 
+                         value={rescheduleHour}
+                         onChange={(e) => setRescheduleHour(parseInt(e.target.value))}
+                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8"
+                       >
+                         {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
+                       </select>
+                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
+                         <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                       </div>
+                     </div>
                   </div>
                 </div>
 
