@@ -43,6 +43,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
       
       <div className="relative w-full max-w-sm bg-bg-secondary border border-border rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300">
         <button 
+          type="button"
           onClick={onBackToLogin}
           className="absolute top-6 left-6 p-2 hover:bg-bg-primary rounded-full text-text-secondary hover:text-text-primary transition-colors"
         >
