@@ -295,6 +295,7 @@ function App() {
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
+            fetchRooms(); // Prevent hard refresh requirement for new rooms
             fetchBookings();
             fetchAvailability();
           }}

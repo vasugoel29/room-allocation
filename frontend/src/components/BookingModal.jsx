@@ -15,6 +15,13 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
+  const [isDayOpen, setIsDayOpen] = useState(false);
+  const [isHourOpen, setIsHourOpen] = useState(false);
+  const [isRescheduleRoomOpen, setIsRescheduleRoomOpen] = useState(false);
+  const [rescheduleSearchTerm, setRescheduleSearchTerm] = useState('');
+  const [rescheduleDebouncedTerm, setRescheduleDebouncedTerm] = useState('');
+
   React.useEffect(() => {
     if (searchTerm.length < 2) {
       setDebouncedTerm('');
@@ -25,6 +32,17 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  React.useEffect(() => {
+    if (rescheduleSearchTerm.length < 2) {
+      setRescheduleDebouncedTerm('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setRescheduleDebouncedTerm(rescheduleSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [rescheduleSearchTerm]);
 
   const [bookingType, setBookingType] = useState('EXTRA'); // 'EXTRA' | 'RESCHEDULE'
   const [rescheduleRoom, setRescheduleRoom] = useState('');
@@ -216,17 +234,37 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
               <div className="space-y-2">
                 <label className="text-sm font-bold text-text-primary">Booking Type</label>
                 <div className="relative">
-                  <select 
-                    value={bookingType}
-                    onChange={(e) => setBookingType(e.target.value)}
-                    className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm font-medium text-text-primary focus:outline-none focus:border-accent transition-all appearance-none cursor-pointer shadow-sm pr-10 hover:bg-bg-secondary/30"
-                  >
-                    <option value="EXTRA">Extra Booking</option>
-                    <option value="RESCHEDULE">Reschedule</option>
-                  </select>
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
-                    <svg width="14" height="14" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <div className="relative cursor-pointer" onClick={() => setIsTypeOpen(!isTypeOpen)}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={bookingType === 'EXTRA' ? 'Extra Booking' : 'Reschedule'}
+                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm font-medium text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30 pointer-events-none"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50">
+                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isTypeOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    </div>
                   </div>
+
+                  {isTypeOpen && (
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                      {[
+                        { id: 'EXTRA', label: 'Extra Booking' },
+                        { id: 'RESCHEDULE', label: 'Reschedule' }
+                      ].map(type => (
+                        <div
+                          key={type.id}
+                          onClick={() => {
+                            setBookingType(type.id);
+                            setIsTypeOpen(false);
+                          }}
+                          className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center gap-2 ${bookingType === type.id ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
+                        >
+                          {type.label}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -237,44 +275,126 @@ function BookingModal({ slot, rooms, bookings, availability, onClose, onSuccess 
                   <div className="space-y-1.5">
                      <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Day to free up</label>
                      <div className="relative">
-                       <select 
-                         value={rescheduleDay}
-                         onChange={(e) => setRescheduleDay(e.target.value)}
-                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8 hover:bg-bg-primary/50"
-                       >
-                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => <option key={d} value={d}>{d}</option>)}
-                       </select>
-                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
-                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                       <div className="relative cursor-pointer" onClick={() => setIsDayOpen(!isDayOpen)}>
+                         <input
+                           type="text"
+                           readOnly
+                           value={rescheduleDay}
+                           className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm cursor-pointer pr-8 hover:bg-bg-primary/50 pointer-events-none"
+                         />
+                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
+                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDayOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                         </div>
                        </div>
+                       
+                       {isDayOpen && (
+                         <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
+                             <div
+                               key={d}
+                               onClick={() => {
+                                 setRescheduleDay(d);
+                                 setIsDayOpen(false);
+                               }}
+                               className={`px-3 py-2.5 cursor-pointer border-b border-border last:border-0 transition-colors text-sm ${rescheduleDay === d ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
+                             >
+                               {d}
+                             </div>
+                           ))}
+                         </div>
+                       )}
                      </div>
                   </div>
                   <div className="space-y-1.5">
                      <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Slot to free up</label>
                      <div className="relative">
-                       <select 
-                         value={rescheduleHour}
-                         onChange={(e) => setRescheduleHour(parseInt(e.target.value))}
-                         className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm appearance-none cursor-pointer pr-8 hover:bg-bg-primary/50"
-                       >
-                         {HOURS.map(h => <option key={h} value={h}>{h}:00</option>)}
-                       </select>
-                       <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50 pointer-events-none">
-                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                       <div className="relative cursor-pointer" onClick={() => setIsHourOpen(!isHourOpen)}>
+                         <input
+                           type="text"
+                           readOnly
+                           value={`${rescheduleHour}:00`}
+                           className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm cursor-pointer pr-8 hover:bg-bg-primary/50 pointer-events-none"
+                         />
+                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
+                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isHourOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                         </div>
                        </div>
+                       
+                       {isHourOpen && (
+                         <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                           {HOURS.map(h => (
+                             <div
+                               key={h}
+                               onClick={() => {
+                                 setRescheduleHour(h);
+                                 setIsHourOpen(false);
+                               }}
+                               className={`px-3 py-2.5 cursor-pointer border-b border-border last:border-0 transition-colors text-sm ${rescheduleHour === h ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
+                             >
+                               {h}:00
+                             </div>
+                           ))}
+                         </div>
+                       )}
                      </div>
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-sm font-bold text-text-primary">Which room is being freed up?</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 5115"
-                    value={rescheduleRoom}
-                    onChange={(e) => setRescheduleRoom(e.target.value)}
-                    className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent transition-all shadow-sm"
-                  />
+                  <div className="relative">
+                    <div className="relative cursor-pointer">
+                      <input
+                        type="text"
+                        placeholder="Search or enter room..."
+                        value={isRescheduleRoomOpen ? rescheduleSearchTerm : (rescheduleRoom || '')}
+                        onClick={() => setIsRescheduleRoomOpen(!isRescheduleRoomOpen)}
+                        onChange={(e) => {
+                          setRescheduleSearchTerm(e.target.value);
+                          setRescheduleRoom(e.target.value);
+                          setIsRescheduleRoomOpen(true);
+                        }}
+                        className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-primary/30"
+                      />
+                      <div 
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
+                        onClick={() => setIsRescheduleRoomOpen(!isRescheduleRoomOpen)}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isRescheduleRoomOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                    </div>
+
+                    {isRescheduleRoomOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+                        {rooms
+                          .filter(room => {
+                            if (!rescheduleDebouncedTerm) return true;
+                            return room.name.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase()) || 
+                                   room.building?.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase());
+                          })
+                          .map(room => (
+                            <div
+                              key={room.id}
+                              onClick={() => {
+                                setRescheduleRoom(room.name);
+                                setRescheduleSearchTerm(room.name);
+                                setIsRescheduleRoomOpen(false);
+                              }}
+                              className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center justify-between hover:bg-accent/5 ${rescheduleRoom === room.name ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
+                            >
+                              <div className="flex flex-col gap-0.5 max-w-[70%]">
+                                <span className="font-bold text-base text-text-primary truncate flex items-center gap-2">{room.name}</span>
+                                <span className="text-xs text-text-secondary truncate font-medium">{room.building}</span>
+                              </div>
+                              <div className="flex gap-2 items-center opacity-80">
+                                {room.has_ac && <Wind size={14} className="text-accent" />}
+                                {room.has_projector && <Monitor size={14} className="text-accent" />}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

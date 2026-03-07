@@ -49,12 +49,36 @@ async function createBooking(client, reqData, userId) {
     let resRoomId;
     
     if (resRoomRes.rows.length === 0) {
+      // Calculate building from first digit (e.g. "5" -> "5th Block") robustly
+      const safeRoomName = String(reschedule_room_name || '').trim();
+      const firstDigit = safeRoomName.charAt(0);
+      const building = /^\d$/.test(firstDigit) ? `${firstDigit}th Block` : 'Unknown';
+
       // Create room if not exists
       const newResRoom = await client.query(
         'INSERT INTO rooms (name, building, floor, capacity) VALUES ($1, $2, $3, $4) RETURNING id',
-        [reschedule_room_name, 'Unknown', 0, 40]
+        [safeRoomName, building, 0, 40]
       );
       resRoomId = newResRoom.rows[0].id;
+
+      // Ensure it's unavailable everywhere else by default (Mon-Fri, 8-17)
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+      const defaultHours = Array.from({ length: 10 }, (_, i) => i + 8);
+      
+      const availabilityPromises = [];
+      for (const d of days) {
+        for (const h of defaultHours) {
+          availabilityPromises.push(
+            client.query(
+              'INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, $3, FALSE)',
+              [resRoomId, d, h]
+            )
+          );
+        }
+      }
+      // Await all insertions to prevent race conditions
+      await Promise.all(availabilityPromises);
+      
     } else {
       resRoomId = resRoomRes.rows[0].id;
     }

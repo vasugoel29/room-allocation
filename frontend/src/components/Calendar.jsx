@@ -156,10 +156,12 @@ function Calendar({ bookings, rooms, availability, viewMode, selectedDay, onDayC
                                 key={room.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const dateObj = weekDates.find(d => d.day === day)?.fullDate;
-                                  onSlotClick({ day, hour, date: dateObj, room_id: room.id });
+                                  if (!booking) {
+                                    const dateObj = weekDates.find(d => d.day === day)?.fullDate;
+                                    onSlotClick({ day, hour, date: dateObj, room_id: room.id });
+                                  }
                                 }}
-                                className={`px-3 py-2 rounded-xl border shadow-sm hover:translate-y-[-1px] transform transition-all text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3]' : 'bg-bg-secondary text-text-primary'}`}
+                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px]' : ''} transform transition-all text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
                                 title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
                               >
                                 <div className="flex items-center gap-2 overflow-hidden">

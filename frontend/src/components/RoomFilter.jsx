@@ -31,12 +31,12 @@ function RoomFilter({ filters, setFilters }) {
                  <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-6 transition-transform shadow-sm"></div>
                </div>
                <span className="text-base text-text-secondary group-hover:text-text-primary transition-colors flex items-center gap-2 font-medium">
-                 <Wind size={18} className="text-text-secondary/50" />
+                 <Wind size={16} className="text-text-secondary/50" />
                  AC Required
                </span>
              </label>
 
-             <label className="flex items-center gap-3 cursor-pointer group" key="projector">
+             <label className="flex items-center gap-4 cursor-pointer group" key="projector">
                <div className="relative">
                  <input 
                    type="checkbox" 
@@ -45,10 +45,10 @@ function RoomFilter({ filters, setFilters }) {
                    onChange={handleChange}
                    className="sr-only peer"
                  />
-                 <div className="w-10 h-5 bg-border rounded-full peer peer-checked:bg-accent transition-colors"></div>
-                 <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-transform shadow-sm"></div>
+                 <div className="w-12 h-6 bg-border rounded-full peer peer-checked:bg-accent transition-colors"></div>
+                 <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full peer-checked:translate-x-6 transition-transform shadow-sm"></div>
                </div>
-               <span className="text-sm text-text-secondary group-hover:text-text-primary transition-colors flex items-center gap-2 font-medium">
+               <span className="text-base text-text-secondary group-hover:text-text-primary transition-colors flex items-center gap-2 font-medium">
                  <Monitor size={16} className="text-text-secondary/50" />
                  Projector
                </span>
