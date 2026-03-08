@@ -434,18 +434,24 @@ function BookingModal({ slot, onClose, onSuccess }) {
           </div>
 
           <div className="flex gap-4 pt-2">
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="flex-[2] flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
-              >
-                {loading ? 'Processing...' : (
-                  <>
-                    <CheckCircle size={20} />
-                    Confirm Booking
-                  </>
-                )}
-              </button>
+              {user?.role !== 'VIEWER' ? (
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="flex-[2] flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+                >
+                  {loading ? 'Processing...' : (
+                    <>
+                      <CheckCircle size={20} />
+                      Confirm Booking
+                    </>
+                  )}
+                </button>
+              ) : (
+                <div className="flex-1 bg-bg-primary/50 text-text-secondary py-4 rounded-xl text-center text-sm font-bold border border-border">
+                  View Only Mode
+                </div>
+              )}
               {selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(JSON.parse(localStorage.getItem('user'))?.id) && (
                   <button 
                   type="button"

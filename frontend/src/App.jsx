@@ -104,20 +104,19 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+        <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
+          <div className="flex items-center gap-3">
             <button 
                 onClick={() => setIsSidebarOpen(true)}
                 className="p-2 lg:hidden bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm active:scale-95 transition-transform"
             >
                 <Menu size={20} />
             </button>
-            <div className="flex-1">
-              <h2 className="text-lg lg:text-2xl font-bold text-text-primary leading-tight">Room Schedule</h2>
-              <p className="text-text-secondary text-[10px] lg:text-xs">Manage and book rooms in real-time.</p>
+            <div className="">
+              <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-indigo-600 leading-tight">CRAS</h2>
             </div>
           </div>
-          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+          <div className="flex items-center gap-2">
              <div className="flex gap-1.5 sm:gap-2">
                <button 
                 onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
@@ -129,25 +128,25 @@ function App() {
 
                <button 
                 onClick={() => setIsHistoryOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm"
                >
                  <History size={14} />
                  <span>{user?.role === 'admin' ? 'History' : 'Bookings'}</span>
                </button>
              </div>
 
-             <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm ml-auto sm:ml-0">
-               <button 
-                onClick={() => setViewMode('week')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
-               >
-                 <LayoutGrid size={12} /> Week
-               </button>
+             <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm">
                <button 
                 onClick={() => setViewMode('day')}
                 className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
                >
                  <Maximize2 size={12} /> Day
+               </button>
+               <button 
+                onClick={() => setViewMode('week')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+               >
+                 <LayoutGrid size={12} /> Week
                </button>
              </div>
           </div>

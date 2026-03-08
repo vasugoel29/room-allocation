@@ -20,7 +20,7 @@ export const AppProvider = ({ children }) => {
   const [availability, setAvailability] = useState([]);
   const [filters, setFilters] = useState({ ac: false, projector: false });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
-  const [viewMode, setViewMode] = useState('week'); // 'week' | 'day'
+  const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
 
   const initialDay = useMemo(() => {
     const now = new Date();

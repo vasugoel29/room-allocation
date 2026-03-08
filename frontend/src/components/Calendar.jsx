@@ -140,12 +140,11 @@ function Calendar({ onSlotClick }) {
                       key={dateStr} 
                       className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full min-h-[70px] sm:min-h-[80px]"
                       onClick={() => {
-                        if (user?.role === 'VIEWER') return;
                         const dateObj = currentWeekDay?.fullDate;
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
                     >
-                      <div className={`gap-1 sm:gap-2 p-0.5 sm:p-1 h-full overflow-hidden ${viewMode === 'day' ? 'grid grid-cols-2 xs:grid-cols-3' : 'flex flex-col'}`}>
+                      <div className={`gap-1 sm:gap-2 p-0.5 sm:p-1 h-full overflow-hidden ${viewMode === 'day' ? 'grid grid-cols-2' : 'flex flex-col'}`}>
                           {rooms
                           .filter(room => {
                             const avNode = availability?.find(a => a.room_id === room.id && a.day === dayLabel && a.hour === hour);
@@ -165,13 +164,12 @@ function Calendar({ onSlotClick }) {
                                 key={room.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (user?.role === 'VIEWER') return;
                                   if (!booking) {
                                     const dateObj = currentWeekDay?.fullDate;
                                     onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                   }
                                 }}
-                                className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px]' : ''} transform transition-all text-xs sm:text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
+                                className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-xs sm:text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
                                 title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
                               >
                                 <div className="flex flex-col overflow-hidden">
