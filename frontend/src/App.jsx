@@ -6,19 +6,23 @@ import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
 import { AppContext } from './context/AppContext';
-import { useNotification } from './context/NotificationContext';
-import Notification from './components/Notification';
+import toast from 'react-hot-toast';
 import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
 
 function App() {
   const { user, theme, setTheme, viewMode, setViewMode, backendError, handleLogout } = useContext(AppContext);
-  const { showNotification } = useNotification();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('sidebarCollapsed') === 'true';
+  });
+
+  const toggleSidebar = () => {
+    const newState = !isSidebarCollapsed;
+    setIsSidebarCollapsed(newState);
+    localStorage.setItem('sidebarCollapsed', newState);
+  };
 
   if (backendError) {
     return (
@@ -57,7 +61,6 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
-      <Notification />
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
         <div 
@@ -67,20 +70,24 @@ function App() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 w-72 glass border-r border-black/5 p-6 flex flex-col gap-8 z-50 transition-transform duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between text-indigo-600">
-          <div className="flex items-center gap-3">
-            <CalendarIcon size={32} />
-            <h1 className="text-xl font-bold tracking-tight text-text-primary">CRAS</h1>
+      <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 p-6 flex flex-col gap-8 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'}`}>
+        <div className={`flex items-center text-indigo-600 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <div className="flex items-center gap-3 overflow-hidden">
+            <CalendarIcon size={32} className="shrink-0" />
+            {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight text-text-primary whitespace-nowrap">CRAS</h1>}
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="p-2 lg:hidden text-text-secondary hover:text-text-primary">
-             <CloseIcon size={24} />
-          </button>
+          {!isSidebarCollapsed && (
+            <button onClick={() => setIsSidebarOpen(false)} className="p-2 lg:hidden text-text-secondary hover:text-text-primary">
+              <CloseIcon size={24} />
+            </button>
+          )}
         </div>
 
-        <RoomFilter />
+        <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 lg:hidden' : 'opacity-100'}`}>
+          <RoomFilter />
+        </div>
 
-        {user?.role !== 'VIEWER' && (
+        {user?.role !== 'VIEWER' && !isSidebarCollapsed && (
           <div className="lg:hidden py-4 border-t border-black/5">
              <button 
               onClick={() => {
@@ -96,12 +103,14 @@ function App() {
         )}
 
         <div className="mt-auto pt-6 border-t border-black/5">
-          <div className="flex items-center justify-between">
-            <div className="overflow-hidden">
-              <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
-              <p className="text-[10px] text-accent uppercase tracking-widest font-bold">{user.role}</p>
-            </div>
-            <button onClick={handleLogout} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-text-secondary hover:text-text-primary transition-colors border border-transparent hover:border-border">
+          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            {!isSidebarCollapsed && (
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
+                <p className="text-[10px] text-accent uppercase tracking-widest font-bold">{user.role}</p>
+              </div>
+            )}
+            <button onClick={handleLogout} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-text-secondary hover:text-text-primary transition-colors border border-transparent hover:border-border" title="Logout">
               <LogOut size={18} />
             </button>
           </div>
@@ -113,8 +122,15 @@ function App() {
         <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
           <div className="flex items-center gap-3">
             <button 
-                onClick={() => setIsSidebarOpen(true)}
-                className="p-2 lg:hidden bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm active:scale-95 transition-transform"
+                onClick={() => {
+                  if (window.innerWidth >= 1024) {
+                    toggleSidebar();
+                  } else {
+                    setIsSidebarOpen(true);
+                  }
+                }}
+                className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm active:scale-95 transition-transform hover:text-accent"
+                title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
                 <Menu size={20} />
             </button>
@@ -165,7 +181,7 @@ function App() {
           <Calendar 
             onSlotClick={(slot) => {
               if (user?.role === 'VIEWER') {
-                showNotification('Access Denied: Viewers cannot create or edit bookings.', 'error');
+                toast.error('Access Denied: Viewers cannot create or edit bookings.');
                 return;
               }
               setSelectedSlot(slot);

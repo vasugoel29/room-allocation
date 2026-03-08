@@ -1,11 +1,10 @@
 import { AppContext } from '../context/AppContext';
-import { useNotification } from '../context/NotificationContext';
+import toast from 'react-hot-toast';
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
 function BookingModal({ slot, onClose, onSuccess }) {
   const { user, rooms, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
-  const { showNotification } = useNotification();
   const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || '');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
@@ -127,7 +126,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
       const data = await res.json();
       if (res.ok) {
-        showNotification(`Success! Room ${selectedRoomData ? selectedRoomData.name : selectedRoom} has been booked for ${slot.day} at ${slot.hour}:00.`, 'success');
+        toast.success(`Success! Room ${selectedRoomData ? selectedRoomData.name : selectedRoom} has been booked for ${slot.day} at ${slot.hour}:00.`);
         fetchRooms();
         fetchBookings();
         fetchAvailability();

@@ -144,7 +144,7 @@ function Calendar({ onSlotClick }) {
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
                     >
-                      <div className={`gap-1 sm:gap-2 p-0.5 sm:p-1 h-full overflow-hidden ${viewMode === 'day' ? 'grid grid-cols-2' : 'flex flex-col'}`}>
+                      <div className={`gap-2 p-1.5 h-full overflow-y-auto no-scrollbar ${viewMode === 'day' ? 'flex flex-wrap content-start' : 'flex flex-col'}`}>
                           {rooms
                           .filter(room => {
                             const avNode = availability?.find(a => a.room_id === room.id && a.day === dayLabel && a.hour === hour);
@@ -157,7 +157,7 @@ function Calendar({ onSlotClick }) {
                             const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                             return score(b) - score(a);
                           })
-                          .slice(0, viewMode === 'day' ? 6 : 2).map(room => { 
+                          .slice(0, viewMode === 'day' ? 20 : 2).map(room => { 
                             const booking = getBooking(dateStr, hour, room.id);
                             return (
                               <div 
@@ -169,20 +169,20 @@ function Calendar({ onSlotClick }) {
                                     onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                   }
                                 }}
-                                className={`px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-xs sm:text-base leading-tight truncate flex items-center justify-between font-black border-border ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
+                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border ${viewMode === 'day' ? 'w-[180px]' : 'w-full'} ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
                                 title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
                               >
                                 <div className="flex flex-col overflow-hidden">
-                                  <span className={`font-black truncate ${booking ? 'text-text-secondary text-[10px] sm:text-sm' : ''}`}>{room.name}</span>
+                                  <span className={`font-black truncate ${booking ? 'text-text-secondary text-sm' : ''}`}>{room.name}</span>
                                   {booking && (
-                                    <span className="text-[8px] sm:text-[10px] text-text-secondary/70 truncate leading-none">
+                                    <span className="text-[10px] text-text-secondary/70 truncate leading-none">
                                       {booking.user_name}
                                     </span>
                                   )}
                                 </div>
-                                <div className="flex flex-col items-center gap-0.5 sm:gap-1 ml-1 sm:ml-2 flex-shrink-0 opacity-80">
-                                  <Wind size={10} className={room.has_ac ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500'} />
-                                  <Monitor size={10} className={room.has_projector ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500'} />
+                                <div className="flex flex-col items-center gap-1 ml-2 flex-shrink-0 opacity-80">
+                                  <Wind size={12} className={room.has_ac ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500'} />
+                                  <Monitor size={12} className={room.has_projector ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500'} />
                                 </div>
                               </div>
                             );
