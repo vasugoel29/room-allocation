@@ -76,18 +76,20 @@ function App() {
 
         <RoomFilter />
 
-        <div className="lg:hidden py-4 border-t border-black/5">
-           <button 
-            onClick={() => {
-              setIsHistoryOpen(true);
-              setIsSidebarOpen(false);
-            }} 
-            className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 rounded-xl font-bold transition-all active:scale-[0.98]"
-           >
-             <History size={20} />
-             <span>{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
-           </button>
-        </div>
+        {user?.role !== 'VIEWER' && (
+          <div className="lg:hidden py-4 border-t border-black/5">
+             <button 
+              onClick={() => {
+                setIsHistoryOpen(true);
+                setIsSidebarOpen(false);
+              }} 
+              className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 rounded-xl font-bold transition-all active:scale-[0.98]"
+             >
+               <History size={20} />
+               <span>{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
+             </button>
+          </div>
+        )}
 
         <div className="mt-auto pt-6 border-t border-black/5">
           <div className="flex items-center justify-between">
@@ -126,13 +128,15 @@ function App() {
                  {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
                </button>
 
-               <button 
-                onClick={() => setIsHistoryOpen(true)}
-                className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm"
-               >
-                 <History size={14} />
-                 <span>{user?.role === 'admin' ? 'History' : 'Bookings'}</span>
-               </button>
+               {user?.role !== 'VIEWER' && (
+                 <button 
+                  onClick={() => setIsHistoryOpen(true)}
+                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm"
+                 >
+                   <History size={14} />
+                   <span>{user?.role === 'admin' ? 'History' : 'Bookings'}</span>
+                 </button>
+               )}
              </div>
 
              <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm">
