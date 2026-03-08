@@ -5,7 +5,7 @@ import BookingModal from './components/BookingModal';
 import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
-import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2, Download } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
 import { AppContext } from './context/AppContext';
 
 function App() {
@@ -13,25 +13,6 @@ function App() {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
-
-  const handleInstall = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
-    }
-  };
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -107,18 +88,6 @@ function App() {
                <History size={20} />
                <span>{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
              </button>
-          </div>
-        )}
-
-        {deferredPrompt && (
-          <div className="py-4 border-t border-black/5">
-                <button 
-                  onClick={handleInstall}
-                  className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-600 text-white rounded-xl font-bold transition-all shadow-md shadow-indigo-600/20 active:scale-[0.98]"
-                >
-                  <Download size={20} />
-                  <span>Install CRAS</span>
-                </button>
           </div>
         )}
 
