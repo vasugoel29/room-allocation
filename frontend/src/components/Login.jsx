@@ -10,6 +10,24 @@ const Login = ({ onShowSignup }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
+  const [showForgotSuccess, setShowForgotSuccess] = useState(false);
+
+  const handleForgotPassword = () => {
+    const emailToReset = window.prompt("Enter your NSUT email ID for password recovery:");
+    if (!emailToReset) return;
+
+    if (!emailToReset.toLowerCase().endsWith('@nsut.ac.in')) {
+      alert('Only NSUT emails (@nsut.ac.in) are supported for recovery.');
+      return;
+    }
+
+    const subject = encodeURIComponent(`request for password access for email id ${emailToReset} during login whose password is forgotten`);
+    const body = encodeURIComponent(`Hi Support,\n\nI have forgotten my password for the CRAS system. Could you please help me recover access for my email: ${emailToReset}?\n\nThank you.`);
+    
+    window.location.href = `mailto:support.cras.nsut@gmail.com?subject=${subject}&body=${body}`;
+    setShowForgotSuccess(true);
+    setTimeout(() => setShowForgotSuccess(false), 5000);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -99,20 +117,36 @@ const Login = ({ onShowSignup }) => {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex flex-col items-center justify-center gap-1 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 active:scale-[0.98]"
-          >
-            <div className="flex items-center gap-2">
-              <LogIn size={20} />
-              {loading ? 'Authenticating...' : 'Sign In'}
-            </div>
-            {loading && status && (
-              <span className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
-            )}
-          </button>
+          <div className="flex flex-col gap-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex flex-col items-center justify-center gap-1 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-2">
+                <LogIn size={20} />
+                {loading ? 'Authenticating...' : 'Sign In'}
+              </div>
+              {loading && status && (
+                <span className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-sm font-bold text-text-secondary hover:text-accent transition-colors"
+            >
+              Forgot Password?
+            </button>
+          </div>
         </form>
+
+        {showForgotSuccess && (
+          <div className="p-4 rounded-2xl bg-success/10 border border-success/20 text-success text-xs font-medium animate-in fade-in slide-in-from-top-1">
+            Support request prepared! Please send the email in your mail app.
+          </div>
+        )}
 
         <div className="text-center pt-4">
           <p className="text-sm text-text-secondary font-medium">

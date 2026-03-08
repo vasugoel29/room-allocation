@@ -128,6 +128,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
       const data = await res.json();
       if (res.ok) {
+        alert(`Success! Room ${selectedRoomData ? selectedRoomData.name : selectedRoom} has been booked for ${slot.day} at ${slot.hour}:00.`);
         fetchRooms();
         fetchBookings();
         fetchAvailability();

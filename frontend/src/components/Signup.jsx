@@ -119,23 +119,13 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             />
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-              <ShieldCheck size={16} className="text-text-secondary/50" />
-              Account Type
-            </label>
-            <div className="relative">
-              <select 
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all appearance-none pr-10"
-              >
-                <option value="VIEWER" className="bg-bg-secondary">Viewer (Read Only)</option>
-                <option value="STUDENT_REP" className="bg-bg-secondary">Student Representative (Can Book)</option>
-              </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-text-secondary/50">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </div>
+          {/* Account Type hidden as only VIEWER is available for self-signup */}
+          <input type="hidden" value="VIEWER" />
+          <div className="p-4 rounded-xl bg-bg-primary border border-border flex items-center gap-3">
+            <ShieldCheck size={20} className="text-accent" />
+            <div>
+              <p className="text-xs font-bold text-text-secondary uppercase tracking-wider">Account Type</p>
+              <p className="text-sm font-medium text-text-primary">Viewer (Read Only)</p>
             </div>
           </div>
 

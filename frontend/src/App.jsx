@@ -160,6 +160,10 @@ function App() {
           <div className="glass rounded-2xl p-2 sm:p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
           <Calendar 
             onSlotClick={(slot) => {
+              if (user?.role === 'VIEWER') {
+                alert('Access Denied: Viewers cannot create or edit bookings.');
+                return;
+              }
               setSelectedSlot(slot);
               setIsModalOpen(true);
             }} 
