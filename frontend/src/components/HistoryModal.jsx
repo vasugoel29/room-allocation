@@ -81,26 +81,26 @@ const HistoryModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-white/40 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="relative w-full max-w-4xl glass rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in duration-300 border border-black/5">
+      <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative w-full max-w-4xl glass dark:bg-slate-800 rounded-[2rem] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in duration-300 border border-black/5">
         
         {/* Header */}
-        <div className="p-8 border-b border-black/5 bg-black/[0.01]">
+        <div className="p-8 border-b border-border bg-bg-secondary/30">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">{user?.role === 'admin' ? 'Booking History' : 'My Bookings'}</h2>
-              <p className="text-slate-500 text-sm">{user?.role === 'admin' ? 'Review active room reservations.' : 'Track your active room reservations.'}</p>
+              <h2 className="text-2xl font-bold text-text-primary mb-1">{user?.role === 'admin' ? 'Booking History' : 'My Bookings'}</h2>
+              <p className="text-text-secondary text-sm">{user?.role === 'admin' ? 'Review active room reservations.' : 'Track your active room reservations.'}</p>
             </div>
             <button 
               onClick={onClose}
-              className="p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 transition-colors"
+              className="p-2 hover:bg-black/5 dark:hover:bg-white/5 rounded-full text-text-secondary hover:text-text-primary transition-colors"
             >
               <X size={24} />
             </button>
           </div>
 
           <div className="flex flex-wrap gap-4 items-center justify-between">
-             <div className="flex bg-black/5 p-1 rounded-2xl border border-black/5">
+             <div className="flex bg-bg-secondary p-1 rounded-xl border border-border shadow-sm">
                 {[
                   { id: 'TODAY', label: 'Today' },
                   { id: 'WEEK', label: 'This Week' },
@@ -109,7 +109,7 @@ const HistoryModal = ({ onClose }) => {
                   <button
                     key={f.id}
                     onClick={() => setTimeFilter(f.id)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all ${timeFilter === f.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${timeFilter === f.id ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
                   >
                     {f.label}
                   </button>
@@ -120,7 +120,7 @@ const HistoryModal = ({ onClose }) => {
                 {user?.role === 'admin' && (
                   <button 
                       onClick={() => setFilterMe(!filterMe)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${filterMe ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border-black/5 text-slate-600 hover:border-black/10'}`}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${filterMe ? 'bg-accent border-accent text-white shadow-lg shadow-accent/20' : 'bg-bg-secondary border-border text-text-secondary hover:text-text-primary'}`}
                   >
                       {filterMe ? 'My Bookings ✓' : 'My Bookings'}
                   </button>
@@ -137,63 +137,72 @@ const HistoryModal = ({ onClose }) => {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 bg-white/50">
+        <div className="flex-1 overflow-y-auto p-8 bg-bg-primary/30">
           {filteredBookings.length === 0 ? (
             <div className="text-center py-20">
-              <div className="inline-flex p-4 bg-black/5 rounded-2xl text-slate-400 mb-4">
-                <Clock size={40} />
+              <div className="inline-flex p-6 bg-bg-secondary rounded-[2rem] text-text-secondary/20 mb-4 border border-border shadow-inner">
+                <Clock size={48} />
               </div>
-              <p className="text-slate-500 font-medium">No {timeFilter.toLowerCase() === 'past' ? '' : 'active'} bookings found for this period.</p>
+              <p className="text-text-secondary font-medium">No {timeFilter.toLowerCase() === 'past' ? '' : 'active'} bookings found for this period.</p>
             </div>
           ) : (
             <div className="space-y-4">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="text-slate-400 text-xs uppercase tracking-wider font-semibold">
+                  <tr className="text-text-secondary text-[10px] uppercase font-black tracking-[0.2em] border-b border-border/50">
                     <th className="pb-4 px-4">Room</th>
-                    <th className="pb-4 px-4">Time</th>
-                    <th className="pb-4 px-4">Booked By</th>
+                    <th className="pb-4 px-4 text-center">Time</th>
+                    <th className="pb-4 px-4 text-center">Booker</th>
                     <th className="pb-4 px-4">Purpose</th>
                     <th className="pb-4 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {filteredBookings.map((booking) => (
-                    <tr key={booking.id} className="border-t border-black/5 hover:bg-black/[0.01] transition-colors group">
-                      <td className="py-4 px-4 font-semibold text-slate-900">
+                    <tr key={booking.id} className="border-b border-border/30 hover:bg-bg-secondary/30 transition-colors group">
+                      <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
-                            <Hash size={16} />
+                          <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent shadow-sm">
+                            <Hash size={18} />
                           </div>
-                          {booking.room_name}
+                          <span className="font-bold text-text-primary text-base">{booking.room_name}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-slate-600">
-                        {new Date(booking.start_time).toLocaleDateString('en-US', { 
-                          month: 'short', 
-                          day: 'numeric',
-                          weekday: 'short'
-                        })} at {new Date(booking.start_time).toLocaleTimeString('en-US', { 
-                          hour: 'numeric', 
-                          minute: '2-digit',
-                          hour12: true 
-                        })}
+                      <td className="py-4 px-4 text-center">
+                        <div className="inline-flex flex-col items-center">
+                          <span className="text-text-primary font-bold text-sm">
+                            {new Date(booking.start_time).toLocaleDateString('en-US', { 
+                              month: 'short', 
+                              day: 'numeric',
+                              weekday: 'short'
+                            })}
+                          </span>
+                          <span className="text-text-secondary text-[10px] uppercase font-black tracking-widest mt-0.5">
+                            {new Date(booking.start_time).toLocaleTimeString('en-US', { 
+                              hour: 'numeric', 
+                              minute: '2-digit',
+                              hour12: true 
+                            })}
+                          </span>
+                        </div>
                       </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2 text-indigo-600 font-medium">
-                          <User size={14} />
+                      <td className="py-4 px-4 text-center">
+                        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/5 border border-accent/10 text-accent font-black text-xs">
+                          <User size={12} />
                           {booking.user_name}
                         </div>
                       </td>
-                      <td className="py-4 px-4 text-slate-500 italic max-w-[200px] truncate">
-                        {booking.purpose || 'No purpose'}
+                      <td className="py-4 px-4 max-w-[200px]">
+                        <p className="text-text-secondary text-sm italic line-clamp-2 leading-relaxed">
+                          {booking.purpose || 'No purpose provided'}
+                        </p>
                       </td>
                       <td className="py-4 px-4 text-right">
                         {String(booking.created_by) === String(user?.id) && (booking.status || 'ACTIVE') === 'ACTIVE' && new Date(booking.end_time) > now && (
                           <button 
                             onClick={() => handleCancel(booking.id)}
                             disabled={loading}
-                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
                             title="Cancel Booking"
                           >
                             <Trash2 size={18} />
@@ -209,10 +218,10 @@ const HistoryModal = ({ onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-black/[0.01] border-t border-black/5 flex justify-end items-center gap-4">
+        <div className="p-6 bg-bg-secondary/50 border-t border-border flex justify-end items-center gap-4">
           <button 
             onClick={onClose}
-            className="px-6 py-2.5 bg-white hover:bg-slate-50 rounded-xl text-sm font-semibold text-slate-700 transition-all border border-black/5 shadow-sm active:scale-[0.98]"
+            className="px-8 py-3 bg-bg-primary hover:bg-bg-secondary rounded-xl text-sm font-black text-text-primary transition-all border border-border shadow-sm active:scale-[0.98] uppercase tracking-widest"
           >
             Close
           </button>
