@@ -73,13 +73,15 @@ async function seed() {
         if (!DAYS_MAP[dayStr]) continue;
 
         for (const slot of slots) {
-          // Parse "T108:00-09:00" -> hour 8
-          // The JSON slots are like T1, T2, ... T13
+          // Parse "T108:00-09:00" -> hour 8, "T601:00-02:00" -> hour 1 (which means 13/1 PM)
+          // The JSON slots are like T1-T13 covering 08:00 to 20:00 (8 AM to 8 PM)
           const hourMatch = slot.time_slot.match(/T\d+(\d{2}):00/);
           if (!hourMatch) continue;
-          const hour = parseInt(hourMatch[1]);
+          let hour = parseInt(hourMatch[1]);
           
-          if (hour < 8 || hour > 17) continue; // Only keep standard calendar hours
+          if (hour < 8) hour += 12;
+          
+          if (hour < 8 || hour > 20) continue; 
 
           // Standard university classes make a room UNAVAILABLE for user booking
           const isAvailable = !slot.is_occupied;

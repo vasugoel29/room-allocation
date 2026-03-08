@@ -2,9 +2,11 @@ import React, { useState, useContext } from 'react';
 import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
 import { api } from '../utils/api';
 import { AppContext } from '../context/AppContext';
+import { useNotification } from '../context/NotificationContext';
 
 const Login = ({ onShowSignup }) => {
   const { setUser } = useContext(AppContext);
+  const { showNotification } = useNotification();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,14 +18,14 @@ const Login = ({ onShowSignup }) => {
     const loginEmail = window.prompt("Enter your Login NSUT email ID:");
     if (!loginEmail) return;
     if (!loginEmail.toLowerCase().endsWith('@nsut.ac.in')) {
-      alert('Only NSUT emails (@nsut.ac.in) are supported.');
+      showNotification('Only NSUT emails (@nsut.ac.in) are supported.', 'error');
       return;
     }
 
     const recoveryEmail = window.prompt("Enter the NSUT email ID where the password should be sent:");
     if (!recoveryEmail) return;
     if (!recoveryEmail.toLowerCase().endsWith('@nsut.ac.in')) {
-      alert('Only NSUT emails (@nsut.ac.in) are supported.');
+      showNotification('Only NSUT emails (@nsut.ac.in) are supported.', 'error');
       return;
     }
 
@@ -36,10 +38,10 @@ const Login = ({ onShowSignup }) => {
         setTimeout(() => setShowForgotSuccess(false), 8000);
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to send recovery request');
+        showNotification(data.error || 'Failed to send recovery request', 'error');
       }
     } catch {
-      alert('Connection failed. Please try again.');
+      showNotification('Connection failed. Please try again.', 'error');
     } finally {
       setLoading(false);
       setStatus('');

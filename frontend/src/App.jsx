@@ -5,11 +5,14 @@ import BookingModal from './components/BookingModal';
 import HistoryModal from './components/HistoryModal';
 import Login from './components/Login';
 import Signup from './components/Signup';
-import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
 import { AppContext } from './context/AppContext';
+import { useNotification } from './context/NotificationContext';
+import Notification from './components/Notification';
+import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
 
 function App() {
   const { user, theme, setTheme, viewMode, setViewMode, backendError, handleLogout } = useContext(AppContext);
+  const { showNotification } = useNotification();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -54,6 +57,7 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
+      <Notification />
       {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
         <div 
@@ -161,7 +165,7 @@ function App() {
           <Calendar 
             onSlotClick={(slot) => {
               if (user?.role === 'VIEWER') {
-                alert('Access Denied: Viewers cannot create or edit bookings.');
+                showNotification('Access Denied: Viewers cannot create or edit bookings.', 'error');
                 return;
               }
               setSelectedSlot(slot);
