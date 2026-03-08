@@ -1,16 +1,24 @@
 import json
 import os
 
-input_file = "rooms_complete_data.json"
-output_file = "rooms_complete_data_updated.json"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+input_file = os.path.join(script_dir, "rooms_complete_data.json")
+output_file = os.path.join(script_dir, "rooms_complete_data_updated.json")
 
 # Rooms to remove (Labs)
-labs_to_remove = ["5025", "5012", "5101", "5115", "5129", "5133", "5201", "5218", "5309", "5129", "5133"]
+labs_to_remove = ["5025", "5012", "5101", "5115", "5129", "5133", "5201", "5218", "5309"]
 
 # Metadata updates
-ac_proj_rooms = ["5015", "5116", "5119", "5215", "5216", "5217", "5221", "5222", "5311", "5312", "5305", "5306", "5307"]
+ac_proj_rooms = [
+    "5015", "5116", "5119", "5215", "5216", "5217", "5221", "5222", 
+    "5311", "5312", "5305", "5306", "5307"
+]
 small_rooms = ["5220", "5310", "5308"]
-no_ac_no_proj = ["5027", "5028", "5024", "5013", "5014", "5017", "5127", "5138", "5219", "5301"]
+no_ac_no_proj = [
+    "5027", "5028", "5024", "5013", "5014", "5017", 
+    "5127", "5138", "5219", "5301"
+]
+unknown_rooms = ["5018"] # no clue
 
 def process_rooms():
     if not os.path.exists(input_file):
@@ -44,6 +52,10 @@ def process_rooms():
         elif room_number in no_ac_no_proj:
             metadata["has_ac"] = False
             metadata["has_projector"] = False
+        elif room_number in unknown_rooms:
+            metadata["has_ac"] = None
+            metadata["has_projector"] = None
+            metadata["notes"] = "no clue"
             
         room_data["metadata"] = metadata
         updated_rooms.append(room_data)

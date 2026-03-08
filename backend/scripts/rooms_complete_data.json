@@ -2,9 +2,9 @@
   "timestamp": "2026-03-08T17:47:30.448888",
   "user_id": "2022UIT3042",
   "fin_year": "2025-26",
-  "total_rooms": 27,
+  "total_rooms": 36,
   "analysis": {
-    "total_rooms": 27,
+    "total_rooms": 36,
     "by_day": {
       "Mon": {
         "total": 468,
@@ -87,7 +87,31 @@
     },
     "most_available_rooms": [
       {
+        "room": "5025",
+        "availability_percentage": 100.0,
+        "free_slots": 78,
+        "total_slots": 78
+      },
+      {
         "room": "5024",
+        "availability_percentage": 100.0,
+        "free_slots": 78,
+        "total_slots": 78
+      },
+      {
+        "room": "5129",
+        "availability_percentage": 100.0,
+        "free_slots": 78,
+        "total_slots": 78
+      },
+      {
+        "room": "5133",
+        "availability_percentage": 100.0,
+        "free_slots": 78,
+        "total_slots": 78
+      },
+      {
+        "room": "5218",
         "availability_percentage": 100.0,
         "free_slots": 78,
         "total_slots": 78
@@ -105,9 +129,21 @@
         "total_slots": 78
       },
       {
+        "room": "5309",
+        "availability_percentage": 100.0,
+        "free_slots": 78,
+        "total_slots": 78
+      },
+      {
         "room": "5301",
         "availability_percentage": 100.0,
         "free_slots": 78,
+        "total_slots": 78
+      },
+      {
+        "room": "5101",
+        "availability_percentage": 94.87,
+        "free_slots": 74,
         "total_slots": 78
       },
       {
@@ -132,6 +168,24 @@
         "room": "5138",
         "availability_percentage": 84.62,
         "free_slots": 66,
+        "total_slots": 78
+      },
+      {
+        "room": "5115",
+        "availability_percentage": 82.05,
+        "free_slots": 64,
+        "total_slots": 78
+      },
+      {
+        "room": "5012",
+        "availability_percentage": 79.49,
+        "free_slots": 62,
+        "total_slots": 78
+      },
+      {
+        "room": "5201",
+        "availability_percentage": 79.49,
+        "free_slots": 62,
         "total_slots": 78
       },
       {
@@ -660,10 +714,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
       }
     },
     {
@@ -1073,10 +1123,415 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
+      }
+    },
+    {
+      "room": "5025",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
       }
     },
     {
@@ -1486,10 +1941,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
       }
     },
     {
@@ -1899,11 +2350,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": null,
-        "has_projector": null,
-        "notes": "no clue"
       }
     },
     {
@@ -2313,10 +2759,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -2726,10 +3168,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
       }
     },
     {
@@ -3139,10 +3577,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
       }
     },
     {
@@ -3552,10 +3986,1233 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
+      }
+    },
+    {
+      "room": "5012",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC403VIVEK MEHTASem:4-Sec:3COMPUTER SCIENCE AND ENGINEERING - COCSC403MANYASem:4-Sec:3",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC403VIVEK MEHTASem:4-Sec:3COMPUTER SCIENCE AND ENGINEERING - COCSC403MANYASem:4-Sec:3",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CMCSC404BIJENDRA KUMARSem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CMCSC404MANYASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CMCSC404BIJENDRA KUMARSem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CMCSC404MANYASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CACSC403VIVEK MEHTASem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CACSC403MANYASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CACSC403VIVEK MEHTASem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CACSC403MANYASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC603RAJSHREESem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC603GAURAV SINGALSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC603SUSHAMA NAGPALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC603RAJSHREESem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC603GAURAV SINGALSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC603SUSHAMA NAGPALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC603ANJALI SINGHSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - COCSC603GEETANJALI RATHISem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC603ANJALI SINGHSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - COCSC603GEETANJALI RATHISem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CMCSC601SAVITA YADAVSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CMCSC601SAURABHI CHOUDHARYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CMCSC601SAVITA YADAVSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CMCSC601SAURABHI CHOUDHARYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC603RASHMI CHAUDHRYSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC603RUDRESH DWIVEDISem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC603RASHMI CHAUDHRYSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC603RUDRESH DWIVEDISem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CACSC402ANKUR GUPTASem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CACSC402PURRNIMA SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CACSC402ANKUR GUPTASem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CACSC402PURRNIMA SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "5101",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "CS - CSCSE02M. P. S. BHATIASem:2-Sec:DEAN PG STUDIES - CSCSE02M. P. S. BHATIASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "CS - CSCSE02M. P. S. BHATIASem:2-Sec:DEAN PG STUDIES - CSCSE02M. P. S. BHATIASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "CS - CSCSC04BIJENDRA KUMARSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "CS - CSCSC04BIJENDRA KUMARSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "5115",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC403POONAM RANISem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC403TUSHAR DAHIYASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC403POONAM RANISem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC403TUSHAR DAHIYASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CACSC602SURENDRA NAGARSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CACSC602DEVESH KUMARSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CACSC602SURENDRA NAGARSem:6-Sec:1COMPUTER SCIENCE AND ENGINEERING - CACSC602DEVESH KUMARSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC402RITU SIBALSem:4-Sec:3COMPUTER SCIENCE AND ENGINEERING - COCSC402RISHABH VATSSem:4-Sec:3",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC402RITU SIBALSem:4-Sec:3COMPUTER SCIENCE AND ENGINEERING - COCSC402RISHABH VATSSem:4-Sec:3",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC402PURRNIMA SINGHSem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC402ABHINAV TOMARSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CDCSC402PURRNIMA SINGHSem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - CDCSC402ABHINAV TOMARSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC601ANKUSH JAINSem:6-Sec:3COMPUTER SCIENCE AND ENGINEERING - COCSC601ROHIT KUMARSem:6-Sec:3",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC601ANKUSH JAINSem:6-Sec:3COMPUTER SCIENCE AND ENGINEERING - COCSC601ROHIT KUMARSem:6-Sec:3",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC601ANKUSH JAINSem:6-Sec:2COMPUTER SCIENCE AND ENGINEERING - COCSC601ROHIT KUMARSem:6-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC601ANKUSH JAINSem:6-Sec:2COMPUTER SCIENCE AND ENGINEERING - COCSC601ROHIT KUMARSem:6-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC402PREETI KAURSem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - COCSC402ANJALI SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - COCSC402PREETI KAURSem:4-Sec:1COMPUTER SCIENCE AND ENGINEERING - COCSC402ANJALI SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
       }
     },
     {
@@ -3965,10 +5622,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -4378,10 +6031,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -4791,10 +6440,824 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
+      }
+    },
+    {
+      "room": "5129",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "5133",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
       }
     },
     {
@@ -5204,10 +7667,415 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
+      }
+    },
+    {
+      "room": "5201",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "INFORMATION TECHNOLOGY - ITITC602SHIPRA GAUTAMSem:6-Sec:2INFORMATION TECHNOLOGY - ITITC602DIVANSHI P. WANGOOSem:6-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "INFORMATION TECHNOLOGY - ITITC602SHIPRA GAUTAMSem:6-Sec:2INFORMATION TECHNOLOGY - ITITC602DIVANSHI P. WANGOOSem:6-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "EC - ECITC203AKASH MALIKSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "EC - ECITC203AKASH MALIKSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "INFORMATION TECHNOLOGY - ITITE622AISHWARYA KATYALSem:6-Sec:INFORMATION TECHNOLOGY - ITITE622AISHWARYA KATYALSem:6-Sec:INFORMATION TECHNOLOGY - ITITE622MOHIT SAJWANSem:6-Sec:INFORMATION TECHNOLOGY - ITITE622MOHIT SAJWANSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "INFORMATION TECHNOLOGY - ITITE622AISHWARYA KATYALSem:6-Sec:INFORMATION TECHNOLOGY - ITITE622AISHWARYA KATYALSem:6-Sec:INFORMATION TECHNOLOGY - ITITE622MOHIT SAJWANSem:6-Sec:INFORMATION TECHNOLOGY - ITITE622MOHIT SAJWANSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - ECITC203SHIKHA BANSALSem:2-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - ECITC203SHIKHA BANSALSem:2-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "EE - EEITC401SHIPRA GAUTAMSem:4-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "EE - EEITC401SHIPRA GAUTAMSem:4-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "INFORMATION TECHNOLOGY - ITINC04VIKAS MAHESHKARSem:2-Sec:1DEAN PG STUDIES - ITINC04VIKAS MAHESHKARSem:2-Sec:DEAN PG STUDIES - ITINC04VIKAS MAHESHKARSem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "INFORMATION TECHNOLOGY - ITINC04VIKAS MAHESHKARSem:2-Sec:1DEAN PG STUDIES - ITINC04VIKAS MAHESHKARSem:2-Sec:DEAN PG STUDIES - ITINC04VIKAS MAHESHKARSem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "EE - EEITC401OSHINA VASISHTHSem:4-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "EE - EEITC401OSHINA VASISHTHSem:4-Sec:2",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CSCSC03SAVITA YADAVSem:2-Sec:1INFORMATION TECHNOLOGY - ITINC03KARAN GUPTASem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "COMPUTER SCIENCE AND ENGINEERING - CSCSC03SAVITA YADAVSem:2-Sec:1INFORMATION TECHNOLOGY - ITINC03KARAN GUPTASem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
       }
     },
     {
@@ -5617,10 +8485,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -6030,10 +8894,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -6443,10 +9303,415 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
+      }
+    },
+    {
+      "room": "5218",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
       }
     },
     {
@@ -6856,10 +10121,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
       }
     },
     {
@@ -7269,11 +10530,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false,
-        "size": "small"
       }
     },
     {
@@ -7683,10 +10939,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -8096,10 +11348,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -8509,10 +11757,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -8922,10 +12166,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -9335,11 +12575,415 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false,
-        "size": "small"
+      }
+    },
+    {
+      "room": "5309",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
       }
     },
     {
@@ -9749,11 +13393,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false,
-        "size": "small"
       }
     },
     {
@@ -10163,10 +13802,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -10576,10 +14211,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -10989,10 +14620,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": true,
-        "has_projector": true
       }
     },
     {
@@ -11402,10 +15029,6 @@
             "is_occupied": false
           }
         ]
-      },
-      "metadata": {
-        "has_ac": false,
-        "has_projector": false
       }
     }
   ]

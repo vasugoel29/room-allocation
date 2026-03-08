@@ -1,12 +1,13 @@
 import pkg from 'pg';
 const { Pool } = pkg;
+import dotenv from 'dotenv';
+dotenv.config();
 
 const pool = new Pool({
-  user: 'roomuser',
-  host: 'localhost',
-  database: 'roomdb',
-  password: 'roompass',
-  port: 5432,
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 async function unseed() {
