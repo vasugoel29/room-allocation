@@ -128,13 +128,15 @@ function App() {
                </button>
              </div>
 
-             <button 
-              onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-xs font-medium text-text-secondary hover:text-text-primary transition-all shadow-sm"
-             >
-               <History size={16} />
-               <span className="hidden sm:inline">{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
-             </button>
+             {user?.role !== 'VIEWER' && (
+               <button 
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-xs font-medium text-text-secondary hover:text-text-primary transition-all shadow-sm"
+               >
+                 <History size={16} />
+                 <span className="hidden sm:inline">{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
+               </button>
+             )}
           </div>
         </header>
 
