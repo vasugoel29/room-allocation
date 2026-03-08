@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import * as db from '../db.js';
+import nodemailer from 'nodemailer';
 import { JWT_SECRET } from '../middleware/auth.js';
 
 export const signup = async (req, res) => {
@@ -30,5 +31,37 @@ export const login = async (req, res) => {
     res.json({ token, user: { id: user.id, email: user.email, role: user.role, name: user.name } });
   } catch (err) {
     res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+export const forgotPassword = async (req, res) => {
+  const { loginEmail, recoveryEmail } = req.body;
+
+  if (!loginEmail || !recoveryEmail) {
+    return res.status(400).json({ error: 'Both login and recovery emails are required' });
+  }
+
+  // Create transporter (using Gmail as a likely candidate, but using generic SMTP settings)
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS
+    }
+  });
+
+  const mailOptions = {
+    from: process.env.SMTP_USER,
+    to: 'support.cras.nsut@gmail.com',
+    subject: `request for password for ${loginEmail} along with ${recoveryEmail}`,
+    text: `Password recovery request:\n\nLogin Email: ${loginEmail}\nRecovery Email: ${recoveryEmail}\n\nPlease share the password with the recovery email address provided.`
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    res.json({ message: 'Password recovery request sent successfully' });
+  } catch (err) {
+    console.error('Email error:', err);
+    res.status(500).json({ error: 'Failed to send recovery request' });
   }
 };

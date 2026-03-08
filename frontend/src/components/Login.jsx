@@ -12,21 +12,38 @@ const Login = ({ onShowSignup }) => {
   const [status, setStatus] = useState('');
   const [showForgotSuccess, setShowForgotSuccess] = useState(false);
 
-  const handleForgotPassword = () => {
-    const emailToReset = window.prompt("Enter your NSUT email ID for password recovery:");
-    if (!emailToReset) return;
-
-    if (!emailToReset.toLowerCase().endsWith('@nsut.ac.in')) {
-      alert('Only NSUT emails (@nsut.ac.in) are supported for recovery.');
+  const handleForgotPassword = async () => {
+    const loginEmail = window.prompt("Enter your Login NSUT email ID:");
+    if (!loginEmail) return;
+    if (!loginEmail.toLowerCase().endsWith('@nsut.ac.in')) {
+      alert('Only NSUT emails (@nsut.ac.in) are supported.');
       return;
     }
 
-    const subject = encodeURIComponent(`request for password access for email id ${emailToReset} during login whose password is forgotten`);
-    const body = encodeURIComponent(`Hi Support,\n\nI have forgotten my password for the CRAS system. Could you please help me recover access for my email: ${emailToReset}?\n\nThank you.`);
-    
-    window.location.href = `mailto:support.cras.nsut@gmail.com?subject=${subject}&body=${body}`;
-    setShowForgotSuccess(true);
-    setTimeout(() => setShowForgotSuccess(false), 5000);
+    const recoveryEmail = window.prompt("Enter the NSUT email ID where the password should be sent:");
+    if (!recoveryEmail) return;
+    if (!recoveryEmail.toLowerCase().endsWith('@nsut.ac.in')) {
+      alert('Only NSUT emails (@nsut.ac.in) are supported.');
+      return;
+    }
+
+    setLoading(true);
+    setStatus('Sending recovery request...');
+    try {
+      const res = await api.post('/auth/forgot-password', { loginEmail, recoveryEmail });
+      if (res.ok) {
+        setShowForgotSuccess(true);
+        setTimeout(() => setShowForgotSuccess(false), 8000);
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to send recovery request');
+      }
+    } catch {
+      alert('Connection failed. Please try again.');
+    } finally {
+      setLoading(false);
+      setStatus('');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -144,7 +161,7 @@ const Login = ({ onShowSignup }) => {
 
         {showForgotSuccess && (
           <div className="p-4 rounded-2xl bg-success/10 border border-success/20 text-success text-xs font-medium animate-in fade-in slide-in-from-top-1">
-            Support request prepared! Please send the email in your mail app.
+            Recovery request sent! Support will email the password to your recovery address.
           </div>
         )}
 
