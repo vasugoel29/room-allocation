@@ -19,21 +19,18 @@ const HistoryModal = ({ onClose }) => {
   todayEnd.setHours(23,59,59,999);
 
   // This Week range (Mon-Sun)
-  // Logic: If today is Saturday (6) or Sunday (0), we likely care about the COMING week as "This Week"
-  const isWeekend = now.getDay() === 0 || now.getDay() === 6;
-  const curr = new Date(now);
-  const day = curr.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
+  // Logic: Match the Calendar's "This Week" (if it's Sat/Sun, we look at the coming week)
+  const currentDay = now.getDay() || 7;
+  const offset = currentDay >= 6 ? 7 : 0;
   
-  const mondayOfCurrentWeek = new Date(now);
-  mondayOfCurrentWeek.setDate(now.getDate() + diffToMonday);
+  const mondayOfView = new Date(now);
+  mondayOfView.setDate(now.getDate() - currentDay + 1 + offset);
   
-  const weekStart = new Date(mondayOfCurrentWeek);
+  const weekStart = new Date(mondayOfView);
   weekStart.setHours(0, 0, 0, 0);
   
   const weekEnd = new Date(weekStart);
-  // Extend by 13 days if it's the weekend (this week + next week), else 6 days
-  weekEnd.setDate(weekStart.getDate() + (isWeekend ? 13 : 6));
+  weekEnd.setDate(weekStart.getDate() + 6); // Sunday
   weekEnd.setHours(23, 59, 59, 999);
 
   const filteredBookings = bookings.filter(b => {
