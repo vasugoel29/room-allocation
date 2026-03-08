@@ -9,6 +9,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
   const [role, setRole] = useState('VIEWER');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,9 +21,15 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
     }
 
     setLoading(true);
+    setStatus('Contacting server...');
+
+    const wakeUpTimer = setTimeout(() => {
+      setStatus('Server is waking up, please wait...');
+    }, 4000);
 
     try {
       const res = await api.post('/auth/signup', { name, email, password, role });
+      clearTimeout(wakeUpTimer);
       
       const data = await res.json();
       if (res.ok) {
@@ -31,9 +38,11 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
         setError(data.error || 'Signup failed');
       }
     } catch {
-      setError('Connection to server failed');
+      clearTimeout(wakeUpTimer);
+      setError('Connection failed. The server might be deep-sleeping—please try again after a few seconds.');
     } finally {
       setLoading(false);
+      setStatus('');
     }
   };
 
@@ -133,13 +142,14 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 mt-4 active:scale-[0.98]"
+            className="w-full flex flex-col items-center justify-center gap-1 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 mt-4 active:scale-[0.98]"
           >
-            {loading ? 'Creating Account...' : (
-              <>
-                <UserPlus size={20} />
-                Create Account
-              </>
+            <div className="flex items-center gap-2">
+              <UserPlus size={20} />
+              {loading ? 'Creating Account...' : 'Create Account'}
+            </div>
+            {loading && status && (
+              <span className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
             )}
           </button>
         </form>

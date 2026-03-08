@@ -17,27 +17,34 @@ export async function apiFetch(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const executeFetch = () => fetch(`${BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const MAX_RETRIES = 4;
+  const RETRY_DELAY_BASE = 2000;
 
-  try {
-    let response = await executeFetch();
-    
-    // If it's a 503 (often Render cold start/db connecting), retry once after a short delay
-    if (response.status === 503) {
-      console.warn('Backend is waking up (503), retrying in 2 seconds...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      response = await executeFetch();
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${BASE_URL}${endpoint}`, {
+        ...options,
+        headers,
+      });
+
+      // If it's a 503 (Render cold start) or 504 (Gateway timeout), retry
+      if ((response.status === 503 || response.status === 504) && attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAY_BASE * Math.pow(2, attempt);
+        console.warn(`Backend is waking up (${response.status}), retrying in ${delay / 1000}s (Attempt ${attempt + 1}/${MAX_RETRIES})...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_DELAY_BASE * Math.pow(2, attempt);
+        console.warn(`Fetch failed, retrying in ${delay / 1000}s (Attempt ${attempt + 1}/${MAX_RETRIES})...`, err);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
     }
-    
-    return response;
-  } catch (err) {
-    // If it literally failed to fetch (network error), try once more
-    console.warn('Fetch failed, retrying once...', err);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return executeFetch();
   }
 }
 

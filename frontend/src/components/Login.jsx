@@ -7,6 +7,7 @@ const Login = ({ onLogin, onShowSignup }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,9 +19,15 @@ const Login = ({ onLogin, onShowSignup }) => {
     }
 
     setLoading(true);
+    setStatus('Contacting server...');
+
+    const wakeUpTimer = setTimeout(() => {
+      setStatus('Server is waking up...');
+    }, 4000);
 
     try {
       const res = await api.post('/auth/login', { email, password });
+      clearTimeout(wakeUpTimer);
       
       const data = await res.json();
       if (res.ok && data.token) {
@@ -31,9 +38,11 @@ const Login = ({ onLogin, onShowSignup }) => {
         setError(data.error || 'Invalid credentials');
       }
     } catch {
-      setError('Connection failed. The server might be waking up—please try again in a few seconds.');
+      clearTimeout(wakeUpTimer);
+      setError('Connection failed. The server might be deep-sleeping—please try again after a few seconds.');
     } finally {
       setLoading(false);
+      setStatus('');
     }
   };
 
@@ -91,13 +100,14 @@ const Login = ({ onLogin, onShowSignup }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 active:scale-[0.98]"
+            className="w-full flex flex-col items-center justify-center gap-1 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 active:scale-[0.98]"
           >
-            {loading ? 'Authenticating...' : (
-              <>
-                <LogIn size={20} />
-                Sign In
-              </>
+            <div className="flex items-center gap-2">
+              <LogIn size={20} />
+              {loading ? 'Authenticating...' : 'Sign In'}
+            </div>
+            {loading && status && (
+              <span className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
             )}
           </button>
         </form>
