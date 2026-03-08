@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
 import { api } from '../utils/api';
+import { AppContext } from '../context/AppContext';
 
-const Login = ({ onLogin, onShowSignup }) => {
+const Login = ({ onShowSignup }) => {
+  const { setUser } = useContext(AppContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,7 +35,7 @@ const Login = ({ onLogin, onShowSignup }) => {
       if (res.ok && data.token) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        onLogin(data.user);
+        setUser(data.user);
       } else {
         setError(data.error || 'Invalid credentials');
       }

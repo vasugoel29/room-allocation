@@ -76,6 +76,19 @@ function App() {
 
         <RoomFilter />
 
+        <div className="lg:hidden py-4 border-t border-black/5">
+           <button 
+            onClick={() => {
+              setIsHistoryOpen(true);
+              setIsSidebarOpen(false);
+            }} 
+            className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 rounded-xl font-bold transition-all active:scale-[0.98]"
+           >
+             <History size={20} />
+             <span>{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
+           </button>
+        </div>
+
         <div className="mt-auto pt-6 border-t border-black/5">
           <div className="flex items-center justify-between">
             <div className="overflow-hidden">
@@ -90,63 +103,65 @@ function App() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-2 lg:p-4 overflow-hidden flex flex-col w-full">
-        <header className="flex justify-between items-center mb-4 px-2">
-          <div className="flex items-center gap-4">
+      <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="p-2 lg:hidden bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm"
+                className="p-2 lg:hidden bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm active:scale-95 transition-transform"
             >
-                <Menu size={24} />
+                <Menu size={20} />
             </button>
-            <div>
-              <h2 className="text-xl lg:text-2xl font-bold text-text-primary mb-0.5">Room Schedule</h2>
-              <p className="text-text-secondary text-[10px] lg:text-xs">Manage and book campus rooms in real-time.</p>
+            <div className="flex-1">
+              <h2 className="text-lg lg:text-2xl font-bold text-text-primary leading-tight">Room Schedule</h2>
+              <p className="text-text-secondary text-[10px] lg:text-xs">Manage and book rooms in real-time.</p>
             </div>
           </div>
-          <div className="flex gap-2 lg:gap-4">
-             <button 
-              onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-              className="p-2.5 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all shadow-sm"
-              title="Toggle Theme"
-             >
-               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
-             </button>
-
-             <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm">
+          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+             <div className="flex gap-1.5 sm:gap-2">
                <button 
-                onClick={() => setViewMode('week')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+                className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all shadow-sm"
+                title="Toggle Theme"
                >
-                 <LayoutGrid size={14} /> Week
+                 {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
                </button>
+
                <button 
-                onClick={() => setViewMode('day')}
-                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm"
                >
-                 <Maximize2 size={14} /> Day
+                 <History size={14} />
+                 <span>{user?.role === 'admin' ? 'History' : 'Bookings'}</span>
                </button>
              </div>
 
-             {user?.role !== 'VIEWER' && (
+             <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm ml-auto sm:ml-0">
                <button 
-                onClick={() => setIsHistoryOpen(true)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-xs font-medium text-text-secondary hover:text-text-primary transition-all shadow-sm"
+                onClick={() => setViewMode('week')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
                >
-                 <History size={16} />
-                 <span className="hidden sm:inline">{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
+                 <LayoutGrid size={12} /> Week
                </button>
-             )}
+               <button 
+                onClick={() => setViewMode('day')}
+                className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+               >
+                 <Maximize2 size={12} /> Day
+               </button>
+             </div>
           </div>
         </header>
 
-        <section className="glass rounded-2xl p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
+        <section className="flex-1 flex flex-col overflow-hidden w-full p-2 sm:p-4">
+          <div className="glass rounded-2xl p-2 sm:p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
           <Calendar 
             onSlotClick={(slot) => {
               setSelectedSlot(slot);
               setIsModalOpen(true);
             }} 
           />
+          </div>
         </section>
       </main>
 

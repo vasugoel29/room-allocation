@@ -143,34 +143,34 @@ function BookingModal({ slot, onClose, onSuccess }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
       
-      <div className="relative w-full max-w-xl glass dark:bg-slate-800 rounded-[2rem] p-8 shadow-2xl border border-black/5">
-        <button onClick={onClose} className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
-          <X size={24} />
+      <div className="relative w-full max-w-xl glass dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-2xl border border-black/5 overflow-y-auto max-h-[95vh] no-scrollbar">
+        <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
+          <X size={20} sm:size={24} />
         </button>
 
-        <h3 className="text-2xl font-bold text-text-primary mb-2 flex items-center gap-4">
+        <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-1 sm:mb-2 flex items-center gap-3 sm:gap-4 flex-wrap">
           Book Room
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-accent/10 text-accent capitalize">
+          <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-accent/10 text-accent capitalize">
             {slot.day} @ {slot.hour}:00
           </span>
         </h3>
-        <p className="text-text-secondary mb-6 text-sm">Secure your slot in one of the available rooms.</p>
+        <p className="text-text-secondary mb-4 sm:mb-6 text-xs sm:text-sm">Secure your slot in one of the available rooms.</p>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm flex items-center gap-3 font-medium">
-            <AlertCircle size={20} />
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs sm:text-sm flex items-center gap-2 sm:gap-3 font-medium">
+            <AlertCircle size={18} sm:size={20} />
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-text-primary">Select Room</label>
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+          <div className="space-y-3 sm:space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <label className="text-xs sm:text-sm font-bold text-text-primary">Select Room</label>
                 <div className="relative">
                   <div className="relative">
                     <input

@@ -33,7 +33,13 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.6;
   font-weight: 500;
-  font-size: 16px; /* Increased base font size */
+  font-size: 14px; /* Default for mobile */
+}
+
+@media (min-width: 768px) {
+  :root {
+    font-size: 16px; /* Desktop base font size */
+  }
 }
 
 body {
@@ -45,6 +51,21 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.3s ease, color 0.3s ease;
+  overflow-x: hidden; /* Prevent horizontal scroll on body */
+}
+
+/* Touch optimization for mobile */
+@media (max-width: 767px) {
+  button, 
+  a, 
+  input, 
+  select {
+    min-height: 44px; /* Minimum touch target size */
+  }
+  
+  .glass {
+    backdrop-filter: blur(8px); /* Less blur on mobile for performance */
+  }
 }
 
 .glass {
