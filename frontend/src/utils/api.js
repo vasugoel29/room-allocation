@@ -17,12 +17,28 @@ export async function apiFetch(endpoint, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+  const executeFetch = () => fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers,
   });
 
-  return response;
+  try {
+    let response = await executeFetch();
+    
+    // If it's a 503 (often Render cold start/db connecting), retry once after a short delay
+    if (response.status === 503) {
+      console.warn('Backend is waking up (503), retrying in 2 seconds...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      response = await executeFetch();
+    }
+    
+    return response;
+  } catch (err) {
+    // If it literally failed to fetch (network error), try once more
+    console.warn('Fetch failed, retrying once...', err);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    return executeFetch();
+  }
 }
 
 export const api = {

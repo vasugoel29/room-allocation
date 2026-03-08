@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Filter, Wind, Monitor } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
 function Calendar({ onSlotClick }) {
@@ -21,7 +21,7 @@ function Calendar({ onSlotClick }) {
     const dayIndex = now.getDay(); // 0 is Sunday, 1 is Monday...
     const currentDayName = DAYS[dayIndex - 1];
 
-    if (hour < 8 || hour >= 18 || dayIndex === 0 || dayIndex === 6) return null;
+    if (hour < 8 || hour >= 18) return null;
     
     // Position relative to the 10-hour grid (8 AM to 5 PM+)
     const totalMinutesSince8AM = (hour - 8) * 60 + minutes;
@@ -141,6 +141,7 @@ function Calendar({ onSlotClick }) {
                       key={dateStr} 
                       className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full min-h-[80px]"
                       onClick={() => {
+                        if (user?.role === 'VIEWER') return;
                         const dateObj = currentWeekDay?.fullDate;
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
@@ -169,6 +170,7 @@ function Calendar({ onSlotClick }) {
                                 key={room.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
+                                  if (user?.role === 'VIEWER') return;
                                   if (!booking) {
                                     const dateObj = currentWeekDay?.fullDate;
                                     onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });

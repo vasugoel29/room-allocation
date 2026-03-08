@@ -6,7 +6,7 @@ import { AppContext } from '../context/AppContext';
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
 function BookingModal({ slot, onClose, onSuccess }) {
-  const { rooms, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
+  const { user, rooms, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
   const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || '');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
@@ -69,6 +69,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
   };
 
   const handleCancel = async () => {
+    if (user?.role === 'VIEWER') return;
     const booking = getRoomBooking(selectedRoom);
     if (!booking) return;
 
@@ -93,6 +94,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (user?.role === 'VIEWER') return;
     if (!selectedRoom) return setError('Please select a room');
     if (bookingType === 'RESCHEDULE' && !rescheduleRoom) return setError('Please specify the room being freed up');
     

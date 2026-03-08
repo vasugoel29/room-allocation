@@ -31,7 +31,7 @@ const Login = ({ onLogin, onShowSignup }) => {
         setError(data.error || 'Invalid credentials');
       }
     } catch {
-      setError('Connection to server failed');
+      setError('Connection failed. The server might be waking up—please try again in a few seconds.');
     } finally {
       setLoading(false);
     }
