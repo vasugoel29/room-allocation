@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
 import { api } from '../utils/api';
 import { AppContext } from '../context/AppContext';
-import toast from 'react-hot-toast';
+
 
 const Login = ({ onShowSignup }) => {
   const { setUser } = useContext(AppContext);
@@ -11,41 +11,9 @@ const Login = ({ onShowSignup }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');
-  const [showForgotSuccess, setShowForgotSuccess] = useState(false);
 
-  const handleForgotPassword = async () => {
-    const loginEmail = window.prompt("Enter your Login NSUT email ID:");
-    if (!loginEmail) return;
-    if (!loginEmail.toLowerCase().endsWith('@nsut.ac.in')) {
-      toast.error('Only NSUT emails (@nsut.ac.in) are supported.');
-      return;
-    }
 
-    const recoveryEmail = window.prompt("Enter the NSUT email ID where the password should be sent:");
-    if (!recoveryEmail) return;
-    if (!recoveryEmail.toLowerCase().endsWith('@nsut.ac.in')) {
-      toast.error('Only NSUT emails (@nsut.ac.in) are supported.');
-      return;
-    }
 
-    setLoading(true);
-    setStatus('Sending recovery request...');
-    try {
-      const res = await api.post('/auth/forgot-password', { loginEmail, recoveryEmail });
-      if (res.ok) {
-        setShowForgotSuccess(true);
-        setTimeout(() => setShowForgotSuccess(false), 8000);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || 'Failed to send recovery request');
-      }
-    } catch {
-      toast.error('Connection failed. Please try again.');
-    } finally {
-      setLoading(false);
-      setStatus('');
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -150,21 +118,10 @@ const Login = ({ onShowSignup }) => {
               )}
             </button>
 
-            <button
-              type="button"
-              onClick={handleForgotPassword}
-              className="text-sm font-bold text-text-secondary hover:text-accent transition-colors"
-            >
-              Forgot Password?
-            </button>
           </div>
         </form>
 
-        {showForgotSuccess && (
-          <div className="p-4 rounded-2xl bg-success/10 border border-success/20 text-success text-xs font-medium animate-in fade-in slide-in-from-top-1">
-            Recovery request sent! Support will email the password to your recovery address.
-          </div>
-        )}
+
 
         <div className="text-center pt-4">
           <p className="text-sm text-text-secondary font-medium">
