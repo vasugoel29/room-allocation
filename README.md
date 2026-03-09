@@ -75,12 +75,13 @@ Please see the [Deployment Guide](./deployment_guide.md) for step-by-step instru
 
 ## ✨ Core Features
 
+- **🎨 Premium UI**: Modern dark theme using Tailwind CSS, glassmorphism, and **buttery smooth transitions**.
+- **📱 Mobile Optimized**: High-performance responsive layouts, including a 2-column Day view and GPU-accelerated navigation.
 - **🔐 Robust Auth**: JWT-based authentication with a secure Signup/Login flow.
 - **🔍 Searchable Picker**: Debounced (300ms) room search in the booking modal.
 - **📅 Visual Calendar**: Real-time room schedule with "Booked by" owner visibility.
 - **📜 Booking History**: Unified view of all reservations with direct cancellation.
 - **🛡️ Secure Transactions**: PostgreSQL atomic operations to prevent double-booking.
-- **🎨 Premium UI**: Modern dark theme using Tailwind CSS and glassmorphism.
 
 ## 🛠️ Tech Stack
 

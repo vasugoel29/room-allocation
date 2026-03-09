@@ -3,7 +3,7 @@ import { Filter, Wind, Monitor } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
+const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); 
 
 function Calendar({ onSlotClick }) {
   const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay } = useContext(AppContext);
@@ -19,19 +19,18 @@ function Calendar({ onSlotClick }) {
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
+    const timer = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(timer);
   }, []);
 
   const getCurrentTimePosition = () => {
     const hour = now.getHours();
     const minutes = now.getMinutes();
-    const dayIndex = now.getDay(); // 0 is Sunday, 1 is Monday...
+    const dayIndex = now.getDay();
     const currentDayName = DAYS[dayIndex - 1];
 
     if (hour < 8 || hour >= 18 || dayIndex === 0 || dayIndex === 6) return null;
     
-    // Position relative to the 10-hour grid (8 AM to 5 PM+)
     const totalMinutesSince8AM = (hour - 8) * 60 + minutes;
     const percentage = (totalMinutesSince8AM / (10 * 60)) * 100;
     
@@ -84,7 +83,6 @@ function Calendar({ onSlotClick }) {
     <div className="flex flex-col flex-1 overflow-hidden w-full relative">
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar rounded-xl border border-border">
         <div className={`flex flex-col min-h-full w-full relative layout-transition ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
-          {/* Header */}
           <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm layout-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
             <div className="p-2 sm:p-4 text-[10px] sm:text-base font-bold text-text-secondary uppercase tracking-widest flex items-center justify-center bg-bg-primary/50">Time</div>
             {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
@@ -104,9 +102,7 @@ function Calendar({ onSlotClick }) {
             ))}
           </div>
 
-          {/* Grid */}
           <div className="relative flex-1 flex flex-col w-full">
-            {/* Current Time Line */}
             {timePos && (
               <div 
                 className="absolute left-0 right-0 z-20 pointer-events-none transition-all duration-1000"

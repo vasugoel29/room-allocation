@@ -64,7 +64,6 @@ function App() {
 
   return (
     <div className="w-full h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
-      {/* Sidebar Overlay for Mobile */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
@@ -72,7 +71,6 @@ function App() {
         />
       )}
 
-      {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 px-6 py-3 sm:py-4 flex flex-col gap-8 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'}`}>
         <div className={`flex items-center text-indigo-600 ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'}`}>
           <div className="flex items-center gap-3 overflow-hidden">
@@ -128,7 +126,6 @@ function App() {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
         <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
           <div className="flex items-center gap-1 sm:gap-2">

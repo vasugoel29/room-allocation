@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { X, AlertCircle, Wind, Monitor, CheckCircle } from 'lucide-react';
 import { api } from '../utils/api';
 
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
+const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); 
 
 function BookingModal({ slot, onClose, onSuccess }) {
   const { user, rooms, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
@@ -47,7 +47,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     return () => clearTimeout(timer);
   }, [rescheduleSearchTerm]);
 
-  const [bookingType, setBookingType] = useState('EXTRA'); // 'EXTRA' | 'RESCHEDULE'
+  const [bookingType, setBookingType] = useState('EXTRA');
   const [rescheduleRoom, setRescheduleRoom] = useState('');
   const [rescheduleDay, setRescheduleDay] = useState(slot.day);
   const [rescheduleHour, setRescheduleHour] = useState(slot.hour);
@@ -102,13 +102,11 @@ function BookingModal({ slot, onClose, onSuccess }) {
     setLoading(true);
     setError('');
 
-    // Use a fresh date instance to avoid mutating the source date from props
     const targetDate = new Date(slot.date);
     targetDate.setHours(slot.hour, 0, 0, 0);
     
     const start_time = targetDate.toISOString();
     
-    // Calculate end time separately to preserve targetDate
     const endDate = new Date(targetDate);
     endDate.setHours(slot.hour + 1);
     const end_time = endDate.toISOString();

@@ -13,7 +13,6 @@
   --color-success: #10b981;
   --color-error: #ef4444;
 
-  /* Dark Mode Overrides */
   --color-dark-bg-primary: #0f172a;
   --color-dark-bg-secondary: #1e293b;
   --color-dark-text-primary: #f8fafc;
@@ -33,12 +32,12 @@
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   line-height: 1.6;
   font-weight: 500;
-  font-size: 14px; /* Default for mobile */
+  font-size: 14px;
 }
 
 @media (min-width: 768px) {
   :root {
-    font-size: 16px; /* Desktop base font size */
+    font-size: 16px;
   }
 }
 
@@ -54,17 +53,16 @@ body {
   overflow-x: hidden; /* Prevent horizontal scroll on body */
 }
 
-/* Touch optimization for mobile */
 @media (max-width: 767px) {
   button, 
   a, 
   input, 
   select {
-    min-height: 44px; /* Minimum touch target size */
+    min-height: 44px;
   }
   
   .glass {
-    backdrop-filter: blur(8px); /* Less blur on mobile for performance */
+    backdrop-filter: blur(8px);
   }
 }
 
@@ -75,7 +73,6 @@ body {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-/* Custom Scrollbar for better visibility in Dark Mode */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -134,7 +131,6 @@ body {
   will-change: transform, opacity;
 }
 
-/* Specific layout transitions for desktop only to avoid mobile sluggishness */
 @media (min-width: 1024px) {
   .layout-transition {
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
