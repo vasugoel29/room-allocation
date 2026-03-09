@@ -76,7 +76,7 @@ function App() {
       <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 px-6 py-3 sm:py-4 flex flex-col gap-8 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'}`}>
         <button 
           onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
-          className={`flex items-center text-indigo-600 hover:opacity-80 transition-opacity ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-start w-full'}`}
+          className={`hidden lg:flex items-center text-indigo-600 hover:opacity-80 transition-opacity ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-start w-full'}`}
           title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           <div className="flex items-center gap-3 overflow-hidden">
