@@ -7,7 +7,8 @@ import Login from './components/Login';
 import Signup from './components/Signup';
 import { AppContext } from './context/AppContext';
 import toast from 'react-hot-toast';
-import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2 } from 'lucide-react';
+import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2, Bug } from 'lucide-react';
+import Bugs from './components/Bugs';
 
 function App() {
   const { user, theme, setTheme, viewMode, setViewMode, backendError, handleLogout } = useContext(AppContext);
@@ -20,6 +21,7 @@ function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [activeView, setActiveView] = useState('calendar'); // 'calendar' or 'bugs'
 
   const toggleSidebar = () => {
     const newState = !isSidebarCollapsed;
@@ -94,8 +96,25 @@ function App() {
           )}
         </div>
 
-        <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'}`}>
-          <RoomFilter />
+        <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 flex flex-col gap-6`}>
+          <div className="space-y-2">
+            <button 
+              onClick={() => { setActiveView('calendar'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeView === 'calendar' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+            >
+              <CalendarIcon size={20} />
+              <span>Calendar</span>
+            </button>
+            <button 
+              onClick={() => { setActiveView('bugs'); setIsSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeView === 'bugs' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+            >
+              <Bug size={20} />
+              <span>Report Bug</span>
+            </button>
+          </div>
+          
+          {activeView === 'calendar' && <RoomFilter />}
         </div>
 
         {user?.role !== 'VIEWER' && (
@@ -178,16 +197,20 @@ function App() {
 
         <section className="flex-1 flex flex-col overflow-hidden w-full p-2 sm:p-4">
           <div className="glass rounded-2xl p-2 sm:p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
-          <Calendar 
-            onSlotClick={(slot) => {
-              if (user?.role === 'VIEWER') {
-                toast.error('Access Denied: Viewers cannot create or edit bookings.');
-                return;
-              }
-              setSelectedSlot(slot);
-              setIsModalOpen(true);
-            }} 
-          />
+            {activeView === 'calendar' ? (
+              <Calendar 
+                onSlotClick={(slot) => {
+                  if (user?.role === 'VIEWER') {
+                    toast.error('Access Denied: Viewers cannot create or edit bookings.');
+                    return;
+                  }
+                  setSelectedSlot(slot);
+                  setIsModalOpen(true);
+                }} 
+              />
+            ) : (
+              <Bugs />
+            )}
           </div>
         </section>
       </main>
