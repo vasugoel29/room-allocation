@@ -127,3 +127,21 @@ body {
   color: var(--color-accent);
   font-size: 0.75rem;
 }
+
+.calendar-transition {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (max-width: 767px) {
+  .pill-grid {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}

@@ -10,6 +10,14 @@ function Calendar({ onSlotClick }) {
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
     return () => clearInterval(timer);
@@ -68,6 +76,10 @@ function Calendar({ onSlotClick }) {
     });
   };
 
+  const pillDensity = isMobile 
+    ? (viewMode === 'day' ? 4 : 1) 
+    : (viewMode === 'day' ? 12 : 2);
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative">
       {viewMode === 'day' && (
@@ -85,12 +97,12 @@ function Calendar({ onSlotClick }) {
       )}
       
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar rounded-xl border border-border">
-        <div className={`flex flex-col min-h-full w-full relative ${viewMode === 'day' ? 'min-w-[400px]' : 'min-w-[800px]'}`}>
+        <div className={`flex flex-col min-h-full w-full relative calendar-transition ${viewMode === 'day' ? 'min-w-[400px]' : 'min-w-[800px]'}`}>
           {/* Header */}
-          <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm ${viewMode === 'day' ? 'grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[80px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+          <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm calendar-transition ${viewMode === 'day' ? 'grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[80px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
             <div className="p-2 sm:p-4 text-[10px] sm:text-base font-bold text-text-secondary uppercase tracking-widest flex items-center justify-center bg-bg-primary/50">Time</div>
             {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
-              <div key={dateStr} className="p-2 sm:p-4 text-center border-l border-border flex flex-col gap-0.5 sm:gap-1">
+              <div key={dateStr} className="p-2 sm:p-4 text-center border-l border-border flex flex-col gap-0.5 sm:gap-1 calendar-transition">
                 <span className="text-lg sm:text-2xl font-black text-text-primary uppercase tracking-tighter leading-none">{day}</span>
                 <span className="text-[10px] sm:text-sm text-text-secondary font-bold leading-none">{date}</span>
               </div>
@@ -127,8 +139,8 @@ function Calendar({ onSlotClick }) {
               </div>
             ) : (
               HOURS.map(hour => (
-                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 ${viewMode === 'day' ? 'grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[80px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-                  <div className="p-2 sm:p-4 text-sm sm:text-lg font-black text-text-secondary uppercase border-r border-border flex items-center justify-center bg-bg-primary/10">
+                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 calendar-transition ${viewMode === 'day' ? 'grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[80px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+                  <div className="p-2 sm:p-4 text-sm sm:text-lg font-black text-text-secondary uppercase border-r border-border flex items-center justify-center bg-bg-primary/10 transition-all">
                     {hour}:00
                   </div>
                   {displayDays.map(dateStr => {
@@ -144,7 +156,7 @@ function Calendar({ onSlotClick }) {
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
                     >
-                      <div className={`gap-2 p-1.5 h-full overflow-y-auto no-scrollbar ${viewMode === 'day' ? 'flex flex-wrap content-start' : 'flex flex-col'}`}>
+                      <div className={`p-1.5 h-full overflow-y-auto no-scrollbar calendar-transition ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
                           {rooms
                           .filter(room => {
                             const avNode = availability?.find(a => a.room_id === room.id && a.day === dayLabel && a.hour === hour);
@@ -157,7 +169,7 @@ function Calendar({ onSlotClick }) {
                             const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                             return score(b) - score(a);
                           })
-                          .slice(0, viewMode === 'day' ? 20 : 2).map(room => { 
+                          .slice(0, pillDensity).map(room => { 
                             const booking = getBooking(dateStr, hour, room.id);
                             return (
                               <div 
@@ -169,7 +181,7 @@ function Calendar({ onSlotClick }) {
                                     onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                   }
                                 }}
-                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border ${viewMode === 'day' ? 'w-[180px]' : 'w-full'} ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
+                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border w-full ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
                                 title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
                               >
                                 <div className="flex flex-col overflow-hidden">
