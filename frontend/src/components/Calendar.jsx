@@ -77,7 +77,7 @@ function Calendar({ onSlotClick }) {
   };
 
   const pillDensity = isMobile 
-    ? (viewMode === 'day' ? 4 : 1) 
+    ? (viewMode === 'day' ? 4 : 2) 
     : (viewMode === 'day' ? 12 : 2);
 
   return (
@@ -97,9 +97,9 @@ function Calendar({ onSlotClick }) {
       )}
       
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar rounded-xl border border-border">
-        <div className={`flex flex-col min-h-full w-full relative calendar-transition ${viewMode === 'day' ? 'min-w-[400px]' : 'min-w-[800px]'}`}>
+        <div className={`flex flex-col min-h-full w-full relative calendar-transition ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
           {/* Header */}
-          <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm calendar-transition ${viewMode === 'day' ? 'grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[80px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+          <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm calendar-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
             <div className="p-2 sm:p-4 text-[10px] sm:text-base font-bold text-text-secondary uppercase tracking-widest flex items-center justify-center bg-bg-primary/50">Time</div>
             {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
               <div key={dateStr} className="p-2 sm:p-4 text-center border-l border-border flex flex-col gap-0.5 sm:gap-1 calendar-transition">
@@ -118,7 +118,7 @@ function Calendar({ onSlotClick }) {
                 style={{ top: `${timePos.percentage}%` }}
               >
                 <div className="flex items-center w-full">
-                  <div className="w-[80px] sm:w-[120px] flex justify-end pr-1 sm:pr-2">
+                  <div className="w-[50px] sm:w-[120px] flex justify-end pr-1 sm:pr-2">
                     <span className="bg-red-500 text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
                       {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -139,8 +139,8 @@ function Calendar({ onSlotClick }) {
               </div>
             ) : (
               HOURS.map(hour => (
-                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 calendar-transition ${viewMode === 'day' ? 'grid-cols-[80px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[80px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-                  <div className="p-2 sm:p-4 text-sm sm:text-lg font-black text-text-secondary uppercase border-r border-border flex items-center justify-center bg-bg-primary/10 transition-all">
+                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 calendar-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+                  <div className="p-2 sm:p-4 text-xs sm:text-lg font-black text-text-secondary uppercase border-r border-border flex items-center justify-center bg-bg-primary/10 transition-all">
                     {hour}:00
                   </div>
                   {displayDays.map(dateStr => {
