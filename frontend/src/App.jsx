@@ -76,15 +76,15 @@ function App() {
       <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 px-6 py-3 sm:py-4 flex flex-col gap-8 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'}`}>
         <button 
           onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
-          className={`flex items-center text-indigo-600 hover:opacity-80 transition-opacity ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'}`}
+          className={`flex items-center text-indigo-600 hover:opacity-80 transition-opacity ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-start w-full'}`}
           title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           <div className="flex items-center gap-3 overflow-hidden">
-            <CalendarIcon size={32} className="shrink-0" />
+            <Menu size={32} className="shrink-0" />
             {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight text-text-primary whitespace-nowrap">CRAS</h1>}
           </div>
           {!isSidebarCollapsed && (
-            <div className="p-2 lg:hidden text-text-secondary hover:text-text-primary">
+            <div className="p-2 lg:hidden text-text-secondary hover:text-text-primary ml-auto">
               <CloseIcon size={24} />
             </div>
           )}
@@ -128,19 +128,6 @@ function App() {
       <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
         <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
           <div className="flex items-center gap-1 sm:gap-2">
-            <button 
-                onClick={() => {
-                  if (window.innerWidth >= 1024) {
-                    toggleSidebar();
-                  } else {
-                    setIsSidebarOpen(true);
-                  }
-                }}
-                className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl text-indigo-600 transition-colors"
-                title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            >
-              <Menu size={24} />
-            </button>
             <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-indigo-600 leading-tight">CRAS</h2>
           </div>
           <div className="flex items-center gap-2">
