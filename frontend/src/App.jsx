@@ -74,17 +74,21 @@ function App() {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 p-6 flex flex-col gap-8 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'}`}>
-        <div className={`flex items-center text-indigo-600 ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+        <button 
+          onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
+          className={`flex items-center text-indigo-600 hover:opacity-80 transition-opacity ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'}`}
+          title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
           <div className="flex items-center gap-3 overflow-hidden">
             <CalendarIcon size={32} className="shrink-0" />
             {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight text-text-primary whitespace-nowrap">CRAS</h1>}
           </div>
           {!isSidebarCollapsed && (
-            <button onClick={() => setIsSidebarOpen(false)} className="p-2 lg:hidden text-text-secondary hover:text-text-primary">
+            <div className="p-2 lg:hidden text-text-secondary hover:text-text-primary">
               <CloseIcon size={24} />
-            </button>
+            </div>
           )}
-        </div>
+        </button>
 
         <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 lg:hidden' : 'opacity-100'}`}>
           <RoomFilter />
@@ -132,14 +136,11 @@ function App() {
                     setIsSidebarOpen(true);
                   }
                 }}
-                className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary shadow-sm active:scale-95 transition-transform hover:text-accent"
+                className="flex items-center gap-2 group"
                 title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
-                <Menu size={20} />
+              <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-indigo-600 leading-tight group-hover:text-accent transition-colors">CRAS</h2>
             </button>
-            <div className="">
-              <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-indigo-600 leading-tight">CRAS</h2>
-            </div>
           </div>
           <div className="flex items-center gap-2">
              <div className="flex gap-1.5 sm:gap-2">
