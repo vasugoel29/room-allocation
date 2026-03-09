@@ -61,7 +61,6 @@ function BookingModal({ slot, onClose, onSuccess }) {
       const bStart = new Date(b.start_time);
       const bHour = bStart.getHours();
       
-      // Compare absolute dates for cross-week accuracy
       const bDateStr = bStart.toDateString();
       const slotDateStr = new Date(slot.date).toDateString();
       

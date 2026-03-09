@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import * as db from '../db.js';
 
 const router = express.Router();
 
@@ -9,22 +10,27 @@ router.post('/', authenticate, async (req, res) => {
   const userId = req.user.id;
 
   try {
-    // Log the bug report for manual review
-    logger.warn('BUG REPORT SUBMITTED', { 
+    // Persist bug report to database
+    const result = await db.query(
+      'INSERT INTO bugs (user_id, title, description, severity) VALUES ($1, $2, $3, $4) RETURNING id',
+      [userId, title, description, severity]
+    );
+
+    logger.warn('BUG REPORT PERSISTED', { 
+      bug_id: result.rows[0].id,
       user_id: userId, 
       user_email: req.user.email,
       title, 
       severity 
     });
 
-    // In a real app, we might store this in a 'bugs' table
-    // For now, we'll just log it and acknowledge success
     res.status(201).json({ 
       status: 'Success', 
-      message: 'Bug report received and logged.' 
+      message: 'Bug report received and persisted.',
+      bugId: result.rows[0].id
     });
   } catch (err) {
-    console.error('Failed to process bug report:', err);
+    console.error('Failed to persist bug report:', err);
     res.status(500).json({ error: 'Failed to submit bug report' });
   }
 });
