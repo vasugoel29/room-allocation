@@ -148,7 +148,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
       
-      <div className="relative w-full max-w-xl glass dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-2xl border border-black/5 overflow-y-auto max-h-[95vh] no-scrollbar">
+      <div className="relative w-full max-w-xl mx-4 glass dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-2xl border border-black/5 overflow-y-auto max-h-[95vh] no-scrollbar">
         <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
           <X size={20} sm:size={24} />
         </button>

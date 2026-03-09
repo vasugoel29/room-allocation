@@ -6,7 +6,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, availability, viewMode, selectedDay, setSelectedDay } = useContext(AppContext);
+  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
 
@@ -82,27 +82,22 @@ function Calendar({ onSlotClick }) {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative">
-      {viewMode === 'day' && (
-        <div className="flex gap-1 sm:gap-2 p-1 sm:p-2 mb-2 bg-black/5 rounded-xl self-center w-full sm:w-auto overflow-x-auto no-scrollbar">
-          {weekDates.map(({ day, dateStr }) => (
-            <button
-              key={dateStr}
-              onClick={() => onDayChange(dateStr)}
-              className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${selectedDay === dateStr ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:bg-bg-secondary/50'}`}
-            >
-              {day}
-            </button>
-          ))}
-        </div>
-      )}
-      
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar rounded-xl border border-border">
         <div className={`flex flex-col min-h-full w-full relative calendar-transition ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
           {/* Header */}
           <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm calendar-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
             <div className="p-2 sm:p-4 text-[10px] sm:text-base font-bold text-text-secondary uppercase tracking-widest flex items-center justify-center bg-bg-primary/50">Time</div>
             {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
-              <div key={dateStr} className="p-2 sm:p-4 text-center border-l border-border flex flex-col gap-0.5 sm:gap-1 calendar-transition">
+              <div 
+                key={dateStr} 
+                className={`p-2 sm:p-4 text-center border-l border-border flex flex-col gap-0.5 sm:gap-1 calendar-transition ${viewMode === 'week' ? 'cursor-pointer hover:bg-accent/5 active:bg-accent/10 transition-colors' : ''}`}
+                onClick={() => {
+                  if (viewMode === 'week') {
+                    onDayChange(dateStr);
+                    setViewMode('day');
+                  }
+                }}
+              >
                 <span className="text-lg sm:text-2xl font-black text-text-primary uppercase tracking-tighter leading-none">{day}</span>
                 <span className="text-[10px] sm:text-sm text-text-secondary font-bold leading-none">{date}</span>
               </div>
