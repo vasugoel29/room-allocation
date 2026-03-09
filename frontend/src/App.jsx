@@ -128,6 +128,19 @@ function App() {
       <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
         <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
           <div className="flex items-center gap-1 sm:gap-2">
+            <button 
+                onClick={() => {
+                  if (window.innerWidth >= 1024) {
+                    toggleSidebar();
+                  } else {
+                    setIsSidebarOpen(true);
+                  }
+                }}
+                className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl text-indigo-600 transition-colors"
+                title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              <Menu size={24} />
+            </button>
             <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-indigo-600 leading-tight">CRAS</h2>
           </div>
           <div className="flex items-center gap-2">
