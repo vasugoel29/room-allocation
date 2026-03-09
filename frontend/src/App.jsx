@@ -45,7 +45,6 @@ function App() {
       </div>
     );
   }
-  return <button onClick={() => {throw new Error("My first Sentry error!");}}>Send Message</button>
   if (!user) {
     if (isSigningUp) {
       return (
