@@ -13,7 +13,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [isSemester, setIsSemester] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -111,7 +111,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     endDate.setHours(slot.hour + 1);
     const end_time = endDate.toISOString();
 
-    const endpoint = isSemester ? '/bookings/semester' : '/bookings';
+    const endpoint = '/bookings';
 
     try {
       const res = await api.post(endpoint, {
@@ -119,7 +119,6 @@ function BookingModal({ slot, onClose, onSuccess }) {
         start_time,
         end_time,
         purpose: bookingType === 'RESCHEDULE' ? `Reschedule: ${purpose}` : purpose,
-        is_semester: isSemester,
         reschedule_room_name: bookingType === 'RESCHEDULE' ? rescheduleRoom : null,
         reschedule_day: bookingType === 'RESCHEDULE' ? rescheduleDay : null,
         reschedule_hour: bookingType === 'RESCHEDULE' ? rescheduleHour : null
@@ -408,19 +407,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
               </div>
             )}
 
-            <div className="flex items-center gap-3 p-4 bg-accent/5 rounded-xl border border-accent/20">
-                <input 
-                    type="checkbox" 
-                    id="semesterBooking"
-                    checked={isSemester}
-                    onChange={(e) => setIsSemester(e.target.checked)}
-                    className="w-5 h-5 rounded border-accent text-accent focus:ring-accent"
-                />
-                <label htmlFor="semesterBooking" className="text-sm font-bold text-text-primary cursor-pointer leading-tight">
-                    Book for entire semester (15 weeks)
-                    <p className="text-[10px] text-accent/70 font-medium mt-0.5">Requires all slots to be free across weeks.</p>
-                </label>
-            </div>
+
           </div>
 
           <div className="space-y-2">

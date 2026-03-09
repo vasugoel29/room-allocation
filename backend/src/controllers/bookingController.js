@@ -29,20 +29,20 @@ export const getBookings = async (req, res) => {
 };
 
 export const createBooking = async (req, res) => {
-  const { room_id, start_time, end_time, purpose, is_semester = false } = req.body;
+  const { room_id, start_time, end_time, purpose } = req.body;
   const userId = req.user.id;
   const startTimeObj = new Date(start_time);
   
   if (startTimeObj < new Date()) return res.status(400).json({ error: 'Cannot book in the past' });
   
-  if (Math.abs(startTimeObj - new Date()) / (1000 * 60 * 60 * 24) > 7 && !is_semester) {
+  if (Math.abs(startTimeObj - new Date()) / (1000 * 60 * 60 * 24) > 7) {
     return res.status(400).json({ error: 'Regular bookings allowed only for the current week' });
   }
 
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
-    const result = await bookingService.createBooking(client, { room_id, start_time, end_time, purpose, is_semester, reschedule_room_name: req.body.reschedule_room_name, reschedule_day: req.body.reschedule_day, reschedule_hour: req.body.reschedule_hour }, userId);
+    const result = await bookingService.createBooking(client, { room_id, start_time, end_time, purpose, reschedule_room_name: req.body.reschedule_room_name, reschedule_day: req.body.reschedule_day, reschedule_hour: req.body.reschedule_hour }, userId);
     
     if (result.error) {
       await client.query('ROLLBACK');
@@ -55,31 +55,6 @@ export const createBooking = async (req, res) => {
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: 'Database error' });
-  } finally {
-    client.release();
-  }
-};
-
-export const createSemesterBooking = async (req, res) => {
-  const { room_id, start_time, end_time, purpose } = req.body;
-  const userId = req.user.id;
-  
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await bookingService.createSemesterBooking(client, { room_id, start_time, end_time, purpose }, userId);
-    
-    if (result.error) {
-      await client.query('ROLLBACK');
-      return res.status(result.status).json({ error: result.error });
-    }
-
-    await client.query('COMMIT');
-    logger.info('Semester booking created', { user_id: userId, room_id, start_time });
-    res.status(201).json(result.data);
-  } catch (err) {
-    await client.query('ROLLBACK');
-    res.status(500).json({ error: 'Semester booking failed' });
   } finally {
     client.release();
   }

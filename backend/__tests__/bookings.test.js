@@ -97,34 +97,6 @@ describe('Booking Constraints', () => {
     expect(res.body.error).toBe('Room is already booked for this time period');
   });
 
-  test('Should reject semester booking if any week has conflict', async () => {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 4); // Future enough to not conflict with previous test
-    futureDate.setHours(10, 0, 0, 0); 
-    
-    const conflictDate = new Date(futureDate);
-    conflictDate.setDate(conflictDate.getDate() + (2 * 7)); 
-    await db.query(
-      "INSERT INTO bookings (room_id, start_time, end_time, created_by, status) VALUES (999, $1, $2, $3, 'ACTIVE')",
-      [conflictDate.toISOString(), new Date(conflictDate.getTime() + 3600000).toISOString(), userId]
-    );
-
-    const res = await request(app)
-      .post('/api/bookings/semester')
-      .set('Authorization', `Bearer ${token}`)
-      .send({
-        room_id: 999,
-        start_time: futureDate.toISOString(),
-        end_time: new Date(futureDate.getTime() + 3600000).toISOString(),
-        purpose: 'Semester Test'
-      });
-
-    expect(res.statusCode).toBe(409);
-    expect(res.body.error).toContain('Conflict at week 3');
-
-    const check = await db.query("SELECT * FROM bookings WHERE room_id = 999 AND start_time = $1", [futureDate.toISOString()]);
-    expect(check.rows.length).toBe(0);
-  });
 
   test('Should allow user to cancel their own booking', async () => {
     const futureDate = new Date();
