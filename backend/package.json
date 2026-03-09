@@ -11,10 +11,13 @@
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
   },
   "dependencies": {
+    "@sentry/node": "^10.42.0",
+    "@sentry/profiling-node": "^10.42.0",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.1",
     "pg": "^8.16.3"

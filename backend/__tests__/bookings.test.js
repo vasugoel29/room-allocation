@@ -3,7 +3,7 @@ import app from '../src/server.js';
 import * as db from '../src/db.js';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = 'your_jwt_secret';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_only';
 let token;
 let userId;
 

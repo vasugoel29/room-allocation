@@ -1,16 +1,30 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import bodyParser from 'body-parser';
+import * as Sentry from "@sentry/node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
+
+// Initialize Sentry before any other imports if possible
+Sentry.init({
+  dsn: "https://fffcdd6cd5e09e0fcaeea616debb0bd3@o4511015599341568.ingest.us.sentry.io/4511015602618368",
+  integrations: [
+    nodeProfilingIntegration(),
+  ],
+  // Tracing
+  tracesSampleRate: 1.0, //  Capture 100% of the transactions
+});
+
 // Modular Imports
 import authRoutes from './routes/authRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
-import bugRoutes from './routes/bugRoutes.js';
 
 const app = express();
+app.use(helmet());
 app.use(cors({
-  origin: [
+  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [
     "http://localhost:5173",
     /\.vercel\.app$/
   ],
@@ -37,7 +51,9 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/bugs', bugRoutes);
+
+// The Sentry error handler must be registered before any other error middleware and after all controllers
+Sentry.setupExpressErrorHandler(app);
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);

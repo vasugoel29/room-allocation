@@ -91,7 +91,14 @@ export const rescheduleBooking = async (req, res) => {
   try {
     await client.query('BEGIN');
     const current = await client.query('SELECT * FROM bookings WHERE id = $1', [id]);
-    if (current.rows.length === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
+    const booking = current.rows[0];
+    if (!booking) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Booking not found' }); }
+    
+    // Security Fix: Prevent IDOR (only owner can reschedule)
+    if (booking.created_by !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Only owner can reschedule' });
+    }
 
     await client.query(
       'INSERT INTO booking_history (booking_id, previous_start_time, previous_end_time, previous_room_id, modified_by, change_type) VALUES ($1, $2, $3, $4, $5, $6)',

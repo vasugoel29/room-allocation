@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-export const JWT_SECRET = 'your_jwt_secret';
+export const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_only';
 
 // Middleware to check JWT and role
 export function authenticate(req, res, next) {
