@@ -18,44 +18,33 @@ const pool = new Pool({
     : { rejectUnauthorized: false }
 });
 
-const DATA_YEAR_3 = `
-CSE1
-CSE2
-CSAI1
-CSAI2
-CSDS
-CSDA
-CIVIL
-GEO
-Arch
-MEEV
-ECAM1
-ECAM2
-EE1
-EE2
-ECE1
-ECE2
-ICE1
-ICE2
-ME1
-ME2
-IT1
-IT2
-ITNS
-EIOT
-MBA-IEV
-BBA-IEV
-BBA 1
-BBA 2
-BT
-MAC
-CIOT
-EIOT
-MA-Psych
-M-Sc 
-BDES-PD
-BDES-FT
-MA-English
+const DATA_NEW = `
+Biotech	Third	1
+CSAI	Second	1
+CSAI	Second	2
+CSAI	Third	1
+CSAI	Third	2
+CSAI	Fourth	1
+CSDS	Second	1
+CSDS	Third	1
+CSE	Second	1
+CSE	Second	2
+CSE	Second	3
+CSE	Third	1
+CSE	Third	2
+CSE	Third	3
+EE	Second	2
+EVDT	Second	1
+IT	Second	1
+IT	Second	1
+IT	Third	2
+IT	Third	1
+ITNS	Second	1
+ITNS	Third	1
+MAC	Third	1
+MAC	Second	1
+Masters in Chemistry	First	1
+PIT	First	1
 `;
 
 const DATA_YEAR_4 = `
@@ -97,29 +86,47 @@ MBA-IEV
 
 const random4Digits = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-const parseData = (raw, year) => {
+const YEAR_MAP = {
+  'First': 1,
+  'Second': 2,
+  'Third': 3,
+  'Fourth': 4
+};
+
+const parseData = (raw, defaultYear = null) => {
   return raw.trim().split('\n').filter(Boolean).map(line => {
     line = line.trim();
-    // Match "BranchSection" or "Branch Section" (e.g., CSE1, BBA 1)
-    const match = line.match(/^(.+?)(\d+)$/);
-    let branch, section;
-    if (match) {
-      branch = match[1].trim();
-      section = match[2].trim();
+    
+    let branch, year, section;
+
+    // Handle Tab-separated structured data: "Branch Year Section"
+    if (line.includes('\t')) {
+      const parts = line.split('\t').map(p => p.trim());
+      branch = parts[0];
+      year = YEAR_MAP[parts[1]] || parseInt(parts[1]) || defaultYear;
+      section = parts[2] || '1';
     } else {
-      branch = line;
-      section = '1'; // Default
+      // Handle legacy format: "BranchSection"
+      const match = line.match(/^(.+?)(\d+)$/);
+      if (match) {
+        branch = match[1].trim();
+        section = match[2].trim();
+      } else {
+        branch = line;
+        section = '1';
+      }
+      year = defaultYear;
     }
 
     const branchSlug = branch.toLowerCase()
-      .replace(/[^\w\s]/g, '') // remove symbols for email
+      .replace(/[^\w\s]/g, '')
       .replace(/\s+/g, '_');
     
     const branchPassword = branch.toLowerCase()
-      .replace(/[^\w]/g, ''); // alphanumeric only for pw
+      .replace(/[^\w]/g, '');
 
     const email = `${branchSlug}_${year}_${section}@nsut.ac.in`;
-    const name = `${branch}-${section} ${year} Year`;
+    const name = `${branch}-${section} Year ${year}`;
     const password = `${branchPassword}${year}${section}-${random4Digits()}`;
     
     return { name, email, password, year, section: parseInt(section) };
@@ -127,9 +134,9 @@ const parseData = (raw, year) => {
 };
 
 async function seedUsers() {
-  const usersYear3 = parseData(DATA_YEAR_3, 3);
+  const usersNew = parseData(DATA_NEW);
   const usersYear4 = parseData(DATA_YEAR_4, 4);
-  const allUsers = [...usersYear3, ...usersYear4];
+  const allUsers = [...usersNew, ...usersYear4];
 
   console.log(`Parsed ${allUsers.length} users. Hashing passwords and seeding...`);
 
