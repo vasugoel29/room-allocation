@@ -74,28 +74,34 @@ function App() {
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 px-6 py-3 sm:py-4 flex flex-col gap-8 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'}`}>
-        <button 
-          onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
-          className={`hidden lg:flex items-center text-indigo-600 hover:opacity-80 transition-opacity ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-start w-full'}`}
-          title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
+        <div className={`flex items-center text-indigo-600 ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'}`}>
           <div className="flex items-center gap-3 overflow-hidden">
-            <Menu size={32} className="shrink-0" />
-            {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight text-text-primary whitespace-nowrap">CRAS</h1>}
+            <button 
+              onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
+              className="p-1 hover:opacity-80 transition-opacity flex items-center gap-3 shrink-0"
+              title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              <Menu size={32} className="shrink-0" />
+              {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight text-text-primary whitespace-nowrap">CRAS</h1>}
+            </button>
           </div>
           {!isSidebarCollapsed && (
-            <div className="p-2 lg:hidden text-text-secondary hover:text-text-primary ml-auto">
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 lg:hidden text-text-secondary hover:text-text-primary ml-auto"
+              title="Close Sidebar"
+            >
               <CloseIcon size={24} />
-            </div>
+            </button>
           )}
-        </button>
+        </div>
 
-        <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'opacity-0 lg:hidden' : 'opacity-100'}`}>
+        <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'}`}>
           <RoomFilter />
         </div>
 
-        {user?.role !== 'VIEWER' && !isSidebarCollapsed && (
-          <div className="lg:hidden py-4 border-t border-black/5">
+        {user?.role !== 'VIEWER' && (
+          <div className={`lg:hidden py-4 border-t border-black/5 ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
              <button 
               onClick={() => {
                 setIsHistoryOpen(true);
@@ -110,13 +116,11 @@ function App() {
         )}
 
         <div className="mt-auto pt-6 border-t border-black/5">
-          <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isSidebarCollapsed && (
-              <div className="overflow-hidden">
-                <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
-                <p className="text-[10px] text-accent uppercase tracking-widest font-bold">{user.role}</p>
-              </div>
-            )}
+          <div className={`flex items-center ${isSidebarCollapsed ? 'lg:justify-center justify-between' : 'justify-between'}`}>
+            <div className={`overflow-hidden ${isSidebarCollapsed ? 'lg:hidden block' : 'block'}`}>
+              <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
+              <p className="text-[10px] text-accent uppercase tracking-widest font-bold">{user.role}</p>
+            </div>
             <button onClick={handleLogout} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-text-secondary hover:text-text-primary transition-colors border border-transparent hover:border-border" title="Logout">
               <LogOut size={18} />
             </button>
@@ -129,15 +133,9 @@ function App() {
         <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
           <div className="flex items-center gap-1 sm:gap-2">
             <button 
-                onClick={() => {
-                  if (window.innerWidth >= 1024) {
-                    toggleSidebar();
-                  } else {
-                    setIsSidebarOpen(true);
-                  }
-                }}
-                className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl text-indigo-600 transition-colors"
-                title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-xl text-indigo-600 transition-colors"
+                title="Open Sidebar"
             >
               <Menu size={24} />
             </button>
