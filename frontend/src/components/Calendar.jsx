@@ -10,6 +10,13 @@ function Calendar({ onSlotClick }) {
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
 
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
@@ -69,6 +76,9 @@ function Calendar({ onSlotClick }) {
     });
   };
 
+  const pillDensity = isMobile 
+    ? (viewMode === 'day' ? 4 : 2) 
+    : (viewMode === 'day' ? 12 : 2);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative">
@@ -135,13 +145,13 @@ function Calendar({ onSlotClick }) {
                     return (
                     <div 
                       key={dateStr} 
-                      className={`p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full min-h-[70px] sm:min-h-[80px] overflow-hidden ${viewMode === 'day' ? 'flex items-center' : ''}`}
+                      className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full min-h-[70px] sm:min-h-[80px]"
                       onClick={() => {
                         const dateObj = currentWeekDay?.fullDate;
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
                     >
-                      <div className="p-1.5 h-full calendar-transition slot-scroll no-scrollbar items-center">
+                      <div className={`p-1.5 h-full overflow-y-auto no-scrollbar calendar-transition ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
                           {rooms
                           .filter(room => {
                             const avNode = availability?.find(a => a.room_id === room.id && a.day === dayLabel && a.hour === hour);
@@ -154,7 +164,7 @@ function Calendar({ onSlotClick }) {
                             const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                             return score(b) - score(a);
                           })
-                          .map(room => { 
+                          .slice(0, pillDensity).map(room => { 
                             const booking = getBooking(dateStr, hour, room.id);
                             return (
                               <div 
@@ -166,7 +176,7 @@ function Calendar({ onSlotClick }) {
                                     onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                   }
                                 }}
-                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border min-w-[140px] sm:min-w-[200px] ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
+                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border w-full ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
                                 title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
                               >
                                 <div className="flex flex-col overflow-hidden">
