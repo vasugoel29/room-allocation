@@ -17,6 +17,9 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     return localStorage.getItem('sidebarCollapsed') === 'true';
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const toggleSidebar = () => {
     const newState = !isSidebarCollapsed;
