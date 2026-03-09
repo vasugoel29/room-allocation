@@ -6,7 +6,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('VIEWER');
+  const [role] = useState('VIEWER');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState('');

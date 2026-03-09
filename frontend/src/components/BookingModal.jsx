@@ -1,5 +1,8 @@
+import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
+import { X, AlertCircle, Wind, Monitor, CheckCircle } from 'lucide-react';
+import { api } from '../utils/api';
 
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM
 
