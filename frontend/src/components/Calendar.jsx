@@ -65,6 +65,8 @@ function Calendar({ onSlotClick }) {
 
   const getBooking = (dateStr, hour, roomId) => {
     return bookings.find(b => {
+      const bStatus = b.status || 'ACTIVE';
+      if (bStatus !== 'ACTIVE') return false;
       const bStart = new Date(b.start_time);
       const bYear = bStart.getFullYear();
       const bMonth = String(bStart.getMonth() + 1).padStart(2, '0');
