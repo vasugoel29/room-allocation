@@ -113,7 +113,7 @@ function AdminDashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full h-full overflow-y-auto no-scrollbar">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full h-full flex flex-col overflow-hidden">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -146,7 +146,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-8">
+      <div className="flex-1 flex flex-col gap-8 min-h-0">
         {/* Tabs */}
         <div className="bg-bg-secondary p-1.5 rounded-2xl flex gap-1.5 w-fit border border-border shadow-sm">
           <button 
@@ -187,7 +187,7 @@ function AdminDashboard() {
           </div>
         )}
 
-        <div className="bg-bg-secondary/30 border border-border rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm">
+        <div className="flex-1 bg-bg-secondary/30 border border-border rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm flex flex-col min-h-0">
           {loading ? (
             <div className="p-20 flex justify-center items-center">
               <div className="animate-spin rounded-full h-10 w-10 border-4 border-accent border-t-transparent shadow-sm"></div>
@@ -200,7 +200,7 @@ function AdminDashboard() {
               <p className="text-text-secondary font-medium">No records found matching your selection.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 overflow-auto no-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-bg-secondary/50">
