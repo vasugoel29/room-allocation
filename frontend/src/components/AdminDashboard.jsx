@@ -233,22 +233,27 @@ function AdminDashboard() {
     );
   }, [users, userSearch]);
 
-  const filteredData = activeTab === 'bookings' 
-    ? bookings.filter(b => 
-        b.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        b.room_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : activeTab === 'promotions' 
-    ? promotions.filter(p => 
+  const filteredData = useMemo(() => {
+    if (activeTab === 'bookings') {
+      return [...bookings]
+        .filter(b => 
+          b.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          b.room_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .sort((a, b) => (b.id || 0) - (a.id || 0));
+    }
+    if (activeTab === 'promotions') {
+      return promotions.filter(p => 
         p.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         p.user_email?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : activeTab === 'quick'
-    ? [] // Searching handled within quick tab component
-    : users.filter(u => 
-        u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        u.email.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+    if (activeTab === 'quick') return [];
+    return users.filter(u => 
+      u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [activeTab, bookings, promotions, users, searchTerm]);
 
   if (user?.role !== 'admin') {
     return (
