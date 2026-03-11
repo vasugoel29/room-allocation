@@ -20,8 +20,7 @@ export function authenticate(req, res, next) {
 
 export function requireRole(role) {
   return (req, res, next) => {
-    // STUDENT_REP handles everything for now
-    if (req.user.role !== role && req.user.role !== 'STUDENT_REP') { 
+    if (req.user.role !== role && req.user.role !== 'STUDENT_REP' && req.user.role !== 'admin') { 
       return res.status(403).json({ error: 'Forbidden' });
     }
     next();

@@ -20,6 +20,7 @@ Sentry.init({
 import authRoutes from './routes/authRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
+import promotionRoutes from './routes/promotionRoutes.js';
 
 const app = express();
 app.use(helmet());
@@ -51,6 +52,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);

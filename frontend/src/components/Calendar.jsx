@@ -6,7 +6,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); 
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay } = useContext(AppContext);
+  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
 
@@ -82,7 +82,7 @@ function Calendar({ onSlotClick }) {
     : (viewMode === 'day' ? 12 : 2);
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden w-full relative">
+    <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0">
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar rounded-xl border border-border">
         <div className={`flex flex-col min-h-full w-full relative layout-transition ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
           <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm layout-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
@@ -132,9 +132,10 @@ function Calendar({ onSlotClick }) {
               </div>
             ) : (
               HOURS.map(hour => (
-                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 layout-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-                  <div className="p-2 sm:p-4 text-xs sm:text-lg font-black text-text-secondary uppercase border-r border-border flex items-center justify-center bg-bg-primary/10 transition-all">
-                    {hour}:00
+                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 layout-transition min-h-[90px] sm:min-h-[100px] ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+                  <div className="p-2 sm:p-4 text-[10px] sm:text-lg font-black text-text-secondary uppercase border-r border-border flex flex-col items-center justify-center bg-bg-primary/10 transition-all">
+                    <span>{hour.toString().padStart(2, '0')}:00</span>
+                    <span className="text-[8px] sm:text-[10px] opacity-40">{(hour+1).toString().padStart(2, '0')}:00</span>
                   </div>
                   {displayDays.map(dateStr => {
                     const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
@@ -143,7 +144,7 @@ function Calendar({ onSlotClick }) {
                     return (
                     <div 
                       key={dateStr} 
-                      className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full min-h-[70px] sm:min-h-[80px]"
+                      className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full"
                       onClick={() => {
                         const dateObj = currentWeekDay?.fullDate;
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
@@ -153,7 +154,15 @@ function Calendar({ onSlotClick }) {
                           {rooms
                           .filter(room => {
                             const avNode = availability?.find(a => a.room_id === room.id && a.day === dayLabel && a.hour === hour);
-                            return avNode ? avNode.is_available : true;
+                            const isAvailable = avNode ? avNode.is_available : true;
+                            
+                            // Apply new filters
+                            const matchesSearch = !filters.searchTerm || room.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
+                            const roomFloor = room.name.charAt(1); // 2nd digit
+                            const matchesFloor = filters.floor === 'all' || roomFloor === filters.floor;
+                            const matchesSmart = !filters.smartRoom || (room.has_ac && room.has_projector);
+                            
+                            return isAvailable && matchesSearch && matchesFloor && matchesSmart;
                           })
                           .sort((a, b) => {
                             const aBooked = !!getBooking(dateStr, hour, a.id);

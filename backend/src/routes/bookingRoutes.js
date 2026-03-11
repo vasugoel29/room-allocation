@@ -14,4 +14,7 @@ router.post('/', authenticate, requireRole('STUDENT_REP'), createBooking);
 router.patch('/:id/cancel', authenticate, cancelBooking);
 router.patch('/:id', authenticate, requireRole('STUDENT_REP'), rescheduleBooking);
 
+// Admin-only all bookings (active & cancelled)
+router.get('/admin/all', authenticate, requireRole('admin'), getBookings);
+
 export default router;

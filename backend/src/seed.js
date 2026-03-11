@@ -100,42 +100,42 @@ async function seed() {
 
     console.log(`Seeded ${roomsInserted} real rooms and ${availabilityInserted} availability records!`);
     
-    // 3. Add random simulation bookings for FREE slots to show active system
-    console.log('Simulating existing user bookings on free slots...');
-    let bookingCount = 0;
-    const now = new Date();
-    const currentDay = now.getDay() || 7;
+    // // 3. Add random simulation bookings for FREE slots to show active system
+    // console.log('Simulating existing user bookings on free slots...');
+    // let bookingCount = 0;
+    // const now = new Date();
+    // const currentDay = now.getDay() || 7;
 
-    const freeSlotsRes = await pool.query('SELECT * FROM room_availability WHERE is_available = TRUE');
-    const PURPOSES = ['Study Group', 'Project Collab', 'Club Activity', 'Mock Interview', 'Peer Reading'];
+    // const freeSlotsRes = await pool.query('SELECT * FROM room_availability WHERE is_available = TRUE');
+    // const PURPOSES = ['Study Group', 'Project Collab', 'Club Activity', 'Mock Interview', 'Peer Reading'];
 
-    const usedUserSlots = new Set();
+    // const usedUserSlots = new Set();
 
-    for (const slot of freeSlotsRes.rows) {
-      if (Math.random() < 0.25) { // 25% of truly free slots already booked by students
-        const userId = userIds[Math.floor(Math.random() * userIds.length)];
-        const targetDay = DAYS_MAP[slot.day];
-        const diff = targetDay - currentDay;
-        const targetDate = new Date();
-        targetDate.setDate(now.getDate() + diff);
+    // for (const slot of freeSlotsRes.rows) {
+    //   if (Math.random() < 0.25) { // 25% of truly free slots already booked by students
+    //     const userId = userIds[Math.floor(Math.random() * userIds.length)];
+    //     const targetDay = DAYS_MAP[slot.day];
+    //     const diff = targetDay - currentDay;
+    //     const targetDate = new Date();
+    //     targetDate.setDate(now.getDate() + diff);
         
-        const start = new Date(targetDate);
-        start.setHours(slot.hour, 0, 0, 0);
-        const end = new Date(targetDate);
-        end.setHours(slot.hour + 1, 0, 0, 0);
+    //     const start = new Date(targetDate);
+    //     start.setHours(slot.hour, 0, 0, 0);
+    //     const end = new Date(targetDate);
+    //     end.setHours(slot.hour + 1, 0, 0, 0);
 
-        const slotKey = `${userId}-${start.toISOString()}`;
-        if (usedUserSlots.has(slotKey)) continue;
-        usedUserSlots.add(slotKey);
+    //     const slotKey = `${userId}-${start.toISOString()}`;
+    //     if (usedUserSlots.has(slotKey)) continue;
+    //     usedUserSlots.add(slotKey);
 
-        await pool.query(
-          'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose) VALUES ($1, $2, $3, $4, $5)',
-          [slot.room_id, start.toISOString(), end.toISOString(), userId, PURPOSES[Math.floor(Math.random() * PURPOSES.length)]]
-        );
-        bookingCount++;
-      }
-    }
-    console.log(`Successfully added ${bookingCount} simulation bookings.`);
+    //     await pool.query(
+    //       'INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose) VALUES ($1, $2, $3, $4, $5)',
+    //       [slot.room_id, start.toISOString(), end.toISOString(), userId, PURPOSES[Math.floor(Math.random() * PURPOSES.length)]]
+    //     );
+    //     bookingCount++;
+    //   }
+    // }
+    // console.log(`Successfully added ${bookingCount} simulation bookings.`);
 
   } catch (err) {
     console.error('Seeding error:', err);

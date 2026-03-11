@@ -18,7 +18,7 @@ export const AppProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
-  const [filters, setFilters] = useState({ ac: false, projector: false });
+  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all' });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
 
@@ -53,9 +53,15 @@ export const AppProvider = ({ children }) => {
 
   const fetchRooms = useCallback(async () => {
     try {
-      const query = new URLSearchParams(filters).toString();
+      const queryParams = { ...filters };
+      if (filters.smartRoom) {
+        queryParams.ac = 'true';
+        queryParams.projector = 'true';
+      }
+      delete queryParams.smartRoom;
+      
+      const query = new URLSearchParams(queryParams).toString();
       const res = await api.get(`/rooms?${query}`);
-      if (res.status === 401) return handleLogout();
       const data = await res.json();
       if (Array.isArray(data)) setRooms(data);
       else console.error('Expected array of rooms, got:', data);
@@ -67,7 +73,6 @@ export const AppProvider = ({ children }) => {
   const fetchBookings = useCallback(async () => {
     try {
       const res = await api.get('/bookings');
-      if (res.status === 401) return handleLogout();
       const data = await res.json();
       setBookings(data);
     } catch (err) {
@@ -78,7 +83,6 @@ export const AppProvider = ({ children }) => {
   const fetchAvailability = useCallback(async () => {
     try {
       const res = await api.get('/availability');
-      if (res.status === 401) return handleLogout();
       const data = await res.json();
       setAvailability(data);
     } catch (err) {

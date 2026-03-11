@@ -35,6 +35,15 @@ export async function apiFetch(endpoint, options = {}) {
         continue;
       }
 
+      // Handle 401 (Unauthorized/Token Expired) centrally
+      if (response.status === 401 && !endpoint.includes('/auth/login')) {
+        console.warn('Session expired or unauthorized. Logging out...');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.reload(); // Force App to re-render and show Login
+        return response; 
+      }
+
       return response;
     } catch (err) {
       if (attempt < MAX_RETRIES) {
@@ -60,3 +69,5 @@ export const api = {
   }),
   delete: (endpoint) => apiFetch(endpoint, { method: 'DELETE' }),
 };
+
+export default api;
