@@ -69,8 +69,17 @@ export const cancelBooking = async (req, res) => {
     const result = await client.query('SELECT * FROM bookings WHERE id = $1', [id]);
     const booking = result.rows[0];
 
-    if (!booking) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Booking not found' }); }
-    if (booking.created_by !== userId) { await client.query('ROLLBACK'); return res.status(403).json({ error: 'Only owner can cancel' }); }
+    if (!booking) { 
+      await client.query('ROLLBACK'); 
+      return res.status(404).json({ error: 'Booking not found' }); 
+    }
+
+    // Allow owner OR any admin to cancel
+    const isAdmin = req.user.role === 'admin';
+    if (booking.created_by !== userId && !isAdmin) { 
+      await client.query('ROLLBACK'); 
+      return res.status(403).json({ error: 'Only owner or admin can cancel' }); 
+    }
 
     await client.query("UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW() WHERE id = $1", [id]);
     await client.query('COMMIT');

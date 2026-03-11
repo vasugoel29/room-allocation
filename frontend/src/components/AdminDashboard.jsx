@@ -144,7 +144,23 @@ function AdminDashboard() {
       await api.patch(`/promotions/${id}`, { status, admin_comment: comment });
       fetchData();
     } catch (err) {
-      alert('Action failed');
+      toast.error('Action failed');
+    }
+  };
+
+  const handleCancelBooking = async (bookingId) => {
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    try {
+      const res = await api.patch(`/bookings/${bookingId}/cancel`);
+      if (res.ok) {
+        toast.success('Booking cancelled successfully');
+        fetchData();
+      } else {
+        const err = await res.json();
+        toast.error(err.error || 'Failed to cancel booking');
+      }
+    } catch (err) {
+      toast.error('Network error');
     }
   };
 
@@ -560,6 +576,7 @@ function AdminDashboard() {
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Room</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Time Slot</th>
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Status</th>
+                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
                       </>
                     ) : activeTab === 'promotions' ? (
                       <>
@@ -613,6 +630,17 @@ function AdminDashboard() {
                             }`}>
                               {item.status}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            {item.status === 'ACTIVE' && (
+                              <button
+                                onClick={() => handleCancelBooking(item.id)}
+                                className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                title="Cancel Booking"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
                           </td>
                         </>
                       ) : activeTab === 'promotions' ? (

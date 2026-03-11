@@ -245,7 +245,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                     <input
                       type="text"
                       readOnly
-                      value={bookingType === 'EXTRA' ? 'Extra Booking' : 'Reschedule'}
+                      value={bookingType === 'EXTRA' ? 'Extra Class' : 'Reschedule'}
                       className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm font-medium text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30 pointer-events-none"
                     />
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50">
@@ -256,7 +256,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   {isTypeOpen && (
                     <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
                       {[
-                        { id: 'EXTRA', label: 'Extra Booking' },
+                        { id: 'EXTRA', label: 'Extra Class' },
                         { id: 'RESCHEDULE', label: 'Reschedule' }
                       ].map(type => (
                         <div
