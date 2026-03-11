@@ -113,7 +113,7 @@ function AdminDashboard() {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-8 max-w-7xl mx-auto w-full h-full overflow-y-auto no-scrollbar">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
         <div>
           <div className="flex items-center gap-3 mb-2">
