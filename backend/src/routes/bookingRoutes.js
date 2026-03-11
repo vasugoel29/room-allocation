@@ -4,7 +4,8 @@ import {
   getBookings, 
   createBooking, 
   cancelBooking, 
-  rescheduleBooking 
+  rescheduleBooking,
+  quickBook
 } from '../controllers/bookingController.js';
 
 const router = express.Router();
@@ -16,5 +17,6 @@ router.patch('/:id', authenticate, requireRole('STUDENT_REP'), rescheduleBooking
 
 // Admin-only all bookings (active & cancelled)
 router.get('/admin/all', authenticate, requireRole('admin'), getBookings);
+router.post('/admin/quick', authenticate, requireRole('admin'), quickBook);
 
 export default router;

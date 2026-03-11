@@ -119,3 +119,64 @@ export const rescheduleBooking = async (req, res) => {
     client.release();
   }
 };
+
+export const quickBook = async (req, res) => {
+  const { room_name, target_user_id, date, slot, purpose } = req.body;
+  const adminId = req.user.id;
+
+  if (!room_name || !date || slot === undefined) {
+    return res.status(400).json({ error: 'Missing required fields: room_name, date, slot' });
+  }
+
+  const userId = target_user_id || adminId;
+  try {
+    await client.query('BEGIN');
+
+    // 1. Resolve or create room
+    let roomRes = await client.query('SELECT id FROM rooms WHERE UPPER(name) = UPPER($1)', [room_name]);
+    let roomId;
+    if (roomRes.rows.length === 0) {
+      const safeName = String(room_name).trim();
+      const firstDigit = safeName.charAt(0);
+      const building = /^\d$/.test(firstDigit) ? `${firstDigit}th Block` : 'Unknown';
+      const floor = safeName.length >= 2 ? parseInt(safeName.charAt(safeName.length - 3)) || 0 : 0; // Robust floor calc from 2nd digit or last few
+
+      const newRoom = await client.query(
+        'INSERT INTO rooms (name, building, floor, capacity) VALUES ($1, $2, $3, $4) RETURNING id',
+        [safeName, building, floor, 40]
+      );
+      roomId = newRoom.rows[0].id;
+    } else {
+      roomId = roomRes.rows[0].id;
+    }
+
+    // 2. Construct times
+    const startTime = new Date(date);
+    startTime.setHours(parseInt(slot), 0, 0, 0);
+    const endTime = new Date(startTime);
+    endTime.setHours(startTime.getHours() + 1);
+
+    // 3. Create booking (reuse service logic for conflict checks)
+    const result = await bookingService.createBooking(client, { 
+      room_id: roomId, 
+      start_time: startTime.toISOString(), 
+      end_time: endTime.toISOString(), 
+      purpose: purpose || 'Admin Quick Booking' 
+    }, userId);
+
+    if (result.error) {
+      await client.query('ROLLBACK');
+      return res.status(result.status).json({ error: result.error });
+    }
+
+    await client.query('COMMIT');
+    logger.info('Admin Quick Booking created', { booking_id: result.data.id, room_name, start_time: startTime });
+    res.status(201).json(result.data);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('Quick book error:', err);
+    res.status(500).json({ error: 'Quick booking failed' });
+  } finally {
+    client.release();
+  }
+};

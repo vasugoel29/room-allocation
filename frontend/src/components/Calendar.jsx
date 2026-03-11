@@ -79,7 +79,7 @@ function Calendar({ onSlotClick }) {
 
   const pillDensity = isMobile 
     ? (viewMode === 'day' ? 4 : 2) 
-    : (viewMode === 'day' ? 12 : 2);
+    : (viewMode === 'day' ? 15 : 2);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0">
