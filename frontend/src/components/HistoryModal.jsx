@@ -12,17 +12,24 @@ const HistoryModal = ({ onClose }) => {
 
   const now = new Date();
   
-  // Today range
-  const todayStart = new Date(now);
-  todayStart.setHours(0,0,0,0);
-  const todayEnd = new Date(now);
-  todayEnd.setHours(23,59,59,999);
+  // Smart date logic
+  const day = now.getDay();
+  const hour = now.getHours();
 
-  // This Week range (Mon-Sun)
-  // Logic: Match the Calendar's "This Week" (if it's Sat/Sun, we look at the coming week)
+  // Today range (Smart shifted)
+  const todayDate = new Date(now);
+  if (day === 0) todayDate.setDate(now.getDate() + 1);
+  else if (day === 6) todayDate.setDate(now.getDate() + 2);
+  else if (hour >= 18) {
+    if (day === 5) todayDate.setDate(now.getDate() + 3);
+    else todayDate.setDate(now.getDate() + 1);
+  }
+  const todayStart = new Date(todayDate.setHours(0,0,0,0));
+  const todayEnd = new Date(todayDate.setHours(23,59,59,999));
+
+  // This Week range (Smart shifted)
   const currentDay = now.getDay() || 7;
   const offset = currentDay >= 6 ? 7 : 0;
-  
   const mondayOfView = new Date(now);
   mondayOfView.setDate(now.getDate() - currentDay + 1 + offset);
   
@@ -30,7 +37,7 @@ const HistoryModal = ({ onClose }) => {
   weekStart.setHours(0, 0, 0, 0);
   
   const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6); // Sunday
+  weekEnd.setDate(weekStart.getDate() + 6);
   weekEnd.setHours(23, 59, 59, 999);
 
   const filteredBookings = bookings.filter(b => {

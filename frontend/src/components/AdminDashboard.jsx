@@ -70,13 +70,28 @@ function AdminDashboard() {
     setLoading(true);
     try {
       const now = new Date();
+      const day = now.getDay();
+      const hour = now.getHours();
+
       let startDate, endDate;
       if (filterRange === 'day') {
-        startDate = new Date(now.setHours(0,0,0,0)).toISOString();
-        endDate = new Date(now.setHours(23,59,59,999)).toISOString();
+        const targetDate = new Date(now);
+        // Weekend shift: Sat -> Mon (+2), Sun -> Mon (+1)
+        if (day === 0) targetDate.setDate(now.getDate() + 1);
+        else if (day === 6) targetDate.setDate(now.getDate() + 2);
+        // Late night shift: After 6 PM, show next working day
+        else if (hour >= 18) {
+          if (day === 5) targetDate.setDate(now.getDate() + 3); // Fri -> Mon
+          else targetDate.setDate(now.getDate() + 1);
+        }
+        startDate = new Date(targetDate.setHours(0,0,0,0)).toISOString();
+        endDate = new Date(targetDate.setHours(23,59,59,999)).toISOString();
       } else {
+        // Week shift: Sat/Sun show next week
+        const currentDay = now.getDay() || 7;
+        const offset = currentDay >= 6 ? 7 : 0;
         const monday = new Date(now);
-        monday.setDate(now.getDate() - (now.getDay() || 7) + 1);
+        monday.setDate(now.getDate() - (now.getDay() || 7) + 1 + offset);
         startDate = new Date(monday.setHours(0,0,0,0)).toISOString();
         const sunday = new Date(monday);
         sunday.setDate(monday.getDate() + 6);
