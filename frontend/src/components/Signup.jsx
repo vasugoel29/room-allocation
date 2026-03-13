@@ -68,7 +68,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
         </div>
 
         {error && (
-          <div className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm font-medium">
+          <div role="alert" className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm font-medium">
             {error}
           </div>
         )}
@@ -86,6 +86,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
+              autoComplete="name"
             />
           </div>
 
@@ -101,6 +102,8 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              inputMode="email"
             />
           </div>
 
@@ -116,6 +119,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="new-password"
             />
           </div>
 
@@ -139,7 +143,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               {loading ? 'Creating Account...' : 'Create Account'}
             </div>
             {loading && status && (
-              <span className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
+              <span aria-live="polite" className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
             )}
           </button>
         </form>

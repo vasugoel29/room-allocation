@@ -67,7 +67,7 @@ const Login = ({ onShowSignup }) => {
         </div>
 
         {error && (
-          <div className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm animate-in slide-in-from-top-2 font-medium">
+          <div role="alert" className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm animate-in slide-in-from-top-2 font-medium">
             {error}
           </div>
         )}
@@ -85,6 +85,8 @@ const Login = ({ onShowSignup }) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoComplete="email"
+              inputMode="email"
             />
           </div>
 
@@ -100,6 +102,7 @@ const Login = ({ onShowSignup }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
+              autoComplete="current-password"
             />
           </div>
 
@@ -114,7 +117,7 @@ const Login = ({ onShowSignup }) => {
                 {loading ? 'Authenticating...' : 'Sign In'}
               </div>
               {loading && status && (
-                <span className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
+                <span aria-live="polite" className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
               )}
             </button>
 

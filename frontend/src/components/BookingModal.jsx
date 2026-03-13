@@ -142,9 +142,9 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true"></div>
       
-      <div className="relative w-full max-w-xl mx-4 glass dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-2xl border border-black/5 overflow-y-auto max-h-[95vh] no-scrollbar">
+      <div className="relative w-full max-w-xl mx-4 glass dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-2xl border border-black/5 overflow-y-auto max-h-[90dvh] no-scrollbar">
         <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
           <X size={20} sm:size={24} />
         </button>
@@ -173,15 +173,16 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   <div className="relative">
                     <input
                       type="text"
-                      readOnly
-                      placeholder={selectedRoomData ? selectedRoomData.name : "Select a room..."}
+                      placeholder={selectedRoomData ? selectedRoomData.name : "Search for a room..."}
                       value={searchTerm}
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      onFocus={() => setIsDropdownOpen(true)}
                       onChange={(e) => {
                         setSearchTerm(e.target.value);
                         setIsDropdownOpen(true);
                       }}
-                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30"
+                      autoComplete="off"
+                      aria-label="Search for a room"
+                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm hover:bg-bg-secondary/30"
                     />
                     <div 
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
@@ -353,15 +354,17 @@ function BookingModal({ slot, onClose, onSuccess }) {
                     <div className="relative cursor-pointer">
                       <input
                         type="text"
-                        placeholder="Search or enter room..."
+                        placeholder="Search for room to free up..."
                         value={isRescheduleRoomOpen ? rescheduleSearchTerm : (rescheduleRoom || '')}
-                        onClick={() => setIsRescheduleRoomOpen(!isRescheduleRoomOpen)}
+                        onFocus={() => setIsRescheduleRoomOpen(true)}
                         onChange={(e) => {
                           setRescheduleSearchTerm(e.target.value);
                           setRescheduleRoom(e.target.value);
                           setIsRescheduleRoomOpen(true);
                         }}
-                        className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-primary/30"
+                        autoComplete="off"
+                        aria-label="Search for room to free up"
+                        className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm hover:bg-bg-primary/30"
                       />
                       <div 
                         className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
@@ -415,6 +418,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="e.g. Special Class, Club Meeting"
+              autoComplete="off"
               className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all h-20 resize-none placeholder:text-text-secondary/40 shadow-sm"
             />
           </div>
