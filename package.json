@@ -2,7 +2,7 @@
   "name": "cras-root",
   "private": true,
   "scripts": {
-    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",

@@ -138,6 +138,7 @@ export const quickBook = async (req, res) => {
   }
 
   const userId = target_user_id || adminId;
+  const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
 

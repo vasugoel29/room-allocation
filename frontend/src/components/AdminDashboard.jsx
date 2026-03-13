@@ -454,9 +454,90 @@ function AdminDashboard() {
                  </div>
                </div>
 
-               {/* Discovery Table */}
+               {/* Discovery Mobile Cards / Table */}
                <div className="flex-1 overflow-auto no-scrollbar">
-                  <table className="w-full text-left border-collapse">
+                  {/* Mobile View: Cards */}
+                  <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
+                    {roomStatuses
+                      .filter(r => quickBookForm.roomFilter === 'all' || r.room_name === quickBookForm.roomFilter)
+                      .map(room => (
+                      <div key={room.room_id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-lg font-black text-text-primary tracking-tight">{room.room_name}</span>
+                            <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
+                          </div>
+                          {room.booking_id ? (
+                            <span className="text-[10px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Booked</span>
+                          ) : (
+                            <span className="text-[10px] font-black uppercase text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Available</span>
+                          )}
+                        </div>
+
+                        <div className="space-y-4">
+                          <div className="relative">
+                             <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 mb-1 block">Recipient</label>
+                             <button 
+                               onClick={() => setUserDropdownOpen(userDropdownOpen === room.room_id ? null : room.room_id)}
+                               className="w-full flex items-center justify-between gap-3 bg-bg-secondary/50 border border-border rounded-xl px-4 py-3 text-sm font-bold"
+                             >
+                               <div className="flex items-center gap-2 truncate">
+                                  <UserIcon size={14} className="text-text-secondary opacity-40" />
+                                  <span className="truncate">
+                                    {users.find(u => u.id === quickBookForm[`target_${room.room_id}`])?.name || 'Select User...'}
+                                  </span>
+                               </div>
+                               <ChevronDown size={14} className={`text-text-secondary opacity-30 transition-transform ${userDropdownOpen === room.room_id ? 'rotate-180' : ''}`} />
+                             </button>
+
+                             {userDropdownOpen === room.room_id && (
+                               <div className="absolute z-[100] mt-2 w-full bg-bg-primary border border-border rounded-2xl shadow-2xl overflow-hidden">
+                                  <div className="p-3 border-b border-border">
+                                    <input 
+                                      autoFocus
+                                      type="text"
+                                      placeholder="Search members..."
+                                      value={userSearch}
+                                      onChange={(e) => setUserSearch(e.target.value)}
+                                      className="w-full bg-bg-secondary border border-border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
+                                    />
+                                  </div>
+                                  <div className="max-h-[160px] overflow-auto">
+                                    {filteredUsers.map(u => (
+                                      <button 
+                                        key={u.id}
+                                        onClick={() => {
+                                          setQuickBookForm({...quickBookForm, [`target_${room.room_id}`]: u.id});
+                                          setUserDropdownOpen(null);
+                                        }}
+                                        className="w-full text-left px-4 py-3 hover:bg-bg-secondary text-sm font-bold"
+                                      >
+                                        {u.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                               </div>
+                             )}
+                          </div>
+
+                          <button 
+                            disabled={submitting === room.room_name || room.booking_id}
+                            onClick={() => handleQuickBookSubmit(room.room_name, quickBookForm[`target_${room.room_id}`])}
+                            className={`w-full py-3.5 rounded-xl text-xs font-black transition-all ${
+                              room.booking_id 
+                                ? 'bg-text-secondary/10 text-text-secondary opacity-50 cursor-not-allowed' 
+                                : 'bg-accent text-white shadow-lg shadow-accent/20'
+                            }`}
+                          >
+                            {submitting === room.room_name ? 'Booking...' : (room.booking_id ? 'Already Booked' : 'Confirm Quick Allocation')}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop View: Table */}
+                  <table className="hidden sm:table w-full text-left border-collapse">
                     <thead className="sticky top-0 z-10 bg-bg-secondary/90 backdrop-blur-md">
                       <tr className="border-b border-border/50">
                         <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Room</th>
@@ -567,7 +648,94 @@ function AdminDashboard() {
             </div>
           ) : (
             <div className="flex-1 overflow-auto no-scrollbar">
-              <table className="w-full text-left border-collapse">
+              {/* Mobile Card View for Non-Quick Tabs */}
+              <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
+                {filteredData.map(item => (
+                  <div key={item.id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
+                    {activeTab === 'bookings' ? (
+                      <>
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-lg font-black text-text-primary">{item.room_name}</span>
+                            <span className="text-sm font-bold text-text-secondary">{item.user_name}</span>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
+                            item.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 text-text-secondary bg-bg-secondary p-3 rounded-xl border border-border">
+                          <Clock size={16} />
+                          <div className="flex flex-col">
+                            <span className="text-xs font-bold text-text-primary">
+                              {new Date(item.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                            </span>
+                            <span className="text-[10px] font-medium opacity-60">
+                              {new Date(item.start_time).getHours().toString().padStart(2, '0')}:00 - {(new Date(item.start_time).getHours() + 1).toString().padStart(2, '0')}:00
+                            </span>
+                          </div>
+                        </div>
+                        {item.status === 'ACTIVE' && (
+                          <button
+                            onClick={() => handleCancelBooking(item.id)}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100"
+                          >
+                            <Trash2 size={16} /> Cancel Allocation
+                          </button>
+                        )}
+                      </>
+                    ) : activeTab === 'promotions' ? (
+                      <>
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-lg font-black text-text-primary">{item.user_name}</span>
+                            <span className="text-xs font-medium text-text-secondary">{item.user_email}</span>
+                          </div>
+                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border ${
+                            item.status === 'APPROVED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </div>
+                        <div className="bg-bg-secondary/50 p-3 rounded-xl border border-border">
+                          <p className="text-xs italic font-medium opacity-80">"{item.reason}"</p>
+                        </div>
+                        {item.status === 'PENDING' && (
+                          <div className="flex gap-2">
+                             <button onClick={() => handlePromotion(item.id, 'APPROVED')} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-black shadow-lg shadow-green-500/10">Approve</button>
+                             <button onClick={() => handlePromotion(item.id, 'REJECTED')} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-black shadow-lg shadow-red-500/10">Reject</button>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex justify-between items-start">
+                          <div className="flex flex-col">
+                            <span className="text-lg font-black text-text-primary">{item.name}</span>
+                            <div className="flex items-center gap-1.5 text-text-secondary">
+                              <Mail size={12} className="opacity-40" />
+                              <span className="text-xs font-medium">{item.email}</span>
+                            </div>
+                          </div>
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
+                            item.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                          }`}>
+                            {item.role}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                           <button onClick={() => openEditModal(item)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border"><Edit size={16} /> Edit</button>
+                           <button onClick={() => deleteUser(item.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border"><Trash2 size={16} /> Delete</button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <table className="hidden sm:table w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-bg-secondary/50">
                     {activeTab === 'bookings' ? (

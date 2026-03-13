@@ -40,24 +40,30 @@ function Calendar({ onSlotClick }) {
   const timePos = getCurrentTimePosition();
 
   const getCurrentWeekDates = () => {
-    const currentDay = now.getDay() || 7;
-    const offset = currentDay >= 6 ? 7 : 0;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - currentDay + 1 + offset);
+    const dates = [];
+    let d = new Date(now);
     
-    return DAYS.map((day, i) => {
-      const date = new Date(monday);
-      date.setDate(monday.getDate() + i);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const dayNum = String(date.getDate()).padStart(2, '0');
-      return { 
-        day, 
-        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        fullDate: date,
-        dateStr: `${year}-${month}-${dayNum}`
-      };
-    });
+    // If Sat or Sun, move to next Mon
+    const day = d.getDay();
+    if (day === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
+    else if (day === 6) d.setDate(d.getDate() + 2); // Sat -> Mon
+
+    while (dates.length < 5) {
+      const currentDay = d.getDay();
+      if (currentDay !== 0 && currentDay !== 6) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(d.getDate()).padStart(2, '0');
+        dates.push({
+          day: DAYS[currentDay - 1],
+          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          fullDate: new Date(d),
+          dateStr: `${year}-${month}-${dayNum}`
+        });
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return dates;
   };
 
   const weekDates = getCurrentWeekDates();
