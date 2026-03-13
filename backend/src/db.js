@@ -55,7 +55,17 @@ export async function testDbConnection() {
       )
     `);
 
-    console.log('Database connected successfully');
+    // Ensure performance extensions and indices (CRAS Phase 3)
+    // Runs on every startup to ensure Neon/Production DB is in sync
+    await client.query(`
+      CREATE EXTENSION IF NOT EXISTS btree_gist;
+      CREATE INDEX IF NOT EXISTS idx_rooms_filters ON rooms (capacity, has_ac, has_projector);
+      CREATE INDEX IF NOT EXISTS idx_bookings_range_gist ON bookings USING GIST (room_id, tstzrange(start_time, end_time));
+      CREATE INDEX IF NOT EXISTS idx_bookings_user_range ON bookings USING GIST (created_by, tstzrange(start_time, end_time));
+      CREATE INDEX IF NOT EXISTS idx_availability_room_day_hour ON room_availability (room_id, day, hour);
+    `);
+
+    console.log('Database connected and schemas synchronized');
     return true;
   } catch (err) {
     console.error('Database connection failed:', err);

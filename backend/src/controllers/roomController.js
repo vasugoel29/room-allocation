@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import cache from '../utils/cache.js';
 
 export const getRooms = async (req, res) => {
   const { capacity, ac, projector } = req.query;
@@ -19,7 +20,12 @@ export const getRooms = async (req, res) => {
 
 export const getAvailability = async (req, res) => {
   try {
+    const cacheKey = 'room_availability_all';
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const result = await db.query('SELECT * FROM room_availability');
+    cache.set(cacheKey, result.rows, 300000); // 5 min for static schedule
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch availability' });
@@ -33,6 +39,10 @@ export const getAdminRoomStatus = async (req, res) => {
   }
 
   try {
+    const cacheKey = `admin_status_${date}_${slot}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
     const startTime = new Date(date);
     startTime.setHours(parseInt(slot), 0, 0, 0);
     const endTime = new Date(startTime);
@@ -57,6 +67,7 @@ export const getAdminRoomStatus = async (req, res) => {
     `;
     
     const result = await db.query(query, [startTime.toISOString(), endTime.toISOString()]);
+    cache.set(cacheKey, result.rows, 30000); // 30s cache
     res.json(result.rows);
   } catch (err) {
     console.error('getAdminRoomStatus error:', err);

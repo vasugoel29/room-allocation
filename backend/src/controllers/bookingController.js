@@ -1,6 +1,7 @@
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
 import * as bookingService from '../services/bookingService.js';
+import cache from '../utils/cache.js';
 
 export const getBookings = async (req, res) => {
   const { room_id, user_id, start_date, end_date, slot } = req.query;
@@ -50,6 +51,7 @@ export const createBooking = async (req, res) => {
     }
 
     await client.query('COMMIT');
+    cache.deletePattern('admin_status_.*'); // Invalidate all admin status caches
     logger.info('Booking created', { booking_id: result.data.id, user_id: userId, room_id, start_time });
     res.status(201).json(result.data);
   } catch (err) {
@@ -83,6 +85,7 @@ export const cancelBooking = async (req, res) => {
 
     await client.query("UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW() WHERE id = $1", [id]);
     await client.query('COMMIT');
+    cache.deletePattern('admin_status_.*'); 
     logger.info('Booking cancelled', { booking_id: id, user_id: userId, room_id: booking.room_id });
     res.json({ status: 'Success', message: 'Booking cancelled' });
   } catch (err) {
@@ -120,6 +123,7 @@ export const rescheduleBooking = async (req, res) => {
     );
 
     await client.query('COMMIT');
+    cache.deletePattern('admin_status_.*');
     res.json(updateResult.rows[0]);
   } catch (err) {
     await client.query('ROLLBACK');
@@ -180,6 +184,7 @@ export const quickBook = async (req, res) => {
     }
 
     await client.query('COMMIT');
+    cache.deletePattern('admin_status_.*');
     logger.info('Admin Quick Booking created', { booking_id: result.data.id, room_name, start_time: startTime });
     res.status(201).json(result.data);
   } catch (err) {
