@@ -11,9 +11,17 @@ Sentry.init({
   dsn: "https://fffcdd6cd5e09e0fcaeea616debb0bd3@o4511015599341568.ingest.us.sentry.io/4511015602618368",
   integrations: [
     nodeProfilingIntegration(),
+    Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
   ],
   // Tracing
   tracesSampleRate: 1.0, //  Capture 100% of the transactions
+  metrics: {
+    count: ['button_click'],
+    gauge: ['page_load_time'],
+    distribution: ['response_time']
+  },
+  enableLogs: true,
+
 });
 
 // Modular Imports
@@ -33,6 +41,11 @@ app.use(cors({
 }));
 app.use(bodyParser.json());
 
+// Enable JS profiling in the browser for Sentry
+app.use((req, res, next) => {
+  res.set("Document-Policy", "js-profiling");
+  next();
+});
 const PORT = 4000;
 
 app.get('/', (req, res) => res.json({ status: 'ok', version: '1.2 (Refactored)' }));

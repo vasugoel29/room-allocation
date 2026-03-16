@@ -13,7 +13,9 @@ Sentry.init({
   // For example, automatic IP address collection on events
   sendDefaultPii: true,
   integrations: [
+    Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     Sentry.browserTracingIntegration(),
+    Sentry.browserProfilingIntegration(),
     Sentry.replayIntegration()
   ],
   // Tracing
@@ -24,8 +26,16 @@ Sentry.init({
   replaysSessionSampleRate: 0.1, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
   replaysOnErrorSampleRate: 1.0, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
   // Enable logs to be sent to Sentry
-  enableLogs: true
+  enableLogs: true,
+  // Browser Profiling
+  profileSessionSampleRate: 1.0
 });
+
+Sentry.logger.info('User triggered test log', { log_source: 'sentry_test' });
+
+Sentry.metrics.count('button_click', 1);
+Sentry.metrics.gauge('page_load_time', 150);
+Sentry.metrics.distribution('response_time', 200);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
