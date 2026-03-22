@@ -25,6 +25,7 @@ function PromotionModal({ onClose }) {
         toast.error(error.error || 'Failed to submit request');
       }
     } catch (err) {
+      console.error(err);
       toast.error('Network error. Please try again.');
     } finally {
       setLoading(false);

@@ -18,7 +18,7 @@ export const AppProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
-  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all' });
+  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: '5th Block' });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
 
@@ -59,7 +59,6 @@ export const AppProvider = ({ children }) => {
         queryParams.projector = 'true';
       }
       delete queryParams.smartRoom;
-      
       const query = new URLSearchParams(queryParams).toString();
       const res = await api.get(`/rooms?${query}`);
       const data = await res.json();
@@ -68,7 +67,7 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
-  }, [filters, handleLogout]);
+  }, [filters]);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -78,7 +77,7 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch bookings failed', err);
     }
-  }, [handleLogout]);
+  }, []);
 
   const fetchAvailability = useCallback(async () => {
     try {
@@ -88,7 +87,7 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch availability failed', err);
     }
-  }, [handleLogout]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');

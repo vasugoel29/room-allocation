@@ -32,6 +32,7 @@ function App() {
     } else if (user) {
       setCurrentPage('calendar');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
   const toggleSidebar = () => {
@@ -40,6 +41,7 @@ function App() {
     localStorage.setItem('sidebarCollapsed', newState);
   };
 
+  // eslint-disable-next-line no-unused-vars
   const NavButton = ({ id, icon: Icon, label, color = 'bg-indigo-600', textColor = 'text-white' }) => (
     <button 
       onClick={() => { setCurrentPage(id); setIsSidebarOpen(false); }}

@@ -12,6 +12,12 @@ Sentry.init({
   // Setting this option to true will send default PII data to Sentry.
   // For example, automatic IP address collection on events
   sendDefaultPii: true,
+  ignoreErrors: [
+    /ServiceWorker/i,
+    /Failed to register a ServiceWorker/i,
+    /service worker/i,
+    "ServiceWorkerRegistration"
+  ],
   integrations: [
     Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
     Sentry.browserTracingIntegration(),

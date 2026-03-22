@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
+import compression from 'compression';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
@@ -32,6 +33,7 @@ import promotionRoutes from './routes/promotionRoutes.js';
 
 const app = express();
 app.use(helmet());
+app.use(compression()); // Compress all responses
 app.use(cors({
   origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [
     "http://localhost:5173",

@@ -52,6 +52,7 @@ function AdminDashboard() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterRange]); // Refetch bookings when range changes.
 
   useEffect(() => {
@@ -64,6 +65,7 @@ function AdminDashboard() {
     if (activeTab === 'quick') {
       fetchRoomStatuses();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, quickBookForm.date, quickBookForm.slot]);
 
   const fetchData = async () => {
@@ -144,6 +146,7 @@ function AdminDashboard() {
       await api.patch(`/promotions/${id}`, { status, admin_comment: comment });
       fetchData();
     } catch (err) {
+      console.error(err);
       toast.error('Action failed');
     }
   };
@@ -160,6 +163,7 @@ function AdminDashboard() {
         toast.error(err.error || 'Failed to cancel booking');
       }
     } catch (err) {
+      console.error(err);
       toast.error('Network error');
     }
   };
@@ -205,6 +209,7 @@ function AdminDashboard() {
         toast.error(err.error || 'Booking failed');
       }
     } catch (err) {
+      console.error(err);
       toast.error('Network error');
     } finally {
       setSubmitting(null);
@@ -232,6 +237,7 @@ function AdminDashboard() {
         toast.error(err.error || 'Operation failed');
       }
     } catch (err) {
+      console.error(err);
       toast.error('Network error');
     }
   };
@@ -247,6 +253,7 @@ function AdminDashboard() {
         toast.error('Failed to delete user');
       }
     } catch (err) {
+      console.error(err);
       toast.error('Network error');
     }
   };
