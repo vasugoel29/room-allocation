@@ -4,12 +4,16 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_only';
 
 // Middleware to check JWT and role
 export function authenticate(req, res, next) {
-  const auth = req.headers.authorization;
-  if (!auth || !auth.startsWith('Bearer ')) {
+  let token = req.cookies?.token;
+  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
+    token = req.headers.authorization.split(' ')[1];
+  }
+
+  if (!token) {
     return res.status(401).json({ error: 'Missing or invalid token' });
   }
+
   try {
-    const token = auth.split(' ')[1];
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
@@ -18,9 +22,18 @@ export function authenticate(req, res, next) {
   }
 }
 
-export function requireRole(role) {
+const roleHierarchy = {
+  'VIEWER': 1,
+  'STUDENT_REP': 2,
+  'admin': 3
+};
+
+export function requireRole(minimumRole) {
   return (req, res, next) => {
-    if (req.user.role !== role && req.user.role !== 'STUDENT_REP' && req.user.role !== 'admin') { 
+    const userRoleValue = roleHierarchy[req.user.role] || 0;
+    const requiredRoleValue = roleHierarchy[minimumRole] || 0;
+    
+    if (userRoleValue < requiredRoleValue) {
       return res.status(403).json({ error: 'Forbidden' });
     }
     next();

@@ -36,8 +36,7 @@ const Login = ({ onShowSignup }) => {
       clearTimeout(wakeUpTimer);
       
       const data = await res.json();
-      if (res.ok && data.token) {
-        localStorage.setItem('token', data.token);
+      if (res.ok) {
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
       } else {

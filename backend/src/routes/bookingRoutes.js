@@ -1,5 +1,7 @@
 import express from 'express';
+import { body, param } from 'express-validator';
 import { authenticate, requireRole } from '../middleware/auth.js';
+import { validateRequest } from '../middleware/validate.js';
 import { 
   getBookings, 
   createBooking, 
@@ -10,13 +12,30 @@ import {
 
 const router = express.Router();
 
+const bookingValidation = [
+  body('room_id').isInt().withMessage('Valid room ID required'),
+  body('start_time').isISO8601().withMessage('Valid start time required'),
+  body('end_time').isISO8601().withMessage('Valid end time required'),
+  body('purpose').trim().notEmpty().withMessage('Purpose is required')
+];
+
+const idValidation = [
+  param('id').isInt().withMessage('Valid booking ID required')
+];
+
+const quickBookValidation = [
+  body('room_name').trim().notEmpty().withMessage('Room name required'),
+  body('date').isISO8601().withMessage('Valid date required'),
+  body('slot').isInt({ min: 0, max: 23 }).withMessage('Slot must be between 0 and 23')
+];
+
 router.get('/', getBookings);
-router.post('/', authenticate, requireRole('STUDENT_REP'), createBooking);
-router.patch('/:id/cancel', authenticate, cancelBooking);
-router.patch('/:id', authenticate, requireRole('STUDENT_REP'), rescheduleBooking);
+router.post('/', authenticate, requireRole('STUDENT_REP'), bookingValidation, validateRequest, createBooking);
+router.patch('/:id/cancel', authenticate, idValidation, validateRequest, cancelBooking);
+router.patch('/:id', authenticate, requireRole('STUDENT_REP'), idValidation, validateRequest, rescheduleBooking);
 
 // Admin-only all bookings (active & cancelled)
 router.get('/admin/all', authenticate, requireRole('admin'), getBookings);
-router.post('/admin/quick', authenticate, requireRole('admin'), quickBook);
+router.post('/admin/quick', authenticate, requireRole('admin'), quickBookValidation, validateRequest, quickBook);
 
 export default router;

@@ -3,9 +3,16 @@ import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
+
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  console.error('FATAL ERROR: JWT_SECRET is not defined in production environment.');
+  process.exit(1);
+}
 
 // Initialize Sentry before any other imports if possible
 Sentry.init({
@@ -42,6 +49,15 @@ app.use(cors({
   credentials: true
 }));
 app.use(bodyParser.json());
+app.use(cookieParser());
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300, 
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+app.use('/api', apiLimiter);
 
 // Enable JS profiling in the browser for Sentry
 app.use((req, res, next) => {

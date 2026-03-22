@@ -45,8 +45,12 @@ export const AppProvider = ({ children }) => {
   const [backendError, setBackendError] = useState(null);
   const prevBackendError = useRef(null);
 
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem('token');
+  const handleLogout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (e) {
+      console.error('Logout failed:', e);
+    }
     localStorage.removeItem('user');
     setUser(null);
   }, []);
