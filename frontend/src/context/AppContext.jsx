@@ -52,6 +52,7 @@ export const AppProvider = ({ children }) => {
       console.error('Logout failed:', e);
     }
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
     setUser(null);
   }, []);
 

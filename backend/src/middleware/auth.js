@@ -4,14 +4,11 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_only';
 
 // Middleware to check JWT and role
 export function authenticate(req, res, next) {
-  let token = req.cookies?.token;
-  if (!token && req.headers.authorization?.startsWith('Bearer ')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
-
-  if (!token) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing or invalid token' });
   }
+  const token = authHeader.split(' ')[1];
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);

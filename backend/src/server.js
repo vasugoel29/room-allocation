@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import compression from 'compression';
-import cookieParser from 'cookie-parser';
+
 import rateLimit from 'express-rate-limit';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
@@ -49,7 +49,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(bodyParser.json());
-app.use(cookieParser());
+
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -37,6 +37,7 @@ const Login = ({ onShowSignup }) => {
       
       const data = await res.json();
       if (res.ok) {
+        localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         setUser(data.user);
       } else {

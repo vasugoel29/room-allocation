@@ -6,8 +6,10 @@ const BASE_URL = import.meta.env.VITE_API_URL || '/api';
  * Standardized API fetch wrapper
  */
 export async function apiFetch(endpoint, options = {}) {
+  const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
@@ -19,7 +21,6 @@ export async function apiFetch(endpoint, options = {}) {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
         ...options,
         headers,
-        credentials: 'include',
       });
 
       // If it's a 503 (Render cold start) or 504 (Gateway timeout), retry
@@ -32,8 +33,8 @@ export async function apiFetch(endpoint, options = {}) {
 
       if (response.status === 401 && !endpoint.includes('/auth/login')) {
         console.warn('Session expired or unauthorized. Logging out...');
-        api.post('/auth/logout').catch(() => {});
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
         window.location.reload(); // Force App to re-render and show Login
         return response; 
       }
