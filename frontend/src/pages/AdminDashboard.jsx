@@ -135,12 +135,12 @@ function AdminDashboard() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-accent p-2 rounded-lg shadow-sm">
+            <div className="bg-primary p-3 rounded-2xl shadow-ambient">
               <Shield size={24} className="text-white" />
             </div>
-            <h1 className="text-3xl font-black text-text-primary tracking-tight">Admin Console</h1>
+            <h1 className="text-3xl font-extrabold text-text-primary tracking-tight font-display uppercase">Admin Console</h1>
           </div>
-          <p className="text-text-secondary font-medium">Manage allocations and elevation requests.</p>
+          <p className="text-text-secondary font-bold uppercase text-[10px] tracking-widest opacity-40 font-display">Manage allocations and elevation requests.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -150,13 +150,13 @@ function AdminDashboard() {
               placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64 bg-bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-accent pl-10 transition-all font-medium"
+              className="w-full sm:w-64 bg-tonal-secondary/10 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:bg-tonal-secondary/20 transition-all font-bold placeholder:text-text-secondary/30 pl-11 font-body text-text-primary"
             />
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-secondary/40" size={16} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" size={18} />
           </div>
           <button 
             onClick={exportCSV}
-            className="flex items-center gap-2 bg-text-primary text-bg-primary px-5 py-2.5 rounded-xl font-bold text-sm hover:opacity-90 transition-all active:scale-95 shadow-sm"
+            className="flex items-center gap-2 bg-text-primary text-surface-low px-5 py-2.5 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
           >
             <Download size={16} />
             Export
@@ -166,41 +166,41 @@ function AdminDashboard() {
 
       <div className="flex-1 flex flex-col gap-6 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="bg-bg-secondary p-1.5 rounded-2xl flex flex-wrap gap-1.5 w-full sm:w-fit border border-border shadow-sm">
+          <div className="bg-tonal-secondary/10 p-1.5 rounded-[1.5rem] flex flex-wrap gap-1.5 w-full sm:w-fit font-display">
             <button 
               onClick={() => setActiveTab('bookings')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'bookings' ? 'bg-bg-primary text-text-primary shadow-sm border border-border' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'bookings' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
             >
               <CalendarIcon size={16} />
               <span className="whitespace-nowrap">Bookings</span>
             </button>
             <button 
               onClick={() => setActiveTab('promotions')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'promotions' ? 'bg-bg-primary text-text-primary shadow-sm border border-border' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'promotions' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
             >
               <Users size={16} />
               <span className="whitespace-nowrap">Requests</span>
               {promotions.filter(p => p.status === 'PENDING').length > 0 && (
-                <span className="bg-accent text-white text-[10px] px-1.5 rounded-full">
+                <span className="bg-primary text-white text-[10px] px-1.5 rounded-full">
                   {promotions.filter(p => p.status === 'PENDING').length}
                 </span>
               )}
             </button>
             <button 
               onClick={() => setActiveTab('quick')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'quick' ? 'bg-bg-primary text-text-primary shadow-sm border border-border' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'quick' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
             >
               <Zap size={16} />
               <span className="whitespace-nowrap">Quick Book</span>
             </button>
             <button 
               onClick={() => setActiveTab('users')}
-              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black transition-all ${activeTab === 'users' ? 'bg-bg-primary text-text-primary shadow-sm border border-border' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'users' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
             >
               <ShieldAlert size={16} />
               <span className="whitespace-nowrap">Users</span>
               {users.filter(u => !u.is_approved).length > 0 && (
-                <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full animate-pulse">
+                <span className="bg-tertiary text-white text-[10px] px-1.5 rounded-full shadow-tertiary animate-pulse">
                   {users.filter(u => !u.is_approved).length}
                 </span>
               )}
@@ -208,16 +208,16 @@ function AdminDashboard() {
           </div>
 
           {activeTab === 'bookings' && (
-            <div className="flex items-center gap-2 bg-bg-secondary/50 p-1 rounded-xl w-fit border border-border">
+            <div className="flex items-center gap-2 bg-tonal-secondary/10 p-1.5 rounded-xl w-fit font-display font-bold">
               <button 
                 onClick={() => setFilterRange('day')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterRange === 'day' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-extrabold transition-all tracking-widest ${filterRange === 'day' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Today
               </button>
               <button 
                 onClick={() => setFilterRange('week')}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterRange === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-4 py-1.5 rounded-lg text-[10px] uppercase font-extrabold transition-all tracking-widest ${filterRange === 'week' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 This Week
               </button>
@@ -227,18 +227,18 @@ function AdminDashboard() {
           {activeTab === 'users' && (
             <button 
               onClick={() => openUserModal()}
-              className="flex items-center gap-2 bg-accent text-white px-6 py-2.5 rounded-xl font-black text-sm hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-accent/20"
+              className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
             >
               <UserPlus size={18} />
-              Add New User
+              Add User
             </button>
           )}
         </div>
 
-        <div className="flex-1 bg-bg-secondary/30 border border-border rounded-2xl overflow-hidden shadow-sm backdrop-blur-sm flex flex-col min-h-0">
+        <div className="flex-1 bg-tonal-secondary/5 rounded-[2.5rem] overflow-hidden shadow-ambient backdrop-blur-md flex flex-col min-h-0">
           {loading ? (
             <div className="p-20 flex justify-center items-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-4 border-accent border-t-transparent shadow-sm"></div>
+              <div className="animate-spin rounded-full h-12 w-12 border-primary border-t-transparent"></div>
             </div>
           ) : (
             <>

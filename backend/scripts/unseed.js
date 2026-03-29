@@ -17,7 +17,9 @@ async function unseed() {
     await pool.query('DELETE FROM booking_history');
     await pool.query('DELETE FROM bookings');
     await pool.query('DELETE FROM room_availability');
+    await pool.query('DELETE FROM users WHERE role != \'admin\''); // Keep the admin if it exists
     await pool.query('DELETE FROM rooms');
+    await pool.query('DELETE FROM departments');
     
     console.log('Database successfully cleaned.');
   } catch (err) {

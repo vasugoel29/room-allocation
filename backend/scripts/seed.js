@@ -36,7 +36,31 @@ function getBuildingAndFloor(roomName) {
   return { building, floor };
 }
 
+async function seedDepartments(client) {
+  const departments = [
+    'Computer Science (CSE)', 
+    'Information Technology (IT)', 
+    'Electronics & Communication (ECE)',
+    'Electrical Engineering (EE)',
+    'Mechanical Engineering (ME)',
+    'Instrumentation & Control (ICE)',
+    'Biotechnology',
+    'Mathematics',
+    'Physics',
+    'Humanities & Management'
+  ];
+
+  console.log('Seeding departments...');
+  for (const dept of departments) {
+    await client.query(
+      'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) DO NOTHING',
+      [dept]
+    );
+  }
+}
+
 async function seed() {
+  const client = await pool.connect();
   // Try both possible data file locations
   const dataPaths = [
     path.join(__dirname, 'rooms_complete_data_updated.json'),
@@ -60,6 +84,9 @@ async function seed() {
   console.log(`Starting Batch Seeding from: ${dataPath}`);
   
   try {
+    await seedDepartments(client);
+    client.release();
+
     const rawData = fs.readFileSync(dataPath, 'utf8');
     const universityData = JSON.parse(rawData);
     const rooms = universityData.rooms;
@@ -76,6 +103,7 @@ async function seed() {
 
     console.log('Seeding completed successfully!');
   } catch (err) {
+    if (client) client.release();
     console.error('Seeding error:', err);
   } finally {
     await pool.end();

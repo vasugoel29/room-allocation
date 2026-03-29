@@ -1,9 +1,22 @@
+import { fileURLToPath } from 'url';
+import path from 'path';
 import xlsx from 'xlsx';
 import bcrypt from 'bcrypt';
+import '../src/config/env.js';
 import { pool } from '../src/db.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 async function seed() {
-  const filePath = '/Users/vasugoel/Downloads/Faculty Details.xlsx';
+  const filePath = path.join(__dirname, '../../Faculty Details.xlsx');
+  console.log(`Searching for Faculty file at: ${filePath}`);
+  
+  if (!xlsx.readFile) { // Basic check for xlsx loading
+    console.error('XLSX library not properly loaded.');
+    process.exit(1);
+  }
+
   const workbook = xlsx.readFile(filePath);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = xlsx.utils.sheet_to_json(sheet);

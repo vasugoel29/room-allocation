@@ -4,27 +4,27 @@ function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-      <div className="bg-bg-primary w-full max-w-sm rounded-[2rem] shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="p-6 border-b border-border flex justify-between items-center bg-bg-secondary/30">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl ${confirmType === 'danger' ? 'bg-red-500/10 text-red-500' : 'bg-accent/10 text-accent'}`}>
-               <AlertTriangle size={24} />
+    <div className="fixed inset-0 bg-surface-lowest/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+      <div className="bg-surface-low w-full max-w-sm rounded-[2.5rem] shadow-ambient overflow-hidden animate-in fade-in zoom-in duration-300">
+        <div className="p-8 pb-4 flex justify-between items-center bg-tonal-secondary/5 font-display">
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${confirmType === 'danger' ? 'bg-red-500/10 text-red-500' : 'bg-primary/10 text-primary shadow-ambient'}`}>
+               <AlertTriangle size={24} strokeWidth={2.5} />
             </div>
-            <h2 className="text-xl font-black text-text-primary capitalize">{title}</h2>
+            <h2 className="text-xl font-extrabold text-text-primary tracking-tight uppercase">{title}</h2>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-bg-secondary rounded-xl transition-colors">
-            <X size={20} className="text-text-secondary" />
+          <button onClick={onClose} className="p-2 text-text-secondary hover:text-text-primary transition-colors">
+            <X size={24} />
           </button>
         </div>
-        <div className="p-6 space-y-6">
-          <p className="text-sm font-medium text-text-secondary leading-relaxed">
+        <div className="p-8 pt-4 space-y-8">
+          <p className="text-sm font-bold text-text-secondary leading-relaxed uppercase tracking-wider opacity-60 font-display">
             {message}
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-4 font-display">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-3 border border-border rounded-xl font-bold text-sm hover:bg-bg-secondary text-text-primary transition-all"
+              className="flex-1 px-4 py-4 bg-tonal-secondary/10 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest text-text-primary hover:bg-tonal-secondary/20 transition-all active:scale-95"
             >
               Cancel
             </button>
@@ -33,8 +33,8 @@ function ConfirmModal({ isOpen, onClose, onConfirm, title, message, confirmText 
                 onConfirm();
                 onClose();
               }}
-              className={`flex-[1.5] px-4 py-3 text-white rounded-xl font-black text-sm shadow-lg transition-all active:scale-95 ${
-                confirmType === 'danger' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/10' : 'bg-accent hover:opacity-90 shadow-accent/20'
+              className={`flex-[1.5] px-4 py-4 text-white rounded-2xl font-extrabold text-[10px] uppercase tracking-widest shadow-ambient transition-all active:scale-95 ${
+                confirmType === 'danger' ? 'bg-red-500' : 'bg-primary'
               }`}
             >
               {confirmText}

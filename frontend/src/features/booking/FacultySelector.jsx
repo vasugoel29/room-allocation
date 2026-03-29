@@ -26,7 +26,7 @@ function FacultySelector({
             }}
             autoComplete="off"
             aria-label="Search for faculty"
-            className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm hover:bg-bg-secondary/30"
+            className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm text-text-primary font-bold focus:outline-none focus:bg-tonal-secondary/20 transition-all pr-12 shadow-inner placeholder:text-text-secondary/20 font-body"
           />
           <div 
             className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
@@ -37,7 +37,7 @@ function FacultySelector({
         </div>
 
         {isFacultyOpen && (
-          <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+          <div className="absolute top-full left-0 right-0 mt-3 bg-neutral rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300">
             {Array.isArray(faculties) && faculties
               ?.filter(f => !debouncedFacultyTerm || 
                             f.name.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()) || 
@@ -52,10 +52,10 @@ function FacultySelector({
                       setIsFacultyOpen(false);
                       setFacultySearchTerm('');
                     }}
-                    className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex flex-col hover:bg-accent/5 ${isSelected ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
+                    className={`p-5 cursor-pointer transition-colors flex flex-col hover:bg-white/5 ${isSelected ? 'bg-primary text-white shadow-ambient' : ''}`}
                   >
-                    <span className="font-bold text-base text-text-primary">{f.name}</span>
-                    <span className="text-xs text-text-secondary font-medium truncate">{f.department || f.email}</span>
+                    <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>{f.name}</span>
+                    <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{f.department || f.email}</span>
                   </div>
                 );
               })}

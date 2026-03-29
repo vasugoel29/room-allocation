@@ -47,17 +47,17 @@ const Login = ({ onShowSignup }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-bg-primary p-4 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
       {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-indigo-500/10 blur-[120px] rounded-full"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary-accent/10 blur-[120px] rounded-full"></div>
       
-      <div className="relative w-full max-w-sm bg-bg-secondary border border-border rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300">
+      <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-10 shadow-ambient space-y-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center space-y-2">
-          <div className="inline-flex mb-2">
-            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <div className="inline-flex mb-4">
+            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.5rem] shadow-ambient" />
           </div>
-          <h2 className="text-3xl font-bold text-text-primary tracking-tight">Welcome Back</h2>
-          <p className="text-text-secondary text-sm font-medium">Sign in to manage your bookings</p>
+          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight uppercase font-display">Welcome Back</h2>
+          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60 font-display">Sign in to manage your bookings</p>
         </div>
 
         {error && (
@@ -68,13 +68,13 @@ const Login = ({ onShowSignup }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-              <Mail size={16} className="text-text-secondary/50" />
+            <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+              <Mail size={14} className="text-primary-accent" />
               Email Address
             </label>
             <input
               type="email"
-              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
+              className="w-full bg-surface-highest/10 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
               placeholder="rollno@nsut.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -85,13 +85,13 @@ const Login = ({ onShowSignup }) => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-text-secondary flex items-center gap-2">
-              <Lock size={16} className="text-text-secondary/50" />
+            <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+              <Lock size={14} className="text-primary-accent" />
               Password
             </label>
             <input
               type="password"
-              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
+              className="w-full bg-surface-highest/10 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -104,7 +104,7 @@ const Login = ({ onShowSignup }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex flex-col items-center justify-center gap-1 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white py-4 rounded-xl font-bold transition-all shadow-lg shadow-accent/20 active:scale-[0.98]"
+              className="w-full flex flex-col items-center justify-center gap-1 bg-primary-accent disabled:opacity-50 text-white py-5 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
             >
               <div className="flex items-center gap-2">
                 <LogIn size={20} />
@@ -120,12 +120,12 @@ const Login = ({ onShowSignup }) => {
 
 
 
-        <div className="text-center pt-4">
-          <p className="text-sm text-text-secondary font-medium">
+        <div className="text-center pt-4 font-display">
+          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60">
             Don't have an account?{' '}
             <button 
               onClick={onShowSignup}
-              className="text-accent hover:text-accent-hover font-bold transition-colors underline underline-offset-4"
+              className="text-primary-accent font-extrabold transition-colors underline underline-offset-4"
             >
               Sign up
             </button>

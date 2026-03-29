@@ -119,14 +119,14 @@ function Calendar({ onSlotClick }) {
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
       {/* Page Header (Consistent with History/Timetable) */}
-      <div className="p-4 sm:p-6 border-b border-border bg-bg-secondary/40 backdrop-blur-sm shrink-0">
+      <div className="p-4 sm:p-6 bg-tonal-secondary/10 backdrop-blur-md shrink-0">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col">
-            <h1 className="text-xl sm:text-2xl font-black text-text-primary tracking-tighter uppercase italic leading-none">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight uppercase leading-none font-display">
               Room Schedule
             </h1>
-            <p className="text-[10px] sm:text-xs text-text-secondary font-black uppercase tracking-widest mt-1">
-              Browse available spaces and existing bookings
+            <p className="text-[10px] sm:text-xs text-text-secondary font-bold uppercase tracking-widest mt-1 opacity-60">
+              Structural precision in time and space
             </p>
           </div>
           <PageSearch 
@@ -138,14 +138,14 @@ function Calendar({ onSlotClick }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar rounded-b-xl border-x border-b border-border">
+      <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar">
         <div className={`flex flex-col min-h-full w-full relative layout-transition ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
-          <div className={`grid border-b border-border bg-bg-secondary/90 backdrop-blur-md sticky top-0 z-30 shadow-sm layout-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-            <div className="p-2 sm:p-4 text-[10px] sm:text-base font-bold text-text-secondary uppercase tracking-widest flex items-center justify-center bg-bg-primary/50">Time</div>
+          <div className={`grid bg-surface-low/90 backdrop-blur-md sticky top-0 z-30 layout-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+            <div className="p-2 sm:p-4 text-[10px] sm:text-xs font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center justify-center bg-tonal-secondary/20 font-display">Time</div>
             {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
               <div 
                 key={dateStr} 
-                className={`p-2 sm:p-4 text-center border-l border-border flex flex-col gap-0.5 sm:gap-1 layout-transition ${viewMode === 'week' ? 'cursor-pointer hover:bg-accent/5 active:bg-accent/10 transition-colors' : ''}`}
+                className={`p-2 sm:p-4 text-center flex flex-col gap-0.5 sm:gap-1 layout-transition ${viewMode === 'week' ? 'cursor-pointer hover:bg-primary-accent/5 active:bg-primary-accent/10 transition-colors' : ''}`}
                 onClick={() => {
                   if (viewMode === 'week') {
                     onDayChange(dateStr);
@@ -153,7 +153,7 @@ function Calendar({ onSlotClick }) {
                   }
                 }}
               >
-                <span className="text-lg sm:text-2xl font-black text-text-primary uppercase tracking-tighter leading-none">{day}</span>
+                <span className="text-lg sm:text-2xl font-extrabold text-text-primary uppercase tracking-tight leading-none font-display">{day}</span>
                 <span className="text-[10px] sm:text-sm text-text-secondary font-bold leading-none">{date}</span>
               </div>
             ))}
@@ -167,30 +167,30 @@ function Calendar({ onSlotClick }) {
               >
                 <div className="flex items-center w-full">
                   <div className="w-[50px] sm:w-[120px] flex justify-end pr-1 sm:pr-2">
-                    <span className="bg-red-500 text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                    <span className="bg-tertiary text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded shadow-tertiary whitespace-nowrap">
                       {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <div className="flex-1 h-[1px] sm:h-[2px] bg-red-500 relative">
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 sm:w-3 sm:h-3 bg-red-500 rounded-full border border-white shadow-sm"></div>
+                  <div className="flex-1 h-[1px] sm:h-[1.5px] bg-tertiary relative">
+                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-tertiary rounded-full shadow-tertiary"></div>
                   </div>
                 </div>
               </div>
             )}
 
             {rooms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-bg-primary/50 flex-1">
-                <div className="bg-bg-secondary p-4 rounded-full shadow-sm border border-border mb-4">
-                  <Filter className="text-text-secondary/30" size={32} />
+              <div className="flex flex-col items-center justify-center py-20 bg-tonal-secondary/5 flex-1 p-8 rounded-[2rem] m-4">
+                <div className="p-6 bg-tonal-secondary/10 rounded-full mb-6">
+                  <Filter className="text-secondary/60" size={48} strokeWidth={1.5} />
                 </div>
-                <p className="text-text-secondary text-base sm:text-lg font-medium">No rooms found</p>
+                <p className="text-text-secondary text-base sm:text-lg font-extrabold uppercase tracking-widest opacity-40 font-display text-center">No structural matches found</p>
               </div>
             ) : (
               filteredHours.map(hour => (
-                <div key={hour} className={`flex-1 grid group border-b border-border last:border-b-0 layout-transition min-h-[90px] sm:min-h-[100px] ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-                  <div className="p-2 sm:p-4 text-[10px] sm:text-lg font-black text-text-secondary uppercase border-r border-border flex flex-col items-center justify-center bg-bg-primary/10 transition-all">
-                    <span>{hour.toString().padStart(2, '0')}:00</span>
-                    <span className="text-[8px] sm:text-[10px] opacity-40">{(hour+1).toString().padStart(2, '0')}:00</span>
+                <div key={hour} className={`flex-1 grid group layout-transition min-h-[90px] sm:min-h-[100px] ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+                  <div className="p-2 sm:p-4 text-[10px] sm:text-lg font-extrabold text-text-secondary uppercase flex flex-col items-center justify-center bg-tonal-secondary/5 transition-all font-display">
+                    <span className="tracking-tight">{hour.toString().padStart(2, '0')}:00</span>
+                    <span className="text-[8px] sm:text-[10px] opacity-20">{(hour+1).toString().padStart(2, '0')}:00</span>
                   </div>
                   {displayDays.map(dateStr => {
                     const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
@@ -199,13 +199,13 @@ function Calendar({ onSlotClick }) {
                     return (
                     <div 
                       key={dateStr} 
-                      className="p-1 border-l border-border hover:bg-bg-primary/30 transition-colors cursor-pointer relative h-full"
+                      className="p-3 bg-transparent hover:bg-tonal-secondary/10 transition-colors cursor-pointer relative h-full"
                       onClick={() => {
                         const dateObj = currentWeekDay?.fullDate;
                         onSlotClick({ day: dayLabel, hour, date: dateObj });
                       }}
                     >
-                      <div className={`p-1.5 h-full overflow-y-auto no-scrollbar transition-all ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
+                      <div className={`p-1.5 h-full overflow-y-auto no-scrollbar transition-all ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-4'}`}>
                           {(() => {
                             const slotRooms = rooms
                               .filter(room => {
@@ -251,7 +251,7 @@ function Calendar({ onSlotClick }) {
                                         const dateObj = currentWeekDay?.fullDate;
                                         onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                       }}
-                                      className={`px-3 py-2 rounded-xl border shadow-sm ${!isRestricted ? 'hover:translate-y-[-1px] active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border w-full ${booking ? (isRestricted ? 'bg-bg-primary' : 'bg-bg-primary/80 opacity-80 border-accent/30') : 'bg-bg-secondary text-text-primary'}`}
+                                      className={`px-4 py-3 rounded-lg shadow-ambient ${!isRestricted ? 'hover:translate-y-[-2px] active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-bold w-full ${booking ? (isRestricted ? 'bg-surface-lowest' : 'bg-surface-mid/80 opacity-80') : 'bg-surface-low text-text-primary'}`}
                                       title={`${room.name}${booking ? ` - Booked by ${booking.user_name} ${isRestricted ? '(Restricted)' : '(Click to Request Transfer)'}` : ''}`}
                                     >
                                       <div className="flex flex-col overflow-hidden">
@@ -262,9 +262,9 @@ function Calendar({ onSlotClick }) {
                                           </span>
                                         )}
                                       </div>
-                                      <div className="flex flex-col items-center gap-1 ml-2 flex-shrink-0 opacity-80">
-                                        <Wind size={12} className={windColor} />
-                                        <Monitor size={12} className={monitorColor} />
+                                      <div className="flex flex-col items-center gap-1.5 ml-3 flex-shrink-0 opacity-80">
+                                        <Wind size={14} className={room.has_ac ? 'text-primary-accent' : 'text-text-secondary/20'} />
+                                        <Monitor size={14} className={room.has_projector ? 'text-primary-accent' : 'text-text-secondary/20'} />
                                       </div>
                                     </div>
                                   );
@@ -275,7 +275,7 @@ function Calendar({ onSlotClick }) {
                                       e.stopPropagation();
                                       setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: true }));
                                     }}
-                                    className="px-3 py-2 rounded-xl border border-dashed border-accent/40 bg-accent/5 text-accent text-[10px] font-black uppercase hover:bg-accent/10 transition-all flex items-center justify-center gap-2"
+                                    className="px-3 py-2 rounded-lg bg-primary-accent/5 text-primary-accent text-[10px] font-bold uppercase hover:bg-primary-accent/10 transition-all flex items-center justify-center gap-2 font-display"
                                   >
                                     Show All ({slotRooms.length})
                                   </button>

@@ -63,12 +63,12 @@ function App() {
           }
           setIsSidebarOpen(false); 
         }}
-        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `${color} ${textColor} shadow-lg ${color}/20` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `bg-primary-accent text-white shadow-ambient` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
       >
         <div className="relative">
           <IconComponent size={20} />
           {(id === 'bookings' || id === 'history') && pendingTransferCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-tertiary rounded-full shadow-tertiary animate-pulse" />
           )}
         </div>
         {!isSidebarCollapsed && <span>{label}</span>}
@@ -142,7 +142,7 @@ function App() {
   }
 
   return (
-    <div className="w-full h-screen bg-bg-primary text-text-primary flex overflow-hidden relative">
+    <div className="w-full h-screen bg-surface-lowest text-text-primary flex overflow-hidden relative">
       <PWAInstallOverlay />
       {isSidebarOpen && (
         <div 
@@ -151,8 +151,8 @@ function App() {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 glass border-r border-black/5 px-6 py-3 sm:py-4 flex flex-col gap-6 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'} ${isSidebarOpen ? 'w-[75%] sm:w-72' : ''}`}>
-        <div className={`flex items-center text-accent ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 glass px-6 py-3 sm:py-4 flex flex-col gap-6 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'} ${isSidebarOpen ? 'w-[75%] sm:w-72' : ''}`}>
+        <div className={`flex items-center text-primary-accent ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'}`}>
           <div className="flex items-center gap-3 overflow-hidden">
             <button 
               onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
@@ -160,7 +160,7 @@ function App() {
               title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
               <Menu size={32} className="shrink-0" />
-              {!isSidebarCollapsed && <h1 className="text-xl font-bold tracking-tight text-text-primary whitespace-nowrap">CRAS</h1>}
+              {!isSidebarCollapsed && <h1 className="text-xl font-extrabold tracking-tight text-text-primary whitespace-nowrap font-display uppercase leading-tight">ROOM ALLOCATION</h1>}
             </button>
           </div>
           {!isSidebarCollapsed && (
@@ -176,7 +176,7 @@ function App() {
 
         <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 flex flex-col gap-8`}>
           <div className="space-y-1">
-            <p className="px-4 text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-4 opacity-50">Navigation</p>
+            <p className="px-4 text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] mb-4 opacity-50 font-display">Navigation</p>
                 <div className="flex flex-col gap-1">
                   {getNavigationTabs().map(tab => (
                     <NavButton 
@@ -191,20 +191,20 @@ function App() {
           </div>
 
           {(currentPage === 'calendar' || currentPage === 'admin') && (
-            <div className="space-y-4 pt-4 border-t border-black/5">
-              <p className="px-4 text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-2 opacity-50">Discovery</p>
+            <div className="space-y-4 pt-4">
+              <p className="px-4 text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] mb-2 opacity-50 font-display">Discovery</p>
               <RoomFilter />
             </div>
           )}
         </div>
 
-        <div className="mt-auto pt-6 border-t border-black/5">
+        <div className="mt-auto pt-6">
           <div className={`flex items-center ${isSidebarCollapsed ? 'lg:justify-center justify-between' : 'justify-between'}`}>
             <div className={`overflow-hidden ${isSidebarCollapsed ? 'lg:hidden block' : 'block'}`}>
               <p className="text-sm font-medium text-text-primary truncate">{user.name}</p>
-              <p className="text-[10px] text-accent uppercase tracking-widest font-bold">{user.role}</p>
+              <p className="text-[10px] text-primary-accent uppercase tracking-widest font-extrabold">{user.role}</p>
             </div>
-            <button onClick={logout} className="p-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl text-text-secondary hover:text-text-primary transition-colors border border-transparent hover:border-border" title="Logout">
+            <button onClick={logout} className="p-2.5 hover:bg-tonal-secondary rounded-xl text-text-secondary hover:text-text-primary transition-colors" title="Logout">
               <LogOut size={18} />
             </button>
           </div>
@@ -212,29 +212,29 @@ function App() {
       </aside>
 
       <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
-        <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 border-b border-border bg-bg-secondary/50 backdrop-blur-md">
+        <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
           <div className="flex items-center gap-1 sm:gap-2">
             <button 
                 onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-accent transition-colors"
+                className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"
                 title="Open Sidebar"
             >
               <Menu size={24} />
             </button>
-            <h2 className="text-xl lg:text-2xl font-black tracking-tighter text-accent leading-tight italic uppercase">CRAS</h2>
+            <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight uppercase font-display">SCHEDULE</h2>
           </div>
           <div className="flex items-center gap-2">
-             {currentPage === 'calendar' && (
-               <div className="flex bg-bg-secondary rounded-xl p-1 border border-border shadow-sm">
+              {currentPage === 'calendar' && (
+               <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
                  <button 
                   onClick={() => setViewMode('day')}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold uppercase transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
                  >
                    <Maximize2 size={12} /> Day
                  </button>
                  <button 
                   onClick={() => setViewMode('week')}
-                  className={`px-3 py-1.5 rounded-lg text-[10px] sm:text-xs font-medium transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-accent text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold uppercase transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
                  >
                    <LayoutGrid size={12} /> Week
                  </button>
@@ -243,8 +243,8 @@ function App() {
           </div>
         </header>
 
-        <section className={`flex-1 flex flex-col overflow-hidden w-full p-2 sm:p-4 ${currentPage === 'calendar' ? 'pb-20 lg:pb-4' : 'pb-20 lg:pb-4'}`}>
-          <div className="glass rounded-2xl p-2 sm:p-4 shadow-lg flex-1 flex flex-col overflow-hidden w-full">
+        <section className={`flex-1 flex flex-col overflow-hidden w-full p-2 sm:p-4 ${currentPage === 'calendar' ? 'pb-20 lg:pb-0' : 'pb-20 lg:pb-0'}`}>
+          <div className="glass rounded-2xl p-2 sm:p-4 shadow-ambient flex-1 flex flex-col overflow-hidden w-full">
             {currentPage === 'calendar' && (
               <Calendar 
                 onSlotClick={(slot) => {

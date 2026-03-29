@@ -55,52 +55,57 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-       <div className="bg-bg-primary w-full max-w-md rounded-[2rem] shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in duration-200">
-          <div className="p-6 border-b border-border flex justify-between items-center bg-bg-secondary/30">
-             <div className="flex items-center gap-3">
-                <div className="bg-accent/10 p-2 rounded-xl">
-                   <UserIcon className="text-accent" size={24} />
+    <div className="fixed inset-0 bg-neutral/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
+       <div className="bg-neutral/90 w-full max-w-md rounded-[3rem] shadow-ambient overflow-hidden animate-in fade-in zoom-in duration-300 font-display">
+          <div className="p-8 flex justify-between items-center bg-tonal-secondary/10">
+             <div className="flex items-center gap-4">
+                <div className="bg-primary/10 p-3 rounded-2xl shadow-ambient">
+                   <UserIcon className="text-primary" size={24} />
                 </div>
-                <h2 className="text-xl font-black text-text-primary capitalize">{editingUser ? 'Edit User' : 'Add New User'}</h2>
+                <div>
+                   <h2 className="text-xl font-extrabold text-text-primary uppercase tracking-tight leading-none">{editingUser ? 'Edit Registry' : 'New Observer'}</h2>
+                   <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-widest mt-1 opacity-40">User Access Management</p>
+                </div>
              </div>
-             <button onClick={onClose} className="p-2 hover:bg-bg-secondary rounded-xl transition-colors">
-                <X size={20} className="text-text-secondary" />
+             <button onClick={onClose} className="p-3 hover:bg-tonal-secondary/10 rounded-full transition-all text-text-secondary">
+                <X size={20} />
              </button>
           </div>
 
-          <form onSubmit={handleUserSubmit} className="p-6 space-y-5">
-             <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Full Name</label>
+          <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
+             <div className="space-y-2">
+                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Legal Identity / Name</label>
                 <input 
                   required
                   type="text"
+                  placeholder="e.g. John Doe"
                   value={userForm.name}
                   onChange={(e) => setUserForm({...userForm, name: e.target.value})}
-                  className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent"
+                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
                 />
              </div>
-             <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Email Address</label>
+             <div className="space-y-2">
+                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Operational Email</label>
                 <input 
                   required
                   type="email"
+                  placeholder="john@campus.edu"
                   value={userForm.email}
                   onChange={(e) => setUserForm({...userForm, email: e.target.value})}
-                  className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent"
+                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
                 />
              </div>
-             <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Assign Role</label>
+             <div className="space-y-2">
+                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Authority Role</label>
                 <select 
                   value={userForm.role}
                   onChange={(e) => setUserForm({...userForm, role: e.target.value})}
-                  className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent appearance-none"
+                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-extrabold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner appearance-none uppercase tracking-tight"
                 >
                     <option value="VIEWER">VIEWER (Student)</option>
-                    <option value="STUDENT_REP">STUDENT_REP (Student Lead)</option>
+                    <option value="STUDENT_REP">STUDENT_REP (Lead)</option>
                     <option value="FACULTY">FACULTY (Staff)</option>
-                    <option value="admin">ADMIN (Root)</option>
+                    <option value="admin">ADMIN (Root Access)</option>
                 </select>
              </div>
 
@@ -113,7 +118,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
              />
              
              {(userForm.role === 'STUDENT_REP' || userForm.role === 'VIEWER') && (
-               <div className="space-y-4 pt-2 border-t border-border/50">
+               <div className="space-y-6 pt-4">
                  <StudentFields
                     branch={userForm.branch || ''}
                     setBranch={(val) => setUserForm({...userForm, branch: val})}
@@ -130,23 +135,23 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
              )}
 
              {!editingUser && (
-               <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Initial Password</label>
+               <div className="space-y-2">
+                  <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Temporal Access Key</label>
                   <input 
                     required
                     type="password"
                     placeholder="••••••••"
                     value={userForm.password}
                     onChange={(e) => setUserForm({...userForm, password: e.target.value})}
-                    className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent"
+                    className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
                   />
                </div>
              )}
              <button 
                type="submit"
-               className="w-full bg-accent text-white py-4 rounded-xl font-black shadow-lg shadow-accent/20 hover:opacity-90 active:scale-[0.98] transition-all mt-4"
+               className="w-full bg-primary text-white py-5 rounded-[2rem] font-extrabold shadow-ambient active:scale-[0.98] transition-all mt-6 uppercase tracking-widest text-xs"
              >
-               {editingUser ? 'Update User Details' : 'Create Access Account'}
+               {editingUser ? 'Synchronize Registry' : 'Establish Access'}
              </button>
           </form>
        </div>

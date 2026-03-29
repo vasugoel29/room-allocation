@@ -16,7 +16,12 @@
     "preview:frontend": "npm run preview --prefix frontend",
     "start": "npx concurrently \"npm run start:backend\" \"npm run preview:frontend\"",
     "seed": "npm run seed --prefix backend",
-    "unseed": "npm run unseed --prefix backend"
+    "seed:staging": "NODE_ENV=staging npm run seed --prefix backend",
+    "seed:prod": "NODE_ENV=production npm run seed --prefix backend",
+    "seed-faculties:staging": "NODE_ENV=staging node backend/scripts/seed_faculties.js",
+    "unseed": "npm run unseed --prefix backend",
+    "unseed:staging": "NODE_ENV=staging npm run unseed --prefix backend",
+    "reset:staging": "npm run unseed:staging && npm run seed:staging && npm run seed-faculties:staging"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

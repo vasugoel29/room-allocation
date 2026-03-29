@@ -142,24 +142,24 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
-      <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm" onClick={onClose} aria-hidden="true"></div>
+      <div className="absolute inset-0 bg-neutral/60 backdrop-blur-md" onClick={onClose} aria-hidden="true"></div>
       
-      <div className="relative w-full max-w-xl mx-4 glass dark:bg-slate-800 rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 shadow-2xl border border-black/5 overflow-y-auto max-h-[90dvh] no-scrollbar">
-        <button onClick={onClose} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-2 hover:bg-black/5 rounded-full text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
-          <X size={20} sm:size={24} />
+      <div className="relative w-full max-w-xl mx-4 bg-neutral/90 rounded-[2.5rem] p-6 sm:p-10 shadow-ambient border-none overflow-y-auto max-h-[90dvh] no-scrollbar">
+        <button onClick={onClose} className="absolute top-4 right-4 sm:top-8 sm:right-8 p-3 hover:bg-tonal-secondary/10 rounded-full text-text-secondary transition-all">
+          <X size={20} />
         </button>
 
-        <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-1 sm:mb-2 flex items-center gap-3 sm:gap-4 flex-wrap">
-          Book Room
-          <span className="text-[10px] sm:text-xs font-semibold px-2 sm:px-3 py-0.5 sm:py-1 rounded-full bg-accent/10 text-accent capitalize">
+        <h3 className="text-2xl sm:text-3xl font-extrabold text-text-primary mb-2 flex items-center gap-4 flex-wrap font-display uppercase tracking-tight">
+          Reserve Space
+          <span className="text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-lg bg-tonal-secondary/10 text-primary uppercase tracking-widest">
             {slot.day} @ {slot.hour}:00
           </span>
         </h3>
-        <p className="text-text-secondary mb-4 sm:mb-6 text-xs sm:text-sm">Secure your slot in one of the available rooms.</p>
+        <p className="text-text-secondary mb-6 sm:mb-10 text-xs sm:text-sm font-bold opacity-40 uppercase tracking-widest">Architectural precision in room scheduling.</p>
 
         {error && (
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 text-xs sm:text-sm flex items-center gap-2 sm:gap-3 font-medium">
-            <AlertCircle size={18} sm:size={20} />
+          <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-red-500/10 text-red-500 text-xs sm:text-sm flex items-center gap-3 font-extrabold font-display uppercase tracking-tight">
+            <AlertCircle size={20} />
             {error}
           </div>
         )}
@@ -225,14 +225,14 @@ function BookingModal({ slot, onClose, onSuccess }) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-text-primary uppercase tracking-wider">Purpose Details</label>
+          <div className="space-y-3">
+            <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] ml-1 opacity-40 font-display">Logistics & Context</label>
             <textarea 
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              placeholder="e.g. Special Class, Club Meeting"
+              placeholder="e.g. Special Class, Club Meeting, Portfolio Review"
               autoComplete="off"
-              className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all h-20 resize-none placeholder:text-text-secondary/40 shadow-sm"
+              className="w-full bg-tonal-secondary/10 rounded-[2rem] px-6 py-6 text-sm text-text-primary font-bold focus:outline-none transition-all h-28 resize-none placeholder:text-text-secondary/20 shadow-inner font-body"
             />
           </div>
 
@@ -241,18 +241,18 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 <button 
                   type="submit" 
                   disabled={loading || (selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(user?.id))}
-                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-accent hover:bg-accent/80 shadow-accent/20'} disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg active:scale-[0.98]`}
+                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? 'bg-tertiary text-white shadow-tertiary' : 'bg-primary text-white shadow-ambient'} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display uppercase tracking-widest`}
                 >
                   {loading ? 'Processing...' : (
                     <>
+                      {selectedRoom && getRoomBooking(selectedRoom) ? 'Request Inbound Transfer' : 'Finalize Allocation'}
                       <CheckCircle size={20} />
-                      {selectedRoom && getRoomBooking(selectedRoom) ? 'Request Transfer' : 'Confirm Booking'}
                     </>
                   )}
                 </button>
               ) : (
-                <div className="flex-1 bg-bg-primary/50 text-text-secondary py-4 rounded-xl text-center text-sm font-bold border border-border">
-                  View Only Mode
+                <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-5 rounded-2xl text-center text-[10px] font-extrabold uppercase tracking-widest opacity-40">
+                  Read Only Registry
                 </div>
               )}
               {selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(user?.id) && (
@@ -260,10 +260,10 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   type="button"
                   onClick={handleCancel}
                   disabled={loading}
-                  className="flex-1 border-2 border-red-100 text-red-600 hover:bg-red-50 rounded-xl text-base font-bold transition-all flex items-center justify-center gap-3"
+                  className="flex-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-[2rem] text-[10px] font-extrabold uppercase tracking-widest transition-all flex items-center justify-center gap-3 font-display"
                 >
                   <X size={20} />
-                  Cancel
+                  Revoke
                 </button>
               )}
           </div>
