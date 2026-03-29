@@ -10,7 +10,11 @@ const router = express.Router();
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
-  message: { error: 'Too many authentication attempts, please try again later' }
+  message: (req, res) => {
+    const resetTime = req.rateLimit?.resetTime?.getTime() || (Date.now() + 15 * 60 * 1000);
+    const minutes = Math.ceil((resetTime - Date.now()) / 60000);
+    return { error: `Too many authentication attempts, please try again in ${Math.max(1, minutes)} minute${minutes !== 1 ? 's' : ''}.` };
+  }
 });
 
 const signupValidation = [
@@ -33,7 +37,7 @@ router.get('/faculties', authenticate, getFaculties);
 // Admin-only user management
 router.get('/users', authenticate, requireRole('admin'), getUsers);
 router.post('/users', authenticate, requireRole('admin'), createUser);
-router.patch('/users/:id', authenticate, requireRole('admin'), updateUser);
+router.patch('/users/:id', authenticate, updateUser);
 router.delete('/users/:id', authenticate, requireRole('admin'), deleteUser);
 router.patch('/approve-user/:id', authenticate, requireRole('admin'), approveUser);
 

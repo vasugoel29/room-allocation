@@ -2,9 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import * as userService from '../services/userService.js';
 import { JWT_SECRET } from '../middleware/auth.js';
-import * as db from '../db.js';
-import logger from '../utils/logger.js';
-import { ensureDepartment } from './departmentController.js';
+import * as departmentService from '../services/departmentService.js';
 
 export const signup = async (req, res) => {
   const { name, email, password, branch, year, section, role, departmentName } = req.body;
@@ -14,7 +12,7 @@ export const signup = async (req, res) => {
     // Resolve department_id if name provided
     let department_id = null;
     if (departmentName) {
-      department_id = await ensureDepartment(departmentName);
+      department_id = await departmentService.ensureDepartment(departmentName);
     }
 
     // Faculty requires approval
@@ -111,7 +109,7 @@ export const createUser = async (req, res) => {
     
     let department_id = null;
     if (departmentName) {
-      department_id = await ensureDepartment(departmentName);
+      department_id = await departmentService.ensureDepartment(departmentName);
     }
 
     const user = await userService.createUser({
@@ -129,9 +127,19 @@ export const updateUser = async (req, res) => {
   const { id } = req.params;
   const { departmentName, ...otherData } = req.body;
   try {
+    if (req.user.role !== 'admin' && String(req.user.id) !== String(id)) {
+      return res.status(403).json({ error: 'Not authorized to update this profile' });
+    }
+
+    // Regular users cannot update role or approval status
+    if (req.user.role !== 'admin') {
+      delete otherData.role;
+      delete otherData.is_approved;
+    }
+
     let department_id = undefined;
     if (departmentName) {
-      department_id = await ensureDepartment(departmentName);
+      department_id = await departmentService.ensureDepartment(departmentName);
     }
     
     const user = await userService.updateUser(id, { ...otherData, department_id });
@@ -157,14 +165,8 @@ export const deleteUser = async (req, res) => {
 
 export const getFaculties = async (req, res) => {
   try {
-    const result = await db.query(`
-      SELECT u.id, u.name, u.email, d.name as department 
-      FROM users u 
-      LEFT JOIN departments d ON u.department_id = d.id 
-      WHERE u.role = 'FACULTY' AND u.is_approved = true
-      ORDER BY u.name ASC
-    `);
-    res.json(result.rows);
+    const faculties = await userService.getFaculties();
+    res.json(faculties);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch faculties' });
   }

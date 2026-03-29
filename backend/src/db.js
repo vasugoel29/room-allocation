@@ -97,7 +97,32 @@ export async function testDbConnection() {
       CREATE INDEX IF NOT EXISTS idx_bookings_range_gist ON bookings USING GIST (room_id, tstzrange(start_time, end_time));
       CREATE INDEX IF NOT EXISTS idx_bookings_user_range ON bookings USING GIST (created_by, tstzrange(start_time, end_time));
       CREATE INDEX IF NOT EXISTS idx_availability_room_day_hour ON room_availability (room_id, day, hour);
+      ALTER TABLE room_availability ALTER COLUMN day TYPE VARCHAR(20);
+      ALTER TABLE room_availability ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+      ALTER TABLE room_availability ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+      CREATE INDEX IF NOT EXISTS idx_availability_user_id ON room_availability (user_id);
     `);
+    
+    // Seed default departments if table is empty
+    const deptCheck = await client.query('SELECT COUNT(*) FROM departments');
+    if (parseInt(deptCheck.rows[0].count) === 0) {
+      const defaultDepts = [
+        'Computer Science (CSE)', 
+        'Information Technology (IT)', 
+        'Electronics & Communication (ECE)',
+        'Electrical Engineering (EE)',
+        'Mechanical Engineering (ME)',
+        'Instrumentation & Control (ICE)',
+        'Biotechnology',
+        'Mathematics',
+        'Physics',
+        'Humanities & Management'
+      ];
+      for (const dept of defaultDepts) {
+        await client.query('INSERT INTO departments (name) VALUES ($1) ON CONFLICT DO NOTHING', [dept]);
+      }
+      logger.info('Default departments seeded successfully');
+    }
 
     console.log('Database connected and schemas synchronized');
     return true;

@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { api } from '../utils/api';
+import { authService } from '../services/authService';
+import { bookingService } from '../services/bookingService';
+import { roomService } from '../services/roomService';
 
 export const AppContext = createContext();
 
@@ -21,6 +23,24 @@ export const AppProvider = ({ children }) => {
   const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: '5th Block' });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [departments, setDepartments] = useState([]);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      console.log('PWA: deferredPrompt captured');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   const initialDay = useMemo(() => {
     const now = new Date();
@@ -48,26 +68,27 @@ export const AppProvider = ({ children }) => {
   const [backendError, setBackendError] = useState(null);
   const prevBackendError = useRef(null);
 
-  const handleLogout = useCallback(async () => {
+  const logout = useCallback(async () => {
     try {
-      await api.post('/auth/logout');
-    } catch (e) {
-      console.error('Logout failed:', e);
+      await authService.logout();
+    } catch (err) {
+      console.error('Logout error', err);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
     }
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setUser(null);
   }, []);
 
   const fetchTransfers = useCallback(async () => {
-    if (!user || user.role === 'VIEWER') return;
+    if (!user) return;
     try {
-      const [incRes, outRes] = await Promise.all([
-        api.get('/transfers/incoming'),
-        api.get('/transfers/outgoing')
+      const [incoming, outgoing] = await Promise.all([
+        bookingService.getIncomingTransfers(),
+        bookingService.getOutgoingTransfers()
       ]);
-      if (incRes.ok) setIncomingTransfers(await incRes.json());
-      if (outRes.ok) setOutgoingTransfers(await outRes.json());
+      setIncomingTransfers(incoming);
+      setOutgoingTransfers(outgoing);
     } catch (err) {
       console.error('Fetch transfers failed', err);
     }
@@ -75,11 +96,19 @@ export const AppProvider = ({ children }) => {
 
   const fetchFaculties = useCallback(async () => {
     try {
-      const res = await api.get('/auth/faculties');
-      const data = await res.json();
+      const data = await authService.getFaculties();
       setFaculties(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Fetch faculties failed', err);
+    }
+  }, []);
+
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const data = await roomService.getDepartments();
+      setDepartments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch departments failed', err);
     }
   }, []);
 
@@ -91,9 +120,7 @@ export const AppProvider = ({ children }) => {
         queryParams.projector = 'true';
       }
       delete queryParams.smartRoom;
-      const query = new URLSearchParams(queryParams).toString();
-      const res = await api.get(`/rooms?${query}`);
-      const data = await res.json();
+      const data = await roomService.getRooms(queryParams);
       if (Array.isArray(data)) setRooms(data);
       else console.error('Expected array of rooms, got:', data);
     } catch (err) {
@@ -103,8 +130,7 @@ export const AppProvider = ({ children }) => {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const res = await api.get('/bookings');
-      const data = await res.json();
+      const data = await bookingService.getBookings();
       setBookings(data);
     } catch (err) {
       console.error('Fetch bookings failed', err);
@@ -113,8 +139,7 @@ export const AppProvider = ({ children }) => {
 
   const fetchAvailability = useCallback(async () => {
     try {
-      const res = await api.get('/availability');
-      const data = await res.json();
+      const data = await roomService.getAvailability();
       setAvailability(data);
     } catch (err) {
       console.error('Fetch availability failed', err);
@@ -130,6 +155,7 @@ export const AppProvider = ({ children }) => {
     if (user) {
       fetchRooms();
       fetchFaculties();
+      fetchDepartments();
       fetchTransfers();
     }
   }, [user, fetchRooms, fetchFaculties, fetchTransfers]);
@@ -144,8 +170,7 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     const checkConnection = async () => {
       try {
-        const res = await api.get('/health');
-        if (!res.ok) throw new Error('Backend unresponsive');
+        await roomService.getHealth();
         if (prevBackendError.current && user) {
           console.log('Backend recovered! Refreshing data...');
           fetchRooms();
@@ -180,6 +205,7 @@ export const AppProvider = ({ children }) => {
       pendingTransferCount: incomingTransfers.filter(t => t.status === 'PENDING').length,
       bookings,
       availability,
+      departments,
       filters,
       setFilters,
       theme,
@@ -188,13 +214,16 @@ export const AppProvider = ({ children }) => {
       setViewMode,
       selectedDay,
       setSelectedDay,
+      deferredPrompt,
+      clearInstallPrompt: () => setDeferredPrompt(null),
       backendError,
       fetchRooms,
       fetchFaculties,
+      fetchDepartments,
       fetchBookings,
       fetchAvailability,
       fetchTransfers,
-      handleLogout
+      logout
     }}>
       {children}
     </AppContext.Provider>

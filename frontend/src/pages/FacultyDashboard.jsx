@@ -1,53 +1,25 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { api } from '../utils/api';
+import React, { useState, useContext } from 'react';
+import { facultyService } from '../services/facultyService';
 import { AppContext } from '../context/AppContext';
-import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight } from 'lucide-react';
+import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useFacultyRequests } from '../hooks/useFacultyRequests';
 
 function FacultyDashboard() {
   const { user, bookings, fetchBookings, fetchAvailability } = useContext(AppContext);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('PENDING'); // PENDING | ACCEPTED | MY
-
-  const loadRequests = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get('/faculty/pending');
-      const data = await res.json();
-      if (res.ok) {
-        setPendingRequests(data);
-      } else {
-        toast.error(data.error || 'Failed to fetch pending requests');
-      }
-    } catch (err) {
-      toast.error('Network error while fetching requests');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (user?.role === 'FACULTY' || user?.role === 'admin') {
-      loadRequests();
-    }
-  }, [user]);
+  const { pendingRequests, setPendingRequests, loading } = useFacultyRequests(user);
 
   const handleAction = async (id, action) => {
     try {
-      const res = await api.patch(`/faculty/${id}/${action}`);
-      const data = await res.json();
-      if (res.ok) {
-        toast.success(data.message || `Booking ${action}ed`);
-        // Remove from list
-        setPendingRequests(prev => prev.filter(r => r.id !== id));
-        fetchBookings();
-        fetchAvailability();
-      } else {
-        toast.error(data.error || `Failed to ${action} booking`);
-      }
+      const data = await facultyService.handleRequest(id, action);
+      toast.success(data.message || `Booking ${action}ed`);
+      // Remove from list
+      setPendingRequests(prev => prev.filter(r => r.id !== id));
+      fetchBookings();
+      fetchAvailability();
     } catch (err) {
-      toast.error('Network error');
+      toast.error(err.message || `Failed to ${action} booking`);
     }
   };
 
@@ -75,7 +47,7 @@ function FacultyDashboard() {
   if (loading) {
     return (
       <div className="w-full h-full flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
       </div>
     );
   }
@@ -87,21 +59,22 @@ function FacultyDashboard() {
         <p className="text-text-secondary text-sm">Review student requests and manage your scheduled bookings.</p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 border-b border-border">
+      <div className="grid grid-cols-3 gap-2 pb-2 border-b border-border">
         {[
-          { id: 'PENDING', label: `Pending Requests (${pendingRequests.length})` },
-          { id: 'ACCEPTED', label: 'Accepted Student Bookings' },
+          { id: 'PENDING', label: `Pending (${pendingRequests.length})` },
+          { id: 'ACCEPTED', label: 'Approved' },
           { id: 'MY', label: 'My Bookings' }
         ].map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${activeTab === tab.id ? 'bg-indigo-600 text-white shadow-md' : 'bg-bg-secondary text-text-secondary hover:bg-black/5 hover:text-text-primary'}`}
+            className={`px-2 py-2.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all text-center ${activeTab === tab.id ? 'bg-accent text-white shadow-md' : 'bg-bg-secondary text-text-secondary hover:bg-black/5 hover:text-text-primary'}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
+
 
       {DISPLAY_BOOKINGS.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-border rounded-3xl bg-bg-secondary/20">
@@ -127,26 +100,26 @@ function FacultyDashboard() {
                       <Check size={12} /> Accepted Student Request
                     </span>
                   )}
-                  {activeTab === 'MY' && (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold leading-none bg-indigo-50 text-indigo-600 border border-indigo-200 mb-3">
-                      <User size={12} /> My Booking
-                    </span>
-                  )}
+                    {activeTab === 'MY' && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold leading-none bg-accent/10 text-accent border border-accent/20 mb-3">
+                        <GraduationCap size={12} /> My Booking
+                      </span>
+                    )}
                   <p className="font-bold text-text-primary text-base line-clamp-2">{req.purpose || 'No purpose specified'}</p>
                 </div>
               </div>
 
               <div className="space-y-3 flex-1 text-sm text-text-secondary">
                 <div className="flex items-center gap-3">
-                  <User size={16} className="text-indigo-500 shrink-0" />
+                  <User size={16} className="text-accent shrink-0" />
                   <span className="truncate">{req.user_name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <MapPin size={16} className="text-indigo-500 shrink-0" />
+                  <MapPin size={16} className="text-accent shrink-0" />
                   <span className="font-semibold text-text-primary">{req.room_name}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <CalendarIcon size={16} className="text-indigo-500 shrink-0" />
+                  <CalendarIcon size={16} className="text-accent shrink-0" />
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-medium">{formatDate(req.start_time)}</span>
                     <ChevronRight size={12} className="opacity-50" />
@@ -159,7 +132,7 @@ function FacultyDashboard() {
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => handleAction(req.id, 'approve')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl font-bold transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent/80 text-white py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-accent/20"
                   >
                     <Check size={16} /> Approve
                   </button>

@@ -94,7 +94,7 @@ describe('Booking Constraints', () => {
       .send({ room_id: 999, start_time: start, end_time: end, purpose: 'Conflict' });
 
     expect(res.statusCode).toBe(409);
-    expect(res.body.error).toBe('Room is already booked for this time period');
+    expect(res.body.error).toBe('Room is already booked for this time period (or pending approval)');
   });
 
 

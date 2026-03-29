@@ -1,9 +1,13 @@
-import { Zap, User as UserIcon, Search, ChevronDown, Check } from 'lucide-react';
+import { Zap, User as UserIcon, Search, ChevronDown, Clock, MapPin } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import DatePickerDropdown from '../../components/ui/DatePickerDropdown';
 
 function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, submitting, onSubmit }) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(null); // room_id
   const [userSearch, setUserSearch] = useState('');
+  
+  const [isSlotOpen, setIsSlotOpen] = useState(false);
+  const [isRoomJumpOpen, setIsRoomJumpOpen] = useState(false);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -22,39 +26,81 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
        <div className="p-4 sm:p-6 border-b border-border bg-bg-secondary/20">
          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-             <div className="space-y-1">
+             <div className="space-y-1 relative z-50">
                <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Date</label>
-               <input 
-                 type="date"
-                 value={quickBookForm.date}
-                 onChange={(e) => setQuickBookForm({...quickBookForm, date: e.target.value})}
-                 className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent"
+               <DatePickerDropdown 
+                 selectedDate={quickBookForm.date}
+                 onChange={(val) => setQuickBookForm({...quickBookForm, date: val})}
                />
              </div>
-             <div className="space-y-1">
-               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Slot</label>
-               <select 
-                 value={quickBookForm.slot}
-                 onChange={(e) => setQuickBookForm({...quickBookForm, slot: e.target.value})}
-                 className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent appearance-none"
+             <div className="space-y-1 relative">
+               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 flex items-center gap-1.5">
+                 <Clock size={12} className="text-accent" /> Slot
+               </label>
+               <button
+                 type="button"
+                 onClick={() => { setIsSlotOpen(!isSlotOpen);           setIsRoomJumpOpen(false); }}
+                 className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent flex justify-between items-center gap-3 hover:bg-bg-secondary/50 transition-colors"
                >
-                 {Array.from({length: 12}, (_, i) => i + 8).map(h => (
-                   <option key={h} value={h}>{h.toString().padStart(2, '0')}:00 - {(h+1).toString().padStart(2, '0')}:00</option>
-                 ))}
-               </select>
+                 <span className="truncate">
+                   {quickBookForm.slot.toString().padStart(2, '0')}:00 - {(parseInt(quickBookForm.slot)+1).toString().padStart(2, '0')}:00
+                 </span>
+                 <ChevronDown size={14} className={`text-text-secondary transition-transform ${isSlotOpen ? 'rotate-180' : ''}`} />
+               </button>
+               {isSlotOpen && (
+                 <div className="absolute z-50 w-full mt-2 bg-bg-primary border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full">
+                   <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
+                     {Array.from({length: 12}, (_, i) => i + 8).map(h => (
+                       <button
+                         key={h}
+                         type="button"
+                         onClick={() => { setQuickBookForm({...quickBookForm, slot: h}); setIsSlotOpen(false); }}
+                         className={`w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-bg-secondary transition-colors ${parseInt(quickBookForm.slot) === h ? 'bg-accent/10 text-accent' : 'text-text-primary'}`}
+                       >
+                         {h.toString().padStart(2, '0')}:00 - {(h+1).toString().padStart(2, '0')}:00
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               )}
              </div>
-             <div className="space-y-1">
-               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Room Jump</label>
-               <select 
-                 value={quickBookForm.roomFilter}
-                 onChange={(e) => setQuickBookForm({...quickBookForm, roomFilter: e.target.value})}
-                 className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent appearance-none min-w-[120px]"
+             <div className="space-y-1 relative">
+               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 flex items-center gap-1.5">
+                 <MapPin size={12} className="text-accent" /> Room Jump
+               </label>
+               <button
+                 type="button"
+                 onClick={() => { setIsRoomJumpOpen(!isRoomJumpOpen); setIsSlotOpen(false); }}
+                 className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent flex justify-between items-center gap-3 min-w-[140px] hover:bg-bg-secondary/50 transition-colors"
                >
-                 <option value="all">All Rooms</option>
-                 {roomStatuses.map(r => (
-                   <option key={r.room_id} value={r.room_name}>{r.room_name}</option>
-                 ))}
-               </select>
+                 <span className="truncate text-left flex-1">
+                   {quickBookForm.roomFilter === 'all' ? 'All Rooms' : quickBookForm.roomFilter}
+                 </span>
+                 <ChevronDown size={14} className={`text-text-secondary transition-transform shrink-0 ${isRoomJumpOpen ? 'rotate-180' : ''}`} />
+               </button>
+               {isRoomJumpOpen && (
+                 <div className="absolute z-50 w-full mt-2 bg-bg-primary border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full">
+                   <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
+                     <button
+                       type="button"
+                       onClick={() => { setQuickBookForm({...quickBookForm, roomFilter: 'all'}); setIsRoomJumpOpen(false); }}
+                       className={`w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-bg-secondary transition-colors ${quickBookForm.roomFilter === 'all' ? 'bg-accent/10 text-accent' : 'text-text-primary'}`}
+                     >
+                       All Rooms
+                     </button>
+                     {roomStatuses.map(r => (
+                       <button
+                         key={r.room_id}
+                         type="button"
+                         onClick={() => { setQuickBookForm({...quickBookForm, roomFilter: r.room_name}); setIsRoomJumpOpen(false); }}
+                         className={`w-full text-left px-4 py-2.5 text-sm font-bold hover:bg-bg-secondary transition-colors ${quickBookForm.roomFilter === r.room_name ? 'bg-accent/10 text-accent' : 'text-text-primary'}`}
+                       >
+                         {r.room_name}
+                       </button>
+                     ))}
+                   </div>
+                 </div>
+               )}
              </div>
            </div>
            <div className="hidden sm:flex bg-accent/5 px-4 py-2 rounded-xl border border-accent/10 items-center gap-3">

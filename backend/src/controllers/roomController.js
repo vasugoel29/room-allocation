@@ -1,19 +1,14 @@
 import * as db from '../db.js';
 import cache from '../utils/cache.js';
+import { roomRepository } from '../repositories/roomRepository.js';
 
 export const getRooms = async (req, res) => {
-  const { capacity, ac, projector } = req.query;
-  let query = 'SELECT * FROM rooms WHERE 1=1';
-  const params = [];
-
-  if (capacity) { params.push(capacity); query += ` AND capacity >= $${params.length}`; }
-  if (ac === 'true') query += ' AND has_ac = TRUE';
-  if (projector === 'true') query += ' AND has_projector = TRUE';
-
+  const { capacity, ac, projector, building } = req.query;
   try {
-    const result = await db.query(query, params);
-    res.json(result.rows);
+    const rooms = await roomRepository.findFiltered(capacity, ac, projector, building);
+    res.json(rooms);
   } catch (err) {
+    console.error('getRooms error:', err);
     res.status(500).json({ error: 'Failed to fetch rooms' });
   }
 };
@@ -24,9 +19,9 @@ export const getAvailability = async (req, res) => {
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
-    const result = await db.query('SELECT * FROM room_availability');
-    cache.set(cacheKey, result.rows, 300000); // 5 min for static schedule
-    res.json(result.rows);
+    const result = await roomRepository.getAllAvailability();
+    cache.set(cacheKey, result, 300000); // 5 min
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch availability' });
   }
@@ -48,29 +43,39 @@ export const getAdminRoomStatus = async (req, res) => {
     const endTime = new Date(startTime);
     endTime.setHours(startTime.getHours() + 1);
 
-    const query = `
-      SELECT 
-        r.id as room_id, 
-        r.name as room_name,
-        r.building,
-        r.floor,
-        b.id as booking_id,
-        b.purpose,
-        u.name as booked_by_name,
-        u.email as booked_by_email
-      FROM rooms r
-      LEFT JOIN bookings b ON r.id = b.room_id 
-        AND b.status = 'ACTIVE'
-        AND tstzrange(b.start_time, b.end_time) && tstzrange($1::timestamptz, $2::timestamptz)
-      LEFT JOIN users u ON b.created_by = u.id
-      ORDER BY r.name ASC
-    `;
+    const statuses = await roomRepository.getAdminRoomStatus(startTime.toISOString(), endTime.toISOString());
     
-    const result = await db.query(query, [startTime.toISOString(), endTime.toISOString()]);
-    cache.set(cacheKey, result.rows, 30000); // 30s cache
-    res.json(result.rows);
+    cache.set(cacheKey, statuses, 30000); // 30s cache
+    res.json(statuses);
   } catch (err) {
     console.error('getAdminRoomStatus error:', err);
     res.status(500).json({ error: 'Failed to fetch room statuses' });
+  }
+};
+export const overrideRoomAvailability = async (req, res) => {
+  const { room_name, day, hour, is_available } = req.body;
+  if (!room_name || !day || hour === undefined) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    const userId = req.user?.id; // Capture who is making the override
+    await roomRepository.overrideAvailability(room_name, day, hour, is_available, userId);
+    
+    cache.delete('room_availability_all');
+    res.json({ status: 'Success', message: `Room ${room_name} availability updated` });
+  } catch (err) {
+    console.error('overrideRoomAvailability error:', err);
+    res.status(500).json({ error: err.message || 'Failed to update availability' });
+  }
+};
+
+export const getMyOverrides = async (req, res) => {
+  try {
+    const overrides = await roomRepository.getUserOverrides(req.user.id);
+    res.json(overrides);
+  } catch (err) {
+    console.error('getMyOverrides error:', err);
+    res.status(500).json({ error: 'Failed to fetch your overrides' });
   }
 };

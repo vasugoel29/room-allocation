@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
-import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
-import { api } from '../utils/api';
+import { Mail, Lock, LogIn, ChevronRight, UserPlus, Info, ShieldCheck } from 'lucide-react';
+import { authService } from '../services/authService';
 import { AppContext } from '../context/AppContext';
 
 
@@ -32,20 +32,14 @@ const Login = ({ onShowSignup }) => {
     }, 4000);
 
     try {
-      const res = await api.post('/auth/login', { email, password });
+      const data = await authService.login(email, password);
       clearTimeout(wakeUpTimer);
-      
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-      } else {
-        setError(data.error || 'Invalid credentials');
-      }
-    } catch {
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+    } catch (err) {
       clearTimeout(wakeUpTimer);
-      setError('Connection failed. The server might be deep-sleeping—please try again after a few seconds.');
+      setError(err.message || 'Connection failed. The server might be deep-sleeping—please try again after a few seconds.');
     } finally {
       setLoading(false);
       setStatus('');
@@ -59,8 +53,8 @@ const Login = ({ onShowSignup }) => {
       
       <div className="relative w-full max-w-sm bg-bg-secondary border border-border rounded-3xl p-10 shadow-2xl space-y-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 bg-accent/10 rounded-2xl text-accent mb-2">
-            <ShieldCheck size={32} />
+          <div className="inline-flex mb-2">
+            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
           </div>
           <h2 className="text-3xl font-bold text-text-primary tracking-tight">Welcome Back</h2>
           <p className="text-text-secondary text-sm font-medium">Sign in to manage your bookings</p>

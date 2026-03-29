@@ -1,13 +1,14 @@
 import React, { useState, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
+import { AppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import { X, AlertCircle, CheckCircle } from 'lucide-react';
-import { api } from '../utils/api';
+import { bookingService } from '../../services/bookingService';
+import { useSearchDebounce } from '../../hooks/useSearchDebounce';
 
-import RoomSelector from '../features/booking/RoomSelector';
-import BookingTypeSelector from '../features/booking/BookingTypeSelector';
-import RescheduleDetails from '../features/booking/RescheduleDetails';
-import FacultySelector from '../features/booking/FacultySelector';
+import RoomSelector from '../../features/booking/RoomSelector';
+import BookingTypeSelector from '../../features/booking/BookingTypeSelector';
+import RescheduleDetails from '../../features/booking/RescheduleDetails';
+import FacultySelector from '../../features/booking/FacultySelector';
 
 function BookingModal({ slot, onClose, onSuccess }) {
   const { user, rooms, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
@@ -18,7 +19,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [loading, setLoading] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedTerm, setDebouncedTerm] = useState('');
+  const debouncedTerm = useSearchDebounce(searchTerm);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [isTypeOpen, setIsTypeOpen] = useState(false);
@@ -26,44 +27,11 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [isHourOpen, setIsHourOpen] = useState(false);
   const [isRescheduleRoomOpen, setIsRescheduleRoomOpen] = useState(false);
   const [rescheduleSearchTerm, setRescheduleSearchTerm] = useState('');
-  const [rescheduleDebouncedTerm, setRescheduleDebouncedTerm] = useState('');
+  const rescheduleDebouncedTerm = useSearchDebounce(rescheduleSearchTerm);
 
   const [isFacultyOpen, setIsFacultyOpen] = useState(false);
   const [facultySearchTerm, setFacultySearchTerm] = useState('');
-  const [debouncedFacultyTerm, setDebouncedFacultyTerm] = useState('');
-
-  React.useEffect(() => {
-    if (facultySearchTerm.length < 2) {
-      setDebouncedFacultyTerm('');
-      return;
-    }
-    const timer = setTimeout(() => {
-      setDebouncedFacultyTerm(facultySearchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [facultySearchTerm]);
-
-  React.useEffect(() => {
-    if (searchTerm.length < 2) {
-      setDebouncedTerm('');
-      return;
-    }
-    const timer = setTimeout(() => {
-      setDebouncedTerm(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  React.useEffect(() => {
-    if (rescheduleSearchTerm.length < 2) {
-      setRescheduleDebouncedTerm('');
-      return;
-    }
-    const timer = setTimeout(() => {
-      setRescheduleDebouncedTerm(rescheduleSearchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [rescheduleSearchTerm]);
+  const debouncedFacultyTerm = useSearchDebounce(facultySearchTerm);
 
   const [bookingType, setBookingType] = useState('EXTRA');
   const [rescheduleRoom, setRescheduleRoom] = useState('');
@@ -93,18 +61,13 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
     setLoading(true);
     try {
-      const res = await api.patch(`/bookings/${booking.id}/cancel`);
-      if (res.ok) {
-        fetchRooms();
-        fetchBookings();
-        fetchAvailability();
-        onSuccess();
-      } else {
-        const data = await res.json();
-        setError(data.error || 'Cancellation failed');
-      }
-    } catch {
-      setError('Connection error');
+      await bookingService.cancelBooking(booking.id);
+      fetchRooms();
+      fetchBookings();
+      fetchAvailability();
+      onSuccess();
+    } catch (err) {
+      setError(err.message || 'Cancellation failed');
     } finally {
       setLoading(false);
     }
@@ -132,33 +95,31 @@ function BookingModal({ slot, onClose, onSuccess }) {
     const end_time = endDate.toISOString();
 
     const isTransfer = !!getRoomBooking(selectedRoom);
-    const endpoint = isTransfer ? '/transfers/request' : '/bookings';
+
+    const payload = isTransfer 
+      ? {
+          booking_id: getRoomBooking(selectedRoom).id,
+          target_faculty_id: isStudent ? selectedFaculty : null,
+          new_purpose: purpose
+        }
+      : {
+          room_id: selectedRoom,
+          start_time,
+          end_time,
+          faculty_id: isStudent ? selectedFaculty : null,
+          purpose: bookingType === 'RESCHEDULE' ? `Reschedule: ${purpose}` : purpose,
+          reschedule_room_name: bookingType === 'RESCHEDULE' ? rescheduleRoom : null,
+          reschedule_day: bookingType === 'RESCHEDULE' ? rescheduleDay : null,
+          reschedule_hour: bookingType === 'RESCHEDULE' ? rescheduleHour : null
+        };
 
     try {
-      const payload = isTransfer 
-        ? {
-            booking_id: getRoomBooking(selectedRoom).id,
-            target_faculty_id: isStudent ? selectedFaculty : null,
-            new_purpose: purpose
-          }
-        : {
-            room_id: selectedRoom,
-            start_time,
-            end_time,
-            faculty_id: isStudent ? selectedFaculty : null,
-            purpose: bookingType === 'RESCHEDULE' ? `Reschedule: ${purpose}` : purpose,
-            reschedule_room_name: bookingType === 'RESCHEDULE' ? rescheduleRoom : null,
-            reschedule_day: bookingType === 'RESCHEDULE' ? rescheduleDay : null,
-            reschedule_hour: bookingType === 'RESCHEDULE' ? rescheduleHour : null
-          };
-
-      const res = await api.post(endpoint, payload);
-
-      const data = await res.json();
-      if (res.ok) {
-        if (isTransfer) {
-          toast.success('Transfer request sent successfully!');
-        } else if (isStudent && selectedFaculty) {
+      if (isTransfer) {
+        await bookingService.requestTransfer(payload);
+        toast.success('Transfer request sent successfully!');
+      } else {
+        await bookingService.createBooking(payload);
+        if (isStudent && selectedFaculty) {
           const facultyName = faculties.find(f => String(f.id) === String(selectedFaculty))?.name || 'Faculty';
           const targetDate = new Date(slot.date);
           const dateStr = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -167,15 +128,13 @@ function BookingModal({ slot, onClose, onSuccess }) {
         } else {
           toast.success(`Success! Room ${selectedRoomData ? selectedRoomData.name : selectedRoom} has been booked for ${slot.day} at ${slot.hour}:00.`);
         }
-        fetchRooms();
-        fetchBookings();
-        fetchAvailability();
-        onSuccess();
-      } else {
-        setError(data.error || 'Booking failed');
       }
-    } catch {
-      setError('Connection error');
+      fetchRooms();
+      fetchBookings();
+      fetchAvailability();
+      onSuccess();
+    } catch (err) {
+      setError(err.message || 'Booking failed');
     } finally {
       setLoading(false);
     }
@@ -258,7 +217,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 rescheduleRoom={rescheduleRoom}
                 setRescheduleRoom={setRescheduleRoom}
                 rescheduleSearchTerm={rescheduleSearchTerm}
-                setSearchTerm={setSearchTerm}
+                setRescheduleSearchTerm={setRescheduleSearchTerm}
                 isRescheduleRoomOpen={isRescheduleRoomOpen}
                 setIsRescheduleRoomOpen={setIsRescheduleRoomOpen}
                 rescheduleDebouncedTerm={rescheduleDebouncedTerm}
@@ -282,7 +241,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 <button 
                   type="submit" 
                   disabled={loading || (selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(user?.id))}
-                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'} disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg active:scale-[0.98]`}
+                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-accent hover:bg-accent/80 shadow-accent/20'} disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg active:scale-[0.98]`}
                 >
                   {loading ? 'Processing...' : (
                     <>

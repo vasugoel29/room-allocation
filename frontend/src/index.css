@@ -13,11 +13,11 @@
   --color-success: #10b981;
   --color-error: #ef4444;
 
-  --color-dark-bg-primary: #0f172a;
-  --color-dark-bg-secondary: #1e293b;
+  --color-dark-bg-primary: #050505;
+  --color-dark-bg-secondary: #0f1218;
   --color-dark-text-primary: #f8fafc;
   --color-dark-text-secondary: #94a3b8;
-  --color-dark-border: rgba(255, 255, 255, 0.1);
+  --color-dark-border: rgba(122, 140, 240, 0.1);
 }
 
 .dark {
@@ -26,7 +26,31 @@
   --color-text-primary: var(--color-dark-text-primary);
   --color-text-secondary: var(--color-dark-text-secondary);
   --color-border: var(--color-dark-border);
+  --color-accent: #7a8cf0; /* Custom Periwinkle Accent */
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 :root {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -92,7 +116,7 @@ body {
 }
 
 .dark .glass {
-  background: rgba(30, 41, 59, 0.7);
+  background: rgba(15, 18, 24, 0.85);
 }
 
 .card-hover {

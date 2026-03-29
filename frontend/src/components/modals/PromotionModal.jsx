@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, X, Send, AlertTriangle } from 'lucide-react';
-import api from '../utils/api';
+import { promotionService } from '../../services/promotionService';
 import toast from 'react-hot-toast';
 
 function PromotionModal({ onClose }) {
@@ -14,19 +14,14 @@ function PromotionModal({ onClose }) {
       return;
     }
 
+
     setLoading(true);
     try {
-      const res = await api.post('/promotions', { reason });
-      if (res.ok) {
-        toast.success('Request submitted successfully! Admin will review it.');
-        onClose();
-      } else {
-        const error = await res.json();
-        toast.error(error.error || 'Failed to submit request');
-      }
+      await promotionService.requestPromotion(reason);
+      toast.success('Request submitted successfully! Admin will review it.');
+      onClose();
     } catch (err) {
-      console.error(err);
-      toast.error('Network error. Please try again.');
+      toast.error(err.message || 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }

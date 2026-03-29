@@ -40,6 +40,7 @@ import promotionRoutes from './routes/promotionRoutes.js';
 import facultyRoutes from './routes/facultyRoutes.js';
 import transferRoutes from './routes/transferRoutes.js';
 import departmentRoutes from './routes/departmentRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 const app = express();
 app.use(helmet());
@@ -90,6 +91,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/admin', adminRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);
