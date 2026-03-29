@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext } from 'react';
 import { Filter, Wind, Monitor, Search, Layers, Check } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 
