@@ -1,3 +1,4 @@
+import './config/env.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -31,6 +32,7 @@ Sentry.init({
   enableLogs: true,
 
 });
+
 
 // Modular Imports
 import authRoutes from './routes/authRoutes.js';

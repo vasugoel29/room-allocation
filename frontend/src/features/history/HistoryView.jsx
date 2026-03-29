@@ -12,11 +12,11 @@ import PageSearch from '../../components/ui/PageSearch';
 const HistoryView = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
   const [myOverrides, setMyOverrides] = useState([]);
-  const [filterMe, setFilterMe] = useState(user?.role !== 'admin');
+  const [filterMe] = useState(user?.role !== 'admin');
   const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST, TRANSFERS
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [, setError] = useState('');
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: null });
 
   const fetchHistory = async () => {

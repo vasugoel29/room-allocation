@@ -1,3 +1,4 @@
+import './config/env.js';
 import pkg from 'pg';
 import logger from './utils/logger.js';
 const { Pool } = pkg;
@@ -14,13 +15,15 @@ let poolConfig = {
 if (process.env.DATABASE_URL) {
   try {
     const url = new URL(process.env.DATABASE_URL);
+    const isLocalhost = url.hostname === 'localhost';
+    
     poolConfig = {
       user: url.username,
       password: url.password,
       host: url.hostname,
       port: url.port || 5432,
       database: url.pathname.slice(1),
-      ssl: url.hostname === 'localhost' ? false : { rejectUnauthorized: false },
+      ssl: isLocalhost ? false : { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000,
     };
   } catch (error) {

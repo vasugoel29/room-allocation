@@ -66,7 +66,7 @@ function MobileBooking({ onBack }) {
   const getDayName = (date) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
 
   // Filter available rooms for the selected slot
-  const slotDateStr = selectedDate.toDateString();
+
   const dayName = getDayName(selectedDate);
 
   const availableRooms = rooms.filter(room => {

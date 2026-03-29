@@ -4,8 +4,10 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "NODE_ENV=production node src/server.js",
+    "start:staging": "NODE_ENV=staging node src/server.js",
+    "dev": "NODE_ENV=development nodemon src/server.js",
+    "dev:staging": "NODE_ENV=staging nodemon src/server.js",
     "seed": "node scripts/seed.js",
     "unseed": "node scripts/unseed.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
@@ -24,6 +26,8 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.1",
+    "dotenv": "^16.4.5",
+    "dotenv-expand": "^11.0.6",
     "pg": "^8.16.3"
   },
   "devDependencies": {

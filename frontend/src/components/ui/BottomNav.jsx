@@ -1,9 +1,8 @@
 import { Plus } from 'lucide-react';
 
-const BottomNav = ({ currentPage, setCurrentPage, user, tabs = [], pendingTransferCount, setIsSidebarOpen }) => {
+const BottomNav = ({ currentPage, setCurrentPage, user, tabs = [], pendingTransferCount }) => {
 
   const isViewer = user?.role === 'VIEWER';
-  const isFaculty = user?.role === 'FACULTY';
   const useFourCol = isViewer || user?.role === 'admin';
 
   return (

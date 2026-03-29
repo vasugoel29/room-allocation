@@ -158,7 +158,7 @@ export const AppProvider = ({ children }) => {
       fetchDepartments();
       fetchTransfers();
     }
-  }, [user, fetchRooms, fetchFaculties, fetchTransfers]);
+  }, [user, fetchRooms, fetchFaculties, fetchTransfers, fetchDepartments]);
 
   useEffect(() => {
     if (user) {

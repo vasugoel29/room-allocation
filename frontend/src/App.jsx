@@ -50,7 +50,8 @@ function App() {
     localStorage.setItem('sidebarCollapsed', newState);
   };
 
-  const NavButton = ({ id, icon: Icon, label, color = 'bg-accent', textColor = 'text-white', onClick }) => {
+  const NavButton = ({ id, label, color = 'bg-accent', textColor = 'text-white', onClick, ...props }) => {
+    const IconComponent = props.icon;
     const isActive = currentPage === id;
     return (
       <button 
@@ -65,7 +66,7 @@ function App() {
         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `${color} ${textColor} shadow-lg ${color}/20` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
       >
         <div className="relative">
-          <Icon size={20} />
+          <IconComponent size={20} />
           {(id === 'bookings' || id === 'history') && pendingTransferCount > 0 && (
             <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
           )}
