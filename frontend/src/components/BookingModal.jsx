@@ -1,18 +1,21 @@
 import React, { useState, useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
-import { X, AlertCircle, Wind, Monitor, CheckCircle } from 'lucide-react';
+import { X, AlertCircle, CheckCircle } from 'lucide-react';
 import { api } from '../utils/api';
 
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); 
+import RoomSelector from '../features/booking/RoomSelector';
+import BookingTypeSelector from '../features/booking/BookingTypeSelector';
+import RescheduleDetails from '../features/booking/RescheduleDetails';
+import FacultySelector from '../features/booking/FacultySelector';
 
 function BookingModal({ slot, onClose, onSuccess }) {
-  const { user, rooms, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
+  const { user, rooms, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
   const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || '');
+  const [selectedFaculty, setSelectedFaculty] = useState('');
   const [purpose, setPurpose] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedTerm, setDebouncedTerm] = useState('');
@@ -24,6 +27,21 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [isRescheduleRoomOpen, setIsRescheduleRoomOpen] = useState(false);
   const [rescheduleSearchTerm, setRescheduleSearchTerm] = useState('');
   const [rescheduleDebouncedTerm, setRescheduleDebouncedTerm] = useState('');
+
+  const [isFacultyOpen, setIsFacultyOpen] = useState(false);
+  const [facultySearchTerm, setFacultySearchTerm] = useState('');
+  const [debouncedFacultyTerm, setDebouncedFacultyTerm] = useState('');
+
+  React.useEffect(() => {
+    if (facultySearchTerm.length < 2) {
+      setDebouncedFacultyTerm('');
+      return;
+    }
+    const timer = setTimeout(() => {
+      setDebouncedFacultyTerm(facultySearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [facultySearchTerm]);
 
   React.useEffect(() => {
     if (searchTerm.length < 2) {
@@ -57,7 +75,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const getRoomBooking = (roomId) => {
     return bookings?.find(b => {
       const bStatus = b.status || 'ACTIVE';
-      if (bStatus !== 'ACTIVE') return false;
+      if (bStatus !== 'ACTIVE' && bStatus !== 'PENDING') return false;
       const bStart = new Date(b.start_time);
       const bHour = bStart.getHours();
       
@@ -92,10 +110,13 @@ function BookingModal({ slot, onClose, onSuccess }) {
     }
   };
 
+  const isStudent = user?.role !== 'admin' && user?.role !== 'FACULTY';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (user?.role === 'VIEWER') return;
     if (!selectedRoom) return setError('Please select a room');
+    if (isStudent && !selectedFaculty) return setError('Please select a faculty for this class');
     if (bookingType === 'RESCHEDULE' && !rescheduleRoom) return setError('Please specify the room being freed up');
     
     setLoading(true);
@@ -110,22 +131,42 @@ function BookingModal({ slot, onClose, onSuccess }) {
     endDate.setHours(slot.hour + 1);
     const end_time = endDate.toISOString();
 
-    const endpoint = '/bookings';
+    const isTransfer = !!getRoomBooking(selectedRoom);
+    const endpoint = isTransfer ? '/transfers/request' : '/bookings';
 
     try {
-      const res = await api.post(endpoint, {
-        room_id: selectedRoom,
-        start_time,
-        end_time,
-        purpose: bookingType === 'RESCHEDULE' ? `Reschedule: ${purpose}` : purpose,
-        reschedule_room_name: bookingType === 'RESCHEDULE' ? rescheduleRoom : null,
-        reschedule_day: bookingType === 'RESCHEDULE' ? rescheduleDay : null,
-        reschedule_hour: bookingType === 'RESCHEDULE' ? rescheduleHour : null
-      });
+      const payload = isTransfer 
+        ? {
+            booking_id: getRoomBooking(selectedRoom).id,
+            target_faculty_id: isStudent ? selectedFaculty : null,
+            new_purpose: purpose
+          }
+        : {
+            room_id: selectedRoom,
+            start_time,
+            end_time,
+            faculty_id: isStudent ? selectedFaculty : null,
+            purpose: bookingType === 'RESCHEDULE' ? `Reschedule: ${purpose}` : purpose,
+            reschedule_room_name: bookingType === 'RESCHEDULE' ? rescheduleRoom : null,
+            reschedule_day: bookingType === 'RESCHEDULE' ? rescheduleDay : null,
+            reschedule_hour: bookingType === 'RESCHEDULE' ? rescheduleHour : null
+          };
+
+      const res = await api.post(endpoint, payload);
 
       const data = await res.json();
       if (res.ok) {
-        toast.success(`Success! Room ${selectedRoomData ? selectedRoomData.name : selectedRoom} has been booked for ${slot.day} at ${slot.hour}:00.`);
+        if (isTransfer) {
+          toast.success('Transfer request sent successfully!');
+        } else if (isStudent && selectedFaculty) {
+          const facultyName = faculties.find(f => String(f.id) === String(selectedFaculty))?.name || 'Faculty';
+          const targetDate = new Date(slot.date);
+          const dateStr = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          const roomName = selectedRoomData ? selectedRoomData.name : selectedRoom;
+          toast.success(`Request sent to Prof. ${facultyName} for Room ${roomName} from ${slot.hour}:00 to ${slot.hour + 1}:00 on ${dateStr}.`);
+        } else {
+          toast.success(`Success! Room ${selectedRoomData ? selectedRoomData.name : selectedRoom} has been booked for ${slot.day} at ${slot.hour}:00.`);
+        }
         fetchRooms();
         fetchBookings();
         fetchAvailability();
@@ -167,249 +208,62 @@ function BookingModal({ slot, onClose, onSuccess }) {
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div className="space-y-3 sm:space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <div className="space-y-1.5 sm:space-y-2">
-                <label className="text-xs sm:text-sm font-bold text-text-primary">Select Room</label>
-                <div className="relative">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder={selectedRoomData ? selectedRoomData.name : "Search for a room..."}
-                      value={searchTerm}
-                      onFocus={() => setIsDropdownOpen(true)}
-                      onChange={(e) => {
-                        setSearchTerm(e.target.value);
-                        setIsDropdownOpen(true);
-                      }}
-                      autoComplete="off"
-                      aria-label="Search for a room"
-                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm hover:bg-bg-secondary/30"
-                    />
-                    <div 
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                  </div>
+              <RoomSelector 
+                rooms={rooms}
+                availability={availability}
+                slot={slot}
+                user={user}
+                selectedRoom={selectedRoom}
+                setSelectedRoom={setSelectedRoom}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                debouncedTerm={debouncedTerm}
+                isDropdownOpen={isDropdownOpen}
+                setIsDropdownOpen={setIsDropdownOpen}
+                getRoomBooking={getRoomBooking}
+              />
 
-                  {isDropdownOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                      {rooms
-                        .filter(room => {
-                          const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
-                          const matchesSearch = !debouncedTerm || room.name.toLowerCase().includes(debouncedTerm.toLowerCase()) || room.building?.toLowerCase().includes(debouncedTerm.toLowerCase());
-                          return (av ? av.is_available : true) && matchesSearch;
-                        })
-                        .map(room => {
-                          const booking = getRoomBooking(room.id);
-                          const isSelected = String(selectedRoom) === String(room.id);
-                          
-                          return (
-                            <div
-                              key={room.id}
-                              onClick={() => {
-                                if (!booking) {
-                                  setSelectedRoom(room.id);
-                                  setIsDropdownOpen(false);
-                                  setSearchTerm('');
-                                }
-                              }}
-                              className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center justify-between ${booking ? 'opacity-50 cursor-not-allowed bg-bg-primary/50' : 'hover:bg-accent/5'} ${isSelected ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
-                            >
-                              <div className="flex flex-col gap-0.5 max-w-[70%]">
-                                <span className="font-bold text-base text-text-primary truncate flex items-center gap-2">
-                                  {room.name}
-                                </span>
-                                <span className="text-xs text-text-secondary truncate font-medium">{room.building}</span>
-                                {booking && (
-                                  <span className="text-sm text-red-600 font-black italic bg-red-50 px-2 py-0.5 rounded-md mt-1 w-fit">
-                                    Occupied by {booking.user_name}
-                                  </span>
-                                )}
-                              </div>
-                               <div className="flex gap-2 items-center opacity-80">
-                                 {room.has_ac && <Wind size={14} className="text-accent" />}
-                                 {room.has_projector && <Monitor size={14} className="text-accent" />}
-                               </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <BookingTypeSelector 
+                bookingType={bookingType}
+                setBookingType={setBookingType}
+                isTypeOpen={isTypeOpen}
+                setIsTypeOpen={setIsTypeOpen}
+              />
 
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-text-primary">Booking Type</label>
-                <div className="relative">
-                  <div className="relative cursor-pointer" onClick={() => setIsTypeOpen(!isTypeOpen)}>
-                    <input
-                      type="text"
-                      readOnly
-                      value={bookingType === 'EXTRA' ? 'Extra Class' : 'Reschedule'}
-                      className="w-full bg-bg-primary border border-border rounded-xl px-4 py-3 text-sm font-medium text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm cursor-pointer hover:bg-bg-secondary/30 pointer-events-none"
-                    />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50">
-                      <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isTypeOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                  </div>
-
-                  {isTypeOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                      {[
-                        { id: 'EXTRA', label: 'Extra Class' },
-                        { id: 'RESCHEDULE', label: 'Reschedule' }
-                      ].map(type => (
-                        <div
-                          key={type.id}
-                          onClick={() => {
-                            setBookingType(type.id);
-                            setIsTypeOpen(false);
-                          }}
-                          className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center gap-2 ${bookingType === type.id ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
-                        >
-                          {type.label}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {isStudent && (
+                <FacultySelector 
+                  faculties={faculties}
+                  selectedFaculty={selectedFaculty}
+                  setSelectedFaculty={setSelectedFaculty}
+                  isFacultyOpen={isFacultyOpen}
+                  setIsFacultyOpen={setIsFacultyOpen}
+                  facultySearchTerm={facultySearchTerm}
+                  setFacultySearchTerm={setFacultySearchTerm}
+                  debouncedFacultyTerm={debouncedFacultyTerm}
+                />
+              )}
             </div>
 
             {bookingType === 'RESCHEDULE' && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 bg-bg-primary/50 p-4 rounded-xl border border-border shadow-inner">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                     <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Day to free up</label>
-                     <div className="relative">
-                       <div className="relative cursor-pointer" onClick={() => setIsDayOpen(!isDayOpen)}>
-                         <input
-                           type="text"
-                           readOnly
-                           value={rescheduleDay}
-                           className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm cursor-pointer pr-8 hover:bg-bg-primary/50 pointer-events-none"
-                         />
-                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
-                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDayOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                         </div>
-                       </div>
-                       
-                       {isDayOpen && (
-                         <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 overflow-hidden max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
-                             <div
-                               key={d}
-                               onClick={() => {
-                                 setRescheduleDay(d);
-                                 setIsDayOpen(false);
-                               }}
-                               className={`px-3 py-2.5 cursor-pointer border-b border-border last:border-0 transition-colors text-sm ${rescheduleDay === d ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
-                             >
-                               {d}
-                             </div>
-                           ))}
-                         </div>
-                       )}
-                     </div>
-                  </div>
-                  <div className="space-y-1.5">
-                     <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Slot to free up</label>
-                     <div className="relative">
-                       <div className="relative cursor-pointer" onClick={() => setIsHourOpen(!isHourOpen)}>
-                         <input
-                           type="text"
-                           readOnly
-                           value={`${rescheduleHour}:00`}
-                           className="w-full bg-bg-secondary border border-border rounded-lg px-3 py-2.5 text-sm font-medium text-text-primary focus:outline-none focus:border-accent shadow-sm cursor-pointer pr-8 hover:bg-bg-primary/50 pointer-events-none"
-                         />
-                         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
-                           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isHourOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                         </div>
-                       </div>
-                       
-                       {isHourOpen && (
-                         <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-48 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                           {HOURS.map(h => (
-                             <div
-                               key={h}
-                               onClick={() => {
-                                 setRescheduleHour(h);
-                                 setIsHourOpen(false);
-                               }}
-                               className={`px-3 py-2.5 cursor-pointer border-b border-border last:border-0 transition-colors text-sm ${rescheduleHour === h ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'hover:bg-accent/5 font-medium'}`}
-                             >
-                               {h}:00
-                             </div>
-                           ))}
-                         </div>
-                       )}
-                     </div>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-sm font-bold text-text-primary">Which room is being freed up?</label>
-                  <div className="relative">
-                    <div className="relative cursor-pointer">
-                      <input
-                        type="text"
-                        placeholder="Search for room to free up..."
-                        value={isRescheduleRoomOpen ? rescheduleSearchTerm : (rescheduleRoom || '')}
-                        onFocus={() => setIsRescheduleRoomOpen(true)}
-                        onChange={(e) => {
-                          setRescheduleSearchTerm(e.target.value);
-                          setRescheduleRoom(e.target.value);
-                          setIsRescheduleRoomOpen(true);
-                        }}
-                        autoComplete="off"
-                        aria-label="Search for room to free up"
-                        className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:border-accent transition-all pr-10 shadow-sm hover:bg-bg-primary/30"
-                      />
-                      <div 
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
-                        onClick={() => setIsRescheduleRoomOpen(!isRescheduleRoomOpen)}
-                      >
-                        <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isRescheduleRoomOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </div>
-                    </div>
-
-                    {isRescheduleRoomOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
-                        {rooms
-                          .filter(room => {
-                            if (!rescheduleDebouncedTerm) return true;
-                            return room.name.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase()) || 
-                                   room.building?.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase());
-                          })
-                          .map(room => (
-                            <div
-                              key={room.id}
-                              onClick={() => {
-                                setRescheduleRoom(room.name);
-                                setRescheduleSearchTerm(room.name);
-                                setIsRescheduleRoomOpen(false);
-                              }}
-                              className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center justify-between hover:bg-accent/5 ${rescheduleRoom === room.name ? 'bg-accent/10 border-l-4 border-l-accent' : ''}`}
-                            >
-                              <div className="flex flex-col gap-0.5 max-w-[70%]">
-                                <span className="font-bold text-base text-text-primary truncate flex items-center gap-2">{room.name}</span>
-                                <span className="text-xs text-text-secondary truncate font-medium">{room.building}</span>
-                              </div>
-                              <div className="flex gap-2 items-center opacity-80">
-                                {room.has_ac && <Wind size={14} className="text-accent" />}
-                                {room.has_projector && <Monitor size={14} className="text-accent" />}
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <RescheduleDetails 
+                rooms={rooms}
+                rescheduleDay={rescheduleDay}
+                setRescheduleDay={setRescheduleDay}
+                isDayOpen={isDayOpen}
+                setIsDayOpen={setIsDayOpen}
+                rescheduleHour={rescheduleHour}
+                setRescheduleHour={setRescheduleHour}
+                isHourOpen={isHourOpen}
+                setIsHourOpen={setIsHourOpen}
+                rescheduleRoom={rescheduleRoom}
+                setRescheduleRoom={setRescheduleRoom}
+                rescheduleSearchTerm={rescheduleSearchTerm}
+                setSearchTerm={setSearchTerm}
+                isRescheduleRoomOpen={isRescheduleRoomOpen}
+                setIsRescheduleRoomOpen={setIsRescheduleRoomOpen}
+                rescheduleDebouncedTerm={rescheduleDebouncedTerm}
+              />
             )}
-
-
           </div>
 
           <div className="space-y-2">
@@ -427,13 +281,13 @@ function BookingModal({ slot, onClose, onSuccess }) {
               {user?.role !== 'VIEWER' ? (
                 <button 
                   type="submit" 
-                  disabled={loading}
-                  className="flex-[2] flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg shadow-indigo-600/20 active:scale-[0.98]"
+                  disabled={loading || (selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(user?.id))}
+                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/20'} disabled:opacity-50 text-white py-4 rounded-xl text-base font-bold transition-all shadow-lg active:scale-[0.98]`}
                 >
                   {loading ? 'Processing...' : (
                     <>
                       <CheckCircle size={20} />
-                      Confirm Booking
+                      {selectedRoom && getRoomBooking(selectedRoom) ? 'Request Transfer' : 'Confirm Booking'}
                     </>
                   )}
                 </button>
@@ -442,7 +296,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   View Only Mode
                 </div>
               )}
-              {selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(JSON.parse(localStorage.getItem('user'))?.id) && (
+              {selectedRoom && getRoomBooking(selectedRoom) && String(getRoomBooking(selectedRoom).created_by) === String(user?.id) && (
                   <button 
                   type="button"
                   onClick={handleCancel}

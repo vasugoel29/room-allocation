@@ -22,7 +22,8 @@ export function authenticate(req, res, next) {
 const roleHierarchy = {
   'VIEWER': 1,
   'STUDENT_REP': 2,
-  'admin': 3
+  'FACULTY': 3,
+  'admin': 4
 };
 
 export function requireRole(minimumRole) {

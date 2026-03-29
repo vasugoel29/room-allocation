@@ -20,7 +20,7 @@ if (process.env.DATABASE_URL) {
       host: url.hostname,
       port: url.port || 5432,
       database: url.pathname.slice(1),
-      ssl: { rejectUnauthorized: false },
+      ssl: url.hostname === 'localhost' ? false : { rejectUnauthorized: false },
       connectionTimeoutMillis: 5000,
     };
   } catch (error) {
@@ -53,6 +53,40 @@ export async function testDbConnection() {
         updated_at TIMESTAMPTZ DEFAULT NOW(),
         UNIQUE(user_id, status)
       )
+    `);
+
+    // Ensure department and approval support
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS departments (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) UNIQUE NOT NULL
+      );
+      
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS department_id INTEGER REFERENCES departments(id);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS department VARCHAR(255); -- Keep legacy for migration
+    `);
+
+    // Ensure transfer requests table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS booking_transfers (
+        id SERIAL PRIMARY KEY,
+        booking_id INTEGER REFERENCES bookings(id) ON DELETE CASCADE,
+        requested_by INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        target_faculty_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        new_purpose TEXT,
+        status VARCHAR(20) DEFAULT 'PENDING',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(booking_id, requested_by)
+      );
+      ALTER TABLE booking_transfers ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+
+      -- Loosen constraints for sections and years
+      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_section_check;
+      ALTER TABLE users ADD CONSTRAINT users_section_check CHECK (section BETWEEN 1 AND 15);
+      ALTER TABLE users DROP CONSTRAINT IF EXISTS users_year_check;
+      ALTER TABLE users ADD CONSTRAINT users_year_check CHECK (year BETWEEN 1 AND 5);
     `);
 
     // Ensure performance extensions and indices (CRAS Phase 3)

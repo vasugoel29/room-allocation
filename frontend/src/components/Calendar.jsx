@@ -6,7 +6,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); 
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters } = useContext(AppContext);
+  const { user, bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
 
@@ -177,26 +177,26 @@ function Calendar({ onSlotClick }) {
                             const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                             return score(b) - score(a);
                           })
-                          .slice(0, pillDensity).map(room => { 
-                            const booking = getBooking(dateStr, hour, room.id);
-                            return (
-                              <div 
-                                key={room.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (!booking) {
+                            .slice(0, pillDensity).map(room => { 
+                              const booking = getBooking(dateStr, hour, room.id);
+                              const isRestricted = booking && (booking.user_role === 'admin' || booking.user_role === 'FACULTY') && user?.role !== 'admin';
+                              return (
+                                <div 
+                                  key={room.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (isRestricted) return;
                                     const dateObj = currentWeekDay?.fullDate;
                                     onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
-                                  }
-                                }}
-                                className={`px-3 py-2 rounded-xl border shadow-sm ${!booking ? 'hover:translate-y-[-1px] active:scale-95' : ''} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border w-full ${booking ? 'bg-bg-primary opacity-60 grayscale-[0.3] cursor-not-allowed' : 'bg-bg-secondary text-text-primary cursor-pointer'}`}
-                                title={`${room.name}${booking ? ` - Booked by ${booking.user_name}` : ''}`}
-                              >
+                                  }}
+                                  className={`px-3 py-2 rounded-xl border shadow-sm ${!isRestricted ? 'hover:translate-y-[-1px] active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-black border-border w-full ${booking ? (isRestricted ? 'bg-bg-primary' : 'bg-bg-primary/80 opacity-80 border-indigo-200/50') : 'bg-bg-secondary text-text-primary'}`}
+                                  title={`${room.name}${booking ? ` - Booked by ${booking.user_name} ${isRestricted ? '(Restricted)' : '(Click to Request Transfer)'}` : ''}`}
+                                >
                                 <div className="flex flex-col overflow-hidden">
                                   <span className={`font-black truncate ${booking ? 'text-text-secondary text-sm' : ''}`}>{room.name}</span>
                                   {booking && (
                                     <span className="text-[10px] text-text-secondary/70 truncate leading-none">
-                                      {booking.user_name}
+                                      {booking.class_name}
                                     </span>
                                   )}
                                 </div>

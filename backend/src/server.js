@@ -37,6 +37,9 @@ import authRoutes from './routes/authRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import promotionRoutes from './routes/promotionRoutes.js';
+import facultyRoutes from './routes/facultyRoutes.js';
+import transferRoutes from './routes/transferRoutes.js';
+import departmentRoutes from './routes/departmentRoutes.js';
 
 const app = express();
 app.use(helmet());
@@ -84,6 +87,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/transfers', transferRoutes);
+app.use('/api/departments', departmentRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);
@@ -97,12 +103,15 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
+console.warn('Attempting to start server...', { NODE_ENV: process.env.NODE_ENV, PORT });
 if (process.env.NODE_ENV !== 'test') { 
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.warn(`Server successfully listening on port ${PORT}`);
   }).on('error', (err) => {
-    console.error('Server failed to start:', err);
+    console.error('Server failed to start (L108):', err);
   });
+} else {
+  console.warn('Server NOT started - NODE_ENV is "test"');
 }
 
 

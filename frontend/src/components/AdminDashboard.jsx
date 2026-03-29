@@ -1,32 +1,29 @@
-import { useState, useEffect, useContext, useMemo } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { 
   Shield, 
   Users, 
   Calendar as CalendarIcon, 
   Download, 
   Search, 
-  Check, 
-  X, 
-  Clock,
-  ArrowRight,
-  Zap,
-  ChevronDown,
-  User as UserIcon,
-  Filter,
+  Zap, 
   UserPlus,
-  Trash2,
-  Edit,
-  Mail,
-  ShieldAlert
+  ShieldAlert,
+  X,
+  User as UserIcon
 } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
+// Modular Components
+import AdminBookings from '../features/admin/AdminBookings';
+import AdminRequests from '../features/admin/AdminRequests';
+import AdminUsers from '../features/admin/AdminUsers';
+import AdminQuickBook from '../features/admin/AdminQuickBook';
 
 function AdminDashboard() {
   const { user } = useContext(AppContext);
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' | 'promotions' | 'users'
+  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' | 'promotions' | 'users' | 'quick'
   const [bookings, setBookings] = useState([]);
   const [promotions, setPromotions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,19 +38,18 @@ function AdminDashboard() {
   });
   const [users, setUsers] = useState([]);
   const [roomStatuses, setRoomStatuses] = useState([]);
-  const [submitting, setSubmitting] = useState(null); // booking_id being submitted
-  const [userDropdownOpen, setUserDropdownOpen] = useState(null); // room_id
-  const [userSearch, setUserSearch] = useState('');
+  const [submitting, setSubmitting] = useState(null); // room_name being submitted
   
   // User CRUD states
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'VIEWER', password: '' });
+  const [userForm, setUserForm] = useState({ name: '', email: '', role: 'VIEWER', password: '', branch: '', year: 1, section: 1, departmentName: '' });
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filterRange]); // Refetch bookings when range changes.
+    fetchDepartments();
+  }, [filterRange]);
 
   useEffect(() => {
     if (activeTab === 'quick' || activeTab === 'users') {
@@ -65,7 +61,6 @@ function AdminDashboard() {
     if (activeTab === 'quick') {
       fetchRoomStatuses();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, quickBookForm.date, quickBookForm.slot]);
 
   const fetchData = async () => {
@@ -78,18 +73,15 @@ function AdminDashboard() {
       let startDate, endDate;
       if (filterRange === 'day') {
         const targetDate = new Date(now);
-        // Weekend shift: Sat -> Mon (+2), Sun -> Mon (+1)
         if (day === 0) targetDate.setDate(now.getDate() + 1);
         else if (day === 6) targetDate.setDate(now.getDate() + 2);
-        // Late night shift: After 6 PM, show next working day
         else if (hour >= 18) {
-          if (day === 5) targetDate.setDate(now.getDate() + 3); // Fri -> Mon
+          if (day === 5) targetDate.setDate(now.getDate() + 3);
           else targetDate.setDate(now.getDate() + 1);
         }
         startDate = new Date(targetDate.setHours(0,0,0,0)).toISOString();
         endDate = new Date(targetDate.setHours(23,59,59,999)).toISOString();
       } else {
-        // Week shift: Sat/Sun show next week
         const currentDay = now.getDay() || 7;
         const offset = currentDay >= 6 ? 7 : 0;
         const monday = new Date(now);
@@ -100,7 +92,6 @@ function AdminDashboard() {
         endDate = new Date(sunday.setHours(23,59,59,999)).toISOString();
       }
 
-      // Fetch both for accurate badges and smooth tab switching
       const [bookingsRes, promotionsRes] = await Promise.all([
         api.get(`/bookings/admin/all?start_date=${startDate}&end_date=${endDate}`),
         api.get('/promotions')
@@ -137,6 +128,18 @@ function AdminDashboard() {
       if (Array.isArray(data)) setRoomStatuses(data);
     } catch (err) {
       console.error('Failed to fetch room statuses', err);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    try {
+      const res = await api.get('/departments');
+      if (res.ok) {
+        const data = await res.json();
+        setDepartments(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch departments', err);
     }
   };
 
@@ -216,6 +219,21 @@ function AdminDashboard() {
     }
   };
 
+  const handleApproveUser = async (id) => {
+    try {
+      const res = await api.patch(`/auth/approve-user/${id}`);
+      if (res.ok) {
+        toast.success('User approved!');
+        fetchUsers();
+      } else {
+        toast.error('Approval failed');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Network error');
+    }
+  };
+
   const handleUserSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -230,8 +248,9 @@ function AdminDashboard() {
         toast.success(editingUser ? 'User updated' : 'User created');
         setIsUserModalOpen(false);
         setEditingUser(null);
-        setUserForm({ name: '', email: '', role: 'VIEWER', password: '' });
+        setUserForm({ name: '', email: '', role: 'VIEWER', password: '', branch: '', year: 1, section: 1, departmentName: '' });
         fetchUsers();
+        fetchDepartments();
       } else {
         const err = await res.json();
         toast.error(err.error || 'Operation failed');
@@ -260,38 +279,18 @@ function AdminDashboard() {
 
   const openEditModal = (u) => {
     setEditingUser(u);
-    setUserForm({ name: u.name, email: u.email, role: u.role, password: '' });
+    setUserForm({ 
+      name: u.name, 
+      email: u.email, 
+      role: u.role, 
+      password: '',
+      branch: u.branch || '',
+      year: u.year || 1,
+      section: u.section || 1,
+      departmentName: u.department_name || ''
+    });
     setIsUserModalOpen(true);
   };
-
-  const filteredUsers = useMemo(() => {
-    return users.filter(u => 
-      u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
-      u.email.toLowerCase().includes(userSearch.toLowerCase())
-    );
-  }, [users, userSearch]);
-
-  const filteredData = useMemo(() => {
-    if (activeTab === 'bookings') {
-      return [...bookings]
-        .filter(b => 
-          b.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-          b.room_name?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-        .sort((a, b) => (b.id || 0) - (a.id || 0));
-    }
-    if (activeTab === 'promotions') {
-      return promotions.filter(p => 
-        p.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        p.user_email?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    if (activeTab === 'quick') return [];
-    return users.filter(u => 
-      u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      u.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [activeTab, bookings, promotions, users, searchTerm]);
 
   if (user?.role !== 'admin') {
     return (
@@ -338,7 +337,6 @@ function AdminDashboard() {
       </div>
 
       <div className="flex-1 flex flex-col gap-6 min-h-0">
-        {/* Tabs */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="bg-bg-secondary p-1.5 rounded-2xl flex flex-wrap gap-1.5 w-full sm:w-fit border border-border shadow-sm">
             <button 
@@ -373,6 +371,11 @@ function AdminDashboard() {
             >
               <ShieldAlert size={16} />
               <span className="whitespace-nowrap">Users</span>
+              {users.filter(u => !u.is_approved).length > 0 && (
+                <span className="bg-red-500 text-white text-[10px] px-1.5 rounded-full animate-pulse">
+                  {users.filter(u => !u.is_approved).length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -397,7 +400,7 @@ function AdminDashboard() {
             <button 
               onClick={() => {
                 setEditingUser(null);
-                setUserForm({ name: '', email: '', role: 'VIEWER', password: '' });
+                setUserForm({ name: '', email: '', role: 'VIEWER', password: '', branch: '', year: 1, section: 1, departmentName: '' });
                 setIsUserModalOpen(true);
               }}
               className="flex items-center gap-2 bg-accent text-white px-6 py-2.5 rounded-xl font-black text-sm hover:opacity-90 transition-all active:scale-95 shadow-lg shadow-accent/20"
@@ -413,504 +416,42 @@ function AdminDashboard() {
             <div className="p-20 flex justify-center items-center">
               <div className="animate-spin rounded-full h-10 w-10 border-4 border-accent border-t-transparent shadow-sm"></div>
             </div>
-          ) : activeTab === 'quick' ? (
-            <div className="flex-1 flex flex-col min-h-0 bg-bg-primary/50">
-               {/* Discovery Header */}
-               <div className="p-4 sm:p-6 border-b border-border bg-bg-secondary/20">
-                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Date</label>
-                       <input 
-                         type="date"
-                         value={quickBookForm.date}
-                         onChange={(e) => setQuickBookForm({...quickBookForm, date: e.target.value})}
-                         className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent"
-                       />
-                     </div>
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Slot</label>
-                       <select 
-                         value={quickBookForm.slot}
-                         onChange={(e) => setQuickBookForm({...quickBookForm, slot: e.target.value})}
-                         className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent appearance-none"
-                       >
-                         {Array.from({length: 12}, (_, i) => i + 8).map(h => (
-                           <option key={h} value={h}>{h.toString().padStart(2, '0')}:00 - {(h+1).toString().padStart(2, '0')}:00</option>
-                         ))}
-                       </select>
-                     </div>
-                     <div className="space-y-1">
-                       <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Room Jump</label>
-                       <select 
-                         value={quickBookForm.roomFilter}
-                         onChange={(e) => setQuickBookForm({...quickBookForm, roomFilter: e.target.value})}
-                         className="w-full bg-bg-primary border border-border rounded-xl px-4 py-2 text-sm font-bold focus:outline-none focus:border-accent appearance-none min-w-[120px]"
-                       >
-                         <option value="all">All Rooms</option>
-                         {roomStatuses.map(r => (
-                           <option key={r.room_id} value={r.room_name}>{r.room_name}</option>
-                         ))}
-                       </select>
-                     </div>
-                   </div>
-                   <div className="hidden sm:flex bg-accent/5 px-4 py-2 rounded-xl border border-accent/10 items-center gap-3">
-                     <Zap size={14} className="text-accent" />
-                     <span className="text-[10px] font-black text-accent uppercase tracking-widest italic">Rapid Discovery</span>
-                   </div>
-                 </div>
-               </div>
-
-               {/* Discovery Mobile Cards / Table */}
-               <div className="flex-1 overflow-auto no-scrollbar">
-                  {/* Mobile View: Cards */}
-                  <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
-                    {roomStatuses
-                      .filter(r => quickBookForm.roomFilter === 'all' || r.room_name === quickBookForm.roomFilter)
-                      .map(room => (
-                      <div key={room.room_id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col">
-                            <span className="text-lg font-black text-text-primary tracking-tight">{room.room_name}</span>
-                            <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
-                          </div>
-                          {room.booking_id ? (
-                            <span className="text-[10px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Booked</span>
-                          ) : (
-                            <span className="text-[10px] font-black uppercase text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Available</span>
-                          )}
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="relative">
-                             <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 mb-1 block">Recipient</label>
-                             <button 
-                               onClick={() => setUserDropdownOpen(userDropdownOpen === room.room_id ? null : room.room_id)}
-                               className="w-full flex items-center justify-between gap-3 bg-bg-secondary/50 border border-border rounded-xl px-4 py-3 text-sm font-bold"
-                             >
-                               <div className="flex items-center gap-2 truncate">
-                                  <UserIcon size={14} className="text-text-secondary opacity-40" />
-                                  <span className="truncate">
-                                    {users.find(u => u.id === quickBookForm[`target_${room.room_id}`])?.name || 'Select User...'}
-                                  </span>
-                               </div>
-                               <ChevronDown size={14} className={`text-text-secondary opacity-30 transition-transform ${userDropdownOpen === room.room_id ? 'rotate-180' : ''}`} />
-                             </button>
-
-                             {userDropdownOpen === room.room_id && (
-                               <div className="absolute z-[100] mt-2 w-full bg-bg-primary border border-border rounded-2xl shadow-2xl overflow-hidden">
-                                  <div className="p-3 border-b border-border">
-                                    <input 
-                                      autoFocus
-                                      type="text"
-                                      placeholder="Search members..."
-                                      value={userSearch}
-                                      onChange={(e) => setUserSearch(e.target.value)}
-                                      className="w-full bg-bg-secondary border border-border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
-                                    />
-                                  </div>
-                                  <div className="max-h-[160px] overflow-auto">
-                                    {filteredUsers.map(u => (
-                                      <button 
-                                        key={u.id}
-                                        onClick={() => {
-                                          setQuickBookForm({...quickBookForm, [`target_${room.room_id}`]: u.id});
-                                          setUserDropdownOpen(null);
-                                        }}
-                                        className="w-full text-left px-4 py-3 hover:bg-bg-secondary text-sm font-bold"
-                                      >
-                                        {u.name}
-                                      </button>
-                                    ))}
-                                  </div>
-                               </div>
-                             )}
-                          </div>
-
-                          <button 
-                            disabled={submitting === room.room_name || room.booking_id}
-                            onClick={() => handleQuickBookSubmit(room.room_name, quickBookForm[`target_${room.room_id}`])}
-                            className={`w-full py-3.5 rounded-xl text-xs font-black transition-all ${
-                              room.booking_id 
-                                ? 'bg-text-secondary/10 text-text-secondary opacity-50 cursor-not-allowed' 
-                                : 'bg-accent text-white shadow-lg shadow-accent/20'
-                            }`}
-                          >
-                            {submitting === room.room_name ? 'Booking...' : (room.booking_id ? 'Already Booked' : 'Confirm Quick Allocation')}
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Desktop View: Table */}
-                  <table className="hidden sm:table w-full text-left border-collapse">
-                    <thead className="sticky top-0 z-10 bg-bg-secondary/90 backdrop-blur-md">
-                      <tr className="border-b border-border/50">
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Room</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Member (Recipient)</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/30">
-                      {roomStatuses
-                        .filter(r => quickBookForm.roomFilter === 'all' || r.room_name === quickBookForm.roomFilter)
-                        .map(room => (
-                        <tr key={room.room_id} className="hover:bg-bg-primary/30 transition-colors group">
-                           <td className="px-6 py-4">
-                              <div className="flex flex-col">
-                                <span className="text-sm font-black text-text-primary tracking-tight">{room.room_name}</span>
-                                <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
-                              </div>
-                           </td>
-                           <td className="px-6 py-4">
-                              {room.booking_id ? (
-                                <div className="flex flex-col">
-                                   <span className="text-[10px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 w-fit mb-1">Booked</span>
-                                   <span className="text-[10px] text-text-secondary font-medium italic truncate max-w-[120px]">"{room.purpose}" by {room.booked_by_name}</span>
-                                </div>
-                              ) : (
-                                <span className="text-[10px] font-black uppercase text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 w-fit">Available</span>
-                              )}
-                           </td>
-                           <td className="px-6 py-4">
-                              <div className="relative">
-                                 <button 
-                                   onClick={() => setUserDropdownOpen(userDropdownOpen === room.room_id ? null : room.room_id)}
-                                   className="w-full max-w-[240px] flex items-center justify-between gap-3 bg-bg-primary border border-border rounded-xl px-4 py-2.5 text-sm font-bold hover:border-accent/50 transition-all"
-                                 >
-                                   <div className="flex items-center gap-2 truncate">
-                                      <UserIcon size={14} className="text-text-secondary opacity-40" />
-                                      <span className="truncate">
-                                        {users.find(u => u.id === quickBookForm[`target_${room.room_id}`])?.name || 'Select User...'}
-                                      </span>
-                                   </div>
-                                   <ChevronDown size={14} className={`text-text-secondary opacity-30 transition-transform ${userDropdownOpen === room.room_id ? 'rotate-180' : ''}`} />
-                                 </button>
-
-                                 {userDropdownOpen === room.room_id && (
-                                   <div className="fixed sm:absolute z-[100] mt-2 w-full max-w-[240px] bg-bg-primary border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                                      <div className="p-3 border-b border-border bg-bg-secondary/30">
-                                        <div className="relative">
-                                          <input 
-                                            autoFocus
-                                            type="text"
-                                            placeholder="Search members..."
-                                            value={userSearch}
-                                            onChange={(e) => setUserSearch(e.target.value)}
-                                            className="w-full bg-bg-primary border border-border rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-accent pl-8"
-                                          />
-                                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary/40" size={12} />
-                                        </div>
-                                      </div>
-                                      <div className="max-h-[200px] overflow-auto no-scrollbar">
-                                        {filteredUsers.length === 0 ? (
-                                          <div className="p-4 text-center text-xs text-text-secondary font-bold uppercase tracking-widest">No users found</div>
-                                        ) : (
-                                          filteredUsers.map(u => (
-                                            <button 
-                                              key={u.id}
-                                              onClick={() => {
-                                                setQuickBookForm({...quickBookForm, [`target_${room.room_id}`]: u.id});
-                                                setUserDropdownOpen(null);
-                                                setUserSearch('');
-                                              }}
-                                              className="w-full text-left px-4 py-3 hover:bg-bg-secondary transition-colors flex flex-col gap-0.5"
-                                            >
-                                              <span className="text-sm font-black text-text-primary">{u.name}</span>
-                                              <span className="text-[10px] text-text-secondary opacity-60">{u.email}</span>
-                                            </button>
-                                          ))
-                                        )}
-                                      </div>
-                                   </div>
-                                 )}
-                              </div>
-                           </td>
-                           <td className="px-6 py-4 text-right">
-                              <button 
-                                disabled={submitting === room.room_name || room.booking_id}
-                                onClick={() => handleQuickBookSubmit(room.room_name, quickBookForm[`target_${room.room_id}`])}
-                                className={`px-6 py-2.5 rounded-xl text-xs font-black transition-all shadow-lg active:scale-95 disabled:opacity-30 disabled:active:scale-100 ${
-                                  room.booking_id 
-                                    ? 'bg-text-secondary/10 text-text-secondary shadow-none cursor-not-allowed' 
-                                    : 'bg-accent text-white shadow-accent/20 hover:opacity-90'
-                                }`}
-                              >
-                                {submitting === room.room_name ? (
-                                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : room.booking_id ? (
-                                  'Booked'
-                                ) : (
-                                  'Book Now'
-                                )}
-                              </button>
-                           </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-               </div>
-            </div>
           ) : (
-            <div className="flex-1 overflow-auto no-scrollbar">
-              {/* Mobile Card View for Non-Quick Tabs */}
-              <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
-                {filteredData.map(item => (
-                  <div key={item.id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
-                    {activeTab === 'bookings' ? (
-                      <>
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col">
-                            <span className="text-lg font-black text-text-primary">{item.room_name}</span>
-                            <span className="text-sm font-bold text-text-secondary">{item.user_name}</span>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
-                            item.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-text-secondary bg-bg-secondary p-3 rounded-xl border border-border">
-                          <Clock size={16} />
-                          <div className="flex flex-col">
-                            <span className="text-xs font-bold text-text-primary">
-                              {new Date(item.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-                            </span>
-                            <span className="text-[10px] font-medium opacity-60">
-                              {new Date(item.start_time).getHours().toString().padStart(2, '0')}:00 - {(new Date(item.start_time).getHours() + 1).toString().padStart(2, '0')}:00
-                            </span>
-                          </div>
-                        </div>
-                        {item.status === 'ACTIVE' && (
-                          <button
-                            onClick={() => handleCancelBooking(item.id)}
-                            className="w-full flex items-center justify-center gap-2 py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100"
-                          >
-                            <Trash2 size={16} /> Cancel Allocation
-                          </button>
-                        )}
-                      </>
-                    ) : activeTab === 'promotions' ? (
-                      <>
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col">
-                            <span className="text-lg font-black text-text-primary">{item.user_name}</span>
-                            <span className="text-xs font-medium text-text-secondary">{item.user_email}</span>
-                          </div>
-                          <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border ${
-                            item.status === 'APPROVED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                          }`}>
-                            {item.status}
-                          </span>
-                        </div>
-                        <div className="bg-bg-secondary/50 p-3 rounded-xl border border-border">
-                          <p className="text-xs italic font-medium opacity-80">"{item.reason}"</p>
-                        </div>
-                        {item.status === 'PENDING' && (
-                          <div className="flex gap-2">
-                             <button onClick={() => handlePromotion(item.id, 'APPROVED')} className="flex-1 py-3 bg-green-500 text-white rounded-xl font-black shadow-lg shadow-green-500/10">Approve</button>
-                             <button onClick={() => handlePromotion(item.id, 'REJECTED')} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-black shadow-lg shadow-red-500/10">Reject</button>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex justify-between items-start">
-                          <div className="flex flex-col">
-                            <span className="text-lg font-black text-text-primary">{item.name}</span>
-                            <div className="flex items-center gap-1.5 text-text-secondary">
-                              <Mail size={12} className="opacity-40" />
-                              <span className="text-xs font-medium">{item.email}</span>
-                            </div>
-                          </div>
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
-                            item.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                          }`}>
-                            {item.role}
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                           <button onClick={() => openEditModal(item)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border"><Edit size={16} /> Edit</button>
-                           <button onClick={() => deleteUser(item.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border"><Trash2 size={16} /> Delete</button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Desktop Table View */}
-              <table className="hidden sm:table w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-border/50 bg-bg-secondary/50">
-                    {activeTab === 'bookings' ? (
-                      <>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Member</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Room</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Time Slot</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Status</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
-                      </>
-                    ) : activeTab === 'promotions' ? (
-                      <>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">User</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Reason</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Requested</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Action</th>
-                      </>
-                    ) : (
-                      <>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Name</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Email</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Role</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Joined</th>
-                        <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/30">
-                  {filteredData.map(item => (
-                    <tr key={item.id} className="hover:bg-bg-primary/30 transition-colors group">
-                      {activeTab === 'bookings' ? (
-                        <>
-                          <td className="px-6 py-4">
-                             <div className="flex flex-col">
-                               <span className="text-sm font-bold text-text-primary">{item.user_name}</span>
-                               <span className="text-[10px] text-text-secondary opacity-60">ID: {item.user_id}</span>
-                             </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-black text-accent bg-accent/5 px-2 py-1 rounded-lg border border-accent/10">{item.room_name}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-text-primary">
-                              <Clock size={14} className="text-text-secondary opacity-40" />
-                              <span className="text-xs font-bold whitespace-nowrap">
-                                {new Date(item.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
-                              </span>
-                              <ArrowRight size={12} className="text-text-secondary opacity-20" />
-                              <span className="text-xs font-black bg-bg-secondary px-1.5 py-0.5 rounded border border-border">
-                                {new Date(item.start_time).getHours().toString().padStart(2, '0')}:00
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm border ${
-                              item.status === 'ACTIVE' 
-                                ? 'bg-green-500/10 text-green-500 border-green-500/20' 
-                                : 'bg-red-500/10 text-red-500 border-red-500/20'
-                            }`}>
-                              {item.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            {item.status === 'ACTIVE' && (
-                              <button
-                                onClick={() => handleCancelBooking(item.id)}
-                                className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                title="Cancel Booking"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
-                          </td>
-                        </>
-                      ) : activeTab === 'promotions' ? (
-                        <>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-col">
-                              <span className="text-sm font-bold text-text-primary">{item.user_name}</span>
-                              <span className="text-xs text-text-secondary opacity-70">{item.user_email}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 max-w-xs">
-                            <p className="text-xs text-text-primary font-medium line-clamp-2 italic opacity-80">"{item.reason}"</p>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-[10px] font-bold text-text-secondary uppercase">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            {item.status === 'PENDING' ? (
-                              <div className="flex gap-2">
-                                <button 
-                                  onClick={() => handlePromotion(item.id, 'APPROVED')}
-                                  className="p-2 bg-green-500 text-white rounded-lg hover:opacity-80 active:scale-95 transition-all shadow-sm"
-                                  title="Approve"
-                                >
-                                  <Check size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => handlePromotion(item.id, 'REJECTED')}
-                                  className="p-2 bg-red-500 text-white rounded-lg hover:opacity-80 active:scale-95 transition-all shadow-sm"
-                                  title="Reject"
-                                >
-                                  <X size={16} />
-                                </button>
-                              </div>
-                            ) : (
-                              <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${
-                                item.status === 'APPROVED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-                              }`}>
-                                {item.status}
-                              </span>
-                            )}
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td className="px-6 py-4">
-                            <span className="text-sm font-black text-text-primary">{item.name}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="flex items-center gap-2 text-text-secondary">
-                               <Mail size={12} className="opacity-40" />
-                               <span className="text-xs font-medium">{item.email}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
-                              item.role === 'admin' 
-                                ? 'bg-red-500/10 text-red-500 border-red-500/20' 
-                                : item.role === 'STUDENT_REP' 
-                                ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                                : 'bg-bg-secondary text-text-secondary border-border'
-                            }`}>
-                              {item.role}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span className="text-[10px] font-bold text-text-secondary opacity-50 uppercase">
-                              {new Date(item.created_at).toLocaleDateString()}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2">
-                               <button 
-                                 onClick={() => openEditModal(item)}
-                                 className="p-2 bg-bg-primary border border-border text-text-secondary rounded-lg hover:text-accent hover:border-accent/50 transition-all shadow-sm"
-                               >
-                                 <Edit size={14} />
-                               </button>
-                               <button 
-                                 onClick={() => deleteUser(item.id)}
-                                 className="p-2 bg-bg-primary border border-border text-text-secondary rounded-lg hover:text-red-500 hover:border-red-500/50 transition-all shadow-sm"
-                               >
-                                 <Trash2 size={14} />
-                               </button>
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {activeTab === 'bookings' && (
+                <AdminBookings 
+                  bookings={bookings} 
+                  searchTerm={searchTerm} 
+                  onCancel={handleCancelBooking} 
+                />
+              )}
+              {activeTab === 'promotions' && (
+                <AdminRequests 
+                  promotions={promotions} 
+                  searchTerm={searchTerm} 
+                  handlePromotionAction={handlePromotion} 
+                />
+              )}
+              {activeTab === 'quick' && (
+                <AdminQuickBook 
+                  roomStatuses={roomStatuses}
+                  users={users}
+                  quickBookForm={quickBookForm}
+                  setQuickBookForm={setQuickBookForm}
+                  submitting={submitting}
+                  onSubmit={handleQuickBookSubmit}
+                />
+              )}
+              {activeTab === 'users' && (
+                <AdminUsers 
+                  users={users} 
+                  searchTerm={searchTerm} 
+                  onEdit={openEditModal} 
+                  onDelete={deleteUser} 
+                  onApprove={handleApproveUser}
+                />
+              )}
+            </>
           )}
         </div>
       </div>
@@ -959,11 +500,73 @@ function AdminDashboard() {
                       onChange={(e) => setUserForm({...userForm, role: e.target.value})}
                       className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent appearance-none"
                     >
-                       <option value="VIEWER">VIEWER (Read Only)</option>
-                       <option value="STUDENT_REP">STUDENT_REP (Can Book)</option>
-                       <option value="admin">ADMIN (Full Control)</option>
+                        <option value="VIEWER">VIEWER (Student)</option>
+                        <option value="STUDENT_REP">STUDENT_REP (Student Lead)</option>
+                        <option value="FACULTY">FACULTY (Staff)</option>
+                        <option value="admin">ADMIN (Root)</option>
                     </select>
                  </div>
+
+                 <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Department</label>
+                    <div className="relative">
+                      <input 
+                        required
+                        list="admin-dept-list"
+                        type="text"
+                        placeholder="Select or type department"
+                        value={userForm.departmentName || ''}
+                        onChange={(e) => setUserForm({...userForm, departmentName: e.target.value})}
+                        className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent"
+                      />
+                      <datalist id="admin-dept-list">
+                        {departments.map(d => <option key={d.id} value={d.name} />)}
+                      </datalist>
+                    </div>
+                 </div>
+                 
+                 {(userForm.role === 'STUDENT_REP' || userForm.role === 'VIEWER') && (
+                   <div className="space-y-4 pt-2 border-t border-border/50">
+                     <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Branch</label>
+                        <input 
+                          type="text"
+                          placeholder="e.g. CSE, IT, ECE"
+                          value={userForm.branch || ''}
+                          onChange={(e) => setUserForm({...userForm, branch: e.target.value})}
+                          className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent"
+                        />
+                     </div>
+
+                     <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Year</label>
+                          <select 
+                            value={userForm.year || 1}
+                            onChange={(e) => setUserForm({...userForm, year: parseInt(e.target.value)})}
+                            className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent appearance-none"
+                          >
+                             {[1, 2, 3, 4].map(y => (
+                               <option key={y} value={y}>{y} Year</option>
+                             ))}
+                          </select>
+                       </div>
+                       <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Section</label>
+                          <select 
+                            value={userForm.section || 1}
+                            onChange={(e) => setUserForm({...userForm, section: parseInt(e.target.value)})}
+                            className="w-full bg-bg-secondary border border-border rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-accent appearance-none"
+                          >
+                             {[1, 2, 3, 4, 5, 6].map(s => (
+                               <option key={s} value={s}>Section {s}</option>
+                             ))}
+                          </select>
+                       </div>
+                     </div>
+                   </div>
+                 )}
+
                  {!editingUser && (
                    <div className="space-y-1.5">
                       <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest px-1">Initial Password</label>

@@ -4,6 +4,7 @@ import RoomFilter from './components/RoomFilter';
 import BookingModal from './components/BookingModal';
 import HistoryModal from './components/HistoryModal';
 import AdminDashboard from './components/AdminDashboard';
+import FacultyDashboard from './components/FacultyDashboard';
 import Contact from './components/Contact';
 import Login from './components/Login';
 import Signup from './components/Signup';
@@ -13,7 +14,7 @@ import toast from 'react-hot-toast';
 import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2, Shield, MessageSquare } from 'lucide-react';
 
 function App() {
-  const { user, theme, setTheme, viewMode, setViewMode, backendError, handleLogout } = useContext(AppContext);
+  const { user, theme, setTheme, viewMode, setViewMode, backendError, handleLogout, incomingTransfers, pendingTransferCount } = useContext(AppContext);
   
   const [currentPage, setCurrentPage] = useState('calendar');
   const [isSigningUp, setIsSigningUp] = useState(false);
@@ -29,6 +30,8 @@ function App() {
   React.useEffect(() => {
     if (user?.role === 'admin') {
       setCurrentPage('admin');
+    } else if (user?.role === 'FACULTY') {
+      setCurrentPage('faculty');
     } else if (user) {
       setCurrentPage('calendar');
     }
@@ -131,6 +134,9 @@ function App() {
               {user?.role === 'admin' && (
                 <NavButton id="admin" icon={Shield} label="Admin Console" color="bg-accent" />
               )}
+              {user?.role === 'FACULTY' && (
+                <NavButton id="faculty" icon={Shield} label="Faculty Portal" color="bg-indigo-600" />
+              )}
               {user?.role === 'VIEWER' && (
                 <button 
                   onClick={() => setIsPromotionOpen(true)}
@@ -157,10 +163,15 @@ function App() {
                 setIsHistoryOpen(true);
                 setIsSidebarOpen(false);
               }} 
-              className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 rounded-xl font-bold transition-all active:scale-[0.98]"
+              className="flex items-center gap-3 w-full px-4 py-3 bg-indigo-50/50 dark:bg-indigo-900/10 text-indigo-600 rounded-xl font-bold transition-all active:scale-[0.98] relative"
              >
                <History size={20} />
                <span>{user?.role === 'admin' ? 'History' : 'My Bookings'}</span>
+               {user?.role !== 'admin' && pendingTransferCount > 0 && (
+                 <span className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold border-2 border-bg-primary">
+                    {pendingTransferCount}
+                 </span>
+               )}
              </button>
           </div>
         )}
@@ -201,13 +212,18 @@ function App() {
                </button>
 
                {currentPage === 'calendar' && user?.role !== 'VIEWER' && (
-                 <button 
-                  onClick={() => setIsHistoryOpen(true)}
-                  className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm"
-                 >
-                   <History size={14} />
-                   <span>{user?.role === 'admin' ? 'History' : 'Bookings'}</span>
-                 </button>
+                   <button 
+                   onClick={() => setIsHistoryOpen(true)}
+                   className="hidden sm:flex items-center gap-1.5 px-2.5 py-2 bg-bg-secondary hover:bg-bg-primary border border-border rounded-xl text-[10px] sm:text-xs font-bold text-text-secondary hover:text-text-primary transition-all shadow-sm relative"
+                  >
+                    <History size={14} />
+                    <span>{user?.role === 'admin' ? 'History' : 'Bookings'}</span>
+                    {user?.role !== 'admin' && pendingTransferCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-bold border-2 border-bg-primary animate-in zoom-in duration-200">
+                        {pendingTransferCount}
+                      </span>
+                    )}
+                  </button>
                )}
              </div>
 
@@ -245,6 +261,7 @@ function App() {
               />
             )}
             {currentPage === 'admin' && <AdminDashboard />}
+            {currentPage === 'faculty' && <FacultyDashboard />}
             {currentPage === 'contact' && <Contact />}
           </div>
         </section>

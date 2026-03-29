@@ -41,6 +41,9 @@ export const AppProvider = ({ children }) => {
     return `${year}-${month}-${dayNum}`;
   }, []);
 
+  const [faculties, setFaculties] = useState([]);
+  const [incomingTransfers, setIncomingTransfers] = useState([]);
+  const [outgoingTransfers, setOutgoingTransfers] = useState([]);
   const [selectedDay, setSelectedDay] = useState(initialDay);
   const [backendError, setBackendError] = useState(null);
   const prevBackendError = useRef(null);
@@ -54,6 +57,30 @@ export const AppProvider = ({ children }) => {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     setUser(null);
+  }, []);
+
+  const fetchTransfers = useCallback(async () => {
+    if (!user || user.role === 'VIEWER') return;
+    try {
+      const [incRes, outRes] = await Promise.all([
+        api.get('/transfers/incoming'),
+        api.get('/transfers/outgoing')
+      ]);
+      if (incRes.ok) setIncomingTransfers(await incRes.json());
+      if (outRes.ok) setOutgoingTransfers(await outRes.json());
+    } catch (err) {
+      console.error('Fetch transfers failed', err);
+    }
+  }, [user]);
+
+  const fetchFaculties = useCallback(async () => {
+    try {
+      const res = await api.get('/auth/faculties');
+      const data = await res.json();
+      setFaculties(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch faculties failed', err);
+    }
   }, []);
 
   const fetchRooms = useCallback(async () => {
@@ -102,8 +129,10 @@ export const AppProvider = ({ children }) => {
   useEffect(() => {
     if (user) {
       fetchRooms();
+      fetchFaculties();
+      fetchTransfers();
     }
-  }, [user, fetchRooms]);
+  }, [user, fetchRooms, fetchFaculties, fetchTransfers]);
 
   useEffect(() => {
     if (user) {
@@ -120,8 +149,10 @@ export const AppProvider = ({ children }) => {
         if (prevBackendError.current && user) {
           console.log('Backend recovered! Refreshing data...');
           fetchRooms();
+          fetchFaculties();
           fetchBookings();
           fetchAvailability();
+          fetchTransfers();
         }
         setBackendError(null);
         prevBackendError.current = null;
@@ -136,13 +167,17 @@ export const AppProvider = ({ children }) => {
     checkConnection();
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
-  }, [user, fetchRooms, fetchBookings, fetchAvailability]);
+  }, [user, fetchRooms, fetchFaculties, fetchBookings, fetchAvailability, fetchTransfers]);
 
   return (
     <AppContext.Provider value={{
       user,
       setUser,
       rooms,
+      faculties,
+      incomingTransfers,
+      outgoingTransfers,
+      pendingTransferCount: incomingTransfers.filter(t => t.status === 'PENDING').length,
       bookings,
       availability,
       filters,
@@ -155,11 +190,14 @@ export const AppProvider = ({ children }) => {
       setSelectedDay,
       backendError,
       fetchRooms,
+      fetchFaculties,
       fetchBookings,
       fetchAvailability,
+      fetchTransfers,
       handleLogout
     }}>
       {children}
     </AppContext.Provider>
   );
 };
+

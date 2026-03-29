@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { body } from 'express-validator';
-import { signup, login, logout, getUsers, createUser, updateUser, deleteUser } from '../controllers/authController.js';
+import { signup, login, logout, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser } from '../controllers/authController.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 
@@ -28,10 +28,13 @@ router.post('/signup', authLimiter, signupValidation, validateRequest, signup);
 router.post('/login', authLimiter, loginValidation, validateRequest, login);
 router.post('/logout', logout);
 
+router.get('/faculties', authenticate, getFaculties);
+
 // Admin-only user management
 router.get('/users', authenticate, requireRole('admin'), getUsers);
 router.post('/users', authenticate, requireRole('admin'), createUser);
 router.patch('/users/:id', authenticate, requireRole('admin'), updateUser);
 router.delete('/users/:id', authenticate, requireRole('admin'), deleteUser);
+router.patch('/approve-user/:id', authenticate, requireRole('admin'), approveUser);
 
 export default router;
