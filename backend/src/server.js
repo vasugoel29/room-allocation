@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -39,6 +40,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import promotionRoutes from './routes/promotionRoutes.js';
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(compression()); // Compress all responses
 app.use(cors({
