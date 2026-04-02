@@ -53,98 +53,131 @@ export const formatTo24h = (timeStr) => {
 /**
  * Resolves the merged schedule for a specific user and date
  */
-export const getMergedSchedule = (user, dateStr, bookings = [], availability = [], timetableData = []) => {
-  if (!user || !user.year || !user.section) return [];
+export const getMergedSchedule = (user, dateStr, bookings = [], availability = [], timetableData = [], facultyTimetableData = {}, facultyOverrides = []) => {
+  if (!user) return [];
   
   const dayOfWeek = getDayOfWeek(dateStr);
   if (dayOfWeek === 'Sun' || dayOfWeek === 'Sat') return [];
 
-  // Calculate Semester
-  const currentMonth = new Date().getMonth();
-  const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
-  const calculatedSemester = isEvenSemester ? Number(user.year) * 2 : (Number(user.year) * 2) - 1;
-  
-  // Normalize User Values
-  const userBranch = (user.branch || '').toUpperCase().trim();
-  const userDept = (user.department_name || '').toUpperCase().trim();
-  const userSection = String(user.section).trim();
-  const userSemester = String(calculatedSemester);
-
-  const isITMatch = (entryDept) => (userBranch === 'IT' || userDept === 'IT') && entryDept === 'INFORMATION TECHNOLOGY';
-  const isCSMatch = (entryDept) => (userBranch === 'CS' || userDept === 'CS') && entryDept.includes('COMPUTER SCIENCE');
-  const isBranchMatch = (entryDept) => entryDept === userBranch || entryDept === userDept || entryDept.includes(userBranch) || userBranch.includes(entryDept) || isITMatch(entryDept) || isCSMatch(entryDept);
-
-  // 1. Static Base (from DB, passed via AppContext)
+  // 1. Static Base
   let staticClasses = [];
-  if (Array.isArray(timetableData)) {
-    const entry = timetableData.find(e => {
-      const entryDept = (e.department || '').toUpperCase().trim();
-      const entrySection = String(e.section).trim();
-      const entrySem = String(e.semester).trim();
-      return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
+  
+  const role = (user.role || '').toUpperCase();
+  console.log('[DEBUG] getMergedSchedule: role=', role, 'day=', dayOfWeek, 'date=', dateStr);
+
+  if (role === 'FACULTY' || role === 'FACULTY MEMBER') {
+    // Faculty Logic
+    const rawSlots = facultyTimetableData[dayOfWeek] || [];
+    console.log('[DEBUG] Faculty raw slots for', dayOfWeek, ':', rawSlots);
+    staticClasses = rawSlots.map(s => {
+      const timeStr = s.slot_time || '';
+      const timeMatch = timeStr.match(/\d{2}:\d{2}-\d{2}:\d{2}/);
+      let room = 'N/A';
+      if (s.content && s.content.includes('Room:')) {
+        const parts = s.content.split('Room:');
+        if (parts[1]) {
+          room = parts[1].split(',')[0].trim();
+        }
+      }
+      return {
+        time: timeMatch ? timeMatch[0] : timeStr,
+        subjectName: s.content || 'Untitled Slot',
+        room: room,
+        isOccupied: true,
+        isDynamic: false
+      };
     });
-    staticClasses = entry?.timetable?.[dayOfWeek] || [];
-  } else if (typeof timetableData === 'object') {
-    const rawClasses = timetableData[dayOfWeek] || [];
-    staticClasses = rawClasses.filter(sc => {
-      const entryDept = (sc.department || '').toUpperCase().trim();
-      const entrySection = String(sc.section).trim();
-      const entrySem = String(sc.semester).trim();
-      return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
-    });
+  } else {
+    // Student Logic
+    if (!user.year || !user.section) return [];
+    
+    // Calculate Semester
+    const currentMonth = new Date().getMonth();
+    const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
+    const calculatedSemester = isEvenSemester ? Number(user.year) * 2 : (Number(user.year) * 2) - 1;
+    
+    // Normalize User Values
+    const userBranch = (user.branch || '').toUpperCase().trim();
+    const userDept = (user.department_name || '').toUpperCase().trim();
+    const userSection = String(user.section).trim();
+    const userSemester = String(calculatedSemester);
+
+    const isITMatch = (entryDept) => (userBranch === 'IT' || userDept === 'IT') && entryDept === 'INFORMATION TECHNOLOGY';
+    const isCSMatch = (entryDept) => (userBranch === 'CS' || userDept === 'CS') && entryDept.includes('COMPUTER SCIENCE');
+    const isBranchMatch = (entryDept) => entryDept === userBranch || entryDept === userDept || entryDept.includes(userBranch) || userBranch.includes(entryDept) || isITMatch(entryDept) || isCSMatch(entryDept);
+
+    if (Array.isArray(timetableData)) {
+      const entry = timetableData.find(e => {
+        const entryDept = (e.department || '').toUpperCase().trim();
+        const entrySection = String(e.section).trim();
+        const entrySem = String(e.semester).trim();
+        return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
+      });
+      staticClasses = entry?.timetable?.[dayOfWeek] || [];
+    } else if (typeof timetableData === 'object') {
+      const rawClasses = timetableData[dayOfWeek] || [];
+      staticClasses = rawClasses.filter(sc => {
+        const entryDept = (sc.department || '').toUpperCase().trim();
+        const entrySection = String(sc.section).trim();
+        const entrySem = String(sc.semester).trim();
+        return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
+      });
+    }
   }
 
-  // 2. Dynamic Bookings (Section-wide)
-  const sectionBookings = bookings
+  // 2. Dynamic Bookings
+  const relevantBookings = bookings
     .filter(b => {
-      // Use Local Date parts instead of ISO string
+      // Date Check
       const bStart = new Date(b.start_time);
       const bDateStr = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
-      
-      const normalize = (val) => {
-        if (!val) return '';
-        const v = val.toUpperCase().trim();
-        if (v === 'INFORMATION TECHNOLOGY') return 'IT';
-        if (v === 'COMPUTER SCIENCE') return 'CS';
-        if (v === 'ELECTRONICS') return 'ECE';
-        return v;
-      };
+      if (bDateStr !== dateStr) return false;
+      if (b.status !== 'ACTIVE' && b.status !== 'CONFIRMED' && b.status != null) return false;
 
-      const bBranch = normalize(b.branch);
-      const uBranch = normalize(user.branch);
+      if (user.role === 'FACULTY') {
+        // Faculty's own bookings or bookings they accepted
+        return String(b.faculty_id) === String(user.id) || String(b.created_by) === String(user.id);
+      } else {
+        // Student section bookings
+        const normalize = (val) => {
+          if (!val) return '';
+          const v = val.toUpperCase().trim();
+          if (v === 'INFORMATION TECHNOLOGY') return 'IT';
+          if (v === 'COMPUTER SCIENCE') return 'CS';
+          if (v === 'ELECTRONICS') return 'ECE';
+          return v;
+        };
 
-      return bDateStr === dateStr && 
-             (bBranch === uBranch) && 
-             String(b.section) === userSection &&
-             (b.status === 'ACTIVE' || b.status === 'CONFIRMED');
+        const bBranch = normalize(b.branch);
+        const uBranch = normalize(user.branch);
+        const userSection = String(user.section).trim();
 
-
+        return (bBranch === uBranch) && String(b.section) === userSection;
+      }
     })
     .map(b => {
       const start = new Date(b.start_time);
       const end = new Date(b.end_time);
-      
       const localStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
       const localEndTime = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
       
       return {
-        subjectName: b.reason || 'Rescheduled Class',
+        subjectName: b.purpose || 'Rescheduled Class',
         time: b.slot_time || `${localStartTime}-${localEndTime}`,
         room: b.room_name,
         type: 'Re-scheduled',
         faculty: b.faculty_name || 'N/A',
+        className: b.class_name || '',
         isDynamic: true,
         bookingId: b.id
       };
     });
 
-
-  // 3. Subtract Overrides (Cancellations)
+  // 3. Subtract Overrides (Only for static classes)
   const filteredStatic = staticClasses.filter(sc => {
     if (!sc.time) return true;
     const scHour = getHourFromTime(sc.time);
     
-    // Check if THIS SPECIFIC class is cancelled
     const cancellation = availability.find(o => {
       const dbRoomName = (o.room_name || '').trim().toLowerCase();
       const scRoomName = (sc.room || '').trim().toLowerCase();
@@ -157,7 +190,21 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
     return !cancellation;
   });
 
-  return [...filteredStatic, ...sectionBookings]
+  // 4. Filter static slots by Faculty Overrides (if applicable)
+  const finalStatic = filteredStatic.filter(sc => {
+    const role = (user.role || '').toUpperCase();
+    if (role === 'FACULTY' || role === 'FACULTY MEMBER') {
+      const scHour = getHourFromTime(sc.time);
+      const isOverridden = (facultyOverrides || []).some(o => {
+        const oDate = new Date(o.date).toISOString().split('T')[0];
+        return oDate === dateStr && parseInt(o.hour) === scHour && o.is_cancelled;
+      });
+      return !isOverridden;
+    }
+    return true;
+  });
+
+  return [...finalStatic, ...relevantBookings]
     .sort((a, b) => getSortableMinutes(a.time) - getSortableMinutes(b.time))
     .map(item => ({
       ...item,

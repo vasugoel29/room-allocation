@@ -1,16 +1,48 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { facultyService } from '../services/facultyService';
+import { roomService } from '../services/roomService';
 import { AppContext } from '../context/AppContext';
-import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap } from 'lucide-react';
+import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap, ChevronLeft, Calendar, AlertTriangle, Trash2 } from 'lucide-react';
+import { bookingService } from '../services/bookingService';
 import toast from 'react-hot-toast';
 import { useFacultyRequests } from '../hooks/useFacultyRequests';
+import { getSortableMinutes } from '../utils/timetableLogic';
 
 function FacultyDashboard() {
-  const { user, bookings, fetchBookings, fetchAvailability } = useContext(AppContext);
+  const { user, bookings, fetchBookings, fetchAvailability, fetchFacultyOverrides, facultyTimetableData, facultyOverrides } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('PENDING'); // PENDING | ACCEPTED | MY
   const { pendingRequests, setPendingRequests, loading } = useFacultyRequests(user);
+  
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  const [conflictData, setConflictData] = useState(null);
+  const [pendingApprovalReq, setPendingApprovalReq] = useState(null);
+  const [isResolving, setIsResolving] = useState(false);
 
   const handleAction = async (id, action) => {
+    if (action === 'approve') {
+      const req = pendingRequests.find(r => r.id === id);
+      if (req) {
+        // Check for conflicts
+        try {
+          const startTimeRaw = new Date(req.start_time);
+          const date = startTimeRaw.toISOString().split('T')[0];
+          // Use IST hour for comparison with static slots
+          const hour = startTimeRaw.getHours();
+          console.log('[DEBUG] Checking conflict at approve for:', user.id, date, hour);
+          const check = await roomService.checkFacultyAvailability(user.id, date, hour);
+          
+          if (check.isOccupied) {
+            setConflictData({ ...check, date, hour });
+            setPendingApprovalReq(req);
+            setIsConflictModalOpen(true);
+            return;
+          }
+        } catch (err) {
+          console.warn('Conflict check failed', err);
+        }
+      }
+    }
+
     try {
       const data = await facultyService.handleRequest(id, action);
       toast.success(data.message || `Booking ${action}ed`);
@@ -20,6 +52,53 @@ function FacultyDashboard() {
       fetchAvailability();
     } catch (err) {
       toast.error(err.message || `Failed to ${action} booking`);
+    }
+  };
+
+  const handleResolveConflict = async () => {
+    if (!pendingApprovalReq || !conflictData) return;
+    setIsResolving(true);
+    try {
+      if (conflictData.type === 'DYNAMIC') {
+        // Cancel old booking
+        await bookingService.cancelBooking(conflictData.id);
+      } else {
+        // Override static slot
+        await roomService.overrideFacultySlot({ 
+          date: conflictData.date, 
+          hour: conflictData.hour 
+        });
+      }
+
+      // Now approve new
+      const data = await facultyService.handleRequest(pendingApprovalReq.id, 'approve');
+      toast.success(data.message || 'Conflict resolved & Approved');
+      setPendingRequests(prev => prev.filter(r => r.id !== pendingApprovalReq.id));
+      
+      setIsConflictModalOpen(false);
+      setConflictData(null);
+      setPendingApprovalReq(null);
+      
+      fetchBookings();
+      fetchAvailability();
+      fetchFacultyOverrides();
+    } catch (err) {
+      toast.error(err.message || 'Resolution failed');
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const handleCancel = async (id) => {
+    if (!window.confirm("Architectural Revocation: Are you sure you want to cancel this session? This will remove it from all student timetables.")) return;
+    
+    try {
+      await bookingService.cancelBooking(id);
+      toast.success("Session cancelled successfully");
+      fetchBookings();
+      fetchAvailability();
+    } catch (err) {
+      toast.error(err.message || "Failed to cancel session");
     }
   };
 
@@ -144,8 +223,88 @@ function FacultyDashboard() {
                   </button>
                 </div>
               )}
+
+              {(activeTab === 'ACCEPTED' || activeTab === 'MY') && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => handleCancel(req.id)}
+                    className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 py-3 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest transition-all active:scale-95 group"
+                  >
+                    <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+                    Cancel Session
+                  </button>
+                </div>
+              )}
             </div>
           ))}
+        </div>
+      )}
+      
+      {/* Conflict Resolution Modal */}
+      {isConflictModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+          <div 
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              if (!isResolving) {
+                setIsConflictModalOpen(false);
+                setConflictData(null);
+                setPendingApprovalReq(null);
+              }
+            }}
+          />
+          <div className="relative glass w-full max-w-sm rounded-[2.5rem] border border-white/20 p-8 shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/20 rounded-full blur-3xl opacity-50" />
+            
+            <div className="relative space-y-6 text-center">
+              <div className="w-20 h-20 bg-amber-500/20 text-amber-500 rounded-3xl flex items-center justify-center mx-auto shadow-xl shadow-amber-500/10">
+                <AlertTriangle size={40} strokeWidth={2.5} />
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-text-primary tracking-tight">Resolve Conflict</h2>
+                <p className="text-xs font-bold text-text-secondary uppercase tracking-widest leading-relaxed px-4">
+                  Architectural overlap detected in this scheduling quadrant.
+                </p>
+              </div>
+
+              <div className="bg-bg-primary/50 border border-border rounded-2xl p-4 text-left space-y-3">
+                 <div className="space-y-1">
+                    <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest">Existing Commitment</p>
+                    <p className="text-sm font-black text-text-primary">{conflictData?.content}</p>
+                 </div>
+                 <div className="pt-2 border-t border-border/50">
+                    <p className="text-[10px] font-black text-primary uppercase tracking-widest">New Request</p>
+                    <p className="text-sm font-bold text-text-secondary">{pendingApprovalReq?.purpose}</p>
+                 </div>
+              </div>
+
+              <p className="text-[11px] text-text-secondary font-medium leading-relaxed px-2">
+                Approving this will <span className="text-amber-600 font-black">REPLACE</span> your current slot with the new student request.
+              </p>
+
+              <div className="flex flex-col gap-2 pt-2">
+                <button 
+                  onClick={handleResolveConflict}
+                  disabled={isResolving}
+                  className="w-full bg-primary text-white font-black py-4 rounded-2xl shadow-lg shadow-primary/20 active:scale-95 transition-all text-sm disabled:opacity-50"
+                >
+                  {isResolving ? 'Resolving...' : 'Replace & Approve'}
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsConflictModalOpen(false);
+                    setConflictData(null);
+                    setPendingApprovalReq(null);
+                  }}
+                  disabled={isResolving}
+                  className="w-full bg-bg-secondary border border-border text-text-secondary font-black py-4 rounded-2xl active:scale-95 transition-all text-sm"
+                >
+                  Keep Existing
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

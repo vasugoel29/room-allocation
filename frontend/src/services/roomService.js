@@ -46,6 +46,30 @@ export const roomService = {
     const res = await api.get(`/timetable?${query}`);
     if (!res.ok) throw new Error('Failed to fetch timetable');
     return res.json();
+  },
+
+  getFacultyTimetable: async () => {
+    const res = await api.get('/timetable/faculty');
+    if (!res.ok) throw new Error('Failed to fetch faculty timetable');
+    return res.json();
+  },
+
+  checkFacultyAvailability: async (id, date, hour) => {
+    const res = await api.get(`/timetable/faculty/check/${id}?date=${date}&hour=${hour}`);
+    if (!res.ok) throw new Error('Failed to check faculty availability');
+    return res.json();
+  },
+
+  overrideFacultySlot: async (data) => {
+    const res = await api.post('/timetable/faculty/override', data);
+    if (!res.ok) throw new Error('Failed to override faculty slot');
+    return res.json();
+  },
+
+  getFacultyOverrides: async () => {
+    const res = await api.get('/timetable/faculty/overrides');
+    if (!res.ok) throw new Error('Failed to fetch faculty overrides');
+    return res.json();
   }
 };
 

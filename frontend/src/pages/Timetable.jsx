@@ -2,13 +2,14 @@ import React, { useState, useContext, useMemo } from 'react';
 import { Calendar as CalendarIcon, Clock, MapPin, X, ChevronLeft, ChevronRight, Filter, AlertCircle, Trash2, Lightbulb, Calendar } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { roomService } from '../services/roomService';
+import { bookingService } from '../services/bookingService';
 import { getMergedSchedule, getHourFromTime } from '../utils/timetableLogic';
 import toast from 'react-hot-toast';
 
 import PageSearch from '../components/ui/PageSearch';
 
 const Timetable = () => {
-  const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData } = useContext(AppContext);
+  const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData, facultyTimetableData, facultyOverrides } = useContext(AppContext);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [pendingCancelClass, setPendingCancelClass] = useState(null);
@@ -28,11 +29,13 @@ const Timetable = () => {
   };
 
   // Permission check
+  const { fetchBookings, fetchFacultyOverrides } = useContext(AppContext);
   const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
+  const isFaculty = user?.role === 'FACULTY';
 
   // Filter and Merge Timetable Data
-  const studentTimetable = useMemo(() => {
-    const merged = getMergedSchedule(user, selectedDay, bookings, availability || [], timetableData);
+  const mergedSchedule = useMemo(() => {
+    const merged = getMergedSchedule(user, selectedDay, bookings, availability || [], timetableData, facultyTimetableData, facultyOverrides);
     
     if (!searchTerm) return merged;
     
@@ -43,7 +46,7 @@ const Timetable = () => {
       item.room?.toLowerCase().includes(search) ||
       item.instructor?.toLowerCase().includes(search)
     );
-  }, [user, selectedDay, bookings, availability, searchTerm, timetableData]);
+  }, [user, selectedDay, bookings, availability, searchTerm, timetableData, facultyTimetableData]);
 
   const handleCancelClass = (classItem) => {
     setPendingCancelClass(classItem);
@@ -57,15 +60,27 @@ const Timetable = () => {
     try {
       const hour = getHourFromTime(pendingCancelClass.time);
 
-      await roomService.createAvailabilityOverride({
-        room_name: pendingCancelClass.room,
-        day: selectedDay,
-        hour: hour,
-        is_available: true,
-        reason: `Class ${pendingCancelClass.subjectName} cancelled by Rep`
-      });
+      if (isFaculty) {
+        if (pendingCancelClass.isDynamic) {
+          await bookingService.cancelBooking(pendingCancelClass.bookingId);
+          toast.success(`Booking cancelled`);
+        } else {
+          await roomService.overrideFacultySlot({ date: selectedDay, hour });
+          toast.success(`Class marked available`);
+        }
+        fetchFacultyOverrides?.();
+        fetchBookings?.();
+      } else {
+        await roomService.createAvailabilityOverride({
+          room_name: pendingCancelClass.room,
+          day: selectedDay,
+          hour: hour,
+          is_available: true,
+          reason: `Class ${pendingCancelClass.subjectName} cancelled by Rep`
+        });
+        toast.success(`Room ${pendingCancelClass.room} is now available!`);
+      }
 
-      toast.success(`Room ${pendingCancelClass.room} is now available for this slot!`);
       fetchAvailability(); 
       setIsCancelModalOpen(false);
       setPendingCancelClass(null);
@@ -129,8 +144,8 @@ const Timetable = () => {
       )}
 
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-6">
-        {studentTimetable.length > 0 ? (
-          studentTimetable.map((item, index) => (
+        {mergedSchedule.length > 0 ? (
+          mergedSchedule.map((item, index) => (
             <div 
               key={index}
               className={`bg-bg-secondary/50 border border-border rounded-2xl p-4 flex items-center justify-between hover:border-accent/30 transition-all shadow-sm ${item.isDynamic ? 'border-l-4 border-l-accent ring-1 ring-accent/5' : ''}`}
@@ -144,6 +159,15 @@ const Timetable = () => {
                     <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
                     {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Updated</span>}
                   </div>
+                  {item.isDynamic && (
+                    <div className="mt-1">
+                      {user.role === 'FACULTY' ? (
+                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{item.className}</p>
+                      ) : (
+                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Faculty: {item.faculty}</p>
+                      )}
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 mt-1.5">
                     <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 uppercase tracking-tighter">
                       <Clock size={12} className="text-accent" /> 
@@ -156,12 +180,12 @@ const Timetable = () => {
                 </div>
               </div>
               
-              {isRep && (
+              {(isRep || isFaculty) && (
                 <button 
                   onClick={() => handleCancelClass(item)}
                   disabled={isCancelling}
                   className="p-2.5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all active:scale-90 bg-bg-primary border border-border hover:border-red-500/30"
-                  title="Mark room as available"
+                  title={isFaculty ? "Cancel session" : "Mark available"}
                 >
                   <Trash2 size={18} />
                 </button>

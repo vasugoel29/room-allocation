@@ -154,6 +154,44 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_logs(created_at);
       `);
     }
+  },
+  {
+    version: 7,
+    name: 'Faculty Timetable',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS faculty_timetable_slots (
+          id SERIAL PRIMARY KEY,
+          faculty_name VARCHAR(255) NOT NULL,
+          semester VARCHAR(20),
+          day_of_week VARCHAR(20) NOT NULL,
+          slot_time VARCHAR(50) NOT NULL,
+          content TEXT,
+          is_occupied BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_faculty_tt_name ON faculty_timetable_slots(faculty_name);
+        CREATE INDEX IF NOT EXISTS idx_faculty_tt_day ON faculty_timetable_slots(day_of_week);
+      `);
+    }
+  },
+  {
+    version: 8,
+    name: 'Faculty Slot Overrides',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS faculty_slot_overrides (
+          id SERIAL PRIMARY KEY,
+          faculty_name VARCHAR(255) NOT NULL,
+          date DATE NOT NULL,
+          hour INTEGER NOT NULL,
+          is_cancelled BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(faculty_name, date, hour)
+        );
+        CREATE INDEX IF NOT EXISTS idx_faculty_override_date ON faculty_slot_overrides(date);
+      `);
+    }
   }
 ];
 

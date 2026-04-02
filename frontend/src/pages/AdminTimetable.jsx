@@ -1,225 +1,342 @@
-import React, { useState, useContext } from 'react';
-import { AppContext } from '../context/AppContext';
-import Papa from 'papaparse';
+import React, { useState, useEffect } from 'react';
+import { 
+  Search, 
+  MapPin, 
+  Clock, 
+  Users, 
+  GraduationCap, 
+  Calendar, 
+  TrendingUp, 
+  ChevronLeft, 
+  ChevronRight, 
+  LayoutGrid, 
+  Upload, 
+  FileText, 
+  CheckCircle, 
+  Trash2,
+  AlertCircle
+} from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Upload, FileText, CheckCircle, AlertCircle, Trash2, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import Papa from 'papaparse';
+import api from '../utils/api';
 
 function AdminTimetable() {
-  const { setTimetableData } = useContext(AppContext);
+  const [searchType, setSearchType] = useState('FACULTY'); // 'FACULTY' | 'SECTION'
+  const [facultyName, setFacultyName] = useState('');
+  const [dept, setDept] = useState('IT');
+  const [year, setYear] = useState('3');
+  const [section, setSection] = useState('1');
+  const [selectedDay, setSelectedDay] = useState(new Date().toISOString().split('T')[0]);
+  
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+
   const [csvData, setCsvData] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
+
+  const handleSearch = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ type: searchType });
+      if (searchType === 'FACULTY') params.append('name', facultyName);
+      else {
+        // Calculate Semester from Year
+        const currentMonth = new Date().getMonth();
+        const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
+        const calculatedSemester = isEvenSemester ? Number(year) * 2 : (Number(year) * 2) - 1;
+
+        params.append('department', dept);
+        params.append('semester', String(calculatedSemester));
+        params.append('section', section);
+      }
+
+      const res = await api.get(`/timetable/search?${params.toString()}`);
+      if (!res.ok) throw new Error('Search failed');
+      const result = await res.json();
+      setData(result);
+      if (result.staticSlots?.length === 0 && result.dynamicBookings?.length === 0) {
+        toast.error('No schedule found for this entity');
+      } else {
+        toast.success(`Found schedule for ${searchType === 'FACULTY' ? result.name : result.department}`);
+      }
+    } catch (err) {
+      toast.error(err.message || 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMergedSchedule = () => {
+    if (!data) return [];
+    
+    const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(selectedDay).getDay()];
+    
+    // 1. Static Slots
+    const staticItems = (data.staticSlots || [])
+      .filter(s => s.day_of_week === dayOfWeek)
+      .map(s => {
+        const hour = parseInt((s.slot_time || '').split(':')[0].slice(-2));
+        let realHour = hour;
+        if (hour >= 1 && hour < 8) realHour += 12;
+
+        const isOverridden = data.overrides?.some(o => 
+          new Date(o.date).toISOString().split('T')[0] === selectedDay && o.hour === realHour
+        );
+        
+        if (isOverridden) return null;
+
+        return {
+          time: realHour,
+          displayTime: s.slot_time,
+          subject: s.subject_name || s.subject_code,
+          room: s.room_name,
+          instructor: s.faculty_name,
+          isDynamic: false
+        };
+      }).filter(Boolean);
+
+    // 2. Dynamic Bookings
+    const dynamicItems = (data.dynamicBookings || [])
+      .filter(b => new Date(b.start_time).toISOString().split('T')[0] === selectedDay)
+      .map(b => {
+        const bStart = new Date(b.start_time);
+        const hour = bStart.getHours();
+        return {
+          time: hour,
+          displayTime: `${String(hour).padStart(2, '0')}:00 - ${String(hour + 1).padStart(2, '0')}:00`,
+          subject: b.purpose,
+          room: b.room_name,
+          instructor: b.creator_name || 'Booked Slot',
+          isDynamic: true
+        };
+      });
+
+    return [...staticItems, ...dynamicItems].sort((a, b) => a.time - b.time);
+  };
 
   const handleFileUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
         setCsvData(results.data);
-        toast.success(`Loaded ${results.data.length} rows from CSV`);
-      },
-      error: (err) => {
-        toast.error("Failed to parse CSV: " + err.message);
+        toast.success(`Loaded ${results.data.length} rows`);
       }
     });
   };
 
   const handleBulkUpload = async () => {
     if (csvData.length === 0) return;
-    
     setIsUploading(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/timetable/upload`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ slots: csvData })
-      });
-
-      const data = await response.json();
+      const response = await api.post('/timetable/upload', { slots: csvData });
       if (response.ok) {
-        toast.success(data.message || "Timetable uploaded successfully!");
+        toast.success("Timetable uploaded successfully!");
         setCsvData([]);
-        // Refresh global timetable data
-        const refreshRes = await fetch(`${import.meta.env.VITE_API_URL}/timetable`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-        });
-        if (refreshRes.ok) {
-            setTimetableData(await refreshRes.json());
-        }
-      } else {
-        throw new Error(data.error || "Upload failed");
-      }
-    } catch (err) {
-      toast.error(err.message);
-    } finally {
-      setIsUploading(false);
-    }
+        setShowImport(false);
+      } else throw new Error("Upload failed");
+    } catch (err) { toast.error(err.message); }
+    finally { setIsUploading(false); }
   };
 
+  const schedule = getMergedSchedule();
+
   return (
-    <div className="min-h-screen bg-surface-low p-4 sm:p-8 font-display">
-      <div className="max-w-6xl mx-auto">
-        <header className="flex items-center justify-between mb-12">
-          <div className="flex items-center gap-6">
-            <Link to="/admin" className="p-4 rounded-3xl bg-tonal-secondary/10 text-text-secondary hover:bg-primary hover:text-white transition-all shadow-ambient">
-              <ArrowLeft size={24} />
-            </Link>
-            <div>
-              <h1 className="text-4xl font-black text-text-primary uppercase tracking-tighter">Timetable Master</h1>
-              <p className="text-text-secondary text-sm font-bold opacity-40 uppercase tracking-widest mt-1">Global schedule synchronization engine</p>
+    <div className="flex flex-col h-full max-h-[calc(100vh-80px)] space-y-6 p-6 sm:p-8 overflow-hidden font-display">
+      {/* Header with Search Toggle */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-primary rounded-2xl shadow-ambient">
+            <LayoutGrid size={24} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black text-text-primary tracking-tighter uppercase italic">Global Navigator</h1>
+            <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest opacity-40">Cross-institutional schedule search engine</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 bg-tonal-secondary/10 p-1.5 rounded-2xl border border-border/30 backdrop-blur-md">
+           <button 
+             onClick={() => { setSearchType('FACULTY'); setData(null); }}
+             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchType === 'FACULTY' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+           >
+             <GraduationCap size={16} />
+             Faculty
+           </button>
+           <button 
+             onClick={() => { setSearchType('SECTION'); setData(null); }}
+             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchType === 'SECTION' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+           >
+             <Users size={16} />
+             Section
+           </button>
+           <div className="w-px h-6 bg-border mx-2 opacity-30" />
+           <button 
+             onClick={() => setShowImport(!showImport)}
+             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${showImport ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+           >
+             <Upload size={16} />
+             Import
+           </button>
+        </div>
+      </div>
+
+      <main className="flex-1 flex flex-col min-h-0 gap-6">
+        {/* Search Controls */}
+        {!showImport && (
+          <div className="glass rounded-3xl p-6 shadow-ambient border-none flex flex-col sm:flex-row items-end gap-6 animate-in slide-in-from-top-4 duration-500">
+            {searchType === 'FACULTY' ? (
+              <div className="flex-1 space-y-2">
+                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Faculty Identity</label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
+                  <input 
+                    value={facultyName}
+                    onChange={(e) => setFacultyName(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                    placeholder="Enter faculty name (e.g. DEEPIKA KUKREJA)"
+                    className="w-full bg-bg-primary/50 border border-border rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:outline-none focus:border-primary transition-all text-text-primary placeholder:text-text-secondary/20"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 grid grid-cols-3 gap-4">
+                <div className="space-y-2 text-text-primary">
+                  <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Branch</label>
+                  <select 
+                    value={dept} 
+                    onChange={(e) => setDept(e.target.value)}
+                    className="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary"
+                  >
+                    <option value="IT">IT</option>
+                    <option value="CS">CS</option>
+                    <option value="ECE">ECE</option>
+                  </select>
+                </div>
+                <div className="space-y-2 text-text-primary">
+                  <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Year</label>
+                  <select 
+                    value={year} 
+                    onChange={(e) => setYear(e.target.value)}
+                    className="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary"
+                  >
+                    {[1,2,3,4].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-2 text-text-primary">
+                  <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Section</label>
+                  <select 
+                    value={section} 
+                    onChange={(e) => setSection(e.target.value)}
+                    className="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary"
+                  >
+                    {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
+            )}
+            
+            <button 
+              onClick={handleSearch}
+              disabled={loading}
+              className="w-full sm:w-48 bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {loading ? "Searching..." : "Fetch Schedule"}
+            </button>
+          </div>
+        )}
+
+        {/* Import Interface */}
+        {showImport && (
+          <div className="glass rounded-3xl p-8 shadow-ambient border-none grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-top-4 duration-500">
+            <div className="space-y-4">
+               <h2 className="text-xl font-black text-text-primary uppercase tracking-tighter">Bulk Import Engine</h2>
+               <div className="relative">
+                 <input type="file" accept=".csv" onChange={handleFileUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                 <div className="border-4 border-dashed border-tonal-secondary/20 rounded-[2rem] p-12 flex flex-col items-center justify-center gap-4 hover:bg-primary/5 transition-all">
+                    <FileText size={48} className="text-primary opacity-40" />
+                    <span className="text-xs font-black uppercase tracking-widest text-text-secondary">Click to select CSV</span>
+                 </div>
+               </div>
+               <button 
+                 onClick={handleBulkUpload} 
+                 disabled={csvData.length === 0 || isUploading}
+                 className="w-full bg-text-primary text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-ambient disabled:opacity-30"
+               >
+                 {isUploading ? "Uploading Data..." : `Commit ${csvData.length} records`}
+               </button>
+            </div>
+            <div className="bg-tonal-secondary/5 rounded-3xl p-6 space-y-4 border border-border/50">
+               <h3 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] opacity-40">Protocol Check</h3>
+               <ul className="space-y-4">
+                  {['Format headers correctly', 'Use 24h hour integers', 'Check room codes'].map(text => (
+                    <li key={text} className="flex items-center gap-3 text-xs font-bold text-text-secondary uppercase tracking-tight">
+                       <CheckCircle size={14} className="text-primary" /> {text}
+                    </li>
+                  ))}
+               </ul>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-             <div className="hidden sm:flex flex-col items-end">
-                <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] opacity-40">System Status</span>
-                <span className="text-xs font-black text-primary uppercase tracking-widest flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-                    Ready for Ingestion
-                </span>
+        )}
+
+        {/* Timetable Results */}
+        {!showImport && (
+          <div className="flex-1 flex flex-col min-h-0">
+             <div className="flex items-center justify-between mb-4 px-2">
+                <div className="flex items-center gap-2">
+                   <Calendar size={20} className="text-primary" />
+                   <h2 className="text-sm font-extrabold uppercase text-text-primary tracking-widest">{new Date(selectedDay).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}</h2>
+                </div>
+                <div className="flex items-center gap-2 bg-tonal-secondary/10 p-1 rounded-xl">
+                   <button onClick={() => { const d = new Date(selectedDay); d.setDate(d.getDate()-1); setSelectedDay(d.toISOString().split('T')[0]); }} className="p-2 hover:bg-surface-low rounded-lg transition-all text-text-secondary"><ChevronLeft size={16} /></button>
+                   <button onClick={() => { const d = new Date(selectedDay); d.setDate(d.getDate()+1); setSelectedDay(d.toISOString().split('T')[0]); }} className="p-2 hover:bg-surface-low rounded-lg transition-all text-text-secondary"><ChevronRight size={16} /></button>
+                </div>
+             </div>
+
+             <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-8">
+                {data ? (
+                  schedule.length > 0 ? (
+                    schedule.map((item, idx) => (
+                      <div key={idx} className={`bg-surface-low/50 border border-border/50 rounded-3xl p-6 flex items-center justify-between hover:border-primary/40 transition-all shadow-sm ${item.isDynamic ? 'border-l-4 border-l-primary ring-1 ring-primary/5' : ''}`}>
+                         <div className="flex items-center gap-6">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${item.isDynamic ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-tonal-secondary/10 text-text-secondary'}`}>
+                               {item.isDynamic ? <TrendingUp size={20} /> : <MapPin size={20} />}
+                            </div>
+                            <div>
+                               <div className="flex items-center gap-3">
+                                  <h3 className="text-lg font-black text-text-primary tracking-tight leading-none">{item.subject}</h3>
+                                  {item.isDynamic && <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter">Updated</span>}
+                               </div>
+                               <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] mt-1.5 opacity-60">{item.instructor}</p>
+                               <div className="flex items-center gap-4 mt-2">
+                                  <span className="text-xs font-black text-text-primary flex items-center gap-2">
+                                     <Clock size={14} className="text-primary" /> {item.displayTime}
+                                  </span>
+                                  <span className="text-xs font-black text-primary bg-primary/5 px-3 py-0.5 rounded-lg border border-primary/10">Room {item.room}</span>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 grayscale opacity-20">
+                       <AlertCircle size={64} className="mb-4" />
+                       <p className="text-sm font-black uppercase tracking-[.3em]">No Entries Logged</p>
+                    </div>
+                  )
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 grayscale opacity-10">
+                     <Search size={80} className="mb-6" />
+                     <p className="text-sm font-black uppercase tracking-[.3em]">Ready for Reconnaissance</p>
+                  </div>
+                )}
              </div>
           </div>
-        </header>
-
-        <main className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Upload Section */}
-          <section className="lg:col-span-1 space-y-6">
-            <div className="glass rounded-[2.5rem] p-8 shadow-ambient border-none relative overflow-hidden group">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 transition-transform group-hover:scale-150 duration-700"></div>
-              
-              <h2 className="text-xl font-black text-text-primary mb-6 uppercase tracking-tight flex items-center gap-3">
-                <Upload className="text-primary" size={24} />
-                Ingest Schedule
-              </h2>
-
-              <div className="space-y-4">
-                <div className="relative">
-                    <input 
-                        type="file" 
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    />
-                    <div className="border-4 border-dashed border-tonal-secondary/20 rounded-[2rem] p-10 flex flex-col items-center justify-center gap-4 transition-all group-hover:border-primary/30 group-hover:bg-primary/5">
-                        <div className="p-5 rounded-full bg-tonal-secondary/10 text-text-secondary group-hover:bg-primary group-hover:text-white transition-all">
-                            <FileText size={32} />
-                        </div>
-                        <div className="text-center">
-                            <span className="block text-sm font-black text-text-primary uppercase tracking-widest">Drop CSV File</span>
-                            <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">or click to browse</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-tonal-secondary/5 space-y-3">
-                    <h3 className="text-[10px] font-black text-text-secondary uppercase tracking-widest opacity-40">Required Schema</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {['department', 'section', 'day_of_week', 'slot_time', 'subject_name', 'room_name'].map(label => (
-                            <span key={label} className="text-[9px] font-black px-3 py-1 rounded-full bg-tonal-secondary/10 text-text-secondary uppercase tracking-widest border border-black/5 dark:border-white/5">{label}</span>
-                        ))}
-                    </div>
-                </div>
-
-                <button 
-                    onClick={handleBulkUpload}
-                    disabled={csvData.length === 0 || isUploading}
-                    className="w-full bg-primary text-white py-5 rounded-[2rem] text-sm font-black uppercase tracking-[0.2em] shadow-ambient disabled:opacity-30 disabled:grayscale transition-all active:scale-95 flex items-center justify-center gap-3"
-                >
-                    {isUploading ? "Processing Engine..." : "Commit To Database"}
-                    <CheckCircle size={20} />
-                </button>
-              </div>
-            </div>
-
-            {/* Formatting Help */}
-            <div className="glass rounded-[2.5rem] p-8 shadow-ambient border-none">
-                <h3 className="text-xs font-black text-text-primary mb-4 uppercase tracking-widest flex items-center gap-2">
-                    <AlertCircle size={16} className="text-tertiary" />
-                    Data Protocol
-                </h3>
-                <ul className="space-y-4">
-                    <li className="flex gap-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                        <p className="text-[10px] font-bold text-text-secondary leading-relaxed uppercase tracking-widest opacity-60">
-                            Headers must strictly match the database schema.
-                        </p>
-                    </li>
-                    <li className="flex gap-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                        <p className="text-[10px] font-bold text-text-secondary leading-relaxed uppercase tracking-widest opacity-60">
-                            Time should be integer (e.g. 9 for 9:00 AM).
-                        </p>
-                    </li>
-                    <li className="flex gap-4">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 shrink-0"></div>
-                        <p className="text-[10px] font-bold text-text-secondary leading-relaxed uppercase tracking-widest opacity-60">
-                            Days: Mon, Tue, Wed, Thu, Fri, Sat, Sun.
-                        </p>
-                    </li>
-                </ul>
-            </div>
-          </section>
-
-          {/* Table Preview Section */}
-          <section className="lg:col-span-2">
-            <div className="glass rounded-[2.5rem] shadow-ambient border-none overflow-hidden h-[calc(100vh-250px)] flex flex-col">
-              <div className="p-8 border-b border-black/5 dark:border-white/5 flex items-center justify-between shrink-0">
-                <h2 className="text-xl font-black text-text-primary uppercase tracking-tight">Ingestion Preview</h2>
-                {csvData.length > 0 && (
-                    <button 
-                        onClick={() => setCsvData([])}
-                        className="p-3 bg-red-500/10 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                    >
-                        <Trash2 size={16} />
-                        Clear Buffer
-                    </button>
-                )}
-              </div>
-              
-              <div className="flex-1 overflow-auto no-scrollbar">
-                {csvData.length > 0 ? (
-                  <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-surface-low/80 backdrop-blur-md z-10">
-                      <tr>
-                        {Object.keys(csvData[0]).map(key => (
-                          <th key={key} className="px-6 py-4 text-[10px] font-black text-text-secondary uppercase tracking-widest border-b border-black/5 dark:border-white/5">{key}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                      {csvData.map((row, i) => (
-                        <tr key={i} className="hover:bg-tonal-secondary/5 transition-colors">
-                          {Object.values(row).map((val, j) => (
-                            <td key={j} className="px-6 py-4 text-[11px] font-bold text-text-primary whitespace-nowrap opacity-80">{String(val)}</td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center opacity-20 p-20 grayscale">
-                    <FileText size={80} className="mb-6" />
-                    <p className="text-sm font-black uppercase tracking-[0.3em]">Buffer Empty</p>
-                    <p className="text-[10px] font-bold uppercase tracking-widest mt-2">Awaiting dataset ingestion</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="px-8 py-5 bg-tonal-secondary/5 border-t border-black/5 dark:border-white/5 shrink-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest opacity-40">Queue Metadata</span>
-                    <span className="text-[11px] font-black text-text-primary uppercase tracking-widest">{csvData.length} records identified</span>
-                  </div>
-              </div>
-            </div>
-          </section>
-        </main>
-      </div>
+        )}
+      </main>
     </div>
   );
 }

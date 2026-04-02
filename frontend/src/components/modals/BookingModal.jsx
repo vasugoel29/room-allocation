@@ -71,6 +71,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [facultyConflict, setFacultyConflict] = useState(null); // { type, content }
+  const [confirmedConflict, setConfirmedConflict] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const debouncedTerm = useSearchDebounce(searchTerm);
@@ -147,6 +149,30 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
     const targetDate = new Date(slot.date);
     targetDate.setHours(slot.hour, 0, 0, 0);
+    const dateStr = targetDate.toISOString().split('T')[0];
+
+    // Faculty availability check for students
+    if (isStudent && selectedFaculty && !confirmedConflict) {
+      try {
+        console.log('[DEBUG] Student check faculty availability for:', selectedFaculty, dateStr, slot.hour);
+        const check = await roomService.checkFacultyAvailability(selectedFaculty, dateStr, slot.hour);
+        if (check.isOccupied) {
+          const typeLabel = check.type === 'STATIC' ? 'Academic Class' : 'Existing Booking';
+          const facultyName = faculties.find(f => String(f.id) === String(selectedFaculty))?.name;
+          const confirmMsg = `Prof. ${facultyName} is busy with an ${typeLabel} (${check.content}) in this slot. \n\nDo you want to find another slot or CONTINUE ANYWAY?`;
+          
+          if (!window.confirm(confirmMsg)) {
+            setLoading(false);
+            return;
+          }
+          
+          setConfirmedConflict(true);
+        }
+      } catch (err) {
+        console.warn('Faculty check failed:', err);
+        // Continue if check fails (non-blocking)
+      }
+    }
 
     const start_time = targetDate.toISOString();
 

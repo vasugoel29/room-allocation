@@ -12,6 +12,7 @@ export const bookingRepository = {
     let query = `
       SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
              u.branch, u.year, u.section, d.name as department_name,
+             f.name as faculty_name,
              CASE 
                WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
                ELSE CONCAT(u.branch, '-', u.section, ' ', u.year, ' Year')
@@ -19,6 +20,7 @@ export const bookingRepository = {
       FROM bookings b
       JOIN rooms r ON b.room_id = r.id
       JOIN users u ON b.created_by = u.id
+      LEFT JOIN users f ON b.faculty_id = f.id
       LEFT JOIN departments d ON u.department_id = d.id
       WHERE 1=1
     `;

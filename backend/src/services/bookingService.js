@@ -111,7 +111,10 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin) => {
   const booking = await bookingRepository.findById(bookingId, client);
 
   if (!booking) return { error: 'Booking not found', status: 404 };
-  if (booking.created_by !== userId && !isAdmin) return { error: 'Not authorized', status: 403 };
+  const isCreator = String(booking.created_by) === String(userId);
+  const isAssignedFaculty = String(booking.faculty_id) === String(userId);
+  
+  if (!isCreator && !isAssignedFaculty && !isAdmin) return { error: 'Not authorized', status: 403 };
 
   await bookingRepository.updateStatus(bookingId, 'CANCELLED', client);
 

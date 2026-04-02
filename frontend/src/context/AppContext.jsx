@@ -26,6 +26,8 @@ export const AppProvider = ({ children }) => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [timetableData, setTimetableData] = useState({});
+  const [facultyTimetableData, setFacultyTimetableData] = useState({});
+  const [facultyOverrides, setFacultyOverrides] = useState([]);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -148,13 +150,31 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const fetchTimetable = useCallback(async () => {
+    if (!user) return;
     try {
-      const data = await roomService.getTimetable();
-      setTimetableData(data);
+      console.log('[DEBUG] fetchTimetable calling. role:', user.role);
+      if (user.role === 'FACULTY') {
+        const data = await roomService.getFacultyTimetable();
+        console.log('[DEBUG] Faculty timetable data (raw):', data);
+        setFacultyTimetableData(data || {});
+      } else {
+        const data = await roomService.getTimetable();
+        setTimetableData(data);
+      }
     } catch (err) {
-      console.error('Fetch timetable failed', err);
+      console.error('[DEBUG] Fetch timetable failed', err);
     }
-  }, []);
+  }, [user]);
+
+  const fetchFacultyOverrides = useCallback(async () => {
+    if (!user || user.role !== 'FACULTY') return;
+    try {
+      const data = await roomService.getFacultyOverrides();
+      setFacultyOverrides(data || []);
+    } catch (err) {
+      console.error('Fetch faculty overrides failed', err);
+    }
+  }, [user]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -175,8 +195,9 @@ export const AppProvider = ({ children }) => {
       fetchBookings();
       fetchAvailability();
       fetchTimetable();
+      fetchFacultyOverrides();
     }
-  }, [user, fetchBookings, fetchAvailability, fetchTimetable]);
+  }, [user, fetchBookings, fetchAvailability, fetchTimetable, fetchFacultyOverrides]);
 
   useEffect(() => {
     // Keep internal state for consecutive failures to avoid flickering on transient issues
@@ -246,7 +267,10 @@ export const AppProvider = ({ children }) => {
       fetchBookings,
       fetchAvailability,
       timetableData,
+      facultyTimetableData,
+      facultyOverrides,
       fetchTimetable,
+      fetchFacultyOverrides,
       fetchTransfers,
       logout
     }}>

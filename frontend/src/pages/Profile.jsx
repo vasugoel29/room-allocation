@@ -41,6 +41,10 @@ function Profile() {
     }
   };
 
+  const isAdmin = user?.role === 'ADMIN';
+  const isFaculty = user?.role === 'FACULTY';
+  const isStudent = user?.role === 'STUDENT_REP' || user?.role === 'VIEWER';
+
   if (!user) return null;
 
   const departmentOptions = departments.map(d => ({ value: d.name, label: d.name }));
@@ -49,7 +53,7 @@ function Profile() {
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-hidden flex flex-col no-scrollbar pb-2 lg:pb-8">
       {/* Header with Title */}
       <div className="flex justify-between items-center mb-6 sm:mb-10 shrink-0">
-        <h1 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tighter">My Profile</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tighter uppercase font-display italic">My Profile</h1>
         {!isEditing ? (
           <button 
             onClick={() => setIsEditing(true)}
@@ -106,7 +110,7 @@ function Profile() {
 
         {/* MIDDLE: Detailed Info (Grid stretches to fill available height) */}
         <div className="flex-1 py-6 sm:py-10">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
+          <div className={`grid grid-cols-1 gap-8 sm:gap-10 ${isAdmin ? '' : 'sm:grid-cols-2'}`}>
             <div className="space-y-2">
               <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
                 <Mail size={14} className="text-accent" />
@@ -115,71 +119,79 @@ function Profile() {
               <p className="font-bold text-base sm:text-lg text-text-primary truncate">{user.email}</p>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
-                <Shield size={14} className="text-accent" />
-                Department
-              </label>
-              {isEditing ? (
-                <CustomSelect 
-                  value={formData.departmentName}
-                  onChange={(val) => setFormData(prev => ({ ...prev, departmentName: val }))}
-                  options={departmentOptions}
-                  placeholder="Select Department"
-                />
-              ) : (
-                <p className="font-bold text-base sm:text-lg text-text-primary">{user.department_name || 'General'}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
-                <Building size={14} className="text-accent" />
-                Branch / Program
-              </label>
-              {isEditing ? (
-                <input 
-                  name="branch"
-                  value={formData.branch}
-                  onChange={handleChange}
-                  placeholder="Branch"
-                  className="w-full bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                />
-              ) : (
-                <p className="font-bold text-base sm:text-lg text-text-primary">{user.branch || 'Not set'}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
-                <BookOpen size={14} className="text-accent" />
-                Year & Section
-              </label>
-              <div className="flex gap-3">
+            {/* Admin has no department, Faculty/Student does */}
+            {!isAdmin && (
+              <div className="space-y-2">
+                <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <Shield size={14} className="text-accent" />
+                  Department
+                </label>
                 {isEditing ? (
-                  <>
-                    <input 
-                      name="year"
-                      value={formData.year}
-                      onChange={handleChange}
-                      placeholder="Year"
-                      className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                    />
-                    <input 
-                      name="section"
-                      value={formData.section}
-                      onChange={handleChange}
-                      placeholder="Sec"
-                      className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                    />
-                  </>
+                  <CustomSelect 
+                    value={formData.departmentName}
+                    onChange={(val) => setFormData(prev => ({ ...prev, departmentName: val }))}
+                    options={departmentOptions}
+                    placeholder="Select Department"
+                  />
                 ) : (
-                  <p className="font-bold text-base sm:text-lg text-text-primary">
-                    {user.year ? `Year ${user.year}` : ''} {user.section ? `Section ${user.section}` : 'Not set'}
-                  </p>
+                  <p className="font-bold text-base sm:text-lg text-text-primary">{user.department_name || 'General'}</p>
                 )}
               </div>
-            </div>
+            )}
+
+            {/* Only Students have Branch and Year/Section */}
+            {isStudent && (
+              <>
+                <div className="space-y-2">
+                  <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+                    <Building size={14} className="text-accent" />
+                    Branch / Program
+                  </label>
+                  {isEditing ? (
+                    <input 
+                      name="branch"
+                      value={formData.branch}
+                      onChange={handleChange}
+                      placeholder="Branch"
+                      className="w-full bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
+                    />
+                  ) : (
+                    <p className="font-bold text-base sm:text-lg text-text-primary">{user.branch || 'Not set'}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+                    <BookOpen size={14} className="text-accent" />
+                    Year & Section
+                  </label>
+                  <div className="flex gap-3">
+                    {isEditing ? (
+                      <>
+                        <input 
+                          name="year"
+                          value={formData.year}
+                          onChange={handleChange}
+                          placeholder="Year"
+                          className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
+                        />
+                        <input 
+                          name="section"
+                          value={formData.section}
+                          onChange={handleChange}
+                          placeholder="Sec"
+                          className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
+                        />
+                      </>
+                    ) : (
+                      <p className="font-bold text-base sm:text-lg text-text-primary">
+                        {user.year ? `Year ${user.year}` : ''} {user.section ? `Section ${user.section}` : 'Not set'}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 

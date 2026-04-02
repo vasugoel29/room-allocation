@@ -67,7 +67,12 @@ function App() {
 
   const getNavigationTabs = () => {
     if (user?.role === 'ADMIN') {
-      return [{ id: 'admin', icon: Shield, label: 'Admin Console' }];
+      return [
+        { id: 'admin', icon: Shield, label: 'Admin Console' },
+        { id: 'calendar', icon: CalendarIcon, label: 'Rooms' },
+        { id: 'admin/timetable', icon: Clock, label: 'Timetable' },
+        { id: 'profile', icon: User, label: 'Profile' },
+      ];
     }
     if (user?.role === 'FACULTY') {
       return [
