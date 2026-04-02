@@ -1,7 +1,24 @@
 import { userRepository } from '../repositories/userRepository.js';
 
-export const getUsers = async () => {
-  return userRepository.findAll();
+export const getUsers = async (filters = {}) => {
+  const page = parseInt(filters.page) || 1;
+  const limit = parseInt(filters.limit) || 20;
+  const offset = (page - 1) * limit;
+
+  const [users, total] = await Promise.all([
+    userRepository.findAll(limit, offset),
+    userRepository.countUsers()
+  ]);
+
+  return {
+    data: users,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
 };
 
 export const findByEmail = async (email) => {

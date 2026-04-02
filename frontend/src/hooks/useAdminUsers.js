@@ -4,14 +4,16 @@ import toast from 'react-hot-toast';
 
 export function useAdminUsers(activeTab) {
   const [users, setUsers] = useState([]);
+  const [usersMeta, setUsersMeta] = useState({ page: 1, totalPages: 1 });
   const [departments, setDepartments] = useState([]);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
-  const fetchUsers = async () => {
+  const fetchUsers = async (page = 1) => {
     try {
-      const data = await adminService.getUsers();
-      setUsers(data);
+      const result = await adminService.getUsers(page);
+      setUsers(result.data || result);
+      if (result.meta) setUsersMeta(result.meta);
     } catch (err) {
       console.error('Failed to fetch users', err);
     }
@@ -69,7 +71,7 @@ export function useAdminUsers(activeTab) {
   }, []);
 
   return { 
-    users, departments, isUserModalOpen, editingUser, 
+    users, usersMeta, departments, isUserModalOpen, editingUser, 
     fetchUsers, fetchDepartments, handleApproveUser, handleDeleteUser,
     openUserModal, closeUserModal 
   };

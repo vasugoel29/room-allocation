@@ -3,6 +3,8 @@ import { AppContext } from '../context/AppContext';
 import { User, Mail, Shield, Building, BookOpen, Edit2, Save, X, LogOut, Sun, Moon } from 'lucide-react';
 import { authService } from '../services/authService';
 import toast from 'react-hot-toast';
+import { getRoleLabel } from '../utils/roleUtils';
+import CustomSelect from '../components/ui/CustomSelect';
 
 function Profile() {
   const { user, setUser, logout, theme, setTheme, departments } = useContext(AppContext);
@@ -40,6 +42,8 @@ function Profile() {
   };
 
   if (!user) return null;
+
+  const departmentOptions = departments.map(d => ({ value: d.name, label: d.name }));
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-hidden flex flex-col no-scrollbar pb-2 lg:pb-8">
@@ -94,12 +98,14 @@ function Profile() {
             ) : (
               <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
             )}
-            <p className="text-accent font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs bg-accent/10 px-3 py-1 rounded-full inline-block mt-2">{user.role}</p>
+            <p className="text-accent font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs bg-accent/10 px-3 py-1 rounded-full inline-block mt-2">
+              {getRoleLabel(user.role)}
+            </p>
           </div>
         </div>
 
         {/* MIDDLE: Detailed Info (Grid stretches to fill available height) */}
-        <div className="flex-1 overflow-y-auto no-scrollbar py-6 sm:py-10">
+        <div className="flex-1 py-6 sm:py-10">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-10">
             <div className="space-y-2">
               <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
@@ -115,17 +121,12 @@ function Profile() {
                 Department
               </label>
               {isEditing ? (
-                <select 
-                  name="departmentName"
+                <CustomSelect 
                   value={formData.departmentName}
-                  onChange={handleChange}
-                  className="w-full bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                >
-                  <option value="">Select Department</option>
-                  {departments.map(dept => (
-                    <option key={dept.id} value={dept.name}>{dept.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFormData(prev => ({ ...prev, departmentName: val }))}
+                  options={departmentOptions}
+                  placeholder="Select Department"
+                />
               ) : (
                 <p className="font-bold text-base sm:text-lg text-text-primary">{user.department_name || 'General'}</p>
               )}

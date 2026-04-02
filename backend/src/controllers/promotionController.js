@@ -2,13 +2,25 @@ import * as db from '../db.js';
 import logger from '../utils/logger.js';
 import { promotionRepository } from '../repositories/promotionRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { notifyPromotionResult } from '../utils/emailService.js';
+import { logActivity } from '../services/loggerService.js';
 
 export const requestPromotion = async (req, res) => {
-  const { reason } = req.body;
-  const userId = req.user.id;
+  if (!reason || reason.trim().length > 100) {
+    return res.status(400).json({ error: 'Reason is required and must be under 100 characters' });
+  }
 
   try {
     const request = await promotionRepository.createRequest(userId, reason);
+
+    await logActivity({
+      userId,
+      action: 'REQUEST_PROMOTION',
+      entityType: 'promotion',
+      entityId: request.id,
+      details: { reason }
+    });
+
     res.status(201).json(request);
   } catch (err) {
     if (err.code === '23505') {
@@ -32,6 +44,14 @@ export const handlePromotionAction = async (req, res) => {
   const { id } = req.params;
   const { status, admin_comment } = req.body; // status: APPROVED, REJECTED
 
+  if (!['APPROVED', 'REJECTED'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  if (admin_comment && admin_comment.length > 100) {
+    return res.status(400).json({ error: 'Admin comment must be under 100 characters' });
+  }
+
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
@@ -50,6 +70,30 @@ export const handlePromotionAction = async (req, res) => {
     }
 
     await client.query('COMMIT');
+
+    await logActivity({
+      userId: req.user.id, // Admin
+      action: status === 'APPROVED' ? 'APPROVE_PROMOTION' : 'REJECT_PROMOTION',
+      entityType: 'promotion',
+      entityId: id,
+      details: { user_id: request.user_id, admin_comment }
+    }, client);
+
+    // PROD-02: Notify student of promotion result
+    try {
+      const user = await userRepository.findById(request.user_id);
+      if (user?.email) {
+        notifyPromotionResult({
+          userEmail: user.email,
+          userName: user.name,
+          status,
+          adminComment: admin_comment
+        }).catch(err => logger.error('Promotion notification failed', err));
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send promotion notification (non-blocking)', notifErr);
+    }
+
     res.json({ message: `Request ${status.toLowerCase()} successfully` });
   } catch (err) {
     await client.query('ROLLBACK');

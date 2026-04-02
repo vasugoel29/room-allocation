@@ -2,8 +2,6 @@
  * Utility for Timetable and Booking logic
  */
 
-import timetableData from '../../../hajiri.timetables.json';
-
 /**
  * Gets the base 5-day week name (Mon, Tue, etc.) from a date string or Date object
  */
@@ -55,7 +53,7 @@ export const formatTo24h = (timeStr) => {
 /**
  * Resolves the merged schedule for a specific user and date
  */
-export const getMergedSchedule = (user, dateStr, bookings = [], availability = []) => {
+export const getMergedSchedule = (user, dateStr, bookings = [], availability = [], timetableData = []) => {
   if (!user || !user.year || !user.section) return [];
   
   const dayOfWeek = getDayOfWeek(dateStr);
@@ -72,25 +70,29 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
   const userSection = String(user.section).trim();
   const userSemester = String(calculatedSemester);
 
-  // 1. Static JSON Base
-  const entry = timetableData.find(e => {
-    const entryDept = (e.department || '').toUpperCase().trim();
-    const entrySection = String(e.section).trim();
-    const entrySem = String(e.semester).trim();
+  const isITMatch = (entryDept) => (userBranch === 'IT' || userDept === 'IT') && entryDept === 'INFORMATION TECHNOLOGY';
+  const isCSMatch = (entryDept) => (userBranch === 'CS' || userDept === 'CS') && entryDept.includes('COMPUTER SCIENCE');
+  const isBranchMatch = (entryDept) => entryDept === userBranch || entryDept === userDept || entryDept.includes(userBranch) || userBranch.includes(entryDept) || isITMatch(entryDept) || isCSMatch(entryDept);
 
-    const isITMatch = (userBranch === 'IT' || userDept === 'IT') && entryDept === 'INFORMATION TECHNOLOGY';
-    const isCSMatch = (userBranch === 'CS' || userDept === 'CS') && entryDept.includes('COMPUTER SCIENCE');
-    
-    const deptMatch = entryDept === userBranch || 
-                      entryDept === userDept || 
-                      entryDept.includes(userBranch) || 
-                      userBranch.includes(entryDept) ||
-                      isITMatch || isCSMatch;
-
-    return deptMatch && entrySection === userSection && entrySem === userSemester;
-  });
-
-  const staticClasses = entry?.timetable?.[dayOfWeek] || [];
+  // 1. Static Base (from DB, passed via AppContext)
+  let staticClasses = [];
+  if (Array.isArray(timetableData)) {
+    const entry = timetableData.find(e => {
+      const entryDept = (e.department || '').toUpperCase().trim();
+      const entrySection = String(e.section).trim();
+      const entrySem = String(e.semester).trim();
+      return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
+    });
+    staticClasses = entry?.timetable?.[dayOfWeek] || [];
+  } else if (typeof timetableData === 'object') {
+    const rawClasses = timetableData[dayOfWeek] || [];
+    staticClasses = rawClasses.filter(sc => {
+      const entryDept = (sc.department || '').toUpperCase().trim();
+      const entrySection = String(sc.section).trim();
+      const entrySem = String(sc.semester).trim();
+      return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
+    });
+  }
 
   // 2. Dynamic Bookings (Section-wide)
   const sectionBookings = bookings
@@ -166,7 +168,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
 /**
  * Comprehensive check for room availability across all sources
  */
-export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], availability = []) => {
+export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], availability = [], timetableData = []) => {
   if (!room) return false;
 
   // 1. Base Schedule Status (Static Schedule vs Overrides)
@@ -194,7 +196,7 @@ export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], av
     baseAvailable = override.is_available === true;
   } else {
     // Check Static Academic Schedule across ANY department
-    const isOccupiedInSchedule = timetableData.some(entry => {
+    const isOccupiedInSchedule = Array.isArray(timetableData) ? timetableData.some(entry => {
       const daySchedule = entry.timetable?.[dayName] || [];
       return daySchedule.some(sc => {
         if (!sc.time || !sc.room) return false;
@@ -208,7 +210,14 @@ export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], av
         const slotHour = getHourFromTime(sc.time);
         return slotHour === hour;
       });
-    });
+    }) : (typeof timetableData === 'object' ? (timetableData[dayName] || []).some(sc => {
+        if (!sc.time || !sc.room) return false;
+        const scRoomName = sc.room.trim().toLowerCase();
+        const targetRoomName = room.name.trim().toLowerCase();
+        if (scRoomName !== targetRoomName && !scRoomName.includes(targetRoomName)) return false;
+        const slotHour = getHourFromTime(sc.time);
+        return slotHour === hour;
+    }) : false);
     
     if (isOccupiedInSchedule) baseAvailable = false;
   }
@@ -237,8 +246,8 @@ export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], av
 /**
  * Returns a conflicting class (if any) for a given slot and date
  */
-export const getClassConflict = (user, dateStr, hour, bookings = [], availability = []) => {
-  const schedule = getMergedSchedule(user, dateStr, bookings, availability);
+export const getClassConflict = (user, dateStr, hour, bookings = [], availability = [], timetableData = []) => {
+  const schedule = getMergedSchedule(user, dateStr, bookings, availability, timetableData);
   
   return schedule.find(item => {
     if (!item.time) return false;

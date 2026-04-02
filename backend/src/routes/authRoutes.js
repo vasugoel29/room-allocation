@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { body } from 'express-validator';
-import { signup, login, logout, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser } from '../controllers/authController.js';
+import { signup, login, logout, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser, forgotPassword, resetPassword, verifyStudent } from '../controllers/authController.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 
@@ -31,14 +31,17 @@ const loginValidation = [
 router.post('/signup', authLimiter, signupValidation, validateRequest, signup);
 router.post('/login', authLimiter, loginValidation, validateRequest, login);
 router.post('/logout', logout);
+router.post('/forgot-password', authLimiter, forgotPassword);
+router.post('/reset-password', resetPassword);
+router.get('/verify-student/:rollNo', authLimiter, verifyStudent);
 
 router.get('/faculties', authenticate, getFaculties);
 
 // Admin-only user management
-router.get('/users', authenticate, requireRole('admin'), getUsers);
-router.post('/users', authenticate, requireRole('admin'), createUser);
+router.get('/users', authenticate, requireRole('ADMIN'), getUsers);
+router.post('/users', authenticate, requireRole('ADMIN'), createUser);
 router.patch('/users/:id', authenticate, updateUser);
-router.delete('/users/:id', authenticate, requireRole('admin'), deleteUser);
-router.patch('/approve-user/:id', authenticate, requireRole('admin'), approveUser);
+router.delete('/users/:id', authenticate, requireRole('ADMIN'), deleteUser);
+router.patch('/approve-user/:id', authenticate, requireRole('ADMIN'), approveUser);
 
 export default router;

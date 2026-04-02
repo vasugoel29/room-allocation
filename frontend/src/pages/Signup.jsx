@@ -39,23 +39,43 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
     setError('');
     
     try {
-      const response = await fetch(`https://api.sujal.info/api/nsut/students/${rollNo}`);
-      let data = {};
+      const result = await authService.verifyStudent(rollNo);
       
-      if (response.ok) {
-        data = await response.json();
-        if (data.name) setName(data.name);
-        if (data.branch) setBranch(data.branch);
-        if (data.email) setEmail(data.email);
-        if (data.year) setYear(parseInt(data.year));
-        if (data.section) setSection(parseInt(data.section));
-        if (data.department) setDepartmentName(data.department);
-        toast.success(`Welcome, ${data.name || 'Student'}! Details loaded.`);
-      } else {
-        toast.error('Student not found in database. Guessing details from Roll Number...');
+      let apiStudent = null;
+      // The API returns nested data: { success: true, data: { ... } }
+      if (result && result.success && result.data) {
+        apiStudent = result.data;
+        
+        if (apiStudent.name) setName(apiStudent.name);
+        if (apiStudent.email) setEmail(apiStudent.email);
+        
+        // Handle Branch object: { branchName, shortName }
+        if (apiStudent.branch) {
+          const bName = apiStudent.branch.shortName || apiStudent.branch.branchName;
+          setBranch(bName);
+          // Try to match with department list if possible
+          if (apiStudent.branch.branchName) setDepartmentName(apiStudent.branch.branchName);
+        }
+
+        // Smart Academic Year Calculation
+        if (apiStudent.year) {
+          const batchYear = parseInt(apiStudent.year);
+          const now = new Date();
+          const currentYear = now.getFullYear();
+          const currentMonth = now.getMonth(); // 0-indexed
+          
+          let calcYear = currentYear - batchYear;
+          if (currentMonth >= 6) calcYear += 1;
+          
+          setYear(Math.min(4, Math.max(1, calcYear)));
+        }
+
+        if (apiStudent.section) setSection(parseInt(apiStudent.section));
+        
+        toast.success(`Welcome, ${apiStudent.name || 'Student'}! Details loaded.`);
       }
 
-      // Fallback: Parse Roll Number for Year and Branch
+      // Fallback: Parse Roll Number for Year and Branch if API data is missing some fields
       const normalizedRoll = rollNo.toUpperCase();
       
       // Email Fallback
@@ -63,18 +83,15 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
 
       // 1. Extract Batch/Year (e.g. 2022, 22)
       const yearMatch = normalizedRoll.match(/(20\d{2})|(\d{2})/);
-      if (yearMatch && !data.year) {
+      if (yearMatch && (!apiStudent || !apiStudent.year)) {
         const batch = yearMatch[1] || `20${yearMatch[2]}`;
         const currentYear = new Date().getFullYear();
-        const currentMonth = new Date().getMonth(); // 0-indexed
+        const currentMonth = new Date().getMonth();
         
-        // Simple logic: if March 2026, 2025 batch is 1st year, 2022 batch is 4th year
-        // We calculate based on admission year relative to current acad cycle
         let acadYear = currentYear - parseInt(batch);
-        if (currentMonth < 6) acadYear += 0; // Feb 2026 is still part of Batch-X cycle
-        else acadYear += 1; // July 2026 starts next acad year for Batch-X
+        if (currentMonth >= 6) acadYear += 1;
 
-        const calculatedYear = Math.max(1, Math.min(4, acadYear + 1));
+        const calculatedYear = Math.max(1, Math.min(4, acadYear));
         setYear(calculatedYear);
       }
 
@@ -95,11 +112,8 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
 
 
       for (const [code, name] of Object.entries(branchMap)) {
-        if (normalizedRoll.includes(code) && !data.branch) {
+        if (normalizedRoll.includes(code) && (!apiStudent || !apiStudent.branch)) {
           setBranch(name);
-          // Auto-select department if possible
-          if (name.includes('Information Technology')) setDepartmentName('Information Technology (IT)');
-          if (name.includes('Computer Science')) setDepartmentName('Computer Science (CS)');
           break;
         }
       }
@@ -167,7 +181,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
   }, [role, step]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary-accent/10 blur-[120px] rounded-full"></div>
       
       <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-8 sm:p-10 shadow-ambient space-y-6 sm:space-y-8 animate-in fade-in zoom-in duration-300">
@@ -194,6 +208,13 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             onClick={() => {
               setRole('VIEWER');
               setStep(1);
+              // Clear fields to avoid Student/Faculty contamination
+              setName('');
+              setEmail('');
+              setRollNo('');
+              setBranch('');
+              setDepartmentName('');
+              setError('');
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-extrabold uppercase transition-all tracking-tight ${role === 'VIEWER' ? 'bg-surface-low text-primary-accent shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
           >
@@ -204,6 +225,13 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             onClick={() => {
               setRole('FACULTY');
               setStep(2);
+              // Clear fields to avoid Student/Faculty contamination
+              setName('');
+              setEmail('');
+              setRollNo('');
+              setBranch('');
+              setDepartmentName('');
+              setError('');
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-extrabold uppercase transition-all tracking-tight ${role === 'FACULTY' ? 'bg-surface-low text-primary-accent shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
           >
@@ -212,7 +240,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
         </div>
 
         {error && (
-          <div role="alert" className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-[13px] font-bold">
+          <div id="signup-error" role="alert" className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-[13px] font-bold">
             {error}
           </div>
         )}
@@ -232,6 +260,8 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
                   onChange={(e) => setRollNo(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleFetchStudent()}
                   autoFocus
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'signup-error' : undefined}
                 />
               </div>
               <p className="text-[10px] text-text-secondary px-1 font-medium italic">We'll auto-fill your details using this</p>
@@ -284,6 +314,8 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  aria-invalid={error ? 'true' : 'false'}
+                  aria-describedby={error ? 'signup-error' : undefined}
                 />
               </div>
             </div>

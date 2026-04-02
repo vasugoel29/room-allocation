@@ -8,12 +8,12 @@ export const bookingRepository = {
    * Find bookings based on filters
    */
   findBookings: async (filters) => {
-    const { room_id, user_id, start_date, end_date, slot } = filters;
+    const { room_id, user_id, start_date, end_date, slot, limit, offset } = filters;
     let query = `
       SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
              u.branch, u.year, u.section, d.name as department_name,
              CASE 
-               WHEN u.role IN ('admin', 'FACULTY') THEN u.name
+               WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
                ELSE CONCAT(u.branch, '-', u.section, ' ', u.year, ' Year')
              END as class_name
       FROM bookings b
@@ -31,8 +31,35 @@ export const bookingRepository = {
 
     query += " ORDER BY b.created_at DESC";
     
+    if (limit) {
+      params.push(limit);
+      query += ` LIMIT $${params.length}`;
+    }
+    if (offset) {
+      params.push(offset);
+      query += ` OFFSET $${params.length}`;
+    }
+    
     const result = await db.query(query, params);
     return result.rows;
+  },
+
+  /**
+   * Count total bookings based on filters (for pagination)
+   */
+  countBookings: async (filters) => {
+    const { room_id, user_id, start_date, end_date, slot } = filters;
+    let query = 'SELECT COUNT(*) FROM bookings b WHERE 1=1';
+    const params = [];
+
+    if (room_id) { params.push(room_id); query += ` AND b.room_id = $${params.length}`; }
+    if (user_id) { params.push(user_id); query += ` AND b.created_by = $${params.length}`; }
+    if (start_date) { params.push(start_date); query += ` AND b.start_time >= $${params.length}`; }
+    if (end_date) { params.push(end_date); query += ` AND b.end_time <= $${params.length}`; }
+    if (slot) { params.push(slot); query += ` AND EXTRACT(HOUR FROM b.start_time) = $${params.length}`; }
+
+    const result = await db.query(query, params);
+    return parseInt(result.rows[0].count);
   },
 
   /**

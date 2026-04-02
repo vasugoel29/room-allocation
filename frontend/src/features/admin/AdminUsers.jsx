@@ -1,4 +1,5 @@
 import { Mail, Edit, Trash2, CheckCircle, ShieldAlert } from 'lucide-react';
+import { getRoleLabel } from '../../utils/roleUtils';
 
 function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
   const filteredUsers = users.filter(u => 
@@ -26,9 +27,9 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
               </div>
               <div className="flex flex-col items-end gap-2">
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
-                  item.role === 'admin' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                  item.role === 'ADMIN' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                 }`}>
-                  {item.role}
+                  {getRoleLabel(item.role)}
                 </span>
                 {!item.is_approved && (
                   <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
@@ -80,7 +81,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
               </td>
               <td className="px-6 py-4">
                 <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
-                  item.role === 'admin' 
+                  item.role === 'ADMIN' 
                     ? 'bg-red-500/10 text-red-500 border-red-500/20' 
                     : item.role === 'STUDENT_REP' 
                     ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -88,7 +89,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
                     ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
                     : 'bg-bg-secondary text-text-secondary border-border'
                 }`}>
-                  {item.role}
+                  {getRoleLabel(item.role)}
                 </span>
               </td>
               <td className="px-6 py-4">

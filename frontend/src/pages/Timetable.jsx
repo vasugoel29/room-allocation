@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import PageSearch from '../components/ui/PageSearch';
 
 const Timetable = () => {
-  const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability } = useContext(AppContext);
+  const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData } = useContext(AppContext);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [pendingCancelClass, setPendingCancelClass] = useState(null);
@@ -28,11 +28,11 @@ const Timetable = () => {
   };
 
   // Permission check
-  const isRep = user?.role === 'STUDENT_REP' || user?.role === 'admin';
+  const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
 
   // Filter and Merge Timetable Data
   const studentTimetable = useMemo(() => {
-    const merged = getMergedSchedule(user, selectedDay, bookings, availability || []);
+    const merged = getMergedSchedule(user, selectedDay, bookings, availability || [], timetableData);
     
     if (!searchTerm) return merged;
     
@@ -43,7 +43,7 @@ const Timetable = () => {
       item.room?.toLowerCase().includes(search) ||
       item.instructor?.toLowerCase().includes(search)
     );
-  }, [user, selectedDay, bookings, availability, searchTerm]);
+  }, [user, selectedDay, bookings, availability, searchTerm, timetableData]);
 
   const handleCancelClass = (classItem) => {
     setPendingCancelClass(classItem);

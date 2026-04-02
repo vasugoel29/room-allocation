@@ -3,12 +3,32 @@ import logger from '../utils/logger.js';
 import cache from '../utils/cache.js';
 import { bookingRepository } from '../repositories/bookingRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
+import { userRepository } from '../repositories/userRepository.js';
+import { notifyFacultyNewRequest, notifyBookingCancelled } from '../utils/emailService.js';
+import { logActivity } from './loggerService.js';
 
 /**
  * Fetch bookings with optional filters
  */
 export const getBookings = async (filters) => {
-  return bookingRepository.findBookings(filters);
+  const page = parseInt(filters.page) || 1;
+  const limit = parseInt(filters.limit) || 20;
+  const offset = (page - 1) * limit;
+
+  const [bookings, total] = await Promise.all([
+    bookingRepository.findBookings({ ...filters, limit, offset }),
+    bookingRepository.countBookings(filters)
+  ]);
+
+  return {
+    data: bookings,
+    meta: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    }
+  };
 };
 
 /**
@@ -41,6 +61,14 @@ export const createBooking = async (client, reqData, userId) => {
     room_id, start_time, end_time, created_by: userId, purpose, faculty_id, status
   }, client);
   
+  await logActivity({
+    userId,
+    action: status === 'PENDING' ? 'REQUEST_BOOKING' : 'CREATE_BOOKING',
+    entityType: 'booking',
+    entityId: booking.id,
+    details: { room_id, start_time, end_time, purpose }
+  }, client);
+  
   // Reschedule Logic
   const { reschedule_room_name } = reqData;
   if (reschedule_room_name) {
@@ -57,24 +85,9 @@ const handleRescheduleFreedUpRoom = async (client, reqData, start_time) => {
   let resRoomId;
   
   if (!resRoom) {
-    const safeRoomName = String(reschedule_room_name || '').trim();
-    const firstDigit = safeRoomName.charAt(0);
-    const building = /^\d$/.test(firstDigit) ? `${firstDigit}th Block` : 'Unknown';
-
-    resRoom = await roomRepository.create({
-      name: safeRoomName,
-      building,
-      floor: 0,
-      capacity: 40
-    }, client);
-    resRoomId = resRoom.id;
-
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-    const defaultHours = Array.from({ length: 10 }, (_, i) => i + 8);
-    await roomRepository.insertDefaultAvailability(resRoomId, days, defaultHours, client);
-  } else {
-    resRoomId = resRoom.id;
+    throw { error: `Room ${reschedule_room_name} not found`, status: 404 };
   }
+  resRoomId = resRoom.id;
 
   let dayName, hour;
   if (reschedule_day && reschedule_hour !== undefined) {
@@ -101,6 +114,15 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin) => {
   if (booking.created_by !== userId && !isAdmin) return { error: 'Not authorized', status: 403 };
 
   await bookingRepository.updateStatus(bookingId, 'CANCELLED', client);
+
+  await logActivity({
+    userId,
+    action: 'CANCEL_BOOKING',
+    entityType: 'booking',
+    entityId: bookingId,
+    details: { reason: 'User/Admin initiated cancellation', previous_status: booking.status }
+  }, client);
+
   return { status: 200 };
 };
 
@@ -114,6 +136,27 @@ export const rescheduleBooking = async (client, bookingId, data, userId) => {
   if (!booking) return { error: 'Booking not found', status: 404 };
   if (booking.created_by !== userId) return { error: 'Not authorized', status: 403 };
 
+  const newStartTime = start_time || booking.start_time;
+  const newEndTime = end_time || booking.end_time;
+  const newRoomId = room_id || booking.room_id;
+
+  // Check Room conflict (excluding the current booking itself)
+  const roomConflicts = await bookingRepository.checkRoomConflict(newRoomId, newStartTime, newEndTime, client);
+  const otherRoomConflicts = roomConflicts.filter(c => String(c.id) !== String(bookingId));
+  if (otherRoomConflicts.length > 0) {
+    return { error: 'Room is already booked for this time period', status: 409 };
+  }
+
+  // Check User conflict (excluding the current booking itself)
+  const userConflicts = await bookingRepository.checkUserConflict(userId, newStartTime, newEndTime, client);
+  const otherUserConflicts = userConflicts.filter(c => String(c.id) !== String(bookingId));
+  if (otherUserConflicts.length > 0) {
+    return { 
+      error: `You already have another booking during this time in Room ${otherUserConflicts[0].room_name}`, 
+      status: 409 
+    };
+  }
+
   await bookingRepository.createHistory({
     booking_id: bookingId,
     previous_start_time: booking.start_time,
@@ -124,9 +167,20 @@ export const rescheduleBooking = async (client, bookingId, data, userId) => {
   }, client);
 
   const updatedBooking = await bookingRepository.updateBooking(bookingId, {
-    start_time: start_time || booking.start_time,
-    end_time: end_time || booking.end_time,
-    room_id: room_id || booking.room_id
+    start_time: newStartTime,
+    end_time: newEndTime,
+    room_id: newRoomId
+  }, client);
+
+  await logActivity({
+    userId,
+    action: 'RESCHEDULE_BOOKING',
+    entityType: 'booking',
+    entityId: bookingId,
+    details: { 
+        old: { start_time: booking.start_time, room_id: booking.room_id },
+        new: { start_time: newStartTime, room_id: newRoomId }
+    }
   }, client);
 
   return { data: updatedBooking, status: 200 };
@@ -151,6 +205,14 @@ export const approveBooking = async (client, id, facultyId, isAdmin) => {
   if (conflicts.length > 0) return { error: 'Room already booked', status: 409 };
 
   const approvedBooking = await bookingRepository.updateStatus(id, 'ACTIVE', client);
+
+  await logActivity({
+    userId: isAdmin ? -1 : facultyId, // System/Admin or Faculty
+    action: 'APPROVE_BOOKING',
+    entityType: 'booking',
+    entityId: id,
+    details: { approved_by: isAdmin ? 'ADMIN' : 'FACULTY' }
+  }, client);
 
   // Reject others
   await bookingRepository.rejectConflicts(booking.room_id, id, booking.start_time, booking.end_time, client);
@@ -178,7 +240,7 @@ export const createBookingHandler = async (reqData, user) => {
   }
   
   const daysDiff = Math.abs(startTimeObj - new Date()) / (1000 * 60 * 60 * 24);
-  if (daysDiff > 7 && user.role !== 'admin') {
+  if (daysDiff > 7 && user.role !== 'ADMIN') {
     return { error: 'Regular bookings allowed only for the current week', status: 400 };
   }
 
@@ -195,6 +257,30 @@ export const createBookingHandler = async (reqData, user) => {
     await client.query('COMMIT');
     cache.deletePattern('admin_status_.*'); 
     logger.info('Booking created', { booking_id: result.data.id, user_id: userId, room_id: reqData.room_id, start_time });
+
+    // PROD-02: Notify faculty of new pending request
+    if (reqData.faculty_id && result.data) {
+      try {
+        const faculty = await userRepository.findById(reqData.faculty_id);
+        const student = await userRepository.findById(userId);
+        const room = await roomRepository.findById(reqData.room_id);
+        if (faculty?.email) {
+          const dateStr = new Date(start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+          const hour = new Date(start_time).getHours();
+          notifyFacultyNewRequest({
+            facultyName: faculty.name,
+            facultyEmail: faculty.email,
+            studentName: student?.name || 'A student',
+            roomName: room?.name || reqData.room_id,
+            date: dateStr,
+            time: `${hour}:00 – ${hour + 1}:00`
+          }).catch(err => logger.error('Faculty notification failed', err));
+        }
+      } catch (notifErr) {
+        logger.error('Failed to send faculty notification (non-blocking)', notifErr);
+      }
+    }
+
     return result;
   } catch (err) {
     await client.query('ROLLBACK');
@@ -206,7 +292,7 @@ export const createBookingHandler = async (reqData, user) => {
 
 export const cancelBookingHandler = async (bookingId, user) => {
   const userId = user.id;
-  const isAdmin = user.role === 'admin';
+  const isAdmin = user.role === 'ADMIN';
   const client = await db.pool.connect();
   try {
     await client.query('BEGIN');
@@ -220,6 +306,31 @@ export const cancelBookingHandler = async (bookingId, user) => {
     await client.query('COMMIT');
     cache.deletePattern('admin_status_.*'); 
     logger.info('Booking cancelled', { booking_id: bookingId, user_id: userId });
+
+    // PROD-02: Notify booking creator about cancellation
+    try {
+      const booking = await bookingRepository.findById(bookingId);
+      if (booking) {
+        const creator = await userRepository.findById(booking.created_by);
+        const room = await roomRepository.findById(booking.room_id);
+        if (creator?.email) {
+          const dateStr = new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+          const hour = new Date(booking.start_time).getHours();
+          const canceller = userId !== booking.created_by ? (await userRepository.findById(userId))?.name : null;
+          notifyBookingCancelled({
+            userEmail: creator.email,
+            userName: creator.name,
+            roomName: room?.name || booking.room_id,
+            date: dateStr,
+            time: `${hour}:00 – ${hour + 1}:00`,
+            cancelledBy: canceller || undefined
+          }).catch(err => logger.error('Cancellation notification failed', err));
+        }
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send cancellation notification (non-blocking)', notifErr);
+    }
+
     return result;
   } catch (err) {
     await client.query('ROLLBACK');

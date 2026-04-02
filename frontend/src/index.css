@@ -43,19 +43,22 @@
   background-color: var(--color-surface-lowest);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
+
+  --color-bg-primary: var(--color-surface-lowest);
+  --color-bg-secondary: var(--color-surface-low);
 }
 
 .dark {
-  /* Stratos Dark Mode (Neutral-based) */
-  --color-surface-lowest: var(--color-neutral);
-  --color-surface-low: #151921; 
-  --color-surface-mid: #1C212B;
-  --color-surface-high: #2D333F;
-  --color-surface-highest: #3E4553;
+  /* Stratos Dark Mode - Executive Tonal Refinement */
+  --color-surface-lowest: #0a0c10; 
+  --color-surface-low: #0f1218; 
+  --color-surface-mid: #151921;
+  --color-surface-high: #1c222d;
+  --color-surface-highest: #2d333f;
 
-  --color-text-primary: #F8FAFC;
-  --color-text-secondary: #94A3B8;
-  --color-on-surface-variant: #64748B;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-on-surface-variant: #64748b;
   
   --color-bg-primary: var(--color-surface-lowest);
   --color-bg-secondary: var(--color-surface-low);
@@ -143,11 +146,58 @@ h1, h2, h3, .headline-lg {
 }
 
 /* Custom Utilities for tonal stacking */
-.bg-tonal-secondary { background-color: color-mix(in srgb, var(--color-secondary), transparent 92%); }
-.bg-tonal-tertiary { background-color: color-mix(in srgb, var(--color-tertiary), transparent 90%); }
+.bg-tonal-primary { background-color: color-mix(in srgb, var(--color-primary), transparent 85%); }
+.bg-tonal-secondary { background-color: color-mix(in srgb, var(--color-secondary), transparent 82%); }
+.bg-tonal-tertiary { background-color: color-mix(in srgb, var(--color-tertiary), transparent 82%); }
 .bg-shift-low { background-color: var(--color-surface-low); }
 .bg-shift-mid { background-color: var(--color-surface-mid); }
 .bg-shift-high { background-color: var(--color-surface-high); }
+
+/* Room Grid System */
+.pill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  width: 100%;
+}
+
+/* Sectional Clarity Utilities */
+.grid-row-alt {
+  background-color: color-mix(in srgb, var(--color-surface-low), transparent 30%);
+}
+
+.grid-header-sticky {
+  background-color: var(--color-surface-lowest);
+  z-index: 50;
+  position: sticky;
+  top: 0;
+}
+
+.dashed-block {
+  @apply flex items-center justify-center rounded-xl border border-dashed border-text-secondary/30 transition-all duration-300;
+  height: 52px;
+}
+
+.dashed-block:hover {
+  @apply border-primary/50 bg-primary/5;
+}
+
+.room-card {
+  @apply relative overflow-hidden transition-all duration-300 flex items-center justify-between px-3;
+  background: var(--color-surface-high);
+  height: 52px;
+}
+
+.room-card:hover {
+  background: var(--color-surface-highest);
+}
+
+@media (max-width: 640px) {
+  .pill-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+}
 
 /* Remove default borders that might exist */
 .no-border { border: none !important; }

@@ -7,7 +7,7 @@ export function useFacultyRequests(user) {
   const [loading, setLoading] = useState(true);
 
   const loadRequests = useCallback(async () => {
-    if (!user || (user.role !== 'FACULTY' && user.role !== 'admin')) {
+    if (!user || (user.role !== 'FACULTY' && user.role !== 'ADMIN')) {
       return;
     }
     
@@ -28,7 +28,7 @@ export function useFacultyRequests(user) {
   }, [user]);
 
   useEffect(() => {
-    if (user?.role === 'FACULTY' || user?.role === 'admin') {
+    if (user?.role === 'FACULTY' || user?.role === 'ADMIN') {
       loadRequests();
     } else {
       setLoading(false);

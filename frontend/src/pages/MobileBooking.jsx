@@ -1,5 +1,5 @@
 import React, { useState, useContext } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles, MapPin } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { bookingService } from '../services/bookingService';
 import { roomService } from '../services/roomService';
@@ -39,7 +39,7 @@ function MobileBooking({ onBack }) {
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [conflictingClass, setConflictingClass] = useState(null);
 
-  const isStudent = user?.role !== 'admin' && user?.role !== 'FACULTY';
+  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
 
   // Extract unique blocks (buildings) from rooms
   const blocks = ['all', ...new Set(rooms.map(r => r.building).filter(Boolean))];
@@ -112,7 +112,7 @@ function MobileBooking({ onBack }) {
 
     try {
       // 1. Check for Class Conflicts
-      const isRep = user?.role === 'STUDENT_REP' || user?.role === 'admin';
+      const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
       const conflict = getClassConflict(user, dateStr, selectedHour, bookings, availability || []);
       
       if (conflict && !conflictingClass) {
@@ -417,7 +417,12 @@ function MobileBooking({ onBack }) {
                             }}
                             className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-white/5 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-extrabold text-white/60'}`}
                           >
-                            <span className="text-sm font-display uppercase tracking-tight">{f.name}</span>
+                            <div className="flex flex-col">
+                              <span className="text-sm font-display uppercase tracking-tight">{f.name}</span>
+                              <span className={`text-[9px] uppercase tracking-widest mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
+                                {f.department || 'Faculty'}
+                              </span>
+                            </div>
                             {String(selectedFaculty) === String(f.id) && <CheckCircle size={18} />}
                           </div>
                         ))}

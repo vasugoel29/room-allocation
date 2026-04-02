@@ -1,6 +1,7 @@
 import React from 'react';
 import { Wind, Monitor } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isRoomReallyFree } from '../../utils/timetableLogic';
 
 function RoomSelector({ 
   rooms, 
@@ -14,7 +15,8 @@ function RoomSelector({
   debouncedTerm,
   isDropdownOpen, 
   setIsDropdownOpen, 
-  getRoomBooking 
+  getRoomBooking,
+  timetableData
 }) {
   const selectedRoomData = rooms.find(r => String(r.id) === String(selectedRoom));
 
@@ -45,12 +47,12 @@ function RoomSelector({
         </div>
 
         {isDropdownOpen && (
-          <div className="absolute top-full left-0 right-0 mt-3 bg-neutral rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
             {rooms
               .filter(room => {
-                const av = availability?.find(a => a.room_id === room.id && a.day === slot.day && a.hour === slot.hour);
+                const isFree = isRoomReallyFree(room, slot.dateStr || new Date(slot.date).toISOString().split('T')[0], slot.day, slot.hour, [], availability, timetableData);
                 const matchesSearch = !debouncedTerm || room.name.toLowerCase().includes(debouncedTerm.toLowerCase()) || room.building?.toLowerCase().includes(debouncedTerm.toLowerCase());
-                return (av ? av.is_available : true) && matchesSearch;
+                return isFree && matchesSearch;
               })
               .map(room => {
                 const booking = getRoomBooking(room.id);
@@ -60,7 +62,7 @@ function RoomSelector({
                   <div
                     key={room.id}
                     onClick={() => {
-                      if (booking && (booking.user_role === 'admin' || booking.user_role === 'FACULTY') && user?.role !== 'admin') {
+                      if (booking && (booking.user_role === 'ADMIN' || booking.user_role === 'FACULTY') && user?.role !== 'ADMIN') {
                         toast.error("Cannot transfer from faculty or admin bookings");
                         return;
                       }
@@ -72,7 +74,7 @@ function RoomSelector({
                       setIsDropdownOpen(false);
                       setSearchTerm('');
                     }}
-                    className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-white/5 ${isSelected ? 'bg-primary text-white font-extrabold shadow-ambient' : ''}`}
+                    className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'bg-primary text-white font-extrabold shadow-ambient' : ''}`}
                   >
                     <div className="flex flex-col gap-0.5 max-w-[70%]">
                       <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>

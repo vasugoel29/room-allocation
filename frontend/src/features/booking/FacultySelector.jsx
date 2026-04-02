@@ -37,7 +37,7 @@ function FacultySelector({
         </div>
 
         {isFacultyOpen && (
-          <div className="absolute top-full left-0 right-0 mt-3 bg-neutral rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
             {Array.isArray(faculties) && faculties
               ?.filter(f => !debouncedFacultyTerm || 
                             f.name.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()) || 
@@ -52,10 +52,10 @@ function FacultySelector({
                       setIsFacultyOpen(false);
                       setFacultySearchTerm('');
                     }}
-                    className={`p-5 cursor-pointer transition-colors flex flex-col hover:bg-white/5 ${isSelected ? 'bg-primary text-white shadow-ambient' : ''}`}
+                    className={`p-5 cursor-pointer transition-colors flex flex-col hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'bg-primary text-white shadow-ambient' : ''}`}
                   >
                     <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>{f.name}</span>
-                    <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{f.department || f.email}</span>
+                    <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{f.department || 'Faculty'}</span>
                   </div>
                 );
               })}

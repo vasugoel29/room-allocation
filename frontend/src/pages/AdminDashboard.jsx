@@ -7,8 +7,12 @@ import {
   Search, 
   Zap, 
   UserPlus,
-  ShieldAlert
+  ShieldAlert,
+  Database,
+  Activity,
+  TrendingUp
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
 import { getTodayRange, getWeekRange, formatRangeToISO } from '../utils/dateHelpers';
@@ -21,6 +25,8 @@ import AdminQuickBook from '../features/admin/AdminQuickBook';
 import AdminUserModal from '../components/modals/AdminUserModal';
 import AdminPromotionActionModal from '../components/modals/AdminPromotionActionModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
+import AdminAuditLog from '../features/admin/AdminAuditLog';
+import AdminAnalytics from '../features/admin/AdminAnalytics';
 
 // Services & Hooks
 import adminService from '../services/adminService';
@@ -31,13 +37,14 @@ import { useAdminQuickBook } from '../hooks/useAdminQuickBook';
 
 function AdminDashboard() {
   const { user } = useContext(AppContext);
-  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' | 'promotions' | 'users' | 'quick'
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('bookings'); // 'bookings' | 'promotions' | 'users' | 'quick' | 'audit' | 'analytics'
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRange, setFilterRange] = useState('day'); // 'day' | 'week'
   
-  const { bookings, promotions, loading, fetchData } = useAdminData(filterRange);
+  const { bookings, promotions, bookingsMeta, loading, fetchData } = useAdminData(filterRange);
   const { 
-    users, departments, isUserModalOpen, editingUser, 
+    users, usersMeta, departments, isUserModalOpen, editingUser, 
     fetchUsers, handleApproveUser, handleDeleteUser,
     openUserModal, closeUserModal 
   } = useAdminUsers(activeTab);
@@ -120,7 +127,7 @@ function AdminDashboard() {
     });
   };
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== 'ADMIN') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Shield size={48} className="text-red-500 mb-4 opacity-20" />
@@ -205,6 +212,27 @@ function AdminDashboard() {
                 </span>
               )}
             </button>
+            <button 
+              onClick={() => setActiveTab('audit')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'audit' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              <Activity size={16} />
+              <span className="whitespace-nowrap">Audit Log</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('analytics')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'analytics' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              <TrendingUp size={16} />
+              <span className="whitespace-nowrap">Analytics</span>
+            </button>
+            <button 
+              onClick={() => navigate('/admin/timetable')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all text-text-secondary hover:text-text-primary hover:bg-surface-low`}
+            >
+              <Database size={16} />
+              <span className="whitespace-nowrap">Timetable</span>
+            </button>
           </div>
 
           {activeTab === 'bookings' && (
@@ -243,11 +271,36 @@ function AdminDashboard() {
           ) : (
             <>
               {activeTab === 'bookings' && (
-                <AdminBookings 
-                  bookings={bookings} 
-                  searchTerm={searchTerm} 
-                  onCancel={handleCancelBooking} 
-                />
+                <div className="flex-1 flex flex-col min-h-0">
+                  <AdminBookings 
+                    bookings={bookings} 
+                    searchTerm={searchTerm} 
+                    onCancel={handleCancelBooking} 
+                  />
+                  {bookingsMeta.totalPages > 1 && (
+                    <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        Page {bookingsMeta.page} of {bookingsMeta.totalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          disabled={bookingsMeta.page <= 1}
+                          onClick={() => fetchData(bookingsMeta.page - 1)}
+                          className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          Prev
+                        </button>
+                        <button 
+                          disabled={bookingsMeta.page >= bookingsMeta.totalPages}
+                          onClick={() => fetchData(bookingsMeta.page + 1)}
+                          className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
               {activeTab === 'promotions' && (
                 <AdminRequests 
@@ -267,13 +320,48 @@ function AdminDashboard() {
                 />
               )}
               {activeTab === 'users' && (
-                <AdminUsers 
-                  users={users} 
-                  searchTerm={searchTerm} 
-                  onEdit={openUserModal} 
-                  onDelete={deleteUser} 
-                  onApprove={handleApproveUser}
-                />
+                <div className="flex-1 flex flex-col min-h-0">
+                  <AdminUsers 
+                    users={users} 
+                    searchTerm={searchTerm} 
+                    onEdit={openUserModal} 
+                    onDelete={deleteUser} 
+                    onApprove={handleApproveUser}
+                  />
+                  {usersMeta.totalPages > 1 && (
+                    <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        Page {usersMeta.page} of {usersMeta.totalPages}
+                      </p>
+                      <div className="flex gap-2">
+                        <button 
+                          disabled={usersMeta.page <= 1}
+                          onClick={() => fetchUsers(usersMeta.page - 1)}
+                          className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          Prev
+                        </button>
+                        <button 
+                          disabled={usersMeta.page >= usersMeta.totalPages}
+                          onClick={() => fetchUsers(usersMeta.page + 1)}
+                          className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {activeTab === 'audit' && (
+                <div className="flex-1 p-6 overflow-y-auto min-h-0">
+                  <AdminAuditLog />
+                </div>
+              )}
+              {activeTab === 'analytics' && (
+                <div className="flex-1 p-6 overflow-y-auto min-h-0">
+                  <AdminAnalytics />
+                </div>
               )}
             </>
           )}

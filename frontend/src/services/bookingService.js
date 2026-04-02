@@ -9,7 +9,11 @@ export const bookingService = {
     const endpoint = `/bookings${queryParams ? `?${queryParams}` : ''}`;
     const res = await api.get(endpoint);
     if (!res.ok) throw new Error('Failed to fetch bookings');
-    return res.json();
+    const result = await res.json();
+    
+    // For backward compatibility with other parts of the app that expect an array
+    // We return the data array if it's paginated, otherwise return the array directly
+    return result.data || result;
   },
 
   createBooking: async (data) => {

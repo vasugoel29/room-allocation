@@ -25,6 +25,7 @@ export const AppProvider = ({ children }) => {
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [departments, setDepartments] = useState([]);
+  const [timetableData, setTimetableData] = useState({});
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -146,6 +147,15 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchTimetable = useCallback(async () => {
+    try {
+      const data = await roomService.getTimetable();
+      setTimetableData(data);
+    } catch (err) {
+      console.error('Fetch timetable failed', err);
+    }
+  }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
@@ -164,13 +174,19 @@ export const AppProvider = ({ children }) => {
     if (user) {
       fetchBookings();
       fetchAvailability();
+      fetchTimetable();
     }
-  }, [user, fetchBookings, fetchAvailability]);
+  }, [user, fetchBookings, fetchAvailability, fetchTimetable]);
 
   useEffect(() => {
+    // Keep internal state for consecutive failures to avoid flickering on transient issues
+    let failureCount = 0;
+    
     const checkConnection = async () => {
       try {
         await roomService.getHealth();
+        
+        // If we were in error state and now recovered
         if (prevBackendError.current && user) {
           console.log('Backend recovered! Refreshing data...');
           fetchRooms();
@@ -179,20 +195,27 @@ export const AppProvider = ({ children }) => {
           fetchAvailability();
           fetchTransfers();
         }
+        
         setBackendError(null);
         prevBackendError.current = null;
+        failureCount = 0;
       } catch (err) {
-        console.error('Backend connection check failed:', err);
-        const errMsg = 'Cannot connect to server. Please ensure the backend is running.';
-        setBackendError(errMsg);
-        prevBackendError.current = errMsg;
+        failureCount++;
+        // Only show error screen after 2 consecutive failures to allow for minor network jitters
+        if (failureCount >= 2) {
+          console.error('Backend connection check failed:', err);
+          const errMsg = 'Cannot connect to server. Please ensure the backend is running.';
+          setBackendError(errMsg);
+          prevBackendError.current = errMsg;
+        }
       }
     };
 
     checkConnection();
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
-  }, [user, fetchRooms, fetchFaculties, fetchBookings, fetchAvailability, fetchTransfers]);
+    // Removed function dependencies that were causing re-render loops
+  }, [user]); 
 
   return (
     <AppContext.Provider value={{
@@ -222,6 +245,8 @@ export const AppProvider = ({ children }) => {
       fetchDepartments,
       fetchBookings,
       fetchAvailability,
+      timetableData,
+      fetchTimetable,
       fetchTransfers,
       logout
     }}>

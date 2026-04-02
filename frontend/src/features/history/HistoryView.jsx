@@ -12,7 +12,7 @@ import PageSearch from '../../components/ui/PageSearch';
 const HistoryView = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
   const [myOverrides, setMyOverrides] = useState([]);
-  const [filterMe] = useState(user?.role !== 'admin');
+  const [filterMe] = useState(user?.role !== 'ADMIN');
   const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST, TRANSFERS
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -130,10 +130,10 @@ const HistoryView = ({ onClose }) => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight uppercase leading-none font-display">
-              {user?.role === 'admin' ? 'Allocation Registry' : 'My Schedule'}
+              {user?.role === 'ADMIN' ? 'Allocation Registry' : 'My Schedule'}
             </h2>
             <p className="text-[10px] sm:text-xs text-text-secondary font-bold uppercase tracking-widest mt-1 opacity-40 font-display">
-              {user?.role === 'admin' ? 'Review room reservations campus-wide' : 'Track your active room reservations'}
+              {user?.role === 'ADMIN' ? 'Review room reservations campus-wide' : 'Track your active room reservations'}
             </p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">

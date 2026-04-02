@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import ErrorBoundary from "./components/ui/ErrorBoundary.jsx";
 import { AppProvider } from "./context/AppContext.jsx";
+import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import * as Sentry from "@sentry/react";
 import "./index.css";
@@ -46,10 +47,12 @@ Sentry.metrics.distribution('response_time', 200);
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <Toaster position="top-center" reverseOrder={false} />
-      <AppProvider>
-        <App />
-      </AppProvider>
+      <BrowserRouter>
+        <Toaster position="top-center" reverseOrder={false} />
+        <AppProvider>
+          <App />
+        </AppProvider>
+      </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>
 );

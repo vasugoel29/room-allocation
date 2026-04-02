@@ -57,9 +57,6 @@ export default defineConfig({
         target: 'http://localhost:4000',
         changeOrigin: true,
       },
-      '/login': 'http://localhost:4000',
-      '/register': 'http://localhost:4000',
-      '/admin': 'http://localhost:4000',
     }
   }
 })

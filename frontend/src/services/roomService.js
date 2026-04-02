@@ -39,6 +39,13 @@ export const roomService = {
     const res = await api.get('/availability/my');
     if (!res.ok) throw new Error('Failed to fetch your cancellations');
     return res.json();
+  },
+
+  getTimetable: async (params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const res = await api.get(`/timetable?${query}`);
+    if (!res.ok) throw new Error('Failed to fetch timetable');
+    return res.json();
   }
 };
 

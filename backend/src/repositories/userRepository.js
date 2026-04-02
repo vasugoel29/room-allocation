@@ -35,15 +35,33 @@ export const userRepository = {
   /**
    * Find all users with department names
    */
-  findAll: async () => {
-    const query = `
+  findAll: async (limit, offset) => {
+    let query = `
       SELECT u.id, u.name, u.email, u.role, u.branch, u.year, u.section, u.is_approved, u.created_at, d.name as department_name
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       ORDER BY u.created_at DESC
     `;
-    const result = await db.query(query);
+    const params = [];
+    if (limit) {
+      params.push(limit);
+      query += ` LIMIT $${params.length}`;
+    }
+    if (offset) {
+      params.push(offset);
+      query += ` OFFSET $${params.length}`;
+    }
+
+    const result = await db.query(query, params);
     return result.rows;
+  },
+
+  /**
+   * Count total users (for pagination)
+   */
+  countUsers: async () => {
+    const result = await db.query('SELECT COUNT(*) FROM users');
+    return parseInt(result.rows[0].count);
   },
 
   /**
@@ -115,5 +133,53 @@ export const userRepository = {
     `;
     const result = await db.query(query);
     return result.rows;
+  },
+
+  /**
+   * Store a hashed password-reset token and expiry
+   */
+  setResetToken: async (email, tokenHash, expires) => {
+    const query = `
+      UPDATE users 
+      SET password_reset_token = $1, password_reset_expires = $2 
+      WHERE email = $3 
+      RETURNING id
+    `;
+    const result = await db.query(query, [tokenHash, expires, email]);
+    return result.rows[0];
+  },
+
+  /**
+   * Find user by valid (non-expired) reset token hash
+   */
+  findByResetToken: async (tokenHash) => {
+    const query = `
+      SELECT id, name, email 
+      FROM users 
+      WHERE password_reset_token = $1 AND password_reset_expires > NOW()
+    `;
+    const result = await db.query(query, [tokenHash]);
+    return result.rows[0];
+  },
+
+  /**
+   * Clear the reset token after successful password change
+   */
+  clearResetToken: async (userId) => {
+    const query = `
+      UPDATE users 
+      SET password_reset_token = NULL, password_reset_expires = NULL 
+      WHERE id = $1
+    `;
+    await db.query(query, [userId]);
+  },
+
+  /**
+   * Update password hash for a user
+   */
+  updatePassword: async (userId, passwordHash) => {
+    const query = 'UPDATE users SET password = $1 WHERE id = $2 RETURNING id';
+    const result = await db.query(query, [passwordHash, userId]);
+    return result.rows[0];
   }
 };

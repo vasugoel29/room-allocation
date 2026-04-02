@@ -43,18 +43,19 @@ import facultyRoutes from './routes/facultyRoutes.js';
 import transferRoutes from './routes/transferRoutes.js';
 import departmentRoutes from './routes/departmentRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import timetableRoutes from './routes/timetableRoutes.js';
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(helmet());
 app.use(compression()); // Compress all responses
 app.use(cors({
-  origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : [
-    "http://localhost:5173",
-    /\.vercel\.app$/
-  ],
+  origin: process.env.CORS_ORIGIN 
+    ? process.env.CORS_ORIGIN.split(',') 
+    : ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }));
-app.use(bodyParser.json());
+app.use(express.json({ limit: '100kb' }));
 
 
 const apiLimiter = rateLimit({
@@ -70,7 +71,7 @@ app.use((req, res, next) => {
   res.set("Document-Policy", "js-profiling");
   next();
 });
-const PORT = 4000;
+const PORT = process.env.PORT || 4000;
 
 app.get('/', (req, res) => res.json({ status: 'ok', version: '1.2 (Refactored)' }));
 
@@ -94,6 +95,7 @@ app.use('/api/faculty', facultyRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/timetable', timetableRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);

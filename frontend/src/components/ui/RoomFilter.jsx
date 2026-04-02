@@ -13,17 +13,14 @@ function RoomFilter() {
     <div className="space-y-6">
       {/* Room Search */}
       <div className="space-y-2">
-        <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 opacity-50 font-display">
-          <Search size={14} className="text-primary" />
-          Discovery
-        </label>
+
         <div className="relative group">
           <input 
             type="text"
             placeholder="Search room name..."
             value={filters.searchTerm || ''}
             onChange={(e) => updateFilter('searchTerm', e.target.value)}
-            className="w-full bg-tonal-secondary/10 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:bg-tonal-secondary/20 transition-all pl-11 font-body font-bold text-text-primary placeholder:text-text-secondary/30"
+            className="w-full bg-tonal-secondary/10 border border-text-secondary/10 rounded-xl px-4 py-3.5 text-sm focus:outline-none focus:bg-tonal-secondary/20 focus:border-text-secondary/20 transition-all pl-11 font-body font-bold text-text-primary placeholder:text-text-secondary/30"
           />
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" size={18} />
         </div>
@@ -32,8 +29,8 @@ function RoomFilter() {
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Floor Level</label>
-          <div className="flex bg-tonal-secondary/10 p-1 rounded-xl">
-            {['all', 'G', '1', '2', '3', '4', '5'].map((f) => (
+          <div className="flex bg-tonal-secondary/10 border border-text-secondary/10 p-1 rounded-xl">
+            {['all', 'G', '1', '2', '3'].map((f) => (
               <button
                 key={f}
                 onClick={() => updateFilter('floor', f)}
@@ -48,7 +45,7 @@ function RoomFilter() {
         <div className="space-y-2">
           <button
             onClick={() => updateFilter('smartRoom', !filters.smartRoom)}
-            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all font-display ${filters.smartRoom ? 'bg-tonal-tertiary text-tertiary shadow-tertiary' : 'bg-tonal-secondary/10 text-text-secondary hover:text-text-primary'}`}
+            className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all font-display border ${filters.smartRoom ? 'bg-tonal-tertiary border-tertiary/20 text-tertiary shadow-tertiary' : 'bg-tonal-secondary/10 border-text-secondary/10 text-text-secondary hover:text-text-primary'}`}
           >
             <div className="flex items-center gap-3">
               <Zap size={18} className={filters.smartRoom ? 'text-tertiary shadow-tertiary' : 'text-text-secondary/40'} />

@@ -18,7 +18,7 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
         </div>
 
         {isTypeOpen && (
-          <div className="absolute top-full left-0 right-0 mt-3 bg-neutral rounded-3xl shadow-ambient z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
             {[
               { id: 'EXTRA', label: 'Extra Class' },
               { id: 'RESCHEDULE', label: 'Reschedule' }
@@ -29,7 +29,7 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
                   setBookingType(type.id);
                   setIsTypeOpen(false);
                 }}
-                className={`p-5 cursor-pointer transition-colors flex items-center font-extrabold text-[11px] uppercase tracking-widest ${bookingType === type.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-white/5'}`}
+                className={`p-5 cursor-pointer transition-colors flex items-center font-extrabold text-[11px] uppercase tracking-widest ${bookingType === type.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
               >
                 {type.label}
               </div>

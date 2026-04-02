@@ -4,6 +4,7 @@ import cache from '../utils/cache.js';
 import { transferRepository } from '../repositories/transferRepository.js';
 import { bookingRepository } from '../repositories/bookingRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { logActivity } from './loggerService.js';
 
 export const requestTransfer = async (reqData, userId, userRole) => {
   const { booking_id, target_faculty_id, new_purpose } = reqData;
@@ -17,7 +18,7 @@ export const requestTransfer = async (reqData, userId, userRole) => {
   const owner = await userRepository.findById(booking.created_by);
   const owner_role = owner?.role;
   
-  if ((owner_role === 'admin' || owner_role === 'FACULTY') && userRole !== 'admin') {
+  if ((owner_role === 'ADMIN' || owner_role === 'FACULTY') && userRole !== 'ADMIN') {
     return { error: 'Cannot request transfers for faculty or admin bookings.', status: 403 };
   }
 
@@ -38,6 +39,15 @@ export const requestTransfer = async (reqData, userId, userRole) => {
     const result = await transferRepository.create({
       booking_id, requested_by: userId, target_faculty_id, new_purpose, owner_id: booking.created_by
     });
+
+    await logActivity({
+      userId,
+      action: 'REQUEST_TRANSFER',
+      entityType: 'transfer',
+      entityId: result.id,
+      details: { booking_id, new_purpose }
+    });
+
     return { data: result, status: 201 };
   } catch (err) {
     if (err.code === '23505') return { error: 'You have already requested this transfer.', status: 400 };
@@ -65,7 +75,7 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
       return { error: 'Valid pending transfer request not found', status: 404 };
     }
     
-    if (t.owner_id !== userId && userRole !== 'admin') {
+    if (t.owner_id !== userId && userRole !== 'ADMIN') {
       await client.query('ROLLBACK');
       return { error: 'Not authorized to accept this transfer.', status: 403 };
     }
@@ -83,6 +93,15 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
     await transferRepository.rejectOtherPending(t.booking_id, transferId, client);
     
     await client.query('COMMIT');
+
+    await logActivity({
+      userId,
+      action: 'ACCEPT_TRANSFER',
+      entityType: 'transfer',
+      entityId: transferId,
+      details: { booking_id: t.booking_id, new_owner: t.requested_by }
+    }, client);
+
     cache.deletePattern('room_availability_.*');
     return { status: 200, message: 'Transfer successful' };
   } catch (err) {

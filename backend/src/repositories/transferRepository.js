@@ -101,7 +101,7 @@ export const transferRepository = {
       FROM bookings b
       WHERE t.booking_id = b.id
       AND t.id = $1 AND t.status = 'PENDING'
-      AND (b.created_by = $2 OR $3 = 'admin')
+      AND (b.created_by = $2 OR $3 = 'ADMIN')
       RETURNING t.id
     `;
     const result = await client.query(query, [id, userId, userRole]);

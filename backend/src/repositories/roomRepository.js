@@ -5,6 +5,14 @@ import * as db from '../db.js';
  */
 export const roomRepository = {
   /**
+   * Find a room by ID
+   */
+  findById: async (id, client = db) => {
+    const result = await client.query('SELECT * FROM rooms WHERE id = $1', [id]);
+    return result.rows[0];
+  },
+
+  /**
    * Find a room by name (case-insensitive)
    */
   findByName: async (name, client = db) => {
@@ -74,7 +82,7 @@ export const roomRepository = {
   /**
    * Find available rooms with filters
    */
-  findFiltered: async (capacity, ac, projector, building) => {
+  findFiltered: async (capacity, ac, projector, building, floor) => {
     let query = 'SELECT * FROM rooms WHERE 1=1';
     const params = [];
 
@@ -82,6 +90,14 @@ export const roomRepository = {
     if (ac === 'true') query += ' AND has_ac = TRUE';
     if (projector === 'true') query += ' AND has_projector = TRUE';
     if (building) { params.push(building); query += ` AND building = $${params.length}`; }
+    
+    if (floor && floor !== 'all') {
+      const dbFloor = floor === 'G' ? 0 : parseInt(floor);
+      if (!isNaN(dbFloor)) {
+        params.push(dbFloor);
+        query += ` AND floor = $${params.length}`;
+      }
+    }
 
     const result = await db.query(query, params);
     return result.rows;

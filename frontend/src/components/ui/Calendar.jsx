@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Filter, Wind, Monitor } from 'lucide-react';
+import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
-import { isRoomReallyFree } from '../../utils/timetableLogic';
+import { isRoomReallyFree, getHourFromTime } from '../../utils/timetableLogic';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
@@ -9,7 +9,7 @@ const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { user, bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters } = useContext(AppContext);
+  const { user, bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
@@ -27,45 +27,30 @@ function Calendar({ onSlotClick }) {
     return () => clearInterval(timer);
   }, []);
 
-  const getCurrentTimePosition = () => {
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    const dayIndex = now.getDay();
-    const currentDayName = DAYS[dayIndex - 1];
-
-    if (hour < 8 || hour >= 18 || dayIndex === 0 || dayIndex === 6) return null;
-    
-    const totalMinutesSince8AM = (hour - 8) * 60 + minutes;
-    const percentage = (totalMinutesSince8AM / (10 * 60)) * 100;
-    
-    return { percentage, day: currentDayName };
-  };
-
-  const timePos = getCurrentTimePosition();
-
   const getCurrentWeekDates = () => {
     const dates = [];
     let d = new Date(now);
     
-    // If Sat or Sun, move to next Mon
     const day = d.getDay();
     if (day === 0) d.setDate(d.getDate() + 1); // Sun -> Mon
     else if (day === 6) d.setDate(d.getDate() + 2); // Sat -> Mon
 
+    const currentD = new Date(d);
     while (dates.length < 5) {
-      const currentDay = d.getDay();
+      const currentDay = currentD.getDay();
       if (currentDay !== 0 && currentDay !== 6) {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const dayNum = String(d.getDate()).padStart(2, '0');
+        const year = currentD.getFullYear();
+        const month = String(currentD.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(currentD.getDate()).padStart(2, '0');
         dates.push({
           day: DAYS[currentDay - 1],
-          date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          fullDate: new Date(d),
-          dateStr: `${year}-${month}-${dayNum}`
+          date: currentD.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          fullDate: new Date(currentD),
+          dateStr: `${year}-${month}-${dayNum}`,
+          isToday: currentD.toDateString() === new Date().toDateString()
         });
       }
-      d.setDate(d.getDate() + 1);
+      currentD.setDate(currentD.getDate() + 1);
     }
     return dates;
   };
@@ -78,14 +63,28 @@ function Calendar({ onSlotClick }) {
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
     const currentHour = today.getHours();
 
-    // Only filter globally if in 'day' view and it's today
     if (viewMode === 'day' && selectedDay === todayStr) {
         return hour >= currentHour;
     }
-    
-    // In Week view, we show all hours to prevent the grid from appearing empty
     return true;
   });
+
+  const getCurrentTimePosition = () => {
+    const hour = now.getHours();
+    const minutes = now.getMinutes();
+    
+    // Find index of current hour in filteredHours
+    const hourIndex = filteredHours.indexOf(hour);
+    if (hourIndex === -1) return null;
+
+    // Each row is 100% / total rows
+    const rowPercentage = 100 / filteredHours.length;
+    const percentage = (hourIndex + minutes / 60) * rowPercentage;
+    
+    return { percentage };
+  };
+
+  const timePos = getCurrentTimePosition();
 
   const getBooking = (dateStr, hour, roomId) => {
     return bookings?.find(b => {
@@ -101,25 +100,10 @@ function Calendar({ onSlotClick }) {
     });
   };
 
-  const getFloorFromRoomName = (name) => {
-    if (!name) return '0';
-    const clean = name.trim().toUpperCase();
-    if (clean.startsWith('CR')) {
-       // "CR 403" -> "4"
-       const parts = clean.split(/\s+/);
-       return parts[1] ? parts[1].charAt(0) : '0';
-    }
-    // "5222" -> "2" (Wait, 5222 is CC-NW-1? No, 5222 is usually CC-1. 
-    // In many academic buildings, the SECOND digit is the floor, or the FIRST.
-    // Let's assume the FIRST digit is the floor for simple numbers like 5222 -> Floor 5? 
-    // No, common pattern is 5xxx is 5th floor.
-    return clean.charAt(0);
-  };
-
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
-      {/* Page Header (Consistent with History/Timetable) */}
-      <div className="p-4 sm:p-6 bg-tonal-secondary/10 backdrop-blur-md shrink-0">
+      {/* Page Header */}
+      <div className="p-4 sm:p-6 bg-tonal-secondary/10 backdrop-blur-md shrink-0 border-b border-text-secondary/10">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col">
             <h1 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight uppercase leading-none font-display">
@@ -138,25 +122,32 @@ function Calendar({ onSlotClick }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar">
-        <div className={`flex flex-col min-h-full w-full relative layout-transition ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
-          <div className={`grid bg-surface-low/90 backdrop-blur-md sticky top-0 z-30 layout-transition ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-            <div className="p-2 sm:p-4 text-[10px] sm:text-xs font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center justify-center bg-tonal-secondary/20 font-display">Time</div>
-            {weekDates.filter(d => displayDays.includes(d.dateStr)).map(({ dateStr, day, date }) => (
-              <div 
-                key={dateStr} 
-                className={`p-2 sm:p-4 text-center flex flex-col gap-0.5 sm:gap-1 layout-transition ${viewMode === 'week' ? 'cursor-pointer hover:bg-primary-accent/5 active:bg-primary-accent/10 transition-colors' : ''}`}
-                onClick={() => {
-                  if (viewMode === 'week') {
-                    onDayChange(dateStr);
-                    setViewMode('day');
-                  }
-                }}
-              >
-                <span className="text-lg sm:text-2xl font-extrabold text-text-primary uppercase tracking-tight leading-none font-display">{day}</span>
-                <span className="text-[10px] sm:text-sm text-text-secondary font-bold leading-none">{date}</span>
+      <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar p-2 sm:p-4">
+        <div className={`flex flex-col min-h-full w-full relative layout-transition bg-surface-low border border-text-secondary/10 rounded-2xl overflow-hidden ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
+          
+          {/* Days Header */}
+          <div className="grid-header-sticky border-b border-text-secondary/10">
+            <div className={`grid gap-0 ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
+              <div className="py-4 flex items-center justify-center bg-tonal-secondary/5">
+                <Clock size={16} className="text-text-secondary opacity-50" />
               </div>
-            ))}
+              {weekDates.filter(d => displayDays.includes(d.dateStr)).map(day => (
+                <div 
+                  key={day.dateStr} 
+                  className={`py-4 px-2 text-center transition-all border-l border-text-secondary/10 flex items-center justify-center ${viewMode === 'week' ? 'cursor-pointer hover:bg-primary-accent/5' : ''}`}
+                  onClick={() => {
+                    if (viewMode === 'week') {
+                      onDayChange(day.dateStr);
+                      setViewMode('day');
+                    }
+                  }}
+                >
+                  <h3 className="text-[10px] sm:text-xs font-black tracking-tighter sm:tracking-widest transition-colors text-text-secondary">
+                    {day.day} <span className="hidden sm:inline opacity-40 ml-1">{day.date}</span>
+                  </h3>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="relative flex-1 flex flex-col w-full">
@@ -186,119 +177,139 @@ function Calendar({ onSlotClick }) {
                 <p className="text-text-secondary text-base sm:text-lg font-extrabold uppercase tracking-widest opacity-40 font-display text-center">No structural matches found</p>
               </div>
             ) : (
-              filteredHours.map(hour => (
-                <div key={hour} className={`flex-1 grid group layout-transition min-h-[90px] sm:min-h-[100px] ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-                  <div className="p-2 sm:p-4 text-[10px] sm:text-lg font-extrabold text-text-secondary uppercase flex flex-col items-center justify-center bg-tonal-secondary/5 transition-all font-display">
-                    <span className="tracking-tight">{hour.toString().padStart(2, '0')}:00</span>
-                    <span className="text-[8px] sm:text-[10px] opacity-20">{(hour+1).toString().padStart(2, '0')}:00</span>
-                  </div>
-                  {displayDays.map(dateStr => {
-                    const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
-                    const dayLabel = currentWeekDay ? currentWeekDay.day : 'Unknown';
-                    
-                    return (
-                    <div 
-                      key={dateStr} 
-                      className="p-3 bg-transparent hover:bg-tonal-secondary/10 transition-colors cursor-pointer relative h-full"
-                      onClick={() => {
-                        const dateObj = currentWeekDay?.fullDate;
-                        onSlotClick({ day: dayLabel, hour, date: dateObj });
-                      }}
-                    >
-                      <div className={`p-1.5 h-full overflow-y-auto no-scrollbar transition-all ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-4'}`}>
-                          {(() => {
-                            const slotRooms = rooms
-                              .filter(room => {
-                                // Standard availability check
-                                if (!isRoomReallyFree(room, dateStr, dayLabel, hour, bookings, availability)) return false;
-                                
-                                // Basic filters
-                                const matchesSearch = !filters.searchTerm || room.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
-                                const roomFloor = getFloorFromRoomName(room.name);
-                                const matchesFloor = filters.floor === 'all' || String(roomFloor) === String(filters.floor);
-                                const matchesSmart = !filters.smartRoom || (room.has_ac && room.has_projector);
-                                
-                                return matchesSearch && matchesFloor && matchesSmart;
-                              })
-                              .sort((a, b) => {
-                                const aBooked = !!getBooking(dateStr, hour, a.id);
-                                const bBooked = !!getBooking(dateStr, hour, b.id);
-                                if (aBooked !== bBooked) return aBooked ? 1 : -1;
-                                const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
-                                return score(b) - score(a);
-                              });
+              filteredHours.map((hour, index) => {
+                return (
+                  <div 
+                    key={hour} 
+                    className={`flex-1 grid gap-0 group layout-transition min-h-[90px] sm:min-h-[100px] transition-colors border-b border-text-secondary/10 last:border-b-0 ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}
+                  >
+                    {/* Time Label Column */}
+                    <div className="flex flex-col items-center justify-center transition-colors bg-text-secondary/5">
+                      <span className="text-[10px] sm:text-xs font-black text-text-primary">{String(hour).padStart(2, '0')}:00</span>
+                      <span className="text-[8px] sm:text-[9px] text-text-secondary font-bold opacity-40">{String(hour + 1).padStart(2, '0')}:00</span>
+                    </div>
 
-                            const maxRooms = isMobile ? 4 : slotRooms.length;
-                            const isExpanded = expandedSlots[`${dateStr}-${hour}`];
-                            const hasMore = isMobile && slotRooms.length > maxRooms;
-                            const displayedRooms = (isMobile && !isExpanded && hasMore) ? slotRooms.slice(0, 3) : slotRooms;
-
-                            return (
-                              <>
-                                {displayedRooms.map(room => {
-                                  const booking = getBooking(dateStr, hour, room.id);
-                                  const isRestricted = booking && (booking.user_role === 'admin' || booking.user_role === 'FACULTY') && user?.role !== 'admin';
+                    {displayDays.map(dateStr => {
+                      const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
+                      const dayLabel = currentWeekDay ? currentWeekDay.day : 'Unknown';
+                      
+                      return (
+                        <div 
+                          key={dateStr} 
+                          className="relative p-2 h-full transition-all border-l border-text-secondary/10 hover:bg-tonal-secondary/5"
+                          onClick={() => {
+                            const dateObj = currentWeekDay?.fullDate;
+                            onSlotClick({ day: dayLabel, hour, date: dateObj });
+                          }}
+                        >
+                          <div className="absolute inset-0 z-0 transition-opacity duration-500 opacity-0" />
+                          
+                          <div className={`relative z-10 h-full overflow-y-auto no-scrollbar pt-1 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
+                            {(() => {
+                              const slotRooms = rooms
+                                .filter(room => {
+                                  const matchesSearch = !filters.searchTerm || room.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
+                                  const dbFloor = filters.floor === 'G' ? 0 : (filters.floor === 'all' ? 'all' : parseInt(filters.floor));
+                                  const matchesFloor = dbFloor === 'all' || Number(room.floor) === Number(dbFloor);
+                                  const matchesSmart = !filters.smartRoom || (room.has_ac && room.has_projector);
+                                  return matchesSearch && matchesFloor && matchesSmart;
+                                })
+                                .sort((a, b) => {
+                                  const aBooked = !!getBooking(dateStr, hour, a.id);
+                                  const bBooked = !!getBooking(dateStr, hour, b.id);
                                   
-                                  const windColor = room.has_ac ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500/20';
-                                  const monitorColor = room.has_projector ? (booking ? 'text-text-secondary/50' : 'text-accent') : 'text-red-500/20';
+                                  // Check static timetable for both
+                                  const daySchedule = timetableData?.[dayLabel] || [];
+                                  const isAOccupied = aBooked || daySchedule.some(sc => sc.room && (sc.room.trim().toLowerCase() === a.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(a.name.trim().toLowerCase())) && sc.time === hour);
+                                  const isBOccupied = bBooked || daySchedule.some(sc => sc.room && (sc.room.trim().toLowerCase() === b.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(b.name.trim().toLowerCase())) && sc.time === hour);
+                                  
+                                  if (isAOccupied !== isBOccupied) return isAOccupied ? 1 : -1;
+                                  
+                                  const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
+                                  return score(b) - score(a);
+                                });
 
-                                  return (
-                                    <div 
-                                      key={room.id}
+                              const maxRooms = isMobile ? 4 : slotRooms.length;
+                              const isExpanded = expandedSlots[`${dateStr}-${hour}`];
+                              const hasMore = isMobile && slotRooms.length > maxRooms;
+                              const displayedRooms = (isMobile && !isExpanded && hasMore) ? slotRooms.slice(0, 3) : slotRooms;
+
+                              return (
+                                <>
+                                  {displayedRooms.map(room => {
+                                    const booking = getBooking(dateStr, hour, room.id);
+                                    const daySchedule = timetableData?.[dayLabel] || [];
+                                    const staticClass = !booking ? daySchedule.find(sc => sc.room && (sc.room.trim().toLowerCase() === room.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(room.name.trim().toLowerCase())) && sc.time === hour) : null;
+                                    
+                                    const isRestricted = booking && (booking.user_role === 'ADMIN' || booking.user_role === 'FACULTY') && user?.role !== 'ADMIN';
+                                    const isOccupied = booking || staticClass;
+                                    
+                                    return (
+                                      <div 
+                                        key={room.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (isRestricted) return;
+                                          const dateObj = currentWeekDay?.fullDate;
+                                          onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
+                                        }}
+                                       className={`rounded-xl room-card ${!isRestricted ? 'hover:translate-y-[-2px] active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} transform transition-all text-xs sm:text-sm leading-tight truncate font-bold ${isOccupied ? (isRestricted ? 'bg-surface-lowest shadow-inner' : 'bg-surface-high/40 opacity-90') : 'text-text-primary'}`}
+                                        title={`${room.name}${booking ? ` - Booked by ${booking.user_name} ${isRestricted ? '(Restricted)' : '(Click to Request Transfer)'}` : (staticClass ? ` - Academic Class: ${staticClass.subjectName}` : '')}`}
+                                      >
+                                        <div className="flex flex-col overflow-hidden">
+                                          <span className={`font-black truncate tracking-tight ${isOccupied ? 'text-text-secondary text-[10px] sm:text-xs' : 'text-xs sm:text-sm'}`}>{room.name}</span>
+                                          {booking ? (
+                                            <span className="text-[8px] sm:text-[9px] text-text-secondary/70 truncate leading-none mt-0.5">
+                                              {booking.class_name || 'Booking'}
+                                            </span>
+                                          ) : staticClass ? (
+                                            <span className="text-[8px] sm:text-[9px] text-text-secondary/70 truncate leading-none mt-0.5">
+                                              {staticClass.subjectName || 'Academic Class'}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <div className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0">
+                                          <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
+                                          <Monitor size={isMobile ? 10 : 12} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                  {hasMore && !isExpanded && (
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        if (isRestricted) return;
-                                        const dateObj = currentWeekDay?.fullDate;
-                                        onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
+                                        setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: true }));
                                       }}
-                                      className={`px-4 py-3 rounded-lg shadow-ambient ${!isRestricted ? 'hover:translate-y-[-2px] active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} transform transition-all text-sm leading-tight truncate flex items-center justify-between font-bold w-full ${booking ? (isRestricted ? 'bg-surface-lowest' : 'bg-surface-mid/80 opacity-80') : 'bg-surface-low text-text-primary'}`}
-                                      title={`${room.name}${booking ? ` - Booked by ${booking.user_name} ${isRestricted ? '(Restricted)' : '(Click to Request Transfer)'}` : ''}`}
+                                      className="w-full dashed-block group"
                                     >
-                                      <div className="flex flex-col overflow-hidden">
-                                        <span className={`font-black truncate ${booking ? 'text-text-secondary text-sm' : ''}`}>{room.name}</span>
-                                        {booking && (
-                                          <span className="text-[10px] text-text-secondary/70 truncate leading-none">
-                                            {booking.class_name}
-                                          </span>
-                                        )}
+                                      <div className="flex flex-col items-center gap-1">
+                                        <Filter size={14} className="text-text-secondary/50 group-hover:text-primary transition-colors" />
+                                        <span className="text-text-secondary/60 text-[9px] font-black uppercase tracking-tighter group-hover:text-primary">+{slotRooms.length - 3} More</span>
                                       </div>
-                                      <div className="flex flex-col items-center gap-1.5 ml-3 flex-shrink-0 opacity-80">
-                                        <Wind size={14} className={room.has_ac ? 'text-primary-accent' : 'text-text-secondary/20'} />
-                                        <Monitor size={14} className={room.has_projector ? 'text-primary-accent' : 'text-text-secondary/20'} />
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                                {hasMore && !isExpanded && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: true }));
-                                    }}
-                                    className="px-3 py-2 rounded-lg bg-primary-accent/5 text-primary-accent text-[10px] font-bold uppercase hover:bg-primary-accent/10 transition-all flex items-center justify-center gap-2 font-display"
-                                  >
-                                    Show All ({slotRooms.length})
-                                  </button>
-                                )}
-                                {hasMore && isExpanded && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: false }));
-                                    }}
-                                    className="px-3 py-2 rounded-xl border border-dashed border-text-secondary/40 bg-bg-secondary text-text-secondary text-[10px] font-black uppercase hover:bg-bg-primary transition-all flex items-center justify-center gap-2 mt-1"
-                                  >
-                                    Show Less
-                                  </button>
-                                )}
-                              </>
-                            );
-                          })()}
+                                    </button>
+                                  )}
+                                  {hasMore && isExpanded && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: false }));
+                                      }}
+                                      className="px-3 py-2 rounded-xl bg-surface-lowest text-text-secondary text-[8px] sm:text-[10px] font-black uppercase hover:bg-bg-primary transition-all flex items-center justify-center gap-2 mt-1"
+                                    >
+                                      Show Less
+                                    </button>
+                                  )}
+                                </>
+                              );
+                            })()}
+                          </div>
                         </div>
-                    </div>
-                  );})}
-                </div>
-              ))
+                      );
+                    })}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
