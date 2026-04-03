@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 import { useFacultyRequests } from '../hooks/useFacultyRequests';
 
 function FacultyDashboard() {
-  const { user, bookings, fetchBookings, fetchAvailability, fetchFacultyOverrides } = useContext(AppContext);
+  const { user, bookings, refreshAllData } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('PENDING'); // PENDING | ACCEPTED | MY
   const { pendingRequests, setPendingRequests, loading } = useFacultyRequests(user);
   
@@ -47,8 +47,7 @@ function FacultyDashboard() {
       toast.success(data.message || `Booking ${action}ed`);
       // Remove from list
       setPendingRequests(prev => prev.filter(r => r.id !== id));
-      fetchBookings();
-      fetchAvailability();
+      refreshAllData();
     } catch (err) {
       toast.error(err.message || `Failed to ${action} booking`);
     }
@@ -78,9 +77,7 @@ function FacultyDashboard() {
       setConflictData(null);
       setPendingApprovalReq(null);
       
-      fetchBookings();
-      fetchAvailability();
-      fetchFacultyOverrides();
+      refreshAllData();
     } catch (err) {
       toast.error(err.message || 'Resolution failed');
     } finally {
@@ -94,8 +91,7 @@ function FacultyDashboard() {
     try {
       await bookingService.cancelBooking(id);
       toast.success("Session cancelled successfully");
-      fetchBookings();
-      fetchAvailability();
+      refreshAllData();
     } catch (err) {
       toast.error(err.message || "Failed to cancel session");
     }

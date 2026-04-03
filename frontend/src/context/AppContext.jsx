@@ -117,19 +117,23 @@ export const AppProvider = ({ children }) => {
 
   const fetchRooms = useCallback(async () => {
     try {
-      const queryParams = { ...filters };
+      const queryParams = { 
+        building: filters.building,
+        floor: filters.floor,
+        searchTerm: filters.searchTerm
+      };
       if (filters.smartRoom) {
         queryParams.ac = 'true';
         queryParams.projector = 'true';
       }
-      delete queryParams.smartRoom;
       const data = await roomService.getRooms(queryParams);
       if (Array.isArray(data)) setRooms(data);
       else console.error('Expected array of rooms, got:', data);
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
-  }, [filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.building, filters.floor, filters.searchTerm, filters.smartRoom]);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -149,22 +153,21 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
+
   const fetchTimetable = useCallback(async () => {
     if (!user) return;
     try {
-      console.log('[DEBUG] fetchTimetable calling. role:', user.role);
       if (user.role === 'FACULTY') {
         const data = await roomService.getFacultyTimetable();
-        console.log('[DEBUG] Faculty timetable data (raw):', data);
         setFacultyTimetableData(data || {});
       } else {
         const data = await roomService.getTimetable();
         setTimetableData(data);
       }
     } catch (err) {
-      console.error('[DEBUG] Fetch timetable failed', err);
+      console.error('Fetch timetable failed', err);
     }
-  }, [user]);
+  }, [user?.role]); // Only depend on role for the API endpoint decision
 
   const fetchFacultyOverrides = useCallback(async () => {
     if (!user || user.role !== 'FACULTY') return;
@@ -174,30 +177,38 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch faculty overrides failed', err);
     }
-  }, [user]);
+  }, [user?.role]);
+
+  const refreshAllData = useCallback(async () => {
+    if (!user) return;
+    return Promise.all([
+      fetchRooms(),
+      fetchFaculties(),
+      fetchDepartments(),
+      fetchBookings(),
+      fetchAvailability(),
+      fetchTransfers(),
+      fetchTimetable(),
+      fetchFacultyOverrides()
+    ]);
+  }, [user?.id, fetchRooms, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Consolidated Main Data Fetching Effect
   useEffect(() => {
     if (user) {
-      fetchRooms();
-      fetchFaculties();
-      fetchDepartments();
-      fetchTransfers();
+      refreshAllData();
     }
-  }, [user, fetchRooms, fetchFaculties, fetchTransfers, fetchDepartments]);
-
-  useEffect(() => {
-    if (user) {
-      fetchBookings();
-      fetchAvailability();
-      fetchTimetable();
-      fetchFacultyOverrides();
-    }
-  }, [user, selectedDay, filters.building, fetchBookings, fetchAvailability, fetchTimetable, fetchFacultyOverrides]);
+  }, [
+    user?.id, 
+    selectedDay, 
+    filters.building, 
+    refreshAllData
+  ]);
 
   useEffect(() => {
     // Keep internal state for consecutive failures to avoid flickering on transient issues
@@ -210,11 +221,7 @@ export const AppProvider = ({ children }) => {
         // If we were in error state and now recovered
         if (prevBackendError.current && user) {
           console.log('Backend recovered! Refreshing data...');
-          fetchRooms();
-          fetchFaculties();
-          fetchBookings();
-          fetchAvailability();
-          fetchTransfers();
+          refreshAllData();
         }
         
         setBackendError(null);
@@ -272,6 +279,7 @@ export const AppProvider = ({ children }) => {
       fetchTimetable,
       fetchFacultyOverrides,
       fetchTransfers,
+      refreshAllData,
       logout
     }}>
       {children}

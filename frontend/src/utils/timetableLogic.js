@@ -68,61 +68,28 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
   if (role === 'FACULTY' || role === 'FACULTY MEMBER') {
     // Faculty Logic
     const rawSlots = facultyTimetableData[dayOfWeek] || [];
-    console.log('[DEBUG] Faculty raw slots for', dayOfWeek, ':', rawSlots);
-    staticClasses = rawSlots.map(s => {
-      const timeStr = s.slot_time || '';
-      const timeMatch = timeStr.match(/\d{2}:\d{2}-\d{2}:\d{2}/);
-      let room = 'N/A';
-      if (s.content && s.content.includes('Room:')) {
-        const parts = s.content.split('Room:');
-        if (parts[1]) {
-          room = parts[1].split(',')[0].trim();
-        }
-      }
-      return {
-        time: timeMatch ? timeMatch[0] : timeStr,
-        subjectName: s.content || 'Untitled Slot',
-        room: room,
-        isOccupied: true,
-        isDynamic: false
-      };
-    });
+    staticClasses = rawSlots.map(s => ({
+      time: s.slot_time,
+      subjectName: s.subject_name || s.content || 'Untitled Slot',
+      room: s.room_name || 'N/A',
+      isOccupied: true,
+      isDynamic: false
+    }));
   } else {
-    // Student Logic
-    if (!user.year || !user.section) return [];
-    
-    // Calculate Semester
-    const currentMonth = new Date().getMonth();
-    const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
-    const calculatedSemester = isEvenSemester ? Number(user.year) * 2 : (Number(user.year) * 2) - 1;
-    
-    // Normalize User Values
-    const userBranch = (user.branch || '').toUpperCase().trim();
-    const userDept = (user.department_name || '').toUpperCase().trim();
-    const userSection = String(user.section).trim();
-    const userSemester = String(calculatedSemester);
+    // Student Logic: Flattened Array of Slots
+    if (!Array.isArray(timetableData)) return [];
 
-    const isITMatch = (entryDept) => (userBranch === 'IT' || userDept === 'IT') && entryDept === 'INFORMATION TECHNOLOGY';
-    const isCSMatch = (entryDept) => (userBranch === 'CS' || userDept === 'CS') && entryDept.includes('COMPUTER SCIENCE');
-    const isBranchMatch = (entryDept) => entryDept === userBranch || entryDept === userDept || entryDept.includes(userBranch) || userBranch.includes(entryDept) || isITMatch(entryDept) || isCSMatch(entryDept);
-
-    if (Array.isArray(timetableData)) {
-      const entry = timetableData.find(e => {
-        const entryDept = (e.department || '').toUpperCase().trim();
-        const entrySection = String(e.section).trim();
-        const entrySem = String(e.semester).trim();
-        return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
-      });
-      staticClasses = entry?.timetable?.[dayOfWeek] || [];
-    } else if (typeof timetableData === 'object') {
-      const rawClasses = timetableData[dayOfWeek] || [];
-      staticClasses = rawClasses.filter(sc => {
-        const entryDept = (sc.department || '').toUpperCase().trim();
-        const entrySection = String(sc.section).trim();
-        const entrySem = String(sc.semester).trim();
-        return isBranchMatch(entryDept) && entrySection === userSection && entrySem === userSemester;
-      });
-    }
+    staticClasses = timetableData
+      .filter(slot => {
+        const slotDay = (slot.day_of_week || '').substring(0, 3);
+        return slotDay === dayOfWeek;
+      })
+      .map(slot => ({
+        time: slot.slot_time,
+        subjectName: slot.subject_name,
+        room: slot.room_name,
+        isDynamic: false
+      }));
   }
 
   // 2. Dynamic Bookings

@@ -6,12 +6,32 @@ export async function getTimetable(req, res) {
     const { user } = req;
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
-    const results = await db.query('SELECT * FROM timetable_slots WHERE (UPPER(department) = $1 OR UPPER(department) = $2) AND semester::TEXT = $3::TEXT AND section::TEXT = $4::TEXT', [
-      user.branch || user.department_name,
-      (user.branch || user.department_name) === 'IT' ? 'INFORMATION TECHNOLOGY' : ((user.branch || user.department_name) === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : (user.branch || user.department_name)),
-      user.semester,
-      user.section
-    ]);
+    const dept = user.branch || user.department_name;
+    const semester = user.semester || (user.year ? (user.year * 2) : null); // Fallback to year * 2 (even sem) or similar if needed, but usually semester is best.
+    
+    // Mapping from short codes to full names in timetable_slots
+    const deptMapping = {
+      'IT': 'INFORMATION TECHNOLOGY',
+      'CS': 'COMPUTER SCIENCE AND ENGINEERING',
+      'ICE': 'INSTRUMENTATION AND CONTROL ENGINEERING',
+      'ECE': 'ELECTRONICS AND COMMUNICATION ENGINEERING',
+      'ME': 'MECHANICAL ENGINEERING',
+      'MPAE': 'MANUFACTURING PROCESS AND AUTOMATION ENGINEERING',
+      'EE': 'ELECTRICAL ENGINEERING',
+      'BT': 'BIOTECHNOLOGY'
+    };
+
+    const mappedDept = deptMapping[dept?.toUpperCase()] || dept;
+
+    const results = await db.query(
+      'SELECT * FROM timetable_slots WHERE (UPPER(department) = $1 OR UPPER(department) = $2) AND semester::TEXT = $3::TEXT AND section::TEXT = $4::TEXT',
+      [
+        dept?.toUpperCase(),
+        mappedDept?.toUpperCase(),
+        semester,
+        user.section
+      ]
+    );
 
     res.json(results.rows);
   } catch (err) {

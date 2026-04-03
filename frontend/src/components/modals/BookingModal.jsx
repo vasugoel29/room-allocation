@@ -18,9 +18,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     faculties,
     bookings,
     availability,
-    fetchRooms,
-    fetchBookings,
-    fetchAvailability,
+    refreshAllData,
     timetableData,
   } = useContext(AppContext);
   const modalRef = useRef(null);
@@ -122,9 +120,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     setLoading(true);
     try {
       await bookingService.cancelBooking(booking.id);
-      fetchRooms();
-      fetchBookings();
-      fetchAvailability();
+      refreshAllData();
       onSuccess();
     } catch (err) {
       setError(err.message || "Cancellation failed");
@@ -229,9 +225,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
           );
         }
       }
-      fetchRooms();
-      fetchBookings();
-      fetchAvailability();
+      refreshAllData();
       onSuccess();
     } catch (err) {
       setError(err.message || "Booking failed");

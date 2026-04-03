@@ -31,7 +31,6 @@ const HistoryView = ({ onClose }) => {
 
   useEffect(() => {
     if (user?.role !== 'VIEWER') {
-      fetchTransfers();
       fetchHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
