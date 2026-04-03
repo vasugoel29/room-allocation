@@ -28,6 +28,37 @@ function RoomFilter() {
 
       <div className="space-y-4">
         <div className="space-y-2">
+          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Campus Block</label>
+          <div className="grid grid-cols-3 gap-1.5 bg-tonal-secondary/10 border border-text-secondary/10 p-1.5 rounded-xl">
+            {['all', '4th Block', '5th Block', '6th Block', '8th Block'].map((b) => (
+              <button
+                key={b}
+                onClick={() => {
+                  if (b === 'all') {
+                    updateFilter('building', ['all']);
+                  } else {
+                    const current = filters.building || [];
+                    const isAll = current.includes('all');
+                    let next;
+                    if (isAll) {
+                      next = [b];
+                    } else {
+                      next = current.includes(b) 
+                       ? current.filter(x => x !== b)
+                       : [...current, b];
+                    }
+                    updateFilter('building', next.length === 0 ? ['all'] : next);
+                  }
+                }}
+                className={`py-2 rounded-lg text-[10px] font-extrabold uppercase transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+              >
+                {b === 'all' ? 'All' : b.split(' ')[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Floor Level</label>
           <div className="flex bg-tonal-secondary/10 border border-text-secondary/10 p-1 rounded-xl">
             {['all', 'G', '1', '2', '3'].map((f) => (

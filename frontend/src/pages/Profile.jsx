@@ -42,7 +42,6 @@ function Profile() {
   };
 
   const isAdmin = user?.role === 'ADMIN';
-  const isFaculty = user?.role === 'FACULTY';
   const isStudent = user?.role === 'STUDENT_REP' || user?.role === 'VIEWER';
 
   if (!user) return null;

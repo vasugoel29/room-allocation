@@ -89,7 +89,18 @@ export const roomRepository = {
     if (capacity) { params.push(capacity); query += ` AND capacity >= $${params.length}`; }
     if (ac === 'true') query += ' AND has_ac = TRUE';
     if (projector === 'true') query += ' AND has_projector = TRUE';
-    if (building) { params.push(building); query += ` AND building = $${params.length}`; }
+    if (building) {
+      let buildingArr = Array.isArray(building) ? building : [building];
+      // Handle case where single query param might contain a comma
+      if (buildingArr.length === 1 && typeof buildingArr[0] === 'string' && buildingArr[0].includes(',')) {
+        buildingArr = buildingArr[0].split(',');
+      }
+      const filteredBuildings = buildingArr.filter(b => b && b !== 'all');
+      if (filteredBuildings.length > 0) {
+        params.push(filteredBuildings);
+        query += ` AND building = ANY($${params.length})`;
+      }
+    }
     
     if (floor && floor !== 'all') {
       const dbFloor = floor === 'G' ? 0 : parseInt(floor);

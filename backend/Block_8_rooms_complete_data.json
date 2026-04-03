@@ -1,0 +1,2585 @@
+{
+  "timestamp": "2026-04-03T09:48:16.789017",
+  "user_id": "2022UIT3042",
+  "fin_year": "2025-26",
+  "total_rooms": 6,
+  "analysis": {
+    "total_rooms": 6,
+    "by_day": {
+      "Mon": {
+        "total": 78,
+        "occupied": 36
+      },
+      "Tue": {
+        "total": 78,
+        "occupied": 36
+      },
+      "Wed": {
+        "total": 78,
+        "occupied": 38
+      },
+      "Thu": {
+        "total": 78,
+        "occupied": 38
+      },
+      "Fri": {
+        "total": 78,
+        "occupied": 35
+      },
+      "Sat": {
+        "total": 78,
+        "occupied": 0
+      }
+    },
+    "by_time_slot": {
+      "T108:00-09:00": {
+        "total": 36,
+        "occupied": 9
+      },
+      "T209:00-10:00": {
+        "total": 36,
+        "occupied": 23
+      },
+      "T310:00-11:00": {
+        "total": 36,
+        "occupied": 22
+      },
+      "T411:00-12:00": {
+        "total": 36,
+        "occupied": 20
+      },
+      "T512:00-01:00": {
+        "total": 36,
+        "occupied": 22
+      },
+      "T601:00-02:00": {
+        "total": 36,
+        "occupied": 22
+      },
+      "T702:00-03:00": {
+        "total": 36,
+        "occupied": 22
+      },
+      "T803:00-04:00": {
+        "total": 36,
+        "occupied": 20
+      },
+      "T904:00-05:00": {
+        "total": 36,
+        "occupied": 12
+      },
+      "T1005:00-06:00": {
+        "total": 36,
+        "occupied": 11
+      },
+      "T1106:00-07:00": {
+        "total": 36,
+        "occupied": 0
+      },
+      "T1207:00-08:00": {
+        "total": 36,
+        "occupied": 0
+      },
+      "T1308:00-09:00": {
+        "total": 36,
+        "occupied": 0
+      }
+    },
+    "most_available_rooms": [
+      {
+        "room": "8110",
+        "availability_percentage": 75.64,
+        "free_slots": 59,
+        "total_slots": 78
+      },
+      {
+        "room": "8110A",
+        "availability_percentage": 75.64,
+        "free_slots": 59,
+        "total_slots": 78
+      },
+      {
+        "room": "8003",
+        "availability_percentage": 60.26,
+        "free_slots": 47,
+        "total_slots": 78
+      },
+      {
+        "room": "8102",
+        "availability_percentage": 58.97,
+        "free_slots": 46,
+        "total_slots": 78
+      },
+      {
+        "room": "8103A",
+        "availability_percentage": 51.28,
+        "free_slots": 40,
+        "total_slots": 78
+      }
+    ],
+    "least_available_rooms": [
+      {
+        "room": "8002A",
+        "availability_percentage": 43.59,
+        "free_slots": 34,
+        "total_slots": 78
+      }
+    ]
+  },
+  "rooms": [
+    {
+      "room": "8002A",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "MG - PBM1205PARUL MANCHANDASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MG - PBM1205PARUL MANCHANDASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MG - PBC1204NAVAL GARGSem:2-Sec:1DEAN PG STUDIES - PBC1204NAVAL GARGSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "MG - PBC1204NAVAL GARGSem:2-Sec:1DEAN PG STUDIES - PBC1204NAVAL GARGSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "MG - PBO1201SAMIR GOKARNSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "MG - PBO1201SAMIR GOKARNSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "MG - PBF1206RITIKASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MG - PBF1206RITIKASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MG - PBH1205SALINI ROSALINE THARAYILSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "MG - PBH1205SALINI ROSALINE THARAYILSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "MG - PBC1202SALINI ROSALINE THARAYILSem:2-Sec:1MG - MBC1203SALINI ROSALINE THARAYILSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MG - PBC1202SALINI ROSALINE THARAYILSem:2-Sec:1MG - MBC1203SALINI ROSALINE THARAYILSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MG - PBC1204NAVAL GARGSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "MG - PBC1204NAVAL GARGSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "MG - PBM1205PARUL MANCHANDASem:2-Sec:DEAN PG STUDIES - PBM1205PARUL MANCHANDASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "MG - PBM1205PARUL MANCHANDASem:2-Sec:DEAN PG STUDIES - PBM1205PARUL MANCHANDASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "MG - PBF1203HIMANSHUSem:2-Sec:DEAN PG STUDIES - PBF1203HIMANSHUSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MG - PBF1203HIMANSHUSem:2-Sec:DEAN PG STUDIES - PBF1203HIMANSHUSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MG - PBO1201SAMIR GOKARNSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "MG - PBO1201SAMIR GOKARNSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "MG - PBB1206SAUMYA SATIJASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MG - PBM1201DINESH KUMARSem:2-Sec:MG - MBC1203SALINI ROSALINE THARAYILSem:2-Sec:1DEAN PG STUDIES - PBM1201DINESH KUMARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MG - PBM1201DINESH KUMARSem:2-Sec:DEAN PG STUDIES - PBM1201DINESH KUMARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "MG - MBC1202AASHIMASem:2-Sec:1MG - PBC1201AASHIMASem:2-Sec:1DEAN PG STUDIES - PBC1201AASHIMASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "MG - MBC1202AASHIMASem:2-Sec:1MG - PBC1201AASHIMASem:2-Sec:1DEAN PG STUDIES - PBC1201AASHIMASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MG - PBC1205SHIKSHA KUSHWAHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "MG - PBC1205SHIKSHA KUSHWAHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "MG - PBC1202SALINI ROSALINE THARAYILSem:2-Sec:1MG - MBC1203SALINI ROSALINE THARAYILSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MG - PBC1202SALINI ROSALINE THARAYILSem:2-Sec:1MG - MBC1203SALINI ROSALINE THARAYILSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MG - MBC1202AASHIMASem:2-Sec:1MG - PBC1201AASHIMASem:2-Sec:1DEAN PG STUDIES - PBC1201AASHIMASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "MG - MBC1202AASHIMASem:2-Sec:1MG - PBC1201AASHIMASem:2-Sec:1DEAN PG STUDIES - PBC1201AASHIMASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "MG - PBF1206RITIKASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "MG - PBF1206RITIKASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "MG - PBF1203HIMANSHUSem:2-Sec:DEAN PG STUDIES - PBF1203HIMANSHUSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MG - PBF1203HIMANSHUSem:2-Sec:DEAN PG STUDIES - PBF1203HIMANSHUSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MG - PBC1203NARESH KAUSHIKSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "MG - PBC1203NARESH KAUSHIKSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "MG - PBB1206SAUMYA SATIJASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MG - PBM1201DINESH KUMARSem:2-Sec:DEAN PG STUDIES - PBM1201DINESH KUMARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MG - PBM1201DINESH KUMARSem:2-Sec:DEAN PG STUDIES - PBM1201DINESH KUMARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "MG - PBC1205SHIKSHA KUSHWAHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MG - PBC1205SHIKSHA KUSHWAHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MG - PBC1203NARESH KAUSHIKSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "MG - PBC1203NARESH KAUSHIKSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "8003",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - ECECC405TARUN KUMAR RAWATSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - ECICC601AMAR NATH JHASem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - ECECC401DHARMENDRA KU UPADHYAYSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - ECECC402DHANANJAY V. GADRESem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "DU - EMHS0501GARGI JAINSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - ECEVC03URVASHI BANSALSem:2-Sec:1DU - EMHS0501GARGI JAINSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECECE601SOYINKA NATHSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - ECECC602AMIT SINGHALSem:6-Sec:1EC - ECECC19AMIT SINGHALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - ECECC403SHAILESH MISHRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - ECECC404NAVNEETA VERMASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1EC - ECCOC603MAMTA RAWATSem:6-Sec:1EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1EC - ECCOC603MAMTA RAWATSem:6-Sec:1EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECECC602AMIT SINGHALSem:6-Sec:1EC - ECECC19AMIT SINGHALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - ECECC402DHANANJAY V. GADRESem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - ECECC401DHARMENDRA KU UPADHYAYSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - ECICC601AMAR NATH JHASem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - ECECC405TARUN KUMAR RAWATSem:4-Sec:1DU - EMHS0501GARGI JAINSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - ECECC404NAVNEETA VERMASem:4-Sec:1DU - EMHS0501GARGI JAINSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - ECECC403SHAILESH MISHRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECECE601SOYINKA NATHSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1EC - ECCOC603SHAMPA CHAKERVERTYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - ECECC602AMIT SINGHALSem:6-Sec:1EC - ECECC19AMIT SINGHALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - ECEVC03URVASHI BANSALSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - ECECC401DHARMENDRA KU UPADHYAYSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECICC601AMAR NATH JHASem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - ECECE601SOYINKA NATHSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - ECECC405TARUN KUMAR RAWATSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - ECECC403SHAILESH MISHRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - ECECC404NAVNEETA VERMASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "8102",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - EICSC601SAVITA YADAVSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - VTECC404SANYA ANEESSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - VTECC401SHWETA GAUTAMSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - VTECC402SHAILESH MISHRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECECE601PARIKHA CHAWLASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - EICSC601SAVITA YADAVSem:6-Sec:1EC - EICSC601SAURABHI CHOUDHARYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - EICSC601SAVITA YADAVSem:6-Sec:1EC - EICSC601SAURABHI CHOUDHARYSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - VTECC403KUNWAR SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - VTECC405PARUL GARGSem:4-Sec:1EC - EIECC11PARUL GARGSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - EICSC601SAVITA YADAVSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - EIECC603ANKIT GARGSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - EIECC603ANKIT GARGSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - VTECC402SHAILESH MISHRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - VTECC401SHWETA GAUTAMSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - EIICC602ALOK AGRAWALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - VTECC404SANYA ANEESSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - VTECC405PARUL GARGSem:4-Sec:1EC - EIECC11PARUL GARGSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - VTECC403KUNWAR SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - ECECE601PARIKHA CHAWLASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - EIECC603ANKIT GARGSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - EIECC603ANKIT GARGSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - EIICC602ALOK AGRAWALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - ECEVC04DHANANJAY V. GADRESem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - VTECC401SHWETA GAUTAMSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - VTECC402SHAILESH MISHRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "EC - EIICC602ALOK AGRAWALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "EC - EIECC603ANKIT GARGSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "EC - EICSC601SAVITA YADAVSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "EC - ECECE601PARIKHA CHAWLASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "EC - VTECC404SANYA ANEESSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "EC - VTECC403KUNWAR SINGHSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "EC - VTECC405PARUL GARGSem:4-Sec:1EC - EIECC11PARUL GARGSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "8103A",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MA - MTMTC07SHIVAM KUMAR SINGHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "PH - SEPH202O. P. THAKURSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "PH - SEPH202O. P. THAKURSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CH - CHCHE04SWAPNIL LAXMAN SONAWANESem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "DP - CHCHE03ANJANA SARKARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MA - MTMTE05JAINENDER KUMAR SINGHSem:4-Sec:DP - MTMTE05JAINENDER KUMAR SINGHSem:4-Sec:DP - MTMTE05JAINENDER KUMAR SINGHSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MA - MTMTE08VIJAY GUPTASem:4-Sec:DP - MTMTE08VIJAY GUPTASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "PH - PHPHC14HARSH YADAVSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MA - MTMTC06POOJA BANSALSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "PH - PHPHC14HARSH YADAVSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CH - CHCHE06DIPIKA SHARMA Sem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "DP - CHCHE03ANJANA SARKARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MA - MTMTE02ANUPAM GAUTAMSem:4-Sec:DP - MTMTE02ANUPAM GAUTAMSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MA - MTMTE05JAINENDER KUMAR SINGHSem:4-Sec:DP - MTMTE05JAINENDER KUMAR SINGHSem:4-Sec:DP - MTMTE05JAINENDER KUMAR SINGHSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MA - MTMTC07SHIVAM KUMAR SINGHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "CH - CHCHE01NANCY GUPTASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "PH - PHPHC14HARSH YADAVSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "MA - MTMTE14RASHMI RANISem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "DP - CHCHE03ANJANA SARKARSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MA - MTMTE05JAINENDER KUMAR SINGHSem:4-Sec:DP - MTMTE05JAINENDER KUMAR SINGHSem:4-Sec:DP - MTMTE05JAINENDER KUMAR SINGHSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "PH - PHPHE10AMIT SANGERSem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MA - MTMTC06POOJA BANSALSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MA - MTMTC07SHIVAM KUMAR SINGHSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "MA - MTMTE14RASHMI RANISem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CH - CHCHC06SUSHMITASem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "IT - ITINC03SAVITA YADAVSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "CH - CHCHE01NANCY GUPTASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "MA - MTMTE08VIJAY GUPTASem:4-Sec:DP - MTMTE08VIJAY GUPTASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "PH - PHPHE10AMIT SANGERSem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "MA - MTMTC06POOJA BANSALSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "MA - MTMTE14RASHMI RANISem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "CH - CHCHC08LEENA AGGARWALSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "MA - MTMTE08VIJAY GUPTASem:4-Sec:DP - MTMTE08VIJAY GUPTASem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "DP - CHCHC07SACHIN PALSem:2-Sec:CH - CHCHC07SACHIN PALSem:2-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "CH - CHCHE05JUGAL BORISem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "MA - MTMTE02ANUPAM GAUTAMSem:4-Sec:DP - MTMTE02ANUPAM GAUTAMSem:2-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "PH - PHPHC14HARSH YADAVSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "PH - PHPHE10AMIT SANGERSem:4-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "8110",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "DU - EMPH0601ARYAN BOORASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "CS - COCSC602GAURAV SINGALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "CS - COCSE601SONALI GAHLOTSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "CS - COCSE601SONALI GAHLOTSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "DU - EMPH0601ARYAN BOORASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "CS - COCSE601SONALI GAHLOTSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "CS - COCSC603ANJALI SINGHSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "CS - COCSC601SURENDRA NAGARSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "DU - EMPH0601ARYAN BOORASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "CS - COCSC601SURENDRA NAGARSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "CS - COCSC602GAURAV SINGALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "DU - EMPH0601ARYAN BOORASem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "CS - COCSE601SONALI GAHLOTSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "CS - COCSC603ANJALI SINGHSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "CS - COCSC601SURENDRA NAGARSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "CS - COCSC602GAURAV SINGALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CS - COCSC602GAURAV SINGALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "CS - COCSC602GAURAV SINGALSem:6-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "CS - COCSE601SONALI GAHLOTSem:6-Sec:",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    },
+    {
+      "room": "8110A",
+      "semester": "EVEN",
+      "year": "2025-26",
+      "schedule": {
+        "Mon": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "CS - COICC405AGRIMA CHANDRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "CS - COCSC401ANMOL AWASTHISem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CS - COECC404UMER ASHRAFSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Tue": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "CS - COCSC402PREETI KAURSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CS - COCSC403SHAMPA CHAKERVERTYSem:4-Sec:1CS - COCSC403SHAMPA CHAKERVERTYSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Wed": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "CS - COECC404UMER ASHRAFSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "CS - COCSC401ANMOL AWASTHISem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CS - COICC405AGRIMA CHANDRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "CS - COCSC403SHAMPA CHAKERVERTYSem:4-Sec:1CS - COCSC403SHAMPA CHAKERVERTYSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "CS - COCSC402PREETI KAURSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "CS - COICC405AGRIMA CHANDRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "CS - COICC405AGRIMA CHANDRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Thu": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "CS - COCSC401ANMOL AWASTHISem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "CS - COECC404UMER ASHRAFSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Fri": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "CS - COICC405AGRIMA CHANDRASem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "CS - COCSC402PREETI KAURSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "CS - COCSC403SHAMPA CHAKERVERTYSem:4-Sec:1CS - COCSC403SHAMPA CHAKERVERTYSem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "CS - COCSC401ANMOL AWASTHISem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "CS - COCSC401ANMOL AWASTHISem:4-Sec:1",
+            "is_occupied": true
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ],
+        "Sat": [
+          {
+            "time_slot": "T108:00-09:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T209:00-10:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T310:00-11:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T411:00-12:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T512:00-01:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T601:00-02:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T702:00-03:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T803:00-04:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T904:00-05:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1005:00-06:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1106:00-07:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1207:00-08:00",
+            "content": "",
+            "is_occupied": false
+          },
+          {
+            "time_slot": "T1308:00-09:00",
+            "content": "",
+            "is_occupied": false
+          }
+        ]
+      }
+    }
+  ]
+}

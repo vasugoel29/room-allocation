@@ -3,6 +3,7 @@ import { AppContext } from "../../context/AppContext";
 import toast from "react-hot-toast";
 import { X, AlertCircle, CheckCircle } from "lucide-react";
 import { bookingService } from "../../services/bookingService";
+import { roomService } from "../../services/roomService";
 import { useSearchDebounce } from "../../hooks/useSearchDebounce";
 
 import RoomSelector from "../../features/booking/RoomSelector";
@@ -71,7 +72,6 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [facultyConflict, setFacultyConflict] = useState(null); // { type, content }
   const [confirmedConflict, setConfirmedConflict] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");

@@ -1,15 +1,14 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { facultyService } from '../services/facultyService';
 import { roomService } from '../services/roomService';
 import { AppContext } from '../context/AppContext';
-import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap, ChevronLeft, Calendar, AlertTriangle, Trash2 } from 'lucide-react';
+import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 import toast from 'react-hot-toast';
 import { useFacultyRequests } from '../hooks/useFacultyRequests';
-import { getSortableMinutes } from '../utils/timetableLogic';
 
 function FacultyDashboard() {
-  const { user, bookings, fetchBookings, fetchAvailability, fetchFacultyOverrides, facultyTimetableData, facultyOverrides } = useContext(AppContext);
+  const { user, bookings, fetchBookings, fetchAvailability, fetchFacultyOverrides } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('PENDING'); // PENDING | ACCEPTED | MY
   const { pendingRequests, setPendingRequests, loading } = useFacultyRequests(user);
   

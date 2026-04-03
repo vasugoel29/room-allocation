@@ -46,7 +46,7 @@ const Timetable = () => {
       item.room?.toLowerCase().includes(search) ||
       item.instructor?.toLowerCase().includes(search)
     );
-  }, [user, selectedDay, bookings, availability, searchTerm, timetableData, facultyTimetableData]);
+  }, [user, selectedDay, bookings, availability, searchTerm, timetableData, facultyTimetableData, facultyOverrides]);
 
   const handleCancelClass = (classItem) => {
     setPendingCancelClass(classItem);

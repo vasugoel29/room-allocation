@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
-import { isRoomReallyFree, getHourFromTime } from '../../utils/timetableLogic';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
@@ -9,7 +8,7 @@ const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { user, bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
+  const { user, bookings, rooms, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
@@ -177,7 +176,7 @@ function Calendar({ onSlotClick }) {
                 <p className="text-text-secondary text-base sm:text-lg font-extrabold uppercase tracking-widest opacity-40 font-display text-center">No structural matches found</p>
               </div>
             ) : (
-              filteredHours.map((hour, index) => {
+              filteredHours.map((hour) => {
                 return (
                   <div 
                     key={hour} 

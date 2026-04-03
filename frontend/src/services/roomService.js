@@ -2,8 +2,15 @@ import api from '../utils/api';
 
 export const roomService = {
   getRooms: async (filters = {}) => {
-    const query = new URLSearchParams(filters).toString();
-    const res = await api.get(`/rooms?${query}`);
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(val => params.append(key, val));
+      } else if (value !== undefined && value !== null) {
+        params.append(key, value);
+      }
+    });
+    const res = await api.get(`/rooms?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch rooms');
     return res.json();
   },
@@ -41,9 +48,16 @@ export const roomService = {
     return res.json();
   },
 
-  getTimetable: async (params = {}) => {
-    const query = new URLSearchParams(params).toString();
-    const res = await api.get(`/timetable?${query}`);
+  getTimetable: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (Array.isArray(value)) {
+        value.forEach(val => params.append(key, val));
+      } else if (value !== undefined && value !== null) {
+        params.append(key, value);
+      }
+    });
+    const res = await api.get(`/timetable?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch timetable');
     return res.json();
   },

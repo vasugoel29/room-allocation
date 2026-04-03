@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import Calendar from './components/ui/Calendar';
 import RoomFilter from './components/ui/RoomFilter';
@@ -25,6 +25,43 @@ import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, M
 import BottomNav from './components/ui/BottomNav';
 import FloatingActions from './components/ui/FloatingActions';
 
+const ProtectedRoute = ({ user, children, roles = [] }) => {
+  if (!user) return <Navigate to="/login" replace />;
+  if (roles.length > 0 && !roles.includes(user.role)) {
+    return <Navigate to="/calendar" replace />;
+  }
+  return children;
+};
+
+const NavButton = ({ id, label, icon, to, setIsSidebarOpen, isSidebarCollapsed, pendingTransferCount }) => {
+  const IconComponent = icon;
+  return (
+    <NavLink 
+      to={to || `/${id}`}
+      onClick={() => setIsSidebarOpen(false)}
+      className={({ isActive }) => `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `bg-primary-accent text-white shadow-ambient` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+    >
+      <div className="relative">
+        <IconComponent size={20} />
+        {(id === 'bookings' || id === 'history') && pendingTransferCount > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-tertiary rounded-full shadow-tertiary animate-pulse" />
+        )}
+      </div>
+      {!isSidebarCollapsed && <span>{label}</span>}
+    </NavLink>
+  );
+};
+
+const ThemeToggle = ({ theme, setTheme, className = "" }) => (
+  <button 
+    onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+    className={`p-2.5 hover:bg-tonal-secondary rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95 ${className}`}
+    title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+  >
+    {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+  </button>
+);
+
 function App() {
   const { user, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
   const { isDesktop } = useWindowSize();
@@ -39,30 +76,31 @@ function App() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [isPromotionOpen, setIsPromotionOpen] = useState(false);
 
-
+  if (backendError) {
+    return (
+      <div className={`h-screen w-full flex items-center justify-center bg-surface-lowest p-6 ${theme === 'dark' ? 'dark' : ''}`}>
+        <div className="max-w-md w-full bg-surface-low rounded-[2.5rem] p-8 sm:p-10 shadow-ambient text-center space-y-6 animate-in fade-in zoom-in duration-300">
+          <div className="inline-flex p-4 bg-red-500/10 rounded-2xl text-red-500 mb-2">
+            <ShieldAlert size={48} />
+          </div>
+          <h2 className="text-2xl font-bold text-text-primary uppercase font-display tracking-tight">Connection Error</h2>
+          <p className="text-text-secondary font-medium">{backendError}</p>
+          <button 
+            type="button"
+            onClick={() => window.location.reload()} 
+            className="w-full bg-primary text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-primary/90 transition-all shadow-lg active:scale-95 font-display"
+          >
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const toggleSidebar = () => {
     const newState = !isSidebarCollapsed;
     setIsSidebarCollapsed(newState);
     localStorage.setItem('sidebarCollapsed', newState);
-  };
-
-  const NavButton = ({ id, label, icon: IconComponent, to }) => {
-    return (
-      <NavLink 
-        to={to || `/${id}`}
-        onClick={() => setIsSidebarOpen(false)}
-        className={({ isActive }) => `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `bg-primary-accent text-white shadow-ambient` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
-      >
-        <div className="relative">
-          <IconComponent size={20} />
-          {(id === 'bookings' || id === 'history') && pendingTransferCount > 0 && (
-            <span className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-tertiary rounded-full shadow-tertiary animate-pulse" />
-          )}
-        </div>
-        {!isSidebarCollapsed && <span>{label}</span>}
-      </NavLink>
-    );
   };
 
   const getNavigationTabs = () => {
@@ -107,28 +145,6 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
   }
   return children;
 };
-
-function App() {
-  const { user, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-surface-lowest p-6">
-        <div className="max-w-md w-full bg-surface-low rounded-[2.5rem] p-8 sm:p-10 shadow-ambient text-center space-y-6 animate-in fade-in zoom-in duration-300">
-          <div className="inline-flex p-4 bg-red-500/10 rounded-2xl text-red-500 mb-2">
-            <ShieldAlert size={48} />
-          </div>
-          <h2 className="text-2xl font-bold text-slate-900 uppercase font-display tracking-tight">Connection Error</h2>
-          <p className="text-slate-600 font-medium">{backendError}</p>
-          <button 
-            type="button"
-            onClick={() => window.location.reload()} 
-            className="w-full bg-accent text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-accent/90 transition-all shadow-lg active:scale-95 font-display"
-          >
-            Retry Connection
-          </button>
-        </div>
-      </div>
-    );
-  }
   const ThemeToggle = ({ className = "" }) => (
     <button 
       onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
@@ -182,7 +198,16 @@ function App() {
                     <p className="px-4 text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] mb-4 opacity-50 font-display">Navigation</p>
                     <div className="flex flex-col gap-1">
                       {getNavigationTabs().map(tab => (
-                        <NavButton key={tab.id} id={tab.id} icon={tab.icon} label={tab.label} to={tab.id === 'calendar' ? '/calendar' : `/${tab.id}`} />
+                        <NavButton 
+                          key={tab.id} 
+                          id={tab.id} 
+                          icon={tab.icon} 
+                          label={tab.label} 
+                          to={tab.id === 'calendar' ? '/calendar' : `/${tab.id}`}
+                          setIsSidebarOpen={setIsSidebarOpen}
+                          isSidebarCollapsed={isSidebarCollapsed}
+                          pendingTransferCount={pendingTransferCount}
+                        />
                       ))}
                     </div>
                   </div>
@@ -202,7 +227,7 @@ function App() {
                       <p className="text-[9px] text-primary-accent uppercase tracking-widest font-black opacity-60">{getRoleLabel(user?.role)}</p>
                     </div>
                     <div className={`flex items-center gap-1 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
-                      <ThemeToggle />
+                      <ThemeToggle theme={theme} setTheme={setTheme} />
                       <button onClick={logout} className="p-2.5 hover:bg-red-500/10 rounded-xl text-text-secondary hover:text-red-500 transition-colors" title="Logout"><LogOut size={18} /></button>
                     </div>
                   </div>
@@ -218,7 +243,7 @@ function App() {
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">
-                    <ThemeToggle className="lg:hidden" />
+                    <ThemeToggle theme={theme} setTheme={setTheme} className="lg:hidden" />
                     {location.pathname === '/calendar' && (
                       <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
                         <button onClick={() => setViewMode('day')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold uppercase transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>

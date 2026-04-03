@@ -20,7 +20,7 @@ export const AppProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
-  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: '5th Block' });
+  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: ['5th Block'] });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -197,7 +197,7 @@ export const AppProvider = ({ children }) => {
       fetchTimetable();
       fetchFacultyOverrides();
     }
-  }, [user, fetchBookings, fetchAvailability, fetchTimetable, fetchFacultyOverrides]);
+  }, [user, selectedDay, filters.building, fetchBookings, fetchAvailability, fetchTimetable, fetchFacultyOverrides]);
 
   useEffect(() => {
     // Keep internal state for consecutive failures to avoid flickering on transient issues
