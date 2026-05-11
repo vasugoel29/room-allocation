@@ -211,7 +211,17 @@ function Calendar({ onSlotClick }) {
                                   const dbFloor = filters.floor === 'G' ? 0 : (filters.floor === 'all' ? 'all' : parseInt(filters.floor));
                                   const matchesFloor = dbFloor === 'all' || Number(room.floor) === Number(dbFloor);
                                   const matchesSmart = !filters.smartRoom || (room.has_ac && room.has_projector);
-                                  return matchesSearch && matchesFloor && matchesSmart;
+                                  
+                                  if (!matchesSearch || !matchesFloor || !matchesSmart) return false;
+
+                                  // Strict Filtering Rule: Hide static occupied rooms entirely. Keep if manually booked.
+                                  const hasActiveBooking = !!getBooking(dateStr, hour, room.id);
+                                  const availRec = availability?.find(a => Number(a.room_id) === Number(room.id) && a.day === dayLabel && Number(a.hour) === Number(hour));
+                                  const isDBUnavailable = availRec && !availRec.is_available;
+                                  
+                                  if (isDBUnavailable && !hasActiveBooking) return false; // PULL FROM ARRAY!
+                                  
+                                  return true;
                                 })
                                 .sort((a, b) => {
                                   const aBooked = !!getBooking(dateStr, hour, a.id);
@@ -265,8 +275,8 @@ function Calendar({ onSlotClick }) {
                                         <div className="flex flex-col overflow-hidden">
                                           <span className={`font-black truncate tracking-tight ${isOccupied ? 'text-text-secondary text-[10px] sm:text-xs' : 'text-xs sm:text-sm'}`}>{room.name}</span>
                                           {booking ? (
-                                            <span className="text-[8px] sm:text-[9px] text-text-secondary/70 truncate leading-none mt-0.5">
-                                              {booking.class_name || 'Booking'}
+                                            <span className="text-[8px] sm:text-[9px] text-text-secondary/80 font-bold truncate leading-none mt-0.5">
+                                              {booking.user_name ? `${booking.user_name}` : (booking.class_name || 'Booked')}
                                             </span>
                                           ) : staticClass ? (
                                             <span className="text-[8px] sm:text-[9px] text-text-secondary/70 truncate leading-none mt-0.5">
