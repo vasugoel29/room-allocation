@@ -4,10 +4,13 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "seed": "node src/seed.js",
-    "unseed": "node src/unseed.js",
+    "start": "NODE_ENV=production node src/server.js",
+    "start:staging": "NODE_ENV=staging node src/server.js",
+    "dev": "NODE_ENV=development nodemon src/server.js",
+    "dev:staging": "NODE_ENV=staging nodemon src/server.js",
+    "seed": "node scripts/seed.js",
+    "seed:students": "node scripts/seed_students.js",
+    "unseed": "node scripts/unseed.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
   },
   "dependencies": {
@@ -18,14 +21,16 @@
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "dotenv": "^17.3.1",
+    "dotenv": "^16.4.5",
+    "dotenv-expand": "^11.0.6",
     "express": "^5.1.0",
     "express-rate-limit": "^8.3.1",
     "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^8.0.1",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "jest": "^30.2.0",

@@ -1,16 +1,27 @@
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
+import { promotionRepository } from '../repositories/promotionRepository.js';
+import { userRepository } from '../repositories/userRepository.js';
+import { notifyPromotionResult } from '../utils/emailService.js';
+import { logActivity } from '../services/loggerService.js';
 
 export const requestPromotion = async (req, res) => {
-  const { reason } = req.body;
-  const userId = req.user.id;
+  if (!reason || reason.trim().length > 100) {
+    return res.status(400).json({ error: 'Reason is required and must be under 100 characters' });
+  }
 
   try {
-    const result = await db.query(
-      'INSERT INTO promotion_requests (user_id, reason) VALUES ($1, $2) RETURNING *',
-      [userId, reason]
-    );
-    res.status(201).json(result.rows[0]);
+    const request = await promotionRepository.createRequest(userId, reason);
+
+    await logActivity({
+      userId,
+      action: 'REQUEST_PROMOTION',
+      entityType: 'promotion',
+      entityId: request.id,
+      details: { reason }
+    });
+
+    res.status(201).json(request);
   } catch (err) {
     if (err.code === '23505') {
       return res.status(400).json({ error: 'You already have a pending promotion request' });
@@ -22,13 +33,8 @@ export const requestPromotion = async (req, res) => {
 
 export const getPromotionRequests = async (req, res) => {
   try {
-    const result = await db.query(`
-      SELECT pr.*, u.name as user_name, u.email as user_email 
-      FROM promotion_requests pr
-      JOIN users u ON pr.user_id = u.id
-      ORDER BY pr.created_at DESC
-    `);
-    res.json(result.rows);
+    const requests = await promotionRepository.findAllRequests();
+    res.json(requests);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch requests' });
   }
@@ -38,33 +44,73 @@ export const handlePromotionAction = async (req, res) => {
   const { id } = req.params;
   const { status, admin_comment } = req.body; // status: APPROVED, REJECTED
 
+  if (!['APPROVED', 'REJECTED'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status' });
+  }
+
+  if (admin_comment && admin_comment.length > 100) {
+    return res.status(400).json({ error: 'Admin comment must be under 100 characters' });
+  }
+
+  const client = await db.pool.connect();
   try {
-    await db.query('BEGIN');
+    await client.query('BEGIN');
     
-    const requestRes = await db.query('SELECT * FROM promotion_requests WHERE id = $1', [id]);
-    const request = requestRes.rows[0];
+    const request = await promotionRepository.findById(id, client);
 
     if (!request) {
-      await db.query('ROLLBACK');
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Request not found' });
     }
 
-    await db.query(
-      'UPDATE promotion_requests SET status = $1, admin_comment = $2, updated_at = NOW() WHERE id = $3',
-      [status, admin_comment, id]
-    );
+    await promotionRepository.updateStatus(id, status, admin_comment, client);
 
     if (status === 'APPROVED') {
-      await db.query(
-        "UPDATE users SET role = 'STUDENT_REP' WHERE id = $1",
-        [request.user_id]
-      );
+      await userRepository.updateRole(request.user_id, 'STUDENT_REP', client);
     }
 
-    await db.query('COMMIT');
+    await client.query('COMMIT');
+
+    await logActivity({
+      userId: req.user.id, // Admin
+      action: status === 'APPROVED' ? 'APPROVE_PROMOTION' : 'REJECT_PROMOTION',
+      entityType: 'promotion',
+      entityId: id,
+      details: { user_id: request.user_id, admin_comment }
+    }, client);
+
+    // PROD-02: Notify student of promotion result
+    try {
+      const user = await userRepository.findById(request.user_id);
+      if (user?.email) {
+        notifyPromotionResult({
+          userEmail: user.email,
+          userName: user.name,
+          status,
+          adminComment: admin_comment
+        }).catch(err => logger.error('Promotion notification failed', err));
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send promotion notification (non-blocking)', notifErr);
+    }
+
     res.json({ message: `Request ${status.toLowerCase()} successfully` });
   } catch (err) {
-    await db.query('ROLLBACK');
+    await client.query('ROLLBACK');
+    logger.error('Promotion action failed', err);
     res.status(500).json({ error: 'Failed to process request' });
+  } finally {
+    client.release();
   }
 };
+
+export const getMyPromotionRequest = async (req, res) => {
+  try {
+    const request = await promotionRepository.findByUserId(req.user.id);
+    res.json(request || null);
+  } catch (err) {
+    logger.error('Failed to fetch user promotion request', err);
+    res.status(500).json({ error: 'Failed to fetch request' });
+  }
+};
+

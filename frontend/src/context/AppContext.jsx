@@ -1,6 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { api } from '../utils/api';
+import { authService } from '../services/authService';
+import { bookingService } from '../services/bookingService';
+import { roomService } from '../services/roomService';
 
 export const AppContext = createContext();
 
@@ -18,9 +20,30 @@ export const AppProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
-  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: '5th Block' });
+  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: ['5th Block'] });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [departments, setDepartments] = useState([]);
+  const [timetableData, setTimetableData] = useState({});
+  const [facultyTimetableData, setFacultyTimetableData] = useState({});
+  const [facultyOverrides, setFacultyOverrides] = useState([]);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      console.log('PWA: deferredPrompt captured');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   const initialDay = useMemo(() => {
     const now = new Date();
@@ -41,43 +64,80 @@ export const AppProvider = ({ children }) => {
     return `${year}-${month}-${dayNum}`;
   }, []);
 
+  const [faculties, setFaculties] = useState([]);
+  const [incomingTransfers, setIncomingTransfers] = useState([]);
+  const [outgoingTransfers, setOutgoingTransfers] = useState([]);
   const [selectedDay, setSelectedDay] = useState(initialDay);
   const [backendError, setBackendError] = useState(null);
   const prevBackendError = useRef(null);
 
-  const handleLogout = useCallback(async () => {
+  const logout = useCallback(async () => {
     try {
-      await api.post('/auth/logout');
-    } catch (e) {
-      console.error('Logout failed:', e);
+      await authService.logout();
+    } catch (err) {
+      console.error('Logout error', err);
+    } finally {
+      setUser(null);
+      localStorage.removeItem('user');
+      localStorage.removeItem('token');
     }
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    setUser(null);
+  }, []);
+
+  const fetchTransfers = useCallback(async () => {
+    if (!user) return;
+    try {
+      const [incoming, outgoing] = await Promise.all([
+        bookingService.getIncomingTransfers(),
+        bookingService.getOutgoingTransfers()
+      ]);
+      setIncomingTransfers(incoming);
+      setOutgoingTransfers(outgoing);
+    } catch (err) {
+      console.error('Fetch transfers failed', err);
+    }
+  }, [user]);
+
+  const fetchFaculties = useCallback(async () => {
+    try {
+      const data = await authService.getFaculties();
+      setFaculties(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch faculties failed', err);
+    }
+  }, []);
+
+  const fetchDepartments = useCallback(async () => {
+    try {
+      const data = await roomService.getDepartments();
+      setDepartments(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Fetch departments failed', err);
+    }
   }, []);
 
   const fetchRooms = useCallback(async () => {
     try {
-      const queryParams = { ...filters };
+      const queryParams = { 
+        building: filters.building,
+        floor: filters.floor,
+        searchTerm: filters.searchTerm
+      };
       if (filters.smartRoom) {
         queryParams.ac = 'true';
         queryParams.projector = 'true';
       }
-      delete queryParams.smartRoom;
-      const query = new URLSearchParams(queryParams).toString();
-      const res = await api.get(`/rooms?${query}`);
-      const data = await res.json();
+      const data = await roomService.getRooms(queryParams);
       if (Array.isArray(data)) setRooms(data);
       else console.error('Expected array of rooms, got:', data);
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
-  }, [filters]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.building, filters.floor, filters.searchTerm, filters.smartRoom]);
 
   const fetchBookings = useCallback(async () => {
     try {
-      const res = await api.get('/bookings');
-      const data = await res.json();
+      const data = await bookingService.getBookings();
       setBookings(data);
     } catch (err) {
       console.error('Fetch bookings failed', err);
@@ -86,65 +146,117 @@ export const AppProvider = ({ children }) => {
 
   const fetchAvailability = useCallback(async () => {
     try {
-      const res = await api.get('/availability');
-      const data = await res.json();
+      const data = await roomService.getAvailability();
       setAvailability(data);
     } catch (err) {
       console.error('Fetch availability failed', err);
     }
   }, []);
 
+
+  const fetchTimetable = useCallback(async () => {
+    if (!user) return;
+    try {
+      if (user.role === 'FACULTY') {
+        const data = await roomService.getFacultyTimetable();
+        setFacultyTimetableData(data || {});
+      } else {
+        const data = await roomService.getTimetable();
+        setTimetableData(data);
+      }
+    } catch (err) {
+      console.error('Fetch timetable failed', err);
+    }
+  }, [user?.role]); // Only depend on role for the API endpoint decision
+
+  const fetchFacultyOverrides = useCallback(async () => {
+    if (!user || user.role !== 'FACULTY') return;
+    try {
+      const data = await roomService.getFacultyOverrides();
+      setFacultyOverrides(data || []);
+    } catch (err) {
+      console.error('Fetch faculty overrides failed', err);
+    }
+  }, [user?.role]);
+
+  const refreshAllData = useCallback(async () => {
+    if (!user) return;
+    return Promise.all([
+      fetchRooms(),
+      fetchFaculties(),
+      fetchDepartments(),
+      fetchBookings(),
+      fetchAvailability(),
+      fetchTransfers(),
+      fetchTimetable(),
+      fetchFacultyOverrides()
+    ]);
+  }, [user?.id, fetchRooms, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  // Consolidated Main Data Fetching Effect
   useEffect(() => {
     if (user) {
-      fetchRooms();
+      refreshAllData();
     }
-  }, [user, fetchRooms]);
+  }, [
+    user?.id, 
+    selectedDay, 
+    filters.building, 
+    refreshAllData
+  ]);
 
   useEffect(() => {
-    if (user) {
-      fetchBookings();
-      fetchAvailability();
-    }
-  }, [user, fetchBookings, fetchAvailability]);
-
-  useEffect(() => {
+    // Keep internal state for consecutive failures to avoid flickering on transient issues
+    let failureCount = 0;
+    
     const checkConnection = async () => {
       try {
-        const res = await api.get('/health');
-        if (!res.ok) throw new Error('Backend unresponsive');
+        await roomService.getHealth();
+        
+        // If we were in error state and now recovered
         if (prevBackendError.current && user) {
           console.log('Backend recovered! Refreshing data...');
-          fetchRooms();
-          fetchBookings();
-          fetchAvailability();
+          refreshAllData();
         }
+        
         setBackendError(null);
         prevBackendError.current = null;
+        failureCount = 0;
       } catch (err) {
-        console.error('Backend connection check failed:', err);
-        const errMsg = 'Cannot connect to server. Please ensure the backend is running.';
-        setBackendError(errMsg);
-        prevBackendError.current = errMsg;
+        failureCount++;
+        // Only show error screen after 2 consecutive failures to allow for minor network jitters
+        if (failureCount >= 2) {
+          console.error('Backend connection check failed:', err);
+          const errMsg = 'Cannot connect to server. Please ensure the backend is running.';
+          setBackendError(errMsg);
+          prevBackendError.current = errMsg;
+        }
       }
     };
 
     checkConnection();
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
-  }, [user, fetchRooms, fetchBookings, fetchAvailability]);
+    // Removed function dependencies that were causing re-render loops
+  }, [user]); 
 
   return (
     <AppContext.Provider value={{
       user,
       setUser,
       rooms,
+      faculties,
+      incomingTransfers,
+      outgoingTransfers,
+      pendingTransferCount: incomingTransfers.filter(t => t.status === 'PENDING').length,
       bookings,
       availability,
+      departments,
       filters,
       setFilters,
       theme,
@@ -153,13 +265,25 @@ export const AppProvider = ({ children }) => {
       setViewMode,
       selectedDay,
       setSelectedDay,
+      deferredPrompt,
+      clearInstallPrompt: () => setDeferredPrompt(null),
       backendError,
       fetchRooms,
+      fetchFaculties,
+      fetchDepartments,
       fetchBookings,
       fetchAvailability,
-      handleLogout
+      timetableData,
+      facultyTimetableData,
+      facultyOverrides,
+      fetchTimetable,
+      fetchFacultyOverrides,
+      fetchTransfers,
+      refreshAllData,
+      logout
     }}>
       {children}
     </AppContext.Provider>
   );
 };
+

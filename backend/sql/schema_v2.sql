@@ -1,4 +1,10 @@
--- CRAS Phase 2 - Database Schema
+-- DROP TABLES to ensure fresh start
+DROP TABLE IF EXISTS promotion_requests CASCADE;
+DROP TABLE IF EXISTS booking_history CASCADE;
+DROP TABLE IF EXISTS bookings CASCADE;
+DROP TABLE IF EXISTS room_availability CASCADE;
+DROP TABLE IF EXISTS rooms CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -7,8 +13,10 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   password VARCHAR(255) NOT NULL,
   role VARCHAR(50) DEFAULT 'VIEWER',
+  branch VARCHAR(255),
   year INT CHECK (year BETWEEN 1 AND 4),
   section INT CHECK (section BETWEEN 1 AND 4),
+  department VARCHAR(255),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

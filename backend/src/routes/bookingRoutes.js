@@ -16,7 +16,7 @@ const bookingValidation = [
   body('room_id').isInt().withMessage('Valid room ID required'),
   body('start_time').isISO8601().withMessage('Valid start time required'),
   body('end_time').isISO8601().withMessage('Valid end time required'),
-  body('purpose').trim().notEmpty().withMessage('Purpose is required')
+  body('purpose').trim().notEmpty().isLength({ max: 100 }).withMessage('Purpose must be between 1 and 100 characters')
 ];
 
 const idValidation = [
@@ -29,13 +29,13 @@ const quickBookValidation = [
   body('slot').isInt({ min: 0, max: 23 }).withMessage('Slot must be between 0 and 23')
 ];
 
-router.get('/', getBookings);
+router.get('/', authenticate, getBookings);
 router.post('/', authenticate, requireRole('STUDENT_REP'), bookingValidation, validateRequest, createBooking);
 router.patch('/:id/cancel', authenticate, idValidation, validateRequest, cancelBooking);
 router.patch('/:id', authenticate, requireRole('STUDENT_REP'), idValidation, validateRequest, rescheduleBooking);
 
 // Admin-only all bookings (active & cancelled)
-router.get('/admin/all', authenticate, requireRole('admin'), getBookings);
-router.post('/admin/quick', authenticate, requireRole('admin'), quickBookValidation, validateRequest, quickBook);
+router.get('/admin/all', authenticate, requireRole('ADMIN'), getBookings);
+router.post('/admin/quick', authenticate, requireRole('ADMIN'), quickBookValidation, validateRequest, quickBook);
 
 export default router;

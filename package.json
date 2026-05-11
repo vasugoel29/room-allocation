@@ -3,15 +3,25 @@
   "private": true,
   "scripts": {
     "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
-    "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:backend:staging": "npm run dev:staging --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
     "dev": "npx concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:staging": "npx concurrently \"npm run dev:backend:staging\" \"npm run dev:frontend\"",
     "lint": "npm run lint --prefix frontend",
     "test": "npm run test --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build": "npm run lint && npm run test && npm run build:frontend",
+    "start:backend": "npm run start --prefix backend",
+    "preview:frontend": "npm run preview --prefix frontend",
+    "start": "npx concurrently \"npm run start:backend\" \"npm run preview:frontend\"",
     "seed": "npm run seed --prefix backend",
-    "unseed": "npm run unseed --prefix backend"
+    "seed:staging": "NODE_ENV=staging npm run seed --prefix backend",
+    "seed:prod": "NODE_ENV=production npm run seed --prefix backend",
+    "seed-faculties:staging": "NODE_ENV=staging node backend/scripts/seed_faculties.js",
+    "unseed": "npm run unseed --prefix backend",
+    "unseed:staging": "NODE_ENV=staging npm run unseed --prefix backend",
+    "reset:staging": "npm run unseed:staging && npm run seed:staging && npm run seed-faculties:staging"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
