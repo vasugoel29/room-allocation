@@ -9,7 +9,7 @@ let poolConfig = {
   database: 'roomdb',
   password: 'roompass',
   port: 5432,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 15000,
 };
 
 if (process.env.DATABASE_URL) {
@@ -24,7 +24,7 @@ if (process.env.DATABASE_URL) {
       port: url.port || 5432,
       database: url.pathname.slice(1),
       ssl: isLocalhost ? false : { rejectUnauthorized: false },
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 15000,
     };
   } catch (error) {
     logger.error('Failed to parse DATABASE_URL', error);
@@ -242,19 +242,30 @@ export async function testDbConnection() {
   }
 }
 
-// Auto-check on import (opt-in/guarded)
+// Auto-check on import with retry for Neon cold starts
 if (process.env.NODE_ENV !== 'test') {
   (async () => {
-    try {
-      const isConnected = await testDbConnection();
-      if (!isConnected) {
-        logger.error('Startup failed: Database connection could not be established', new Error('Database connection failed'));
-        process.exit(1);
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY_MS = 3000;
+
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const isConnected = await testDbConnection();
+        if (isConnected) return; // Success — exit the retry loop
+
+        logger.error(`Database connection attempt ${attempt}/${MAX_RETRIES} failed`);
+      } catch (err) {
+        logger.error(`Database connection attempt ${attempt}/${MAX_RETRIES} threw an error`, err);
       }
-    } catch (err) {
-      logger.error('Startup failed: Error during database connection test', err);
-      process.exit(1);
+
+      if (attempt < MAX_RETRIES) {
+        logger.info(`Retrying database connection in ${RETRY_DELAY_MS / 1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+      }
     }
+
+    logger.error('Startup failed: Database connection could not be established after all retries', new Error('Database connection failed'));
+    process.exit(1);
   })();
 }
 
