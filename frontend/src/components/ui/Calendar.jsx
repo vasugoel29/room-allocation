@@ -8,7 +8,7 @@ const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { user, bookings, rooms, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
+  const { user, bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
@@ -217,10 +217,13 @@ function Calendar({ onSlotClick }) {
                                   const aBooked = !!getBooking(dateStr, hour, a.id);
                                   const bBooked = !!getBooking(dateStr, hour, b.id);
                                   
-                                  // Check static timetable for both
-                                  const daySchedule = timetableData?.[dayLabel] || [];
-                                  const isAOccupied = aBooked || daySchedule.some(sc => sc.room && (sc.room.trim().toLowerCase() === a.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(a.name.trim().toLowerCase())) && sc.time === hour);
-                                  const isBOccupied = bBooked || daySchedule.some(sc => sc.room && (sc.room.trim().toLowerCase() === b.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(b.name.trim().toLowerCase())) && sc.time === hour);
+                                  // Check database availability
+                                  const aAvail = availability?.find(a => Number(a.room_id) === Number(a.id) && a.day === dayLabel && Number(a.hour) === Number(hour));
+                                  const bAvail = availability?.find(a => Number(a.room_id) === Number(b.id) && a.day === dayLabel && Number(a.hour) === Number(hour));
+                                  
+                                  // If explicitly marked not available in DB, consider it occupied
+                                  const isAOccupied = aBooked || (aAvail && !aAvail.is_available);
+                                  const isBOccupied = bBooked || (bAvail && !bAvail.is_available);
                                   
                                   if (isAOccupied !== isBOccupied) return isAOccupied ? 1 : -1;
                                   
@@ -237,11 +240,15 @@ function Calendar({ onSlotClick }) {
                                 <>
                                   {displayedRooms.map(room => {
                                     const booking = getBooking(dateStr, hour, room.id);
+                                    const availRecord = availability?.find(a => Number(a.room_id) === Number(room.id) && a.day === dayLabel && Number(a.hour) === Number(hour));
+                                    const isDBUnavailable = availRecord && !availRecord.is_available;
+                                    
+                                    // Fallback to static class text if they both coexist, but prioritize DB status
                                     const daySchedule = timetableData?.[dayLabel] || [];
                                     const staticClass = !booking ? daySchedule.find(sc => sc.room && (sc.room.trim().toLowerCase() === room.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(room.name.trim().toLowerCase())) && sc.time === hour) : null;
                                     
                                     const isRestricted = booking && (booking.user_role === 'ADMIN' || booking.user_role === 'FACULTY') && user?.role !== 'ADMIN';
-                                    const isOccupied = booking || staticClass;
+                                    const isOccupied = booking || isDBUnavailable || staticClass;
                                     
                                     return (
                                       <div 

@@ -1,12 +1,16 @@
-import pkg from 'pg';
-const { Pool } = pkg;
-import fs from 'fs';
-import path from 'path';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import '../src/config/env.js';
+import path from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+import pkg from 'pg';
+const { Pool } = pkg;
+import fs from 'fs';
+
+
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -61,20 +65,8 @@ async function seedDepartments(client) {
 
 async function seed() {
   const client = await pool.connect();
-  // Try both possible data file locations
-  const dataPaths = [
-    path.join(__dirname, 'rooms_complete_data_updated.json'),
-    path.join(__dirname, 'rooms_complete_data.json'),
-    '/Users/vasugoel/ims_scraper_outputs/rooms_complete_data.json'
-  ];
-
-  let dataPath = null;
-  for (const p of dataPaths) {
-    if (fs.existsSync(p)) {
-      dataPath = p;
-      break;
-    }
-  }
+  // Point directly to the master scraper output
+  const dataPath = '/Users/vasugoel/ims_scraper_outputs/rooms_complete_data.json';
 
   if (!dataPath) {
     console.error('Data file not found in any of the expected locations.');

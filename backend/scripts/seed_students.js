@@ -1,13 +1,23 @@
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'fs';
-import xlsx from 'xlsx';
-import bcrypt from 'bcrypt';
-import '../src/config/env.js';
-import { pool } from '../src/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+import fs from 'fs';
+import xlsx from 'xlsx';
+import bcrypt from 'bcrypt';
+import pkg from 'pg';
+
+const { Pool } = pkg;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('localhost') ? false : {
+    rejectUnauthorized: false
+  }
+});
 
 async function seed() {
   const possiblePaths = [
