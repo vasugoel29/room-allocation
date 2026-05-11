@@ -9,7 +9,6 @@ import FacultyDashboard from './pages/FacultyDashboard';
 import Timetable from './pages/Timetable';
 import Bookings from './pages/Bookings';
 import Login from './pages/Login';
-import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import PromotionModal from './components/modals/PromotionModal';
@@ -159,8 +158,7 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
     <div className={`h-screen w-full flex flex-col transition-colors duration-400 font-body ${theme === 'dark' ? 'dark' : ''} bg-surface-lowest`}>
       <Routes>
         {/* Auth Routes */}
-        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login onShowSignup={() => navigate('/signup')} />} />
-        <Route path="/signup" element={user ? <Navigate to="/" replace /> : <Signup onSignupSuccess={() => navigate('/')} onBackToLogin={() => navigate('/login')} />} />
+        <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 

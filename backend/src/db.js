@@ -192,6 +192,17 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_faculty_override_date ON faculty_slot_overrides(date);
       `);
     }
+  },
+  {
+    version: 9,
+    name: 'Additional Student Seeding Columns',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS degree VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS roll_no VARCHAR(255);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS department_name VARCHAR(255);
+      `);
+    }
   }
 ];
 

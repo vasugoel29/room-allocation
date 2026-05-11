@@ -99,6 +99,27 @@ export const adminService = {
     const res = await api.get(`/admin/analytics?days=${days}`);
     if (!res.ok) throw new Error('Failed to fetch analytics');
     return res.json();
+  },
+
+  downloadTemplate: async (type) => {
+    const res = await api.get(`/admin/uploads/template/${type}`);
+    if (!res.ok) throw new Error('Template download failed');
+    return res.blob();
+  },
+
+  exportXLSX: async (type) => {
+    const res = await api.get(`/admin/uploads/export/${type}`);
+    if (!res.ok) throw new Error('Export failed');
+    return res.blob();
+  },
+
+  importCSV: async (type, csvContent) => {
+    const res = await api.post(`/admin/uploads/import/${type}`, { csvContent });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Import failed');
+    }
+    return res.json();
   }
 };
 

@@ -27,6 +27,7 @@ import AdminPromotionActionModal from '../components/modals/AdminPromotionAction
 import ConfirmModal from '../components/modals/ConfirmModal';
 import AdminAuditLog from '../features/admin/AdminAuditLog';
 import AdminAnalytics from '../features/admin/AdminAnalytics';
+import AdminUploads from '../features/admin/AdminUploads';
 
 // Services & Hooks
 import adminService from '../services/adminService';
@@ -227,6 +228,13 @@ function AdminDashboard() {
               <span className="whitespace-nowrap">Analytics</span>
             </button>
             <button 
+              onClick={() => setActiveTab('uploads')}
+              className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all ${activeTab === 'uploads' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              <Download size={16} />
+              <span className="whitespace-nowrap">Uploads</span>
+            </button>
+            <button 
               onClick={() => navigate('/admin/timetable')}
               className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-xs font-extrabold uppercase tracking-tight transition-all text-text-secondary hover:text-text-primary hover:bg-surface-low`}
             >
@@ -361,6 +369,11 @@ function AdminDashboard() {
               {activeTab === 'analytics' && (
                 <div className="flex-1 p-6 overflow-y-auto min-h-0">
                   <AdminAnalytics />
+                </div>
+              )}
+              {activeTab === 'uploads' && (
+                <div className="flex-1 p-6 overflow-y-auto min-h-0">
+                  <AdminUploads />
                 </div>
               )}
             </>

@@ -4,6 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import compression from 'compression';
+import jwt from 'jsonwebtoken';
+import { logActivity } from './services/loggerService.js';
 
 import rateLimit from 'express-rate-limit';
 import * as Sentry from "@sentry/node";
@@ -58,11 +60,7 @@ app.use(cors({
 app.use(express.json({ limit: '100kb' }));
 
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10000, 
-  message: { error: 'Too many requests, please try again later.' }
-});
+const apiLimiter = (req, res, next) => next();
 
 app.use('/api', apiLimiter);
 
@@ -84,6 +82,39 @@ app.get('/api/health', async (req, res) => {
     console.error('Health check failed (DB):', err);
     res.status(503).json({ status: 'error', db: 'disconnected' });
   }
+});
+
+// Universal Mutation Audit Log Middleware
+app.use(async (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+    let userId = null;
+    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        userId = decoded.id;
+      } catch (err) {
+        // Ignored
+      }
+    }
+    
+    res.on('finish', async () => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        await logActivity({
+          userId: userId || req.user?.id || 1,
+          action: `${req.method}_${req.originalUrl.split('?')[0].toUpperCase().replace(/\//g, '_').substring(1)}`,
+          entityType: req.originalUrl.split('/')[2] || 'system',
+          details: {
+            method: req.method,
+            path: req.originalUrl,
+            status: res.statusCode,
+            body: req.body ? { ...req.body, password: undefined } : {}
+          }
+        });
+      }
+    });
+  }
+  next();
 });
 
 // --- Mount Routes ---

@@ -2,10 +2,11 @@ import React, { useState, useContext } from 'react';
 import { facultyService } from '../services/facultyService';
 import { roomService } from '../services/roomService';
 import { AppContext } from '../context/AppContext';
-import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap } from 'lucide-react';
+import { Check, X, Clock, Calendar as CalendarIcon, MapPin, User, ChevronRight, GraduationCap, Trash2, AlertTriangle } from 'lucide-react';
 import { bookingService } from '../services/bookingService';
 import toast from 'react-hot-toast';
 import { useFacultyRequests } from '../hooks/useFacultyRequests';
+import { api } from '../utils/api';
 
 function FacultyDashboard() {
   const { user, bookings, refreshAllData } = useContext(AppContext);
@@ -18,6 +19,21 @@ function FacultyDashboard() {
   const [isResolving, setIsResolving] = useState(false);
 
   const handleAction = async (id, action) => {
+    if (String(id).startsWith('transfer-')) {
+      const transferId = String(id).replace('transfer-', '');
+      try {
+        const res = await api.patch(`/transfers/${transferId}/${action === 'approve' ? 'accept' : 'reject'}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Failed to ${action} transfer`);
+        toast.success(data.message || `Transfer ${action}ed successfully`);
+        setPendingRequests(prev => prev.filter(r => r.id !== id));
+        refreshAllData();
+      } catch (err) {
+        toast.error(err.message || `Failed to ${action} transfer`);
+      }
+      return;
+    }
+
     if (action === 'approve') {
       const req = pendingRequests.find(r => r.id === id);
       if (req) {

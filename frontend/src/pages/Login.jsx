@@ -5,7 +5,7 @@ import { authService } from '../services/authService';
 import { AppContext } from '../context/AppContext';
 
 
-const Login = ({ onShowSignup }) => {
+const Login = () => {
   const { setUser } = useContext(AppContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -133,19 +133,6 @@ const Login = ({ onShowSignup }) => {
           </div>
         </form>
 
-
-
-        <div className="text-center pt-4 font-display">
-          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60">
-            Don't have an account?{' '}
-            <button 
-              onClick={onShowSignup}
-              className="text-primary-accent font-extrabold transition-colors underline underline-offset-4"
-            >
-              Sign up
-            </button>
-          </p>
-        </div>
       </div>
     </div>
   );

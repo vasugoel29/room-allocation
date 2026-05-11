@@ -9,7 +9,7 @@ export const transferRepository = {
    */
   findById: async (id, client = db) => {
     const query = `
-      SELECT t.*, b.created_by as owner_id, b.status as booking_status 
+      SELECT t.*, b.created_by as owner_id, b.status as booking_status, b.faculty_id as owner_faculty_id 
       FROM booking_transfers t
       JOIN bookings b ON t.booking_id = b.id
       WHERE t.id = $1
@@ -22,7 +22,7 @@ export const transferRepository = {
    * Find a pending transfer request for a specific booking and user
    */
   findPending: async (bookingId, userId) => {
-    const query = "SELECT * FROM booking_transfers WHERE booking_id = $1 AND requested_by = $2 AND status = 'PENDING'";
+    const query = "SELECT * FROM booking_transfers WHERE booking_id = $1 AND requested_by = $2 AND status NOT IN ('ACCEPTED', 'REJECTED')";
     const result = await db.query(query, [bookingId, userId]);
     return result.rows[0];
   },
@@ -45,12 +45,14 @@ export const transferRepository = {
    */
   findIncoming: async (userId) => {
     const query = `
-      SELECT t.*, r.name as room_name, u.name as requester_name, b.start_time, b.end_time, b.status as booking_status 
+      SELECT t.*, r.name as room_name, u.name as requester_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
       FROM booking_transfers t
       JOIN bookings b ON t.booking_id = b.id
       JOIN rooms r ON b.room_id = r.id
       JOIN users u ON t.requested_by = u.id
-      WHERE t.owner_id = $1
+      WHERE (t.owner_id = $1 AND t.status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED'))
+         OR (b.faculty_id = $1 AND t.status = 'REP2_ACCEPTED')
+         OR (t.target_faculty_id = $1 AND t.status = 'FACULTY2_ACCEPTED')
       ORDER BY t.created_at DESC
     `;
     const result = await db.query(query, [userId]);
@@ -62,7 +64,7 @@ export const transferRepository = {
    */
   findOutgoing: async (userId) => {
     const query = `
-      SELECT t.*, r.name as room_name, u.name as owner_name, b.start_time, b.end_time, b.status as booking_status 
+      SELECT t.*, r.name as room_name, u.name as owner_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
       FROM booking_transfers t
       JOIN bookings b ON t.booking_id = b.id
       JOIN rooms r ON b.room_id = r.id

@@ -191,31 +191,34 @@ const HistoryView = ({ onClose }) => {
                    <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-20">No pending inbound transfers</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-4">
                   {incomingTransfers.map(t => (
-                    <div key={t.id} className="bg-tonal-secondary/10 rounded-[2.5rem] p-8 group hover:bg-tonal-secondary/15 transition-all shadow-ambient">
-                      <div className="flex justify-between items-start mb-6">
-                        <span className="font-extrabold text-text-primary flex items-center gap-3 text-2xl tracking-tight font-display uppercase">
-                          {t.room_name} 
-                        </span>
-                        {t.status === 'PENDING' && <span className="text-[9px] bg-tonal-tertiary text-tertiary px-4 py-1.5 rounded-full font-extrabold shadow-tertiary uppercase tracking-widest whitespace-nowrap">Pending</span>}
+                    <div key={t.id} className="bg-tonal-secondary/10 rounded-[2rem] p-6 flex items-center justify-between hover:bg-tonal-secondary/15 transition-all">
+                      <div>
+                        <p className="font-extrabold text-text-primary text-lg flex items-center gap-4 truncate tracking-tight uppercase font-display">
+                          {t.room_name} <ArrowRightLeft size={16} className="text-secondary opacity-40 shrink-0"/>
+                          <span className="whitespace-nowrap font-extrabold text-primary">{new Date(t.start_time).toLocaleDateString()} @ {new Date(t.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                        </p>
+                        <p className="text-[10px] text-text-secondary font-extrabold mt-2 max-w-sm truncate uppercase tracking-[0.2em] opacity-30 font-display">From: {t.requester_name} - {t.new_purpose || 'No purpose provided'}</p>
                       </div>
-                      <p className="text-sm text-text-secondary mb-6 font-bold leading-relaxed opacity-60">
-                        <span className="text-text-primary font-extrabold uppercase tracking-tight">{t.requester_name}</span> has requested to take over your booking at {new Date(t.start_time).toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'})} on {new Date(t.start_time).toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'})}.
-                      </p>
-                      <div className="text-xs italic text-text-secondary bg-tonal-secondary/5 p-5 rounded-[1.5rem] font-bold leading-loose">
-                        "{t.new_purpose || 'No purpose provided'}"
+                      <div className="shrink-0 ml-6 flex items-center gap-4">
+                        {t.status === 'PENDING' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-tonal-tertiary text-tertiary px-5 py-2 rounded-full shadow-tertiary">Pending</span>}
+                        {t.status === 'REP2_ACCEPTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-amber-500/20 text-amber-500 px-5 py-2 rounded-full shadow-amber">Owner Accepted</span>}
+                        {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-blue-500/20 text-blue-500 px-5 py-2 rounded-full shadow-blue">Slot Released</span>}
+                        {t.status === 'ACCEPTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-green-500/10 text-green-500 px-5 py-2 rounded-full">Synchronized</span>}
+                        {t.status === 'REJECTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-red-500/10 text-red-500 px-5 py-2 rounded-full">Dismissed</span>}
+
+                        {t.status === 'PENDING' && t.booking_status !== 'CANCELLED' && (
+                          <div className="flex gap-2">
+                            <button onClick={() => handleTransferAction(t.id, 'accept')} disabled={loading} className="bg-primary text-white font-extrabold p-2 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-ambient active:scale-95 transition-all">
+                              <Check size={16} /> Accept
+                            </button>
+                            <button onClick={() => handleTransferAction(t.id, 'reject')} disabled={loading} className="bg-tonal-secondary/10 text-text-primary font-extrabold p-2 rounded-xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                              <X size={16} /> Reject
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {t.status === 'PENDING' && t.booking_status !== 'CANCELLED' && (
-                        <div className="flex gap-4 mt-8">
-                          <button onClick={() => handleTransferAction(t.id, 'accept')} disabled={loading} className="flex-1 bg-primary text-white font-extrabold py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 shadow-ambient active:scale-95 transition-all">
-                            <Check size={18} /> Accept
-                          </button>
-                          <button onClick={() => handleTransferAction(t.id, 'reject')} disabled={loading} className="flex-1 bg-tonal-secondary/10 text-text-primary font-extrabold py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-                            <X size={18} /> Reject
-                          </button>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -244,7 +247,9 @@ const HistoryView = ({ onClose }) => {
                         <p className="text-[10px] text-text-secondary font-extrabold mt-2 max-w-sm truncate uppercase tracking-[0.2em] opacity-30 font-display">To: {t.owner_name} - {t.new_purpose}</p>
                       </div>
                       <div className="shrink-0 ml-6">
-                        {t.status === 'PENDING' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-tonal-tertiary text-tertiary px-5 py-2 rounded-full shadow-tertiary">In Review</span>}
+                        {t.status === 'PENDING' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-tonal-tertiary text-tertiary px-5 py-2 rounded-full shadow-tertiary">Waiting for Owner</span>}
+                        {t.status === 'REP2_ACCEPTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-amber-500/20 text-amber-500 px-5 py-2 rounded-full shadow-amber">Owner Accepted</span>}
+                        {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-blue-500/20 text-blue-500 px-5 py-2 rounded-full shadow-blue">Slot Released</span>}
                         {t.status === 'ACCEPTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-green-500/10 text-green-500 px-5 py-2 rounded-full">Synchronized</span>}
                         {t.status === 'REJECTED' && <span className="text-[9px] font-extrabold uppercase tracking-widest bg-red-500/10 text-red-500 px-5 py-2 rounded-full">Dismissed</span>}
                       </div>
