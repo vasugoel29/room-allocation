@@ -236,21 +236,71 @@ export async function searchTimetable(req, res) {
         ]);
 
         // 2. Dynamic Bookings for this section
-        const bookingRes = await db.query(`
-          SELECT b.*, r.name as room_name, u.name as creator_name
-          FROM bookings b
-          JOIN rooms r ON b.room_id = r.id
-          JOIN users u ON b.created_by = u.id
-          WHERE (UPPER(b.branch) = $1 OR UPPER(b.branch) = $2)
-          AND b.semester::TEXT = $3::TEXT
-          AND b.section::TEXT = $4::TEXT
-          AND b.status = 'ACTIVE'
-        `, [
-          deptUpper,
-          department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
-          semester, 
-          section
-        ]);
+        const colCheck = await db.query(`
+          SELECT column_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'bookings' AND column_name = 'department'
+        `);
+        const hasDepartment = colCheck.rows.length > 0;
+
+        let bookingRes;
+        if (hasDepartment) {
+          // Ensure semester and section columns exist in bookings
+          const semCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'semester'`);
+          if (semCheck.rows.length === 0) {
+            await db.query(`ALTER TABLE bookings ADD COLUMN semester VARCHAR(20)`);
+          }
+          const secCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'section'`);
+          if (secCheck.rows.length === 0) {
+            await db.query(`ALTER TABLE bookings ADD COLUMN section VARCHAR(20)`);
+          }
+
+          bookingRes = await db.query(`
+            SELECT b.*, r.name as room_name, u.name as creator_name
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.id
+            JOIN users u ON b.created_by = u.id
+            WHERE (UPPER(b.department) = $1 OR UPPER(b.department) = $2)
+            AND b.semester::TEXT = $3::TEXT
+            AND b.section::TEXT = $4::TEXT
+            AND b.status = 'ACTIVE'
+          `, [
+            deptUpper,
+            department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
+            semester, 
+            section
+          ]);
+        } else {
+          // Ensure branch, semester and section columns exist in bookings
+          const branchCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'branch'`);
+          if (branchCheck.rows.length === 0) {
+            await db.query(`ALTER TABLE bookings ADD COLUMN branch VARCHAR(255)`);
+          }
+          const semCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'semester'`);
+          if (semCheck.rows.length === 0) {
+            await db.query(`ALTER TABLE bookings ADD COLUMN semester VARCHAR(20)`);
+          }
+          const secCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'section'`);
+          if (secCheck.rows.length === 0) {
+            await db.query(`ALTER TABLE bookings ADD COLUMN section VARCHAR(20)`);
+          }
+
+          bookingRes = await db.query(`
+            SELECT b.*, r.name as room_name, u.name as creator_name
+            FROM bookings b
+            JOIN rooms r ON b.room_id = r.id
+            JOIN users u ON b.created_by = u.id
+            WHERE (UPPER(b.branch) = $1 OR UPPER(b.branch) = $2)
+            AND b.semester::TEXT = $3::TEXT
+            AND b.section::TEXT = $4::TEXT
+            AND b.status = 'ACTIVE'
+          `, [
+            deptUpper,
+            department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
+            semester, 
+            section
+          ]);
+        }
 
         return res.json({
           type: 'SECTION',

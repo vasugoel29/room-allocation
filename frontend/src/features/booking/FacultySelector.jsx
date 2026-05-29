@@ -26,7 +26,7 @@ function FacultySelector({
             }}
             autoComplete="off"
             aria-label="Search for faculty"
-            className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm text-text-primary font-bold focus:outline-none focus:bg-tonal-secondary/20 transition-all pr-12 shadow-inner placeholder:text-text-secondary/20 font-body"
+            className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-5 py-4 text-sm text-text-primary font-bold focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all pr-12 shadow-sm placeholder:text-text-secondary/30 font-body"
           />
           <div 
             className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"

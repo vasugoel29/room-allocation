@@ -203,6 +203,74 @@ const migrations = [
         ALTER TABLE users ADD COLUMN IF NOT EXISTS department_name VARCHAR(255);
       `);
     }
+  },
+  {
+    version: 10,
+    name: 'Create and Seed Timetable Slots',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS timetable_slots (
+          id SERIAL PRIMARY KEY,
+          department TEXT,
+          degree TEXT,
+          specialization TEXT,
+          section TEXT,
+          year TEXT,
+          semester TEXT,
+          day_of_week TEXT,
+          slot_time TEXT,
+          subject_code TEXT,
+          subject_name TEXT,
+          room_name TEXT,
+          type TEXT,
+          batch TEXT,
+          faculty_name TEXT,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_timetable_slots_faculty ON timetable_slots(UPPER(faculty_name));
+        CREATE INDEX IF NOT EXISTS idx_timetable_slots_section ON timetable_slots(UPPER(department), semester, section);
+      `);
+
+      const countRes = await client.query('SELECT count(*) FROM timetable_slots');
+      const count = parseInt(countRes.rows[0].count);
+
+      if (count === 0) {
+        const fs = await import('fs');
+        const path = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+
+        const filePath = path.resolve(__dirname, '../../hajiri.timetables.json');
+        if (fs.existsSync(filePath)) {
+          logger.info('Migration v10: Seeding timetable_slots from hajiri.timetables.json...');
+          const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+          for (const obj of data) {
+            const { department, degree, specialization, section, year, semester, timetable } = obj;
+            for (const day in timetable) {
+              const slots = timetable[day];
+              for (const slot of slots) {
+                const { time, subjectCode, subjectName, room, type, batch, faculty } = slot;
+                await client.query(
+                  `INSERT INTO timetable_slots (
+                    department, degree, specialization, section, year, semester, 
+                    day_of_week, slot_time, subject_code, subject_name, room_name, type, batch, faculty_name
+                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+                  [
+                    department, degree, specialization, section, year, semester,
+                    day, time, subjectCode, subjectName, room, type, batch, faculty
+                  ]
+                );
+              }
+            }
+          }
+          logger.info('Migration v10: Successfully seeded timetable_slots.');
+        } else {
+          logger.warn(`Migration v10: Seeding source file not found at ${filePath}. Skipping seeding.`);
+        }
+      }
+    }
   }
 ];
 

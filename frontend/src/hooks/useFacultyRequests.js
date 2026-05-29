@@ -26,7 +26,7 @@ export function useFacultyRequests(user) {
             id: `transfer-${t.id}`,
             originalTransferId: t.id,
             isTransfer: true,
-            purpose: t.new_purpose || `Transfer for ${t.room_name}`,
+            purpose: `Transfer slot to ${t.requester_name || 'Requester'} from ${t.requestee_name || 'Requestee'}${t.new_purpose ? ` (${t.new_purpose})` : ''}`,
             user_name: t.requester_name || 'Requester'
           }));
         }

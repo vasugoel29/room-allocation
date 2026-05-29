@@ -6,7 +6,6 @@ import { bookingService } from "../../services/bookingService";
 import { roomService } from "../../services/roomService";
 import { useSearchDebounce } from "../../hooks/useSearchDebounce";
 
-import RoomSelector from "../../features/booking/RoomSelector";
 import BookingTypeSelector from "../../features/booking/BookingTypeSelector";
 import RescheduleDetails from "../../features/booking/RescheduleDetails";
 import FacultySelector from "../../features/booking/FacultySelector";
@@ -280,23 +279,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div className="space-y-3 sm:space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              <RoomSelector
-                rooms={rooms}
-                availability={availability}
-                slot={slot}
-                user={user}
-                selectedRoom={selectedRoom}
-                setSelectedRoom={setSelectedRoom}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                debouncedTerm={debouncedTerm}
-                isDropdownOpen={isDropdownOpen}
-                setIsDropdownOpen={setIsDropdownOpen}
-                getRoomBooking={getRoomBooking}
-                timetableData={timetableData}
-              />
-
+            <div className={`grid grid-cols-1 ${isStudent ? 'sm:grid-cols-2' : ''} gap-3 sm:gap-4`}>
               <BookingTypeSelector
                 bookingType={bookingType}
                 setBookingType={setBookingType}
@@ -349,7 +332,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
               onChange={(e) => setPurpose(e.target.value)}
               placeholder="e.g. Special Class, Club Meeting, Portfolio Review"
               autoComplete="off"
-              className="w-full bg-tonal-secondary/10 rounded-[2rem] px-6 py-6 text-sm text-text-primary font-bold focus:outline-none transition-all h-28 resize-none placeholder:text-text-secondary/20 shadow-inner font-body"
+              className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-[2rem] px-6 py-6 text-sm text-text-primary font-bold focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all h-28 resize-none placeholder:text-text-secondary/30 shadow-sm font-body"
             />
           </div>
 

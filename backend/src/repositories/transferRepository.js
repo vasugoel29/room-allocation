@@ -45,11 +45,12 @@ export const transferRepository = {
    */
   findIncoming: async (userId) => {
     const query = `
-      SELECT t.*, r.name as room_name, u.name as requester_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
+      SELECT t.*, r.name as room_name, u.name as requester_name, o.name as requestee_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
       FROM booking_transfers t
       JOIN bookings b ON t.booking_id = b.id
       JOIN rooms r ON b.room_id = r.id
       JOIN users u ON t.requested_by = u.id
+      JOIN users o ON b.created_by = o.id
       WHERE (t.owner_id = $1 AND t.status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED'))
          OR (b.faculty_id = $1 AND t.status = 'REP2_ACCEPTED')
          OR (t.target_faculty_id = $1 AND t.status = 'FACULTY2_ACCEPTED')
