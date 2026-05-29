@@ -64,8 +64,9 @@
   --color-bg-secondary: var(--color-surface-low);
 }
 
-/* Global Transition */
-* {
+/* Global Transitions (Scoped for layout containers & interactive elements) */
+body, aside, main, header, footer, a, button, input, select, textarea, 
+.glass, .chip, .room-card, .calendar-item, .dashed-block {
   transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
               color 0.4s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1);

@@ -1,28 +1,113 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, NavLink } from 'react-router-dom';
 import Calendar from './components/ui/Calendar';
 import RoomFilter from './components/ui/RoomFilter';
 import BookingModal from './components/modals/BookingModal';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminTimetable from './pages/AdminTimetable';
-import FacultyDashboard from './pages/FacultyDashboard';
-import Timetable from './pages/Timetable';
-import Bookings from './pages/Bookings';
-import Login from './pages/Login';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
 import PromotionModal from './components/modals/PromotionModal';
 import PWAInstallOverlay from './components/ui/PWAInstallOverlay';
 import { getRoleLabel } from './utils/roleUtils';
-import Profile from './pages/Profile';
-import MobileHistory from './pages/MobileHistory';
-import MobileBooking from './pages/MobileBooking';
-import PromotionRequest from './pages/PromotionRequest';
 import { AppContext } from './context/AppContext';
 import { useWindowSize } from './hooks/useWindowSize';
 import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2, Shield, ShieldAlert, MessageSquare, Search, GraduationCap, User, Clock } from 'lucide-react';
 import BottomNav from './components/ui/BottomNav';
 import FloatingActions from './components/ui/FloatingActions';
+
+// Lazy-loaded pages for bundle splitting
+const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
+const AdminTimetable = React.lazy(() => import('./pages/AdminTimetable'));
+const FacultyDashboard = React.lazy(() => import('./pages/FacultyDashboard'));
+const Timetable = React.lazy(() => import('./pages/Timetable'));
+const Bookings = React.lazy(() => import('./pages/Bookings'));
+const Login = React.lazy(() => import('./pages/Login'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
+const Profile = React.lazy(() => import('./pages/Profile'));
+const MobileHistory = React.lazy(() => import('./pages/MobileHistory'));
+const MobileBooking = React.lazy(() => import('./pages/MobileBooking'));
+const PromotionRequest = React.lazy(() => import('./pages/PromotionRequest'));
+
+const FormLoadingFallback = () => (
+  <div className="h-screen w-full flex items-center justify-center bg-surface-lowest p-6">
+    <div className="max-w-md w-full bg-surface-low rounded-[2.5rem] p-8 sm:p-10 shadow-ambient space-y-6 animate-pulse">
+      <div className="flex flex-col items-center space-y-3">
+        <div className="w-16 h-16 rounded-2xl bg-surface-highest/20" />
+        <div className="h-6 w-36 bg-surface-highest/25 rounded-lg" />
+        <div className="h-3.5 w-48 bg-surface-highest/10 rounded-md" />
+      </div>
+      <div className="space-y-4 pt-4">
+        <div className="space-y-2">
+          <div className="h-3.5 w-16 bg-surface-highest/15 rounded-md" />
+          <div className="h-12 w-full bg-surface-highest/10 rounded-xl" />
+        </div>
+        <div className="space-y-2">
+          <div className="h-3.5 w-16 bg-surface-highest/15 rounded-md" />
+          <div className="h-12 w-full bg-surface-highest/10 rounded-xl" />
+        </div>
+        <div className="h-12 w-full bg-primary/20 rounded-xl mt-6" />
+      </div>
+    </div>
+  </div>
+);
+
+const DashboardLoadingFallback = () => (
+  <div className="w-full h-full space-y-6 animate-pulse">
+    {/* Page Header Skeleton */}
+    <div className="flex justify-between items-center pb-4 border-b border-border/10">
+      <div className="space-y-2">
+        <div className="h-6 w-48 bg-surface-highest/20 rounded-lg" />
+        <div className="h-3.5 w-32 bg-surface-highest/10 rounded-md" />
+      </div>
+      <div className="h-10 w-24 bg-surface-highest/20 rounded-xl" />
+    </div>
+
+    {/* Metric Cards Grid Skeleton */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className="glass p-5 rounded-2xl space-y-3 bg-surface-highest/5">
+          <div className="flex justify-between items-center">
+            <div className="h-4 w-24 bg-surface-highest/15 rounded-md" />
+            <div className="w-8 h-8 rounded-xl bg-surface-highest/15" />
+          </div>
+          <div className="h-8 w-16 bg-surface-highest/25 rounded-lg" />
+          <div className="h-3 w-36 bg-surface-highest/10 rounded-md" />
+        </div>
+      ))}
+    </div>
+
+    {/* Large Content Block & Secondary List Skeleton */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 glass p-6 rounded-2xl h-80 bg-surface-highest/5 flex flex-col justify-between">
+        <div className="space-y-2">
+          <div className="h-5 w-40 bg-surface-highest/20 rounded-lg" />
+          <div className="h-3.5 w-60 bg-surface-highest/10 rounded-md" />
+        </div>
+        <div className="w-full flex items-end gap-3 h-48 px-2">
+          {[60, 40, 80, 50, 70, 30, 90, 45, 65, 85].map((height, idx) => (
+            <div 
+              key={idx} 
+              className="flex-1 bg-surface-highest/15 rounded-t-lg" 
+              style={{ height: `${height}%` }} 
+            />
+          ))}
+        </div>
+      </div>
+      <div className="glass p-6 rounded-2xl h-80 bg-surface-highest/5 space-y-4">
+        <div className="h-5 w-32 bg-surface-highest/20 rounded-lg" />
+        <div className="space-y-3">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="flex items-center gap-3 py-2 border-b border-border/5">
+              <div className="w-10 h-10 rounded-xl bg-surface-highest/15 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3.5 w-3/4 bg-surface-highest/15 rounded-md" />
+                <div className="h-2.5 w-1/2 bg-surface-highest/10 rounded-sm" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 const ProtectedRoute = ({ user, children, roles = [] }) => {
   if (!user) return <Navigate to="/login" replace />;
@@ -156,7 +241,8 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
 
   return (
     <div className={`h-screen w-full flex flex-col transition-colors duration-400 font-body ${theme === 'dark' ? 'dark' : ''} bg-surface-lowest`}>
-      <Routes>
+      <Suspense fallback={<FormLoadingFallback />}>
+        <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -253,7 +339,8 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
 
                 <section className="flex-1 flex flex-col overflow-hidden w-full p-2 sm:p-4 pb-20 lg:pb-0">
                   <div className="glass rounded-2xl p-2 sm:p-4 shadow-ambient flex-1 flex flex-col overflow-hidden w-full">
-                    <Routes>
+                    <Suspense fallback={<DashboardLoadingFallback />}>
+                      <Routes>
                       <Route path="/calendar" element={<ProtectedRoute user={user}><Calendar onSlotClick={(slot) => { setSelectedSlot(slot); setIsModalOpen(true); }} /></ProtectedRoute>} />
                       <Route path="/admin" element={<ProtectedRoute user={user} roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
                       <Route path="/admin/timetable" element={<ProtectedRoute user={user} roles={['ADMIN']}><AdminTimetable /></ProtectedRoute>} />
@@ -270,7 +357,8 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
                         <Navigate to="/calendar" replace />
                       } />
                       <Route path="*" element={<Navigate to="/calendar" replace />} />
-                    </Routes>
+                      </Routes>
+                    </Suspense>
                   </div>
                 </section>
                 <BottomNav user={user} tabs={getNavigationTabs()} pendingTransferCount={pendingTransferCount} setIsSidebarOpen={setIsSidebarOpen} />
@@ -299,6 +387,7 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
           )
         } />
       </Routes>
+      </Suspense>
     </div>
   );
 }
