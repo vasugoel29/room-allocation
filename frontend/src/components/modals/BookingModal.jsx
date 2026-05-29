@@ -16,9 +16,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     rooms,
     faculties,
     bookings,
-    availability,
     refreshAllData,
-    timetableData,
   } = useContext(AppContext);
   const modalRef = useRef(null);
 
@@ -64,16 +62,12 @@ function BookingModal({ slot, onClose, onSuccess }) {
       document.removeEventListener("keydown", handleFocusTrap);
     };
   }, [onClose]);
-  const [selectedRoom, setSelectedRoom] = useState(slot?.room_id || "");
+  const selectedRoom = slot?.room_id || "";
   const [selectedFaculty, setSelectedFaculty] = useState("");
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmedConflict, setConfirmedConflict] = useState(false);
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const debouncedTerm = useSearchDebounce(searchTerm);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isDayOpen, setIsDayOpen] = useState(false);

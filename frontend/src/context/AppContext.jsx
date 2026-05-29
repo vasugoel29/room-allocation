@@ -132,7 +132,6 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.building, filters.floor, filters.searchTerm, filters.smartRoom]);
 
   const fetchBookings = useCallback(async () => {
@@ -167,7 +166,7 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch timetable failed', err);
     }
-  }, [user?.role]); // Only depend on role for the API endpoint decision
+  }, [user]); // Depend on user directly to satisfy ESLint rules
 
   const fetchFacultyOverrides = useCallback(async () => {
     if (!user || user.role !== 'FACULTY') return;
@@ -177,7 +176,7 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch faculty overrides failed', err);
     }
-  }, [user?.role]);
+  }, [user]);
 
   const refreshAllData = useCallback(async () => {
     if (!user) return;
@@ -191,7 +190,7 @@ export const AppProvider = ({ children }) => {
       fetchTimetable(),
       fetchFacultyOverrides()
     ]);
-  }, [user?.id, fetchRooms, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
+  }, [user, fetchRooms, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -204,7 +203,7 @@ export const AppProvider = ({ children }) => {
       refreshAllData();
     }
   }, [
-    user?.id, 
+    user, 
     selectedDay, 
     filters.building, 
     refreshAllData
@@ -243,6 +242,7 @@ export const AppProvider = ({ children }) => {
     const interval = setInterval(checkConnection, 30000);
     return () => clearInterval(interval);
     // Removed function dependencies that were causing re-render loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]); 
 
   return (
