@@ -136,7 +136,7 @@ export const AppProvider = ({ children }) => {
 
   const fetchBookings = useCallback(async () => {
     try {
-      const data = await bookingService.getBookings();
+      const data = await bookingService.getBookings({ limit: 1000 });
       setBookings(data);
     } catch (err) {
       console.error('Fetch bookings failed', err);

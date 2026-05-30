@@ -141,6 +141,14 @@ export const rescheduleBooking = async (client, bookingId, data, userId) => {
 
   const newStartTime = start_time || booking.start_time;
   const newEndTime = end_time || booking.end_time;
+
+  // Weekend check for students (rescheduling is only allowed for STUDENT_REP, so user is always student)
+  const startTimeObj = new Date(newStartTime);
+  const dayOfWeek = startTimeObj.getDay(); // 0 is Sunday, 6 is Saturday
+  if (dayOfWeek === 0 || dayOfWeek === 6) {
+    return { error: 'Students are not allowed to book rooms on weekends', status: 400 };
+  }
+
   const newRoomId = room_id || booking.room_id;
 
   // Check Room conflict (excluding the current booking itself)
@@ -238,6 +246,13 @@ export const createBookingHandler = async (reqData, user) => {
   const userId = user.id;
   const startTimeObj = new Date(start_time);
   const now = new Date();
+
+  // Weekend check for students (roles other than ADMIN and FACULTY)
+  const dayOfWeek = startTimeObj.getDay(); // 0 is Sunday, 6 is Saturday
+  if ((dayOfWeek === 0 || dayOfWeek === 6) && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
+    return { error: 'Students are not allowed to book rooms on weekends', status: 400 };
+  }
+
   if (startTimeObj.getTime() + 3600000 < now.getTime()) {
     return { error: 'Cannot book in the past', status: 400 };
   }

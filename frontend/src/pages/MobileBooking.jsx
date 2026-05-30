@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles, MapPin } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { bookingService } from '../services/bookingService';
@@ -8,18 +8,39 @@ import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
 
 function MobileBooking({ onBack }) {
-  const { user, rooms, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
+  const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
+  const [rooms, setRooms] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    const loadRooms = async () => {
+      try {
+        const data = await roomService.getRooms();
+        if (active && Array.isArray(data)) {
+          setRooms(data);
+        }
+      } catch (err) {
+        console.error("Failed to load rooms", err);
+      }
+    };
+    loadRooms();
+    return () => { active = false; };
+  }, []);
   
   const getInitialDate = () => {
     const now = new Date();
-    // If past 6 PM, default to tomorrow
-    if (now.getHours() >= 18) {
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
-      tomorrow.setHours(8, 0, 0, 0);
-      return tomorrow;
+    const day = now.getDay();
+    const hour = now.getHours();
+    
+    const targetDate = new Date(now);
+    if (day === 0) targetDate.setDate(now.getDate() + 1);
+    else if (day === 6) targetDate.setDate(now.getDate() + 2);
+    else if (hour >= 18) {
+      if (day === 5) targetDate.setDate(now.getDate() + 3);
+      else targetDate.setDate(now.getDate() + 1);
     }
-    return now;
+    targetDate.setHours(8, 0, 0, 0);
+    return targetDate;
   };
 
   const [step, setStep] = useState(1);
@@ -41,8 +62,8 @@ function MobileBooking({ onBack }) {
 
   const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
 
-  // Extract unique blocks (buildings) from rooms
-  const blocks = ['all', ...new Set(rooms.map(r => r.building).filter(Boolean))];
+  // Extract unique blocks (buildings) from rooms and sort alphabetically
+  const blocks = ['all', ...[...new Set(rooms.map(r => r.building).filter(Boolean))].sort((a, b) => a.localeCompare(b))];
 
   const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
@@ -142,7 +163,26 @@ function MobileBooking({ onBack }) {
       }
 
       await bookingService.createBooking(finalPayload);
-      toast.success('Room booked successfully!');
+      
+      const roomName = rooms.find(r => r.id === selectedRoom)?.name || selectedRoom;
+      const formattedDateStr = targetDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      });
+      const dayName = getDayName(selectedDate);
+
+      if (isStudent && selectedFaculty) {
+        const facultyName = faculties.find(f => f.id === selectedFaculty)?.name || 'Faculty';
+        toast.success(
+          `Request sent to Prof. ${facultyName} for Room ${roomName} from ${selectedHour}:00 to ${selectedHour + 1}:00 on ${formattedDateStr}.`
+        );
+      } else {
+        toast.success(
+          `Success! Room ${roomName} has been booked for ${dayName} at ${selectedHour}:00.`
+        );
+      }
+
       fetchRooms();
       fetchBookings();
       fetchAvailability();
@@ -222,6 +262,11 @@ function MobileBooking({ onBack }) {
                 const isToday = selectedDate.toDateString() === now.toDateString();
                 if (isToday && selectedHour <= now.getHours()) {
                   toast.error("Please select a future time slot");
+                  return;
+                }
+                const day = selectedDate.getDay();
+                if ((day === 0 || day === 6) && isStudent) {
+                  toast.error("Students are not allowed to book rooms on weekends");
                   return;
                 }
                 setStep(2);

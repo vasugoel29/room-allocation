@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AppContext } from '../../context/AppContext';
 
 function DatePickerDropdown({ selectedDate, onChange }) {
+  const { user } = useContext(AppContext);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -112,17 +114,26 @@ function DatePickerDropdown({ selectedDate, onChange }) {
               const isSelected = selectedDate === currentDateStr;
               const isToday = new Date().toISOString().split('T')[0] === currentDateStr;
               
+              const dateObj = new Date(year, month, d);
+              const dayOfWeek = dateObj.getDay();
+              const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+              const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+              const isWeekendDisabled = isWeekend && isStudent;
+
               return (
                 <button
                   key={`day-${d}`}
                   type="button"
+                  disabled={isWeekendDisabled}
                   onClick={() => handleDayClick(d)}
                   className={`p-1.5 text-center text-xs font-bold rounded-lg transition-all ${
-                    isSelected 
-                      ? 'bg-accent text-white shadow-md shadow-accent/20' 
-                      : isToday 
-                        ? 'bg-bg-secondary text-accent border border-accent/20' 
-                        : 'hover:bg-bg-secondary hover:text-text-primary text-text-secondary'
+                    isWeekendDisabled
+                      ? 'opacity-20 cursor-not-allowed text-text-secondary/50'
+                      : isSelected 
+                        ? 'bg-accent text-white shadow-md shadow-accent/20' 
+                        : isToday 
+                          ? 'bg-bg-secondary text-accent border border-accent/20' 
+                          : 'hover:bg-bg-secondary hover:text-text-primary text-text-secondary'
                   }`}
                 >
                   {d}

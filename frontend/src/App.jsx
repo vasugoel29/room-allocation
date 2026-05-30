@@ -323,7 +323,7 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"><Menu size={24} /></button>
                     <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight uppercase font-display">
-                      {location.pathname.split('/')[1] || 'Schedule'}
+                      {(location.pathname.split('/')[1] || 'Schedule').replace(/-/g, ' ')}
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">
@@ -350,7 +350,7 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
                       <Route path="/bookings" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}><Bookings /></ProtectedRoute>} />
                       <Route path="/promotion" element={<ProtectedRoute user={user}><PromotionRequest /></ProtectedRoute>} />
                       <Route path="/history" element={!isDesktop ? <MobileHistory onBack={() => navigate('/calendar')} /> : <Navigate to="/bookings" />} />
-                      <Route path="/booking-mobile" element={!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />} />
+                      <Route path="/book-a-slot" element={!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />} />
                       <Route path="/" element={
                         user?.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
                         user?.role === 'FACULTY' ? <Navigate to="/faculty" replace /> :
@@ -368,7 +368,7 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
                 <FloatingActions 
                   onSearchClick={() => setIsSidebarOpen(prev => !prev)}
                   onCreateBookingClick={() => {
-                    if (!isDesktop) navigate('/booking-mobile');
+                    if (!isDesktop) navigate('/book-a-slot');
                     else {
                       const now = new Date();
                       let targetDate = new Date(now);

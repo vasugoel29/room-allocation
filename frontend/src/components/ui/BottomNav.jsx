@@ -67,7 +67,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
 
           <div className="flex justify-center -mt-10">
             <button 
-              onClick={() => navigate('/booking-mobile')}
+              onClick={() => navigate('/book-a-slot')}
               className="w-14 h-14 rounded-full flex items-center justify-center shadow-ambient transition-all active:scale-95 border-4 border-surface-low bg-primary-accent text-white"
             >
               <Plus size={32} strokeWidth={3} />
