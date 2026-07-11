@@ -3,7 +3,8 @@ import { Wind, Search, Layers, Zap } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 
 function RoomFilter() {
-  const { filters, setFilters } = useContext(AppContext);
+  const { user, filters, setFilters } = useContext(AppContext);
+  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
 
   const updateFilter = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -68,6 +69,29 @@ function RoomFilter() {
                 className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold uppercase transition-all font-display ${filters.floor === f ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 {f === 'all' ? 'All' : f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Room Type</label>
+          <div className="grid grid-cols-2 gap-1.5 bg-tonal-secondary/10 border border-text-secondary/10 p-1.5 rounded-xl">
+            {[
+              { id: 'all', label: 'All Spaces' },
+              { id: 'Lecture Room', label: 'Lecture Rooms' },
+              { id: 'Lab', label: 'Labs' },
+              ...(isStudent ? [] : [
+                { id: 'Auditorium', label: 'Auditoriums' },
+                { id: 'Committee Room', label: 'Committee Rooms' }
+              ])
+            ].map((t) => (
+              <button
+                key={t.id}
+                onClick={() => updateFilter('roomType', t.id)}
+                className={`py-2 rounded-lg text-[10px] font-extrabold uppercase transition-all font-display ${filters.roomType === t.id ? 'bg-primary text-white shadow-ambient' : (!filters.roomType && t.id === 'all') ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'} ${t.id === 'all' ? 'col-span-2' : ''}`}
+              >
+                {t.label}
               </button>
             ))}
           </div>

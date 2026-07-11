@@ -5,6 +5,7 @@ const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
 
 function RescheduleDetails({ 
   rooms,
+  user,
   rescheduleDay, 
   setRescheduleDay, 
   isDayOpen, 
@@ -120,6 +121,8 @@ function RescheduleDetails({
             <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
               {rooms
                 .filter(room => {
+                  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+                  if (isStudent && (room.type === 'Committee Room' || room.type === 'Auditorium')) return false;
                   if (!rescheduleDebouncedTerm) return true;
                   return room.name.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase()) || 
                          room.building?.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase());
@@ -136,7 +139,7 @@ function RescheduleDetails({
                   >
                     <div className="flex flex-col gap-0.5 max-w-[70%]">
                       <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${rescheduleRoom === room.name ? 'text-white' : 'text-text-primary'}`}>{room.name}</span>
-                      <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${rescheduleRoom === room.name ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.building}</span>
+                      <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${rescheduleRoom === room.name ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.building} &bull; {room.type}</span>
                     </div>
                     <div className="flex gap-2 items-center opacity-80">
                       {room.has_ac && <Wind size={14} className={rescheduleRoom === room.name ? 'text-white' : 'text-primary'} />}

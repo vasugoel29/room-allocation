@@ -118,8 +118,10 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
         const bBranch = normalize(b.branch);
         const uBranch = normalize(user.branch);
         const userSection = String(user.section).trim();
+        const userYear = String(user.year).trim();
+        const bYear = String(b.year).trim();
 
-        return (bBranch === uBranch) && String(b.section) === userSection;
+        return (bBranch === uBranch) && (String(b.section) === userSection) && (bYear === userYear);
       }
     })
     .map(b => {

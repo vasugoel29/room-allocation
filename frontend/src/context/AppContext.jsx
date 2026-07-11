@@ -20,7 +20,7 @@ export const AppProvider = ({ children }) => {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
-  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: ['5th Block'] });
+  const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: ['5th Block'], roomType: 'all' });
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -118,21 +118,15 @@ export const AppProvider = ({ children }) => {
   const fetchRooms = useCallback(async () => {
     try {
       const queryParams = { 
-        building: filters.building,
-        floor: filters.floor,
-        searchTerm: filters.searchTerm
+        building: filters.building
       };
-      if (filters.smartRoom) {
-        queryParams.ac = 'true';
-        queryParams.projector = 'true';
-      }
       const data = await roomService.getRooms(queryParams);
       if (Array.isArray(data)) setRooms(data);
       else console.error('Expected array of rooms, got:', data);
     } catch (err) {
       console.error('Fetch rooms failed', err);
     }
-  }, [filters.building, filters.floor, filters.searchTerm, filters.smartRoom]);
+  }, [filters.building]);
 
   const fetchBookings = useCallback(async () => {
     try {
@@ -197,17 +191,32 @@ export const AppProvider = ({ children }) => {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // Consolidated Main Data Fetching Effect
+  const loadInitialData = useCallback(async () => {
+    if (!user) return;
+    return Promise.all([
+      fetchFaculties(),
+      fetchDepartments(),
+      fetchBookings(),
+      fetchAvailability(),
+      fetchTransfers(),
+      fetchTimetable(),
+      fetchFacultyOverrides()
+    ]);
+  }, [user, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
+
+  // Load global data exactly once on user login/change
   useEffect(() => {
     if (user) {
-      refreshAllData();
+      loadInitialData();
     }
-  }, [
-    user, 
-    selectedDay, 
-    filters.building, 
-    refreshAllData
-  ]);
+  }, [user, loadInitialData]);
+
+  // Load rooms when user or room filter changes (since fetchRooms depends on filters, this runs on filter changes)
+  useEffect(() => {
+    if (user) {
+      fetchRooms();
+    }
+  }, [user, fetchRooms]);
 
   useEffect(() => {
     // Keep internal state for consecutive failures to avoid flickering on transient issues
@@ -245,43 +254,81 @@ export const AppProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]); 
 
+  const clearInstallPrompt = useCallback(() => setDeferredPrompt(null), []);
+
+  const pendingTransferCount = useMemo(() => {
+    return incomingTransfers.filter(t => t.status === 'PENDING').length;
+  }, [incomingTransfers]);
+
+  const contextValue = useMemo(() => ({
+    user,
+    setUser,
+    rooms,
+    faculties,
+    incomingTransfers,
+    outgoingTransfers,
+    pendingTransferCount,
+    bookings,
+    availability,
+    departments,
+    filters,
+    setFilters,
+    theme,
+    setTheme,
+    viewMode,
+    setViewMode,
+    selectedDay,
+    setSelectedDay,
+    deferredPrompt,
+    clearInstallPrompt,
+    backendError,
+    fetchRooms,
+    fetchFaculties,
+    fetchDepartments,
+    fetchBookings,
+    fetchAvailability,
+    timetableData,
+    facultyTimetableData,
+    facultyOverrides,
+    fetchTimetable,
+    fetchFacultyOverrides,
+    fetchTransfers,
+    refreshAllData,
+    logout
+  }), [
+    user,
+    rooms,
+    faculties,
+    incomingTransfers,
+    outgoingTransfers,
+    pendingTransferCount,
+    bookings,
+    availability,
+    departments,
+    filters,
+    theme,
+    viewMode,
+    selectedDay,
+    deferredPrompt,
+    clearInstallPrompt,
+    backendError,
+    fetchRooms,
+    fetchFaculties,
+    fetchDepartments,
+    fetchBookings,
+    fetchAvailability,
+    timetableData,
+    facultyTimetableData,
+    facultyOverrides,
+    fetchTimetable,
+    fetchFacultyOverrides,
+    fetchTransfers,
+    refreshAllData,
+    logout
+  ]);
+
   return (
-    <AppContext.Provider value={{
-      user,
-      setUser,
-      rooms,
-      faculties,
-      incomingTransfers,
-      outgoingTransfers,
-      pendingTransferCount: incomingTransfers.filter(t => t.status === 'PENDING').length,
-      bookings,
-      availability,
-      departments,
-      filters,
-      setFilters,
-      theme,
-      setTheme,
-      viewMode,
-      setViewMode,
-      selectedDay,
-      setSelectedDay,
-      deferredPrompt,
-      clearInstallPrompt: () => setDeferredPrompt(null),
-      backendError,
-      fetchRooms,
-      fetchFaculties,
-      fetchDepartments,
-      fetchBookings,
-      fetchAvailability,
-      timetableData,
-      facultyTimetableData,
-      facultyOverrides,
-      fetchTimetable,
-      fetchFacultyOverrides,
-      fetchTransfers,
-      refreshAllData,
-      logout
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

@@ -27,19 +27,6 @@ const AdminAnalytics = () => {
         fetchAnalytics();
     }, [days]);
 
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-                <Loader2 className="w-10 h-10 text-blue-500 animate-spin" />
-                <p className="text-gray-400 font-medium animate-pulse">Computing system metrics...</p>
-            </div>
-        );
-    }
-
-    if (!data) return null;
-
-    const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header */}
@@ -61,6 +48,40 @@ const AdminAnalytics = () => {
                     ))}
                 </div>
             </header>
+
+            {loading ? (
+                <div className="space-y-8 animate-pulse">
+                    {/* Quick Stats Skeleton */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/[0.02] shadow-sm space-y-4">
+                                <div className="h-8 w-8 bg-white/10 rounded-lg" />
+                                <div className="space-y-2">
+                                    <div className="h-3 w-28 bg-white/5 rounded" />
+                                    <div className="h-8 w-16 bg-white/10 rounded-md" />
+                                    <div className="h-3 w-32 bg-white/5 rounded" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Charts Skeleton */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        {[1, 2].map((i) => (
+                            <div key={i} className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/[0.02] space-y-4">
+                                <div className="h-5 w-40 bg-white/10 rounded" />
+                                <div className="h-[300px] bg-white/5 rounded-xl flex items-end justify-between p-6">
+                                    {[40, 60, 30, 80, 50, 70, 45, 90, 65].map((h, idx) => (
+                                        <div key={idx} className="w-6 bg-white/10 rounded-t" style={{ height: `${h}%` }} />
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ) : !data ? null : (
+                <>
+
 
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -165,8 +186,9 @@ const AdminAnalytics = () => {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
-                </div>
             </div>
+            </>
+            )}
         </div>
     );
 };

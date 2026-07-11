@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS rooms (
   capacity INT DEFAULT 30,
   has_ac BOOLEAN DEFAULT FALSE,
   has_projector BOOLEAN DEFAULT FALSE,
+  type VARCHAR(50) DEFAULT 'Lecture Room',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

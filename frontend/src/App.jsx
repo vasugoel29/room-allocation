@@ -221,23 +221,7 @@ function App() {
     ];
   };
 
-// Protected Route Component
-const ProtectedRoute = ({ user, children, roles = [] }) => {
-  if (!user) return <Navigate to="/login" replace />;
-  if (roles.length > 0 && !roles.includes(user.role)) {
-    return <Navigate to="/calendar" replace />;
-  }
-  return children;
-};
-  const ThemeToggle = ({ className = "" }) => (
-    <button 
-      onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-      className={`p-2.5 hover:bg-tonal-secondary rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95 ${className}`}
-      title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-    >
-      {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-    </button>
-  );
+
 
   return (
     <div className={`h-screen w-full flex flex-col transition-colors duration-400 font-body ${theme === 'dark' ? 'dark' : ''} bg-surface-lowest`}>

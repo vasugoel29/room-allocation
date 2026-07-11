@@ -273,8 +273,53 @@ function AdminDashboard() {
 
         <div className="flex-1 bg-tonal-secondary/5 rounded-[2.5rem] overflow-hidden shadow-ambient backdrop-blur-md flex flex-col min-h-0">
           {loading ? (
-            <div className="p-20 flex justify-center items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-primary border-t-transparent"></div>
+            <div className="flex-1 overflow-auto no-scrollbar p-4 space-y-4 animate-pulse">
+              {/* Mobile skeleton */}
+              <div className="grid grid-cols-1 gap-4 sm:hidden">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="bg-bg-primary/50 p-5 rounded-2xl border border-border/10 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className="space-y-2 flex-1">
+                        <div className="h-5 w-20 bg-surface-highest/20 rounded-md" />
+                        <div className="h-4 w-32 bg-surface-highest/10 rounded-md" />
+                      </div>
+                      <div className="h-5 w-16 bg-surface-highest/20 rounded-md" />
+                    </div>
+                    <div className="h-10 bg-surface-highest/10 rounded-xl" />
+                  </div>
+                ))}
+              </div>
+              
+              {/* Desktop skeleton */}
+              <div className="hidden sm:block">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-border/10 bg-bg-secondary/20">
+                      <th className="px-6 py-4"><div className="h-3 w-16 bg-surface-highest/10 rounded" /></th>
+                      <th className="px-6 py-4"><div className="h-3 w-12 bg-surface-highest/10 rounded" /></th>
+                      <th className="px-6 py-4"><div className="h-3 w-24 bg-surface-highest/10 rounded" /></th>
+                      <th className="px-6 py-4"><div className="h-3 w-16 bg-surface-highest/10 rounded" /></th>
+                      <th className="px-6 py-4 text-right"><div className="h-3 w-16 bg-surface-highest/10 rounded ml-auto" /></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/10">
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <tr key={i} className="border-b border-border/5">
+                        <td className="px-6 py-4">
+                          <div className="space-y-2">
+                            <div className="h-4 w-28 bg-surface-highest/20 rounded" />
+                            <div className="h-3 w-20 bg-surface-highest/10 rounded" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4"><div className="h-6 w-14 bg-surface-highest/15 rounded-md" /></td>
+                        <td className="px-6 py-4"><div className="h-4 w-36 bg-surface-highest/10 rounded" /></td>
+                        <td className="px-6 py-4"><div className="h-5 w-16 bg-surface-highest/15 rounded-md" /></td>
+                        <td className="px-6 py-4 text-right"><div className="h-8 w-20 bg-surface-highest/25 rounded-xl ml-auto" /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <>

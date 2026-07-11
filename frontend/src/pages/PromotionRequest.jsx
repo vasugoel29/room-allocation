@@ -48,8 +48,18 @@ const PromotionRequest = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+      <div className="flex flex-col h-full space-y-6 p-5 sm:p-8 overflow-y-auto no-scrollbar animate-pulse">
+        <div className="flex flex-col space-y-2">
+          <div className="h-6 w-48 bg-surface-highest/20 rounded-md" />
+          <div className="h-3.5 w-64 bg-surface-highest/10 rounded-md" />
+        </div>
+        <div className="bg-surface-low rounded-[2.5rem] p-6 sm:p-8 border border-border/10 space-y-6">
+          <div className="space-y-2">
+            <div className="h-3.5 w-24 bg-surface-highest/15 rounded-md" />
+            <div className="h-24 w-full bg-surface-highest/5 rounded-2xl" />
+          </div>
+          <div className="h-12 w-full bg-primary/20 rounded-2xl" />
+        </div>
       </div>
     );
   }

@@ -33,7 +33,28 @@ if (process.env.DATABASE_URL) {
 
 const pool = new Pool(poolConfig);
 
+// Add error listener to prevent process crashes on idle client socket errors
+pool.on('error', (err) => {
+  logger.error('Unexpected error on idle database client', err);
+});
+
 export const query = (text, params) => pool.query(text, params);
+
+export const runInTransaction = async (callback) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+};
+
 
 /**
  * Tests the database connection and logs the result
@@ -270,6 +291,20 @@ const migrations = [
           logger.warn(`Migration v10: Seeding source file not found at ${filePath}. Skipping seeding.`);
         }
       }
+    }
+  },
+  {
+    version: 11,
+    name: 'Room Types Schema & Seeding',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT 'Lecture Room';
+        
+        -- Update specific room types
+        UPDATE rooms SET type = 'Committee Room' WHERE name IN ('5013', '5014', '5015');
+        UPDATE rooms SET type = 'Auditorium' WHERE name IN ('5027', '5028', '5301');
+        UPDATE rooms SET type = 'Lab' WHERE name IN ('5310', '5311', '5312', '5138');
+      `);
     }
   }
 ];

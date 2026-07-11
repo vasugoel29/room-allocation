@@ -128,6 +128,9 @@ function BookingModal({ slot, onClose, onSuccess }) {
     e.preventDefault();
     if (user?.role === "VIEWER") return;
     if (!selectedRoom) return setError("Please select a room");
+    if (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium')) {
+      return setError("Committee Rooms and Auditoriums can only be booked by Faculty or Admin.");
+    }
     if (isStudent && !selectedFaculty)
       return setError("Please select a faculty for this class");
     if (bookingType === "RESCHEDULE" && !rescheduleRoom)
@@ -271,6 +274,18 @@ function BookingModal({ slot, onClose, onSuccess }) {
           </div>
         )}
 
+        {isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium') && (
+          <div className="mb-6 sm:mb-8 p-5 rounded-[1.75rem] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-xs sm:text-sm flex flex-col gap-2 font-display uppercase tracking-tight">
+            <div className="flex items-center gap-3 font-extrabold text-sm">
+              <AlertCircle size={20} />
+              Booking Restricted
+            </div>
+            <p className="font-bold opacity-80 normal-case">
+              {selectedRoomData.name} is a {selectedRoomData.type}. These spaces are reserved for academic/official activities and can only be booked by Faculty or Admin roles.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
           <div className="space-y-3 sm:space-y-4">
             <div className={`grid grid-cols-1 ${isStudent ? 'sm:grid-cols-2' : ''} gap-3 sm:gap-4`}>
@@ -298,6 +313,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
             {bookingType === "RESCHEDULE" && (
               <RescheduleDetails
                 rooms={rooms}
+                user={user}
                 rescheduleDay={rescheduleDay}
                 setRescheduleDay={setRescheduleDay}
                 isDayOpen={isDayOpen}
@@ -340,7 +356,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
               ) && (
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
                   className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display uppercase tracking-widest`}
                 >
                   {loading ? (

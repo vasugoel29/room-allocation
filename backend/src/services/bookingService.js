@@ -262,123 +262,130 @@ export const createBookingHandler = async (reqData, user) => {
     return { error: 'Regular bookings allowed only for the current week', status: 400 };
   }
 
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await createBooking(client, reqData, userId);
-    
-    if (result.error) {
-      await client.query('ROLLBACK');
-      return result;
-    }
-
-    await client.query('COMMIT');
-    cache.deletePattern('admin_status_.*'); 
-    logger.info('Booking created', { booking_id: result.data.id, user_id: userId, room_id: reqData.room_id, start_time });
-
-    // PROD-02: Notify faculty of new pending request
-    if (reqData.faculty_id && result.data) {
-      try {
-        const faculty = await userRepository.findById(reqData.faculty_id);
-        const student = await userRepository.findById(userId);
-        const room = await roomRepository.findById(reqData.room_id);
-        if (faculty?.email) {
-          const dateStr = new Date(start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-          const hour = new Date(start_time).getHours();
-          notifyFacultyNewRequest({
-            facultyName: faculty.name,
-            facultyEmail: faculty.email,
-            studentName: student?.name || 'A student',
-            roomName: room?.name || reqData.room_id,
-            date: dateStr,
-            time: `${hour}:00 – ${hour + 1}:00`
-          }).catch(err => logger.error('Faculty notification failed', err));
-        }
-      } catch (notifErr) {
-        logger.error('Failed to send faculty notification (non-blocking)', notifErr);
-      }
-    }
-
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
+  // Enforce room type restriction
+  const room = await roomRepository.findById(reqData.room_id);
+  if (!room) {
+    return { error: 'Room not found', status: 404 };
   }
+  if ((room.type === 'Committee Room' || room.type === 'Auditorium') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
+    return { error: 'Committee Rooms and Auditoriums can only be booked by Faculty or Admin', status: 403 };
+  }
+
+  const result = await db.runInTransaction(async (client) => {
+    const res = await createBooking(client, reqData, userId);
+    if (res.error) throw res;
+    return res;
+  }).catch(err => {
+    if (err && err.error) return err;
+    throw err;
+  });
+
+  if (result.error) return result;
+
+  cache.deletePattern('admin_status_.*');
+  cache.delete('room_availability_all');
+  logger.info('Booking created', { booking_id: result.data.id, user_id: userId, room_id: reqData.room_id, start_time });
+
+  // PROD-02: Notify faculty of new pending request
+  if (reqData.faculty_id && result.data) {
+    try {
+      const faculty = await userRepository.findById(reqData.faculty_id);
+      const student = await userRepository.findById(userId);
+      const room = await roomRepository.findById(reqData.room_id);
+      if (faculty?.email) {
+        const dateStr = new Date(start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        const hour = new Date(start_time).getHours();
+        notifyFacultyNewRequest({
+          facultyName: faculty.name,
+          facultyEmail: faculty.email,
+          studentName: student?.name || 'A student',
+          roomName: room?.name || reqData.room_id,
+          date: dateStr,
+          time: `${hour}:00 – ${hour + 1}:00`
+        }).catch(err => logger.error('Faculty notification failed', err));
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send faculty notification (non-blocking)', notifErr);
+    }
+  }
+
+  return result;
 };
 
 export const cancelBookingHandler = async (bookingId, user) => {
   const userId = user.id;
   const isAdmin = user.role === 'ADMIN';
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await cancelBooking(client, bookingId, userId, isAdmin);
-
-    if (result.error) {
-      await client.query('ROLLBACK');
-      return result;
-    }
-
-    await client.query('COMMIT');
-    cache.deletePattern('admin_status_.*'); 
-    logger.info('Booking cancelled', { booking_id: bookingId, user_id: userId });
-
-    // PROD-02: Notify booking creator about cancellation
-    try {
-      const booking = await bookingRepository.findById(bookingId);
-      if (booking) {
-        const creator = await userRepository.findById(booking.created_by);
-        const room = await roomRepository.findById(booking.room_id);
-        if (creator?.email) {
-          const dateStr = new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const hour = new Date(booking.start_time).getHours();
-          const canceller = userId !== booking.created_by ? (await userRepository.findById(userId))?.name : null;
-          notifyBookingCancelled({
-            userEmail: creator.email,
-            userName: creator.name,
-            roomName: room?.name || booking.room_id,
-            date: dateStr,
-            time: `${hour}:00 – ${hour + 1}:00`,
-            cancelledBy: canceller || undefined
-          }).catch(err => logger.error('Cancellation notification failed', err));
-        }
-      }
-    } catch (notifErr) {
-      logger.error('Failed to send cancellation notification (non-blocking)', notifErr);
-    }
-
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
+  
+  const result = await db.runInTransaction(async (client) => {
+    const res = await cancelBooking(client, bookingId, userId, isAdmin);
+    if (res.error) throw res;
+    return res;
+  }).catch(err => {
+    if (err && err.error) return err;
     throw err;
-  } finally {
-    client.release();
+  });
+
+  if (result.error) return result;
+
+  cache.deletePattern('admin_status_.*');
+  cache.delete('room_availability_all');
+  logger.info('Booking cancelled', { booking_id: bookingId, user_id: userId });
+
+  // PROD-02: Notify booking creator about cancellation
+  try {
+    const booking = await bookingRepository.findById(bookingId);
+    if (booking) {
+      const creator = await userRepository.findById(booking.created_by);
+      const room = await roomRepository.findById(booking.room_id);
+      if (creator?.email) {
+        const dateStr = new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        const hour = new Date(booking.start_time).getHours();
+        const canceller = userId !== booking.created_by ? (await userRepository.findById(userId))?.name : null;
+        notifyBookingCancelled({
+          userEmail: creator.email,
+          userName: creator.name,
+          roomName: room?.name || booking.room_id,
+          date: dateStr,
+          time: `${hour}:00 – ${hour + 1}:00`,
+          cancelledBy: canceller || undefined
+        }).catch(err => logger.error('Cancellation notification failed', err));
+      }
+    }
+  } catch (notifErr) {
+    logger.error('Failed to send cancellation notification (non-blocking)', notifErr);
   }
+
+  return result;
 };
 
 export const rescheduleBookingHandler = async (bookingId, reqData, user) => {
   const userId = user.id;
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-    const result = await rescheduleBooking(client, bookingId, reqData, userId);
-    
-    if (result.error) {
-      await client.query('ROLLBACK');
-      return result;
-    }
+  
+  const booking = await bookingRepository.findById(bookingId);
+  if (!booking) return { error: 'Booking not found', status: 404 };
 
-    await client.query('COMMIT');
-    cache.deletePattern('admin_status_.*');
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
-    throw err;
-  } finally {
-    client.release();
+  const targetRoomId = reqData.room_id || booking.room_id;
+  const targetRoom = await roomRepository.findById(targetRoomId);
+  if (!targetRoom) return { error: 'Target room not found', status: 404 };
+
+  if ((targetRoom.type === 'Committee Room' || targetRoom.type === 'Auditorium') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
+    return { error: 'Committee Rooms and Auditoriums can only be booked by Faculty or Admin', status: 403 };
   }
+
+  const result = await db.runInTransaction(async (client) => {
+    const res = await rescheduleBooking(client, bookingId, reqData, userId);
+    if (res.error) throw res;
+    return res;
+  }).catch(err => {
+    if (err && err.error) return err;
+    throw err;
+  });
+
+  if (result.error) return result;
+
+  cache.deletePattern('admin_status_.*');
+  cache.delete('room_availability_all');
+  return result;
 };
 
 export const quickBookHandler = async (reqData, user) => {
@@ -390,10 +397,8 @@ export const quickBookHandler = async (reqData, user) => {
   }
 
   const userId = target_user_id || adminId;
-  const client = await db.pool.connect();
-  try {
-    await client.query('BEGIN');
-
+  
+  const result = await db.runInTransaction(async (client) => {
     let room = await roomRepository.findByName(room_name, client);
     let roomId;
     if (!room) {
@@ -413,28 +418,26 @@ export const quickBookHandler = async (reqData, user) => {
     const startTime = new Date(date);
     startTime.setHours(parseInt(slot), 0, 0, 0);
     const endTime = new Date(startTime);
-    endTime.setHours(startTime.getHours() + 1);
+    endTime.setHours(startTime.toISOString() ? startTime.getHours() + 1 : 0);
 
-    const result = await createBooking(client, { 
+    const res = await createBooking(client, { 
       room_id: roomId, 
       start_time: startTime.toISOString(), 
       end_time: endTime.toISOString(), 
       purpose: purpose || 'Admin Quick Booking' 
     }, userId);
 
-    if (result.error) {
-      await client.query('ROLLBACK');
-      return result;
-    }
-
-    await client.query('COMMIT');
-    cache.deletePattern('admin_status_.*');
-    logger.info('Admin Quick Booking created', { booking_id: result.data.id, room_name, start_time: startTime });
-    return result;
-  } catch (err) {
-    await client.query('ROLLBACK');
+    if (res.error) throw res;
+    return { res, startTime };
+  }).catch(err => {
+    if (err && err.error) return err;
     throw err;
-  } finally {
-    client.release();
-  }
+  });
+
+  if (result.error) return result;
+
+  cache.deletePattern('admin_status_.*');
+  cache.delete('room_availability_all');
+  logger.info('Admin Quick Booking created', { booking_id: result.res.data.id, room_name, start_time: result.startTime });
+  return result.res;
 };

@@ -60,7 +60,7 @@ async function seedDepartments(client) {
 }
 
 async function seed() {
-  const client = await pool.connect();
+  let client = await pool.connect();
   // Try both possible data file locations
   const dataPaths = [
     path.join(__dirname, 'rooms_complete_data_updated.json'),
@@ -86,6 +86,7 @@ async function seed() {
   try {
     await seedDepartments(client);
     client.release();
+    client = null;
 
     const rawData = fs.readFileSync(dataPath, 'utf8');
     const universityData = JSON.parse(rawData);
@@ -103,11 +104,20 @@ async function seed() {
 
     console.log('Seeding completed successfully!');
   } catch (err) {
-    if (client) client.release();
+    if (client) {
+      client.release();
+    }
     console.error('Seeding error:', err);
   } finally {
     await pool.end();
   }
+}
+
+function getRoomType(roomName) {
+  if (['5013', '5014', '5015'].includes(roomName)) return 'Committee Room';
+  if (['5027', '5028', '5301'].includes(roomName)) return 'Auditorium';
+  if (['5310', '5311', '5312', '5138'].includes(roomName)) return 'Lab';
+  return 'Lecture Room';
 }
 
 async function processBatch(rooms) {
@@ -122,16 +132,18 @@ async function processBatch(rooms) {
       const hasAc = roomObj.metadata?.has_ac ?? false;
       const hasProjector = roomObj.metadata?.has_projector ?? false;
       const capacity = [40, 60, 80, 100, 120][Math.floor(Math.random() * 5)];
+      const type = getRoomType(roomName);
 
       // 1. Insert/Update Room
       const roomRes = await client.query(
-        `INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector) 
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector, type) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
          ON CONFLICT (name) DO UPDATE SET 
             building = EXCLUDED.building,
-            floor = EXCLUDED.floor
+            floor = EXCLUDED.floor,
+            type = EXCLUDED.type
          RETURNING id`,
-        [roomName, building, floor, capacity, hasAc, hasProjector]
+        [roomName, building, floor, capacity, hasAc, hasProjector, type]
       );
       const roomId = roomRes.rows[0].id;
 

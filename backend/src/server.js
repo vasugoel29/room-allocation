@@ -1,10 +1,12 @@
 import './config/env.js';
 import express from 'express';
+import client from 'prom-client';
 import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import compression from 'compression';
 import jwt from 'jsonwebtoken';
+import cookieParser from 'cookie-parser';
 import { logActivity } from './services/loggerService.js';
 
 import rateLimit from 'express-rate-limit';
@@ -49,6 +51,49 @@ import timetableRoutes from './routes/timetableRoutes.js';
 
 const app = express();
 app.set('trust proxy', 1);
+
+// Initialize Prometheus metrics collection
+client.collectDefaultMetrics({ register: client.register });
+
+const httpRequestDurationSeconds = new client.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+});
+
+// Middleware to track HTTP request durations
+app.use((req, res, next) => {
+  const start = process.hrtime();
+  res.on('finish', () => {
+    const duration = process.hrtime(start);
+    const durationInSeconds = duration[0] + duration[1] / 1e9;
+    
+    let route = req.path;
+    if (req.route && req.route.path) {
+      route = req.route.path;
+    }
+    
+    // Skip /metrics endpoint logging to reduce noise
+    if (route !== '/metrics') {
+      httpRequestDurationSeconds
+        .labels(req.method, route, res.statusCode)
+        .observe(durationInSeconds);
+    }
+  });
+  next();
+});
+
+// Prometheus Metrics endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', client.register.contentType);
+    res.send(await client.register.metrics());
+  } catch (err) {
+    res.status(500).end(err);
+  }
+});
+app.use(cookieParser());
 app.use(helmet());
 app.use(compression()); // Compress all responses
 app.use(cors({
@@ -60,7 +105,13 @@ app.use(cors({
 app.use(express.json({ limit: '100kb' }));
 
 
-const apiLimiter = (req, res, next) => next();
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 100 : 5000, // Relaxed for dev/testing
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests from this IP, please try again later.' }
+});
 
 app.use('/api', apiLimiter);
 
@@ -130,6 +181,16 @@ app.use('/api/timetable', timetableRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);
+
+// Global custom JSON error-handling middleware
+app.use((err, req, res, next) => {
+  console.error('Global Error Handler:', err);
+  const statusCode = err.statusCode || err.status || 500;
+  res.status(statusCode).json({
+    error: err.message || 'Internal Server Error',
+    ...(process.env.NODE_ENV !== 'production' ? { stack: err.stack } : {})
+  });
+});
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);

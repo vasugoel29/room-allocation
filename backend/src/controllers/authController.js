@@ -330,9 +330,9 @@ export const verifyStudent = async (req, res) => {
     res.json(data);
   } catch (err) {
     logger.error("Failed to proxy student verification", err);
-    res.status(500).json({
-      error:
-        "Verification service currently unavailable. Using manual entry fallback.",
+    res.status(404).json({
+      error: "Verification service currently offline.",
+      apiDown: true
     });
   }
 };

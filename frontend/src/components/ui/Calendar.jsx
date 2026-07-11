@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 
@@ -85,19 +85,67 @@ function Calendar({ onSlotClick }) {
 
   const timePos = getCurrentTimePosition();
 
-  const getBooking = (dateStr, hour, roomId) => {
-    return bookings?.find(b => {
+  const bookingsMap = useMemo(() => {
+    const map = new Map();
+    if (!bookings) return map;
+    bookings.forEach(b => {
       const bStatus = (b.status || 'ACTIVE').toUpperCase();
-      if (bStatus !== 'ACTIVE' && bStatus !== 'PENDING' && bStatus !== 'CONFIRMED') return false;
+      if (bStatus !== 'ACTIVE' && bStatus !== 'PENDING' && bStatus !== 'CONFIRMED') return;
       const bStart = new Date(b.start_time);
       const bYear = bStart.getFullYear();
       const bMonth = String(bStart.getMonth() + 1).padStart(2, '0');
       const bDate = String(bStart.getDate()).padStart(2, '0');
       const bLocalStr = `${bYear}-${bMonth}-${bDate}`;
       const bHour = bStart.getHours();
-      return bLocalStr === dateStr && bHour === hour && String(b.room_id) === String(roomId);
+      
+      const key = `${bLocalStr}-${bHour}-${b.room_id}`;
+      map.set(key, b);
     });
+    return map;
+  }, [bookings]);
+
+  const getBooking = (dateStr, hour, roomId) => {
+    return bookingsMap.get(`${dateStr}-${hour}-${roomId}`);
   };
+
+  const timetableMap = useMemo(() => {
+    const map = new Map();
+    if (!timetableData) return map;
+    Object.entries(timetableData).forEach(([dayLabel, daySchedule]) => {
+      if (!Array.isArray(daySchedule)) return;
+      daySchedule.forEach(sc => {
+        if (!sc.room) return;
+        const key = `${dayLabel}-${sc.time}-${sc.room.trim().toLowerCase()}`;
+        map.set(key, sc);
+      });
+    });
+    return map;
+  }, [timetableData]);
+
+  const isStaticallyOccupied = (dayLabel, hour, roomName) => {
+    const normalizedRoom = roomName.trim().toLowerCase();
+    const exactKey = `${dayLabel}-${hour}-${normalizedRoom}`;
+    if (timetableMap.has(exactKey)) return timetableMap.get(exactKey);
+    
+    // Fallback: substring matching
+    const daySchedule = timetableData?.[dayLabel] || [];
+    return daySchedule.find(sc => 
+      sc.time === hour && 
+      sc.room && 
+      (sc.room.trim().toLowerCase() === normalizedRoom || sc.room.trim().toLowerCase().includes(normalizedRoom))
+    );
+  };
+
+  const filteredRooms = useMemo(() => {
+    return rooms.filter(room => {
+      const matchesSearch = !filters.searchTerm || room.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      const dbFloor = filters.floor === 'G' ? 0 : (filters.floor === 'all' ? 'all' : parseInt(filters.floor));
+      const matchesFloor = dbFloor === 'all' || Number(room.floor) === Number(dbFloor);
+      const matchesSmart = !filters.smartRoom || (room.has_ac && room.has_projector);
+      const matchesType = !filters.roomType || filters.roomType === 'all' || room.type === filters.roomType;
+      return matchesSearch && matchesFloor && matchesSmart && matchesType;
+    });
+  }, [rooms, filters.searchTerm, filters.floor, filters.smartRoom, filters.roomType]);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
@@ -205,22 +253,13 @@ function Calendar({ onSlotClick }) {
                           
                           <div className={`relative z-10 h-full overflow-y-auto no-scrollbar pt-1 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
                             {(() => {
-                              const slotRooms = rooms
-                                .filter(room => {
-                                  const matchesSearch = !filters.searchTerm || room.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
-                                  const dbFloor = filters.floor === 'G' ? 0 : (filters.floor === 'all' ? 'all' : parseInt(filters.floor));
-                                  const matchesFloor = dbFloor === 'all' || Number(room.floor) === Number(dbFloor);
-                                  const matchesSmart = !filters.smartRoom || (room.has_ac && room.has_projector);
-                                  return matchesSearch && matchesFloor && matchesSmart;
-                                })
+                              const slotRooms = [...filteredRooms]
                                 .sort((a, b) => {
                                   const aBooked = !!getBooking(dateStr, hour, a.id);
                                   const bBooked = !!getBooking(dateStr, hour, b.id);
                                   
-                                  // Check static timetable for both
-                                  const daySchedule = timetableData?.[dayLabel] || [];
-                                  const isAOccupied = aBooked || daySchedule.some(sc => sc.room && (sc.room.trim().toLowerCase() === a.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(a.name.trim().toLowerCase())) && sc.time === hour);
-                                  const isBOccupied = bBooked || daySchedule.some(sc => sc.room && (sc.room.trim().toLowerCase() === b.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(b.name.trim().toLowerCase())) && sc.time === hour);
+                                  const isAOccupied = aBooked || !!isStaticallyOccupied(dayLabel, hour, a.name);
+                                  const isBOccupied = bBooked || !!isStaticallyOccupied(dayLabel, hour, b.name);
                                   
                                   if (isAOccupied !== isBOccupied) return isAOccupied ? 1 : -1;
                                   
@@ -237,8 +276,7 @@ function Calendar({ onSlotClick }) {
                                 <>
                                   {displayedRooms.map(room => {
                                     const booking = getBooking(dateStr, hour, room.id);
-                                    const daySchedule = timetableData?.[dayLabel] || [];
-                                    const staticClass = !booking ? daySchedule.find(sc => sc.room && (sc.room.trim().toLowerCase() === room.name.trim().toLowerCase() || sc.room.trim().toLowerCase().includes(room.name.trim().toLowerCase())) && sc.time === hour) : null;
+                                    const staticClass = !booking ? isStaticallyOccupied(dayLabel, hour, room.name) : null;
                                     
                                     const isRestricted = booking && (booking.user_role === 'ADMIN' || booking.user_role === 'FACULTY') && user?.role !== 'ADMIN';
                                     const isOccupied = booking || staticClass;

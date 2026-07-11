@@ -52,6 +52,8 @@ function RoomSelector({
               .filter(room => {
                 const isFree = isRoomReallyFree(room, slot.dateStr || new Date(slot.date).toISOString().split('T')[0], slot.day, slot.hour, [], availability, timetableData);
                 const matchesSearch = !debouncedTerm || room.name.toLowerCase().includes(debouncedTerm.toLowerCase()) || room.building?.toLowerCase().includes(debouncedTerm.toLowerCase());
+                const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+                if (isStudent && (room.type === 'Committee Room' || room.type === 'Auditorium')) return false;
                 return isFree && matchesSearch;
               })
               .map(room => {
@@ -80,7 +82,9 @@ function RoomSelector({
                       <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>
                         {room.name}
                       </span>
-                      <span className={`text-[10px] uppercase tracking-widest font-extrabold ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.building}</span>
+                      <span className={`text-[10px] uppercase tracking-widest font-extrabold ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
+                        {room.building} &bull; {room.type}
+                      </span>
                       {booking && (
                         <span className="text-[10px] text-tertiary font-extrabold uppercase tracking-widest bg-tonal-tertiary px-3 py-1 rounded-full mt-2 w-fit shadow-tertiary">
                           Occupied by {booking.user_name}

@@ -134,13 +134,7 @@ function FacultyDashboard() {
 
   const DISPLAY_BOOKINGS = getFilteredBookings();
 
-  if (loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-10 w-10 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
+
 
   return (
     <div className="p-4 sm:p-8 w-full h-full overflow-y-auto no-scrollbar space-y-6">
@@ -166,7 +160,24 @@ function FacultyDashboard() {
       </div>
 
 
-      {DISPLAY_BOOKINGS.length === 0 ? (
+      {loading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-pulse">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-surface-low rounded-2xl p-5 shadow-ambient flex flex-col gap-4 border border-text-secondary/5">
+              <div className="space-y-3 pb-2">
+                <div className="h-5 w-24 bg-surface-highest/20 rounded-lg" />
+                <div className="h-4 w-3/4 bg-surface-highest/15 rounded-md" />
+                <div className="h-3.5 w-1/2 bg-surface-highest/10 rounded-md" />
+              </div>
+              <div className="h-20 bg-surface-highest/10 rounded-xl mt-2" />
+              <div className="flex gap-2 pt-2 mt-auto">
+                <div className="h-10 flex-1 bg-surface-highest/20 rounded-xl" />
+                <div className="h-10 flex-1 bg-surface-highest/10 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : DISPLAY_BOOKINGS.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 px-4 text-center rounded-[2.5rem] bg-tonal-secondary/5 m-4">
           <div className="w-16 h-16 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-6">
             <Check size={32} />

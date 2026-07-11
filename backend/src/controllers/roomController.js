@@ -4,9 +4,13 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import logger from '../utils/logger.js';
 
 export const getRooms = async (req, res) => {
-  const { capacity, ac, projector, building, floor } = req.query;
+  const { capacity, ac, projector, building, floor, type } = req.query;
   try {
-    const rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor);
+    const isStudent = req.user?.role !== 'ADMIN' && req.user?.role !== 'FACULTY';
+    let rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor, type);
+    if (isStudent) {
+      rooms = rooms.filter(r => r.type !== 'Committee Room' && r.type !== 'Auditorium');
+    }
     res.json(rooms);
   } catch (err) {
     logger.error('getRooms error', err);

@@ -162,11 +162,13 @@ export const importStudents = async (req, res) => {
       return res.status(400).json({ error: 'Missing csvContent field' });
     }
     const rows = parseCSV(csvContent);
-    const client = await db.pool.connect();
-    try {
-      await client.query('BEGIN');
-      for (const row of rows) {
-        if (!row.email) continue;
+    
+    const processedRows = [];
+    const batchSize = 10;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const chunk = rows.slice(i, i + batchSize);
+      await Promise.all(chunk.map(async (row) => {
+        if (!row.email) return;
         
         // Sanitize bounds
         let year = parseInt(row.year);
@@ -182,9 +184,46 @@ export const importStudents = async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await client.query(`
+        processedRows.push({
+          name: row.name || '',
+          email: row.email.toLowerCase(),
+          password: hashedPassword,
+          branch: row.branch || '',
+          year,
+          section,
+          degree: row.degree || '',
+          department_name: row.department_name || '',
+          roll_no: row.roll_no || ''
+        });
+      }));
+    }
+
+    await db.runInTransaction(async (client) => {
+      const chunkSize = 100;
+      for (let i = 0; i < processedRows.length; i += chunkSize) {
+        const chunk = processedRows.slice(i, i + chunkSize);
+        const values = [];
+        const placeholders = [];
+        let index = 1;
+        for (const row of chunk) {
+          placeholders.push(`($${index}, $${index+1}, $${index+2}, 'VIEWER', $${index+3}, $${index+4}, $${index+5}, $${index+6}, $${index+7}, $${index+8})`);
+          values.push(
+            row.name,
+            row.email,
+            row.password,
+            row.branch,
+            row.year,
+            row.section,
+            row.degree,
+            row.department_name,
+            row.roll_no
+          );
+          index += 9;
+        }
+
+        const bulkQuery = `
           INSERT INTO users (name, email, password, role, branch, year, section, degree, department_name, roll_no)
-          VALUES ($1, $2, $3, 'VIEWER', $4, $5, $6, $7, $8, $9)
+          VALUES ${placeholders.join(', ')}
           ON CONFLICT (email) DO UPDATE SET 
             name = EXCLUDED.name,
             branch = EXCLUDED.branch,
@@ -193,17 +232,8 @@ export const importStudents = async (req, res) => {
             degree = EXCLUDED.degree,
             department_name = EXCLUDED.department_name,
             roll_no = EXCLUDED.roll_no
-        `, [
-          row.name || '',
-          row.email.toLowerCase(),
-          hashedPassword,
-          row.branch || '',
-          year,
-          section,
-          row.degree || '',
-          row.department_name || '',
-          row.roll_no || ''
-        ]);
+        `;
+        await client.query(bulkQuery, values);
       }
 
       if (req.user?.id) {
@@ -214,16 +244,9 @@ export const importStudents = async (req, res) => {
           details: { recordCount: rows.length }
         }, client);
       }
+    });
 
-      await client.query('COMMIT');
-      res.json({ success: true, message: `Successfully imported ${rows.length} student records` });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      logger.error('Failed to import students CSV inside transaction', err);
-      res.status(500).json({ error: 'Database transaction failed during student import' });
-    } finally {
-      client.release();
-    }
+    res.json({ success: true, message: `Successfully imported ${rows.length} student records` });
   } catch (err) {
     logger.error('Failed to import students CSV', err);
     res.status(500).json({ error: 'Failed to import students CSV' });
@@ -237,11 +260,13 @@ export const importFaculty = async (req, res) => {
       return res.status(400).json({ error: 'Missing csvContent field' });
     }
     const rows = parseCSV(csvContent);
-    const client = await db.pool.connect();
-    try {
-      await client.query('BEGIN');
-      for (const row of rows) {
-        if (!row.email) continue;
+    
+    const processedFaculty = [];
+    const batchSize = 10;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const chunk = rows.slice(i, i + batchSize);
+      await Promise.all(chunk.map(async (row) => {
+        if (!row.email) return;
 
         let password = row.password;
         if (!password) {
@@ -249,18 +274,41 @@ export const importFaculty = async (req, res) => {
         }
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        await client.query(`
+        processedFaculty.push({
+          name: row.name || '',
+          email: row.email.toLowerCase(),
+          password: hashedPassword,
+          department_name: row.department_name || ''
+        });
+      }));
+    }
+
+    await db.runInTransaction(async (client) => {
+      const chunkSize = 100;
+      for (let i = 0; i < processedFaculty.length; i += chunkSize) {
+        const chunk = processedFaculty.slice(i, i + chunkSize);
+        const values = [];
+        const placeholders = [];
+        let index = 1;
+        for (const row of chunk) {
+          placeholders.push(`($${index}, $${index+1}, $${index+2}, 'FACULTY', $${index+3})`);
+          values.push(
+            row.name,
+            row.email,
+            row.password,
+            row.department_name
+          );
+          index += 5;
+        }
+
+        const bulkQuery = `
           INSERT INTO users (name, email, password, role, department_name)
-          VALUES ($1, $2, $3, 'FACULTY', $4)
+          VALUES ${placeholders.join(', ')}
           ON CONFLICT (email) DO UPDATE SET 
             name = EXCLUDED.name,
             department_name = EXCLUDED.department_name
-        `, [
-          row.name || '',
-          row.email.toLowerCase(),
-          hashedPassword,
-          row.department_name || ''
-        ]);
+        `;
+        await client.query(bulkQuery, values);
       }
 
       if (req.user?.id) {
@@ -271,16 +319,9 @@ export const importFaculty = async (req, res) => {
           details: { recordCount: rows.length }
         }, client);
       }
+    });
 
-      await client.query('COMMIT');
-      res.json({ success: true, message: `Successfully imported ${rows.length} faculty records` });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      logger.error('Failed to import faculty CSV inside transaction', err);
-      res.status(500).json({ error: 'Database transaction failed during faculty import' });
-    } finally {
-      client.release();
-    }
+    res.json({ success: true, message: `Successfully imported ${rows.length} faculty records` });
   } catch (err) {
     logger.error('Failed to import faculty CSV', err);
     res.status(500).json({ error: 'Failed to import faculty CSV' });
@@ -294,26 +335,39 @@ export const importTimetable = async (req, res) => {
       return res.status(400).json({ error: 'Missing csvContent field' });
     }
     const rows = parseCSV(csvContent);
-    const client = await db.pool.connect();
-    try {
-      await client.query('BEGIN');
+
+    await db.runInTransaction(async (client) => {
       await client.query('TRUNCATE faculty_timetable_slots');
-      for (const row of rows) {
-        if (!row.faculty_name) continue;
+      
+      const chunkSize = 100;
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+        const values = [];
+        const placeholders = [];
+        let index = 1;
+        
+        for (const row of chunk) {
+          if (!row.faculty_name) continue;
+          const isOccupied = row.is_occupied === 'true' || row.is_occupied === '1';
+          placeholders.push(`($${index}, $${index+1}, $${index+2}, $${index+3}, $${index+4}, $${index+5})`);
+          values.push(
+            row.faculty_name,
+            row.semester || '',
+            row.day_of_week || '',
+            row.slot_time || '',
+            row.content || '',
+            isOccupied
+          );
+          index += 6;
+        }
 
-        const isOccupied = row.is_occupied === 'true' || row.is_occupied === '1';
-
-        await client.query(`
-          INSERT INTO faculty_timetable_slots (faculty_name, semester, day_of_week, slot_time, content, is_occupied)
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `, [
-          row.faculty_name,
-          row.semester || '',
-          row.day_of_week || '',
-          row.slot_time || '',
-          row.content || '',
-          isOccupied
-        ]);
+        if (placeholders.length > 0) {
+          const bulkQuery = `
+            INSERT INTO faculty_timetable_slots (faculty_name, semester, day_of_week, slot_time, content, is_occupied)
+            VALUES ${placeholders.join(', ')}
+          `;
+          await client.query(bulkQuery, values);
+        }
       }
 
       if (req.user?.id) {
@@ -324,16 +378,9 @@ export const importTimetable = async (req, res) => {
           details: { recordCount: rows.length }
         }, client);
       }
+    });
 
-      await client.query('COMMIT');
-      res.json({ success: true, message: `Successfully imported ${rows.length} timetable records` });
-    } catch (err) {
-      await client.query('ROLLBACK');
-      logger.error('Failed to import timetable CSV inside transaction', err);
-      res.status(500).json({ error: 'Database transaction failed during timetable import' });
-    } finally {
-      client.release();
-    }
+    res.json({ success: true, message: `Successfully imported ${rows.length} timetable records` });
   } catch (err) {
     logger.error('Failed to import timetable CSV', err);
     res.status(500).json({ error: 'Failed to import timetable CSV' });

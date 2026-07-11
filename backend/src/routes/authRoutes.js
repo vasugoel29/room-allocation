@@ -7,13 +7,20 @@ import { validateRequest } from '../middleware/validate.js';
 
 const router = express.Router();
 
-const authLimiter = (req, res, next) => next();
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: process.env.NODE_ENV === 'production' ? 15 : 1000, // Relaxed for dev/testing
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many attempts, please try again after 15 minutes.' }
+});
 
 const loginValidation = [
   body('email').isEmail().withMessage('Valid email is required'),
   body('password').notEmpty().withMessage('Password cannot be empty')
 ];
 
+router.post('/signup', signup);
 router.post('/login', authLimiter, loginValidation, validateRequest, login);
 router.post('/logout', logout);
 router.post('/forgot-password', authLimiter, forgotPassword);

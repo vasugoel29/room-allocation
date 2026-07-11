@@ -44,34 +44,38 @@ export async function uploadTimetable(req, res) {
     const { slots } = req.body;
     if (!Array.isArray(slots)) return res.status(400).json({ error: 'Invalid data format' });
 
-    await db.query('BEGIN');
-    
-    // Optional: Clear existing data or handle updates
-    // await db.query('DELETE FROM timetable_slots');
+    await db.runInTransaction(async (client) => {
+      const chunkSize = 200;
+      for (let i = 0; i < slots.length; i += chunkSize) {
+        const chunk = slots.slice(i, i + chunkSize);
+        const values = [];
+        const placeholders = [];
+        let index = 1;
+        for (const slot of chunk) {
+          placeholders.push(`($${index}, $${index+1}, $${index+2}, $${index+3}, $${index+4}, $${index+5}, $${index+6}, $${index+7}, $${index+8})`);
+          values.push(
+            slot.department,
+            slot.semester,
+            slot.section,
+            slot.day_of_week,
+            slot.slot_time,
+            slot.subject_name,
+            slot.room_name,
+            slot.subject_code,
+            slot.faculty_name
+          );
+          index += 9;
+        }
+        const bulkQuery = `
+          INSERT INTO timetable_slots (department, semester, section, day_of_week, slot_time, subject_name, room_name, subject_code, faculty_name)
+          VALUES ${placeholders.join(', ')}
+        `;
+        await client.query(bulkQuery, values);
+      }
+    });
 
-    const query = `
-      INSERT INTO timetable_slots (department, semester, section, day_of_week, slot_time, subject_name, room_name, subject_code, faculty_name)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-    `;
-
-    for (const slot of slots) {
-      await db.query(query, [
-        slot.department,
-        slot.semester,
-        slot.section,
-        slot.day_of_week,
-        slot.slot_time,
-        slot.subject_name,
-        slot.room_name,
-        slot.subject_code,
-        slot.faculty_name
-      ]);
-    }
-
-    await db.query('COMMIT');
     res.json({ message: 'Timetable uploaded successfully' });
   } catch (err) {
-    await db.query('ROLLBACK');
     res.status(500).json({ error: err.message });
   }
 }
@@ -236,71 +240,21 @@ export async function searchTimetable(req, res) {
         ]);
 
         // 2. Dynamic Bookings for this section
-        const colCheck = await db.query(`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_name = 'bookings' AND column_name = 'department'
-        `);
-        const hasDepartment = colCheck.rows.length > 0;
-
-        let bookingRes;
-        if (hasDepartment) {
-          // Ensure semester and section columns exist in bookings
-          const semCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'semester'`);
-          if (semCheck.rows.length === 0) {
-            await db.query(`ALTER TABLE bookings ADD COLUMN semester VARCHAR(20)`);
-          }
-          const secCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'section'`);
-          if (secCheck.rows.length === 0) {
-            await db.query(`ALTER TABLE bookings ADD COLUMN section VARCHAR(20)`);
-          }
-
-          bookingRes = await db.query(`
-            SELECT b.*, r.name as room_name, u.name as creator_name
-            FROM bookings b
-            JOIN rooms r ON b.room_id = r.id
-            JOIN users u ON b.created_by = u.id
-            WHERE (UPPER(b.department) = $1 OR UPPER(b.department) = $2)
-            AND b.semester::TEXT = $3::TEXT
-            AND b.section::TEXT = $4::TEXT
-            AND b.status = 'ACTIVE'
-          `, [
-            deptUpper,
-            department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
-            semester, 
-            section
-          ]);
-        } else {
-          // Ensure branch, semester and section columns exist in bookings
-          const branchCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'branch'`);
-          if (branchCheck.rows.length === 0) {
-            await db.query(`ALTER TABLE bookings ADD COLUMN branch VARCHAR(255)`);
-          }
-          const semCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'semester'`);
-          if (semCheck.rows.length === 0) {
-            await db.query(`ALTER TABLE bookings ADD COLUMN semester VARCHAR(20)`);
-          }
-          const secCheck = await db.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'bookings' AND column_name = 'section'`);
-          if (secCheck.rows.length === 0) {
-            await db.query(`ALTER TABLE bookings ADD COLUMN section VARCHAR(20)`);
-          }
-
-          bookingRes = await db.query(`
-            SELECT b.*, r.name as room_name, u.name as creator_name
-            FROM bookings b
-            JOIN rooms r ON b.room_id = r.id
-            JOIN users u ON b.created_by = u.id
-            WHERE (UPPER(b.branch) = $1 OR UPPER(b.branch) = $2)
-            AND b.semester::TEXT = $3::TEXT
-            AND b.section::TEXT = $4::TEXT
-            AND b.status = 'ACTIVE'
-          `, [
-            deptUpper,
-            department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
-            semester, 
-            section
-          ]);
-        }
+        const bookingRes = await db.query(`
+          SELECT b.*, r.name as room_name, u.name as creator_name
+          FROM bookings b
+          JOIN rooms r ON b.room_id = r.id
+          JOIN users u ON b.created_by = u.id
+          WHERE (UPPER(u.branch) = $1 OR UPPER(u.branch) = $2 OR UPPER(u.department_name) = $1 OR UPPER(u.department_name) = $2)
+          AND u.year = CEIL($3::float / 2)
+          AND u.section::TEXT = $4::TEXT
+          AND b.status = 'ACTIVE'
+        `, [
+          deptUpper,
+          department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
+          semester, 
+          section
+        ]);
 
         return res.json({
           type: 'SECTION',

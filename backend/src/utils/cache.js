@@ -4,6 +4,21 @@ class SimpleCache {
   constructor(defaultTtlSeconds = 60) {
     this.cache = new Map();
     this.defaultTtl = defaultTtlSeconds * 1000;
+
+    // Active background cleanup of expired keys every 60s
+    this.cleanupInterval = setInterval(() => {
+      const now = Date.now();
+      for (const [key, entry] of this.cache.entries()) {
+        if (now > entry.expiry) {
+          this.cache.delete(key);
+          logger.info('Cache auto-expired', { key });
+        }
+      }
+    }, 60000);
+    
+    if (this.cleanupInterval && typeof this.cleanupInterval.unref === 'function') {
+      this.cleanupInterval.unref();
+    }
   }
 
   set(key, value, ttlMs = this.defaultTtl) {

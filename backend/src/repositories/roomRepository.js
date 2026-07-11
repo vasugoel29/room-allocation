@@ -24,9 +24,9 @@ export const roomRepository = {
    * Create a new room
    */
   create: async (data, client = db) => {
-    const { name, building, floor, capacity } = data;
-    const query = 'INSERT INTO rooms (name, building, floor, capacity) VALUES ($1, $2, $3, $4) RETURNING *';
-    const result = await client.query(query, [name, building, floor, capacity]);
+    const { name, building, floor, capacity, type } = data;
+    const query = 'INSERT INTO rooms (name, building, floor, capacity, type) VALUES ($1, $2, $3, $4, $5) RETURNING *';
+    const result = await client.query(query, [name, building, floor, capacity, type || 'Lecture Room']);
     return result.rows[0];
   },
 
@@ -82,7 +82,7 @@ export const roomRepository = {
   /**
    * Find available rooms with filters
    */
-  findFiltered: async (capacity, ac, projector, building, floor) => {
+  findFiltered: async (capacity, ac, projector, building, floor, type) => {
     let query = 'SELECT * FROM rooms WHERE 1=1';
     const params = [];
 
@@ -108,6 +108,11 @@ export const roomRepository = {
         params.push(dbFloor);
         query += ` AND floor = $${params.length}`;
       }
+    }
+
+    if (type && type !== 'all') {
+      params.push(type);
+      query += ` AND type = $${params.length}`;
     }
 
     const result = await db.query(query, params);

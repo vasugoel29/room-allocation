@@ -8,6 +8,9 @@ let token;
 let userId;
 
 beforeAll(async () => {
+  // Sync migrations manually in tests
+  await db.testDbConnection();
+
   // Enforce schema sync
   await db.query(`
     ALTER TABLE bookings 
@@ -28,11 +31,13 @@ beforeAll(async () => {
   
   // Ensure we have a room
   await db.query("INSERT INTO rooms (id, name, capacity) VALUES (999, 'Test Room', 50) ON CONFLICT DO NOTHING");
+  await db.query("INSERT INTO rooms (id, name, capacity, type) VALUES (998, 'Committee Room Test', 15, 'Committee Room') ON CONFLICT DO NOTHING");
 }, 30000);
 
 
 afterAll(async () => {
   await db.query("DELETE FROM bookings WHERE created_by = $1", [userId]);
+  await db.query("DELETE FROM rooms WHERE id IN (998, 999)");
   await db.query("DELETE FROM users WHERE id = $1", [userId]);
   await db.pool.end();
 });
@@ -41,6 +46,12 @@ describe('Booking Constraints', () => {
   test('Should reject backdated booking', async () => {
     const pastDate = new Date();
     pastDate.setHours(pastDate.getHours() - 2);
+    const day = pastDate.getDay();
+    if (day === 0) { // Sunday
+      pastDate.setDate(pastDate.getDate() - 2);
+    } else if (day === 6) { // Saturday
+      pastDate.setDate(pastDate.getDate() - 1);
+    }
     
     const res = await request(app)
       .post('/api/bookings')
@@ -59,6 +70,12 @@ describe('Booking Constraints', () => {
   test('Should reject regular booking > 7 days in future', async () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 10);
+    const day = futureDate.getDay();
+    if (day === 0) { // Sunday
+      futureDate.setDate(futureDate.getDate() + 1);
+    } else if (day === 6) { // Saturday
+      futureDate.setDate(futureDate.getDate() + 2);
+    }
     
     const res = await request(app)
       .post('/api/bookings')
@@ -77,6 +94,12 @@ describe('Booking Constraints', () => {
   test('Should reject double booking for same room and time', async () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 2);
+    const day = futureDate.getDay();
+    if (day === 0) { // Sunday
+      futureDate.setDate(futureDate.getDate() + 1);
+    } else if (day === 6) { // Saturday
+      futureDate.setDate(futureDate.getDate() + 2);
+    }
     futureDate.setHours(14, 0, 0, 0);
     const start = futureDate.toISOString();
     const end = new Date(futureDate.getTime() + 3600000).toISOString();
@@ -101,6 +124,12 @@ describe('Booking Constraints', () => {
   test('Should allow user to cancel their own booking', async () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 5);
+    const day = futureDate.getDay();
+    if (day === 0) { // Sunday
+      futureDate.setDate(futureDate.getDate() + 1);
+    } else if (day === 6) { // Saturday
+      futureDate.setDate(futureDate.getDate() + 2);
+    }
     const start = futureDate.toISOString();
     
     const createRes = await request(app)
@@ -116,5 +145,27 @@ describe('Booking Constraints', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.status).toBe('Success');
+  });
+
+  test('Should reject booking of Committee Rooms by student users', async () => {
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + 3);
+    const day = futureDate.getDay();
+    if (day === 0) { // Sunday
+      futureDate.setDate(futureDate.getDate() + 1);
+    } else if (day === 6) { // Saturday
+      futureDate.setDate(futureDate.getDate() + 2);
+    }
+    futureDate.setHours(11, 0, 0, 0);
+    const start = futureDate.toISOString();
+    const end = new Date(futureDate.getTime() + 3600000).toISOString();
+
+    const res = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ room_id: 998, start_time: start, end_time: end, purpose: 'Student Committee Booking Attempt' });
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error).toBe('Committee Rooms and Auditoriums can only be booked by Faculty or Admin');
   });
 });

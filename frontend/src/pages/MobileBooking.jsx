@@ -56,6 +56,7 @@ function MobileBooking({ onBack }) {
   const [floorFilter, setFloorFilter] = useState('all');
   const [blockFilter, setBlockFilter] = useState('all');
   const [smartRoomFilter, setSmartRoomFilter] = useState(false);
+  const [roomTypeFilter, setRoomTypeFilter] = useState('all');
 
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [conflictingClass, setConflictingClass] = useState(null);
@@ -107,6 +108,12 @@ function MobileBooking({ onBack }) {
 
     // 6. Smart Room filter (has BOTH AC and Projector)
     if (smartRoomFilter && (!room.has_ac || !room.has_projector)) return false;
+
+    // 7. Room Type filter
+    if (roomTypeFilter !== 'all' && room.type !== roomTypeFilter) return false;
+
+    // 8. Restriction for students: cannot book Committee Rooms or Auditoriums
+    if (isStudent && (room.type === 'Committee Room' || room.type === 'Auditorium')) return false;
 
     return true;
   });
@@ -328,6 +335,29 @@ function MobileBooking({ onBack }) {
                         className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold transition-all font-display ${floorFilter === f ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
                       >
                         {f === 'all' ? 'ALL' : f}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-extrabold text-text-secondary uppercase tracking-[0.2em] ml-1 opacity-40 font-display">Room Type</label>
+                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5">
+                    {[
+                      { id: 'all', label: 'ALL' },
+                      { id: 'Lecture Room', label: 'LECTURE ROOMS' },
+                      { id: 'Lab', label: 'LABS' },
+                      ...(isStudent ? [] : [
+                        { id: 'Auditorium', label: 'AUDITORIUMS' },
+                        { id: 'Committee Room', label: 'COMMITTEE ROOMS' }
+                      ])
+                    ].map(t => (
+                      <button
+                        key={t.id}
+                        onClick={() => setRoomTypeFilter(t.id)}
+                        className={`px-5 py-2 rounded-lg text-[10px] font-extrabold transition-all whitespace-nowrap min-w-[70px] font-display ${roomTypeFilter === t.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                      >
+                        {t.label}
                       </button>
                     ))}
                   </div>
