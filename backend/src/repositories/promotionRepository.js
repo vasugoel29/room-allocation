@@ -13,9 +13,6 @@ export const promotionRepository = {
     return result.rows[0];
   },
 
-  /**
-   * Find all promotion requests with user details
-   */
   findAllRequests: async () => {
     const query = `
       SELECT pr.*, u.name as user_name, u.email as user_email 
@@ -25,6 +22,28 @@ export const promotionRepository = {
     `;
     const result = await db.query(query);
     return result.rows;
+  },
+
+  /**
+   * Find all promotion requests with pagination
+   */
+  findAllRequestsPaginated: async (limit, offset) => {
+    const countQuery = 'SELECT COUNT(*) FROM promotion_requests';
+    const dataQuery = `
+      SELECT pr.*, u.name as user_name, u.email as user_email 
+      FROM promotion_requests pr
+      JOIN users u ON pr.user_id = u.id
+      ORDER BY pr.created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+    const [countRes, dataRes] = await Promise.all([
+      db.query(countQuery),
+      db.query(dataQuery, [limit, offset])
+    ]);
+    return {
+      total: parseInt(countRes.rows[0].count),
+      requests: dataRes.rows
+    };
   },
 
   /**

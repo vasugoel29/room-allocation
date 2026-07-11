@@ -4,14 +4,39 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import logger from '../utils/logger.js';
 
 export const getRooms = async (req, res) => {
-  const { capacity, ac, projector, building, floor, type } = req.query;
+  const { capacity, ac, projector, building, floor, type, page, limit } = req.query;
   try {
     const isStudent = req.user?.role !== 'ADMIN' && req.user?.role !== 'FACULTY';
-    let rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor, type);
-    if (isStudent) {
-      rooms = rooms.filter(r => r.type !== 'Committee Room' && r.type !== 'Auditorium');
+    
+    if (page && limit) {
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 20;
+      const offset = (pageNum - 1) * limitNum;
+      
+      let { total, rooms } = await roomRepository.findFilteredPaginated({
+        capacity, ac, projector, building, floor, type, limit: limitNum, offset
+      });
+      
+      if (isStudent) {
+        rooms = rooms.filter(r => r.type !== 'Committee Room' && r.type !== 'Auditorium');
+      }
+      
+      res.json({
+        data: rooms,
+        meta: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
+    } else {
+      let rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor, type);
+      if (isStudent) {
+        rooms = rooms.filter(r => r.type !== 'Committee Room' && r.type !== 'Auditorium');
+      }
+      res.json(rooms);
     }
-    res.json(rooms);
   } catch (err) {
     logger.error('getRooms error', err);
     res.status(500).json({ error: 'Failed to fetch rooms' });
@@ -83,5 +108,69 @@ export const getMyOverrides = async (req, res) => {
   } catch (err) {
     logger.error('getMyOverrides error', err);
     res.status(500).json({ error: 'Failed to fetch your overrides' });
+  }
+};
+
+export const createRoom = async (req, res) => {
+  const { name, building, floor, capacity, type, has_ac, has_projector } = req.body;
+  if (!name || capacity === undefined) {
+    return res.status(400).json({ error: 'Missing name or capacity' });
+  }
+
+  try {
+    const room = await roomRepository.create({
+      name,
+      building,
+      floor: floor !== undefined && floor !== null ? parseInt(floor) : null,
+      capacity: parseInt(capacity),
+      type,
+      has_ac: !!has_ac,
+      has_projector: !!has_projector
+    });
+    cache.delete('room_availability_all');
+    res.status(201).json(room);
+  } catch (err) {
+    logger.error('createRoom error', err);
+    res.status(500).json({ error: 'Failed to create room' });
+  }
+};
+
+export const updateRoom = async (req, res) => {
+  const { id } = req.params;
+  const { name, building, floor, capacity, type, has_ac, has_projector } = req.body;
+
+  try {
+    const room = await roomRepository.update(id, {
+      name,
+      building,
+      floor: floor !== undefined && floor !== null ? parseInt(floor) : null,
+      capacity: parseInt(capacity),
+      type,
+      has_ac: !!has_ac,
+      has_projector: !!has_projector
+    });
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    cache.delete('room_availability_all');
+    res.json(room);
+  } catch (err) {
+    logger.error('updateRoom error', err);
+    res.status(500).json({ error: 'Failed to update room' });
+  }
+};
+
+export const deleteRoom = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const room = await roomRepository.delete(id);
+    if (!room) {
+      return res.status(404).json({ error: 'Room not found' });
+    }
+    cache.delete('room_availability_all');
+    res.json({ status: 'Success', message: `Room ${room.name} deleted successfully` });
+  } catch (err) {
+    logger.error('deleteRoom error', err);
+    res.status(500).json({ error: 'Failed to delete room' });
   }
 };

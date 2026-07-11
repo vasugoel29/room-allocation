@@ -186,6 +186,7 @@ const AdminAnalytics = () => {
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
+                </div>
             </div>
             </>
             )}

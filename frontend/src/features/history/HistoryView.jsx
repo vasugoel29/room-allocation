@@ -18,6 +18,12 @@ const HistoryView = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [, setError] = useState('');
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: null });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [timeFilter, searchText]);
 
   const fetchHistory = async () => {
     if (!user) return;
@@ -95,6 +101,9 @@ const HistoryView = ({ onClose }) => {
 
     return true;
   }).sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+
+  const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
+  const paginatedHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCancel = (bookingId) => {
     setConfirmConfig({
@@ -282,7 +291,7 @@ const HistoryView = ({ onClose }) => {
                   </tr>
                 </thead>
                 <tbody className="text-sm">
-                  {filteredHistory.map((item) => (
+                  {paginatedHistory.map((item) => (
                     <tr key={item.id} className="hover:bg-tonal-secondary/5 transition-colors group">
                       <td className="py-8 px-6">
                         <div className="flex items-center gap-4">
@@ -354,7 +363,7 @@ const HistoryView = ({ onClose }) => {
 
             {/* Mobile View Cards */}
             <div className="grid grid-cols-1 gap-6 md:hidden">
-              {filteredHistory.map((item) => (
+              {paginatedHistory.map((item) => (
                 <div key={item.id} className="bg-tonal-secondary/10 rounded-[2.5rem] p-7 space-y-7 group active:translate-y-1 transition-all shadow-ambient">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-5">
@@ -407,6 +416,30 @@ const HistoryView = ({ onClose }) => {
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between p-4 bg-tonal-secondary/5 rounded-2xl border border-border/10 mt-6 font-display">
+            <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <button 
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed text-text-primary"
+              >
+                Prev
+              </button>
+              <button 
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
             </div>
           </div>
         )}

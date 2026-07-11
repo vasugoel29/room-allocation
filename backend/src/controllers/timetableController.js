@@ -1,6 +1,11 @@
 import * as db from '../db.js';
 import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
 
+function toTitleCase(str) {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+}
+
 export async function getTimetable(req, res) {
   try {
     const { user } = req;
@@ -271,4 +276,30 @@ export async function searchTimetable(req, res) {
       console.error('Search error:', err);
       res.status(500).json({ error: err.message });
     }
+}
+
+export async function autocompleteFaculty(req, res) {
+  try {
+    const { query } = req.query;
+    if (!query) {
+      return res.json([]);
+    }
+
+    const likeQuery = `%${query}%`;
+    const result = await db.query(`
+      SELECT MAX(name) AS name FROM (
+        SELECT name FROM users WHERE role = 'FACULTY' AND name ILIKE $1
+        UNION
+        SELECT DISTINCT faculty_name AS name FROM timetable_slots WHERE faculty_name ILIKE $1
+      ) AS combined
+      WHERE name IS NOT NULL AND name != ''
+      GROUP BY UPPER(name)
+      ORDER BY name
+      LIMIT 10
+    `, [likeQuery]);
+
+    res.json(result.rows.map(r => toTitleCase(r.name)));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 }

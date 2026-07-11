@@ -5,6 +5,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 const router = express.Router();
 
 router.get('/search', authenticate, requireRole('ADMIN'), timetableController.searchTimetable);
+router.get('/autocomplete/faculty', authenticate, timetableController.autocompleteFaculty);
 router.post('/upload', authenticate, requireRole('ADMIN'), timetableController.uploadTimetable);
 router.get('/faculty', authenticate, requireRole('FACULTY'), timetableController.getFacultyTimetable);
 router.get('/faculty/check/:id', authenticate, timetableController.checkFacultyAvailability);

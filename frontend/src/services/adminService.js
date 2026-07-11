@@ -22,6 +22,12 @@ export const adminService = {
     };
   },
 
+  getPromotions: async (page = 1, limit = 10) => {
+    const res = await api.get(`/promotions?page=${page}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch promotion requests');
+    return res.json();
+  },
+
   getUsers: async (page = 1, limit = 20) => {
     const res = await api.get(`/auth/users?page=${page}&limit=${limit}`);
     if (!res.ok) throw new Error('Failed to fetch users');
@@ -52,8 +58,14 @@ export const adminService = {
     return res.json();
   },
 
-  getDepartments: async () => {
-    const res = await api.get('/departments');
+  getDepartments: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value);
+      }
+    });
+    const res = await api.get(`/departments?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch departments');
     return res.json();
   },
@@ -118,6 +130,60 @@ export const adminService = {
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || 'Import failed');
+    }
+    return res.json();
+  },
+
+  createRoom: async (data) => {
+    const res = await api.post('/rooms', data);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create room');
+    }
+    return res.json();
+  },
+
+  updateRoom: async (id, data) => {
+    const res = await api.patch(`/rooms/${id}`, data);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update room');
+    }
+    return res.json();
+  },
+
+  deleteRoom: async (id) => {
+    const res = await api.delete(`/rooms/${id}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to delete room');
+    }
+    return res.json();
+  },
+
+  createDepartment: async (name) => {
+    const res = await api.post('/departments', { name });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create department');
+    }
+    return res.json();
+  },
+
+  updateDepartment: async (id, name) => {
+    const res = await api.patch(`/departments/${id}`, { name });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update department');
+    }
+    return res.json();
+  },
+
+  deleteDepartment: async (id) => {
+    const res = await api.delete(`/departments/${id}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to delete department');
     }
     return res.json();
   }

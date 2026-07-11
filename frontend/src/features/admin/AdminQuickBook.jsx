@@ -1,5 +1,5 @@
 import { Zap, User as UserIcon, Search, ChevronDown, Clock, MapPin } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import DatePickerDropdown from '../../components/ui/DatePickerDropdown';
 
 function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, submitting, onSubmit }) {
@@ -8,6 +8,13 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
   
   const [isSlotOpen, setIsSlotOpen] = useState(false);
   const [isRoomJumpOpen, setIsRoomJumpOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [quickBookForm.date, quickBookForm.slot, quickBookForm.roomFilter]);
 
   const filteredUsers = useMemo(() => {
     return users.filter(u => 
@@ -19,6 +26,9 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
   const filteredRooms = roomStatuses.filter(r => 
     quickBookForm.roomFilter === 'all' || r.room_name === quickBookForm.roomFilter
   );
+
+  const totalPages = Math.ceil(filteredRooms.length / itemsPerPage);
+  const paginatedRooms = filteredRooms.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-bg-primary/50">
@@ -114,7 +124,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
        <div className="flex-1 overflow-auto no-scrollbar">
           {/* Mobile View: Cards */}
           <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
-            {filteredRooms.map(room => (
+            {paginatedRooms.map(room => (
               <div key={room.room_id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
@@ -201,7 +211,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
-              {filteredRooms.map(room => (
+              {paginatedRooms.map(room => (
                 <tr key={room.room_id} className="hover:bg-bg-primary/30 transition-colors group">
                    <td className="px-6 py-4">
                       <div className="flex flex-col">
@@ -296,6 +306,30 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
               ))}
             </tbody>
           </table>
+
+          {totalPages > 1 && (
+             <div className="flex items-center justify-between p-4 bg-bg-secondary/40 border-t border-border/50">
+               <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                 Page {currentPage} of {totalPages}
+               </span>
+               <div className="flex gap-2">
+                 <button 
+                   disabled={currentPage <= 1}
+                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                   className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed text-text-primary"
+                 >
+                   Prev
+                 </button>
+                 <button 
+                   disabled={currentPage >= totalPages}
+                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                   className="px-4 py-2 bg-accent text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                 >
+                   Next
+                 </button>
+               </div>
+             </div>
+           )}
        </div>
     </div>
   );

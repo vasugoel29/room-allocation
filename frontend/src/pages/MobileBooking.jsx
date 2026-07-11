@@ -319,8 +319,8 @@ function MobileBooking({ onBack }) {
                   onClick={() => setSmartRoomFilter(!smartRoomFilter)}
                   className={`px-5 rounded-2xl text-[10px] font-extrabold uppercase tracking-widest transition-all flex items-center gap-2 h-12 font-display ${smartRoomFilter ? 'bg-tertiary text-white shadow-tertiary' : 'bg-tonal-secondary/10 text-text-secondary'}`}
                 >
-                  <Sparkles size={16} />
-                  Smart
+                  <Monitor size={16} />
+                  <span>AC & Projector</span>
                 </button>
               </div>
 

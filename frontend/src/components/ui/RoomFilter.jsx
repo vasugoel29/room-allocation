@@ -103,8 +103,8 @@ function RoomFilter() {
             className={`w-full flex items-center justify-between p-4 rounded-2xl transition-all font-display border ${filters.smartRoom ? 'bg-tonal-tertiary border-tertiary/20 text-tertiary shadow-tertiary' : 'bg-tonal-secondary/10 border-text-secondary/10 text-text-secondary hover:text-text-primary'}`}
           >
             <div className="flex items-center gap-3">
-              <Zap size={18} className={filters.smartRoom ? 'text-tertiary shadow-tertiary' : 'text-text-secondary/40'} />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest">Smart Spaces Only</span>
+              <Wind size={18} className={filters.smartRoom ? 'text-tertiary shadow-tertiary' : 'text-text-secondary/40'} />
+              <span className="text-[10px] font-extrabold uppercase tracking-widest">AC & Projector Only</span>
             </div>
             <div className={`w-8 h-4 rounded-full transition-all relative ${filters.smartRoom ? 'bg-tertiary' : 'bg-text-secondary/20'}`}>
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${filters.smartRoom ? 'left-4.5' : 'left-0.5'}`} />

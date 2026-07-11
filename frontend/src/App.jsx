@@ -119,11 +119,17 @@ const ProtectedRoute = ({ user, children, roles = [] }) => {
 
 const NavButton = ({ id, label, icon, to, setIsSidebarOpen, isSidebarCollapsed, pendingTransferCount }) => {
   const IconComponent = icon;
+  const location = useLocation();
+  const targetPath = to || `/${id}`;
+  const isActive = targetPath.includes('?')
+    ? (location.pathname === targetPath.split('?')[0] && location.search === '?' + targetPath.split('?')[1])
+    : (location.pathname === targetPath && !location.search);
+
   return (
     <NavLink 
-      to={to || `/${id}`}
+      to={targetPath}
       onClick={() => setIsSidebarOpen(false)}
-      className={({ isActive }) => `w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `bg-primary-accent text-white shadow-ambient` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
+      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `bg-primary-accent text-white shadow-ambient` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
     >
       <div className="relative">
         <IconComponent size={20} />
@@ -192,7 +198,7 @@ function App() {
       return [
         { id: 'admin', icon: Shield, label: 'Admin Console' },
         { id: 'calendar', icon: CalendarIcon, label: 'Rooms' },
-        { id: 'admin/timetable', icon: Clock, label: 'Timetable' },
+        { id: 'admin/timetable', icon: Clock, label: 'Timetable', to: '/admin?tab=timetable' },
         { id: 'profile', icon: User, label: 'Profile' },
       ];
     }
@@ -327,7 +333,7 @@ function App() {
                       <Routes>
                       <Route path="/calendar" element={<ProtectedRoute user={user}><Calendar onSlotClick={(slot) => { setSelectedSlot(slot); setIsModalOpen(true); }} /></ProtectedRoute>} />
                       <Route path="/admin" element={<ProtectedRoute user={user} roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
-                      <Route path="/admin/timetable" element={<ProtectedRoute user={user} roles={['ADMIN']}><AdminTimetable /></ProtectedRoute>} />
+                      <Route path="/admin/timetable" element={<Navigate to="/admin?tab=timetable" replace />} />
                       <Route path="/faculty" element={<ProtectedRoute user={user} roles={['FACULTY']}><FacultyDashboard /></ProtectedRoute>} />
                       <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
                       <Route path="/timetable" element={<ProtectedRoute user={user}><Timetable /></ProtectedRoute>} />

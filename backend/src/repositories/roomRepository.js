@@ -20,13 +20,10 @@ export const roomRepository = {
     return result.rows[0];
   },
 
-  /**
-   * Create a new room
-   */
   create: async (data, client = db) => {
-    const { name, building, floor, capacity, type } = data;
-    const query = 'INSERT INTO rooms (name, building, floor, capacity, type) VALUES ($1, $2, $3, $4, $5) RETURNING *';
-    const result = await client.query(query, [name, building, floor, capacity, type || 'Lecture Room']);
+    const { name, building, floor, capacity, type, has_ac, has_projector } = data;
+    const query = 'INSERT INTO rooms (name, building, floor, capacity, type, has_ac, has_projector) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *';
+    const result = await client.query(query, [name, building, floor, capacity, type || 'Lecture Room', has_ac || false, has_projector || false]);
     return result.rows[0];
   },
 
@@ -120,6 +117,56 @@ export const roomRepository = {
   },
 
   /**
+   * Find available rooms with filters and pagination
+   */
+  findFilteredPaginated: async (filters) => {
+    const { capacity, ac, projector, building, floor, type, limit, offset } = filters;
+    let baseQuery = 'FROM rooms WHERE 1=1';
+    const params = [];
+
+    if (capacity) { params.push(capacity); baseQuery += ` AND capacity >= $${params.length}`; }
+    if (ac === 'true' || ac === true) baseQuery += ' AND has_ac = TRUE';
+    if (projector === 'true' || projector === true) baseQuery += ' AND has_projector = TRUE';
+    if (building) {
+      let buildingArr = Array.isArray(building) ? building : [building];
+      if (buildingArr.length === 1 && typeof buildingArr[0] === 'string' && buildingArr[0].includes(',')) {
+        buildingArr = buildingArr[0].split(',');
+      }
+      const filteredBuildings = buildingArr.filter(b => b && b !== 'all');
+      if (filteredBuildings.length > 0) {
+        params.push(filteredBuildings);
+        baseQuery += ` AND building = ANY($${params.length})`;
+      }
+    }
+    
+    if (floor && floor !== 'all') {
+      const dbFloor = floor === 'G' ? 0 : parseInt(floor);
+      if (!isNaN(dbFloor)) {
+        params.push(dbFloor);
+        baseQuery += ` AND floor = $${params.length}`;
+      }
+    }
+
+    if (type && type !== 'all') {
+      params.push(type);
+      baseQuery += ` AND type = $${params.length}`;
+    }
+
+    const countQuery = `SELECT COUNT(*) ${baseQuery}`;
+    const dataQuery = `SELECT * ${baseQuery} ORDER BY name ASC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+
+    const [countRes, dataRes] = await Promise.all([
+      db.query(countQuery, params),
+      db.query(dataQuery, [...params, limit, offset])
+    ]);
+
+    return {
+      total: parseInt(countRes.rows[0].count),
+      rooms: dataRes.rows
+    };
+  },
+
+  /**
    * Get all room availability entries
    */
   getAllAvailability: async () => {
@@ -154,5 +201,29 @@ export const roomRepository = {
     `;
     const result = await db.query(query, [userId]);
     return result.rows;
+  },
+
+  /**
+   * Update room details
+   */
+  update: async (id, data, client = db) => {
+    const { name, building, floor, capacity, has_ac, has_projector, type } = data;
+    const query = `
+      UPDATE rooms 
+      SET name = $1, building = $2, floor = $3, capacity = $4, has_ac = $5, has_projector = $6, type = $7
+      WHERE id = $8
+      RETURNING *
+    `;
+    const result = await client.query(query, [name, building, floor, capacity, has_ac, has_projector, type, id]);
+    return result.rows[0];
+  },
+
+  /**
+   * Delete a room
+   */
+  delete: async (id, client = db) => {
+    const query = 'DELETE FROM rooms WHERE id = $1 RETURNING *';
+    const result = await client.query(query, [id]);
+    return result.rows[0];
   }
 };

@@ -8,12 +8,31 @@ import toast from 'react-hot-toast';
 
 import PageSearch from '../components/ui/PageSearch';
 
+const getDatesOfWeek = (baseDateStr) => {
+  const baseDate = new Date(baseDateStr);
+  const currentDay = baseDate.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
+  
+  // Find Monday of the current week
+  const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+  const monday = new Date(baseDate);
+  monday.setDate(baseDate.getDate() + mondayOffset);
+
+  const days = [];
+  for (let i = 0; i < 5; i++) { // Mon, Tue, Wed, Thu, Fri
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    days.push(day.toISOString().split('T')[0]);
+  }
+  return days;
+};
+
 const Timetable = () => {
   const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData, facultyTimetableData, facultyOverrides } = useContext(AppContext);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [pendingCancelClass, setPendingCancelClass] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('day'); // 'day' | 'week'
 
   // Helper: Format date for display
   const formatDateDisplay = (dateStr) => {
@@ -28,10 +47,42 @@ const Timetable = () => {
     }
   };
 
+  const formatWeekDisplay = (dateStr) => {
+    const dates = getDatesOfWeek(dateStr);
+    const first = new Date(dates[0]).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const last = new Date(dates[dates.length - 1]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `Week of ${first} - ${last}`;
+  };
+
   // Permission check
   const { fetchBookings, fetchFacultyOverrides } = useContext(AppContext);
   const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
   const isFaculty = user?.role === 'FACULTY';
+
+  const weeklySchedule = useMemo(() => {
+    if (viewMode !== 'week') return {};
+    const dates = getDatesOfWeek(selectedDay);
+    const weekData = {};
+    
+    dates.forEach(date => {
+      const merged = getMergedSchedule(user, date, bookings, availability || [], timetableData, facultyTimetableData, facultyOverrides);
+      
+      const filtered = !searchTerm ? merged : merged.filter(item => 
+        item.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.subject?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.room?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.instructor?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      
+      const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+      weekData[dayName] = {
+        date,
+        slots: filtered
+      };
+    });
+    
+    return weekData;
+  }, [viewMode, user, selectedDay, bookings, availability, searchTerm, timetableData, facultyTimetableData, facultyOverrides]);
 
   // Filter and Merge Timetable Data
   const mergedSchedule = useMemo(() => {
@@ -92,14 +143,31 @@ const Timetable = () => {
   };
 
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-80px)] space-y-4 p-5 sm:p-6 overflow-hidden">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0">
+    <div className="flex flex-col overflow-hidden" style={{ height: '100%' }}>
+      {/* ── Header Controls ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 px-5 sm:px-6 pt-5 sm:pt-6">
         <div className="flex flex-col">
           <h1 className="text-xl font-black text-text-primary tracking-tighter uppercase italic">Academic Timetable</h1>
-          <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest mt-0.5">{formatDateDisplay(selectedDay)}</p>
+          <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest mt-0.5">
+            {viewMode === 'day' ? formatDateDisplay(selectedDay) : formatWeekDisplay(selectedDay)}
+          </p>
         </div>
         
         <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex bg-tonal-secondary/15 p-1 rounded-xl shrink-0">
+            <button
+              onClick={() => setViewMode('day')}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'day' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              Day
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'week' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+            >
+              Week
+            </button>
+          </div>
           <PageSearch 
             value={searchTerm}
             onChange={setSearchTerm}
@@ -110,7 +178,7 @@ const Timetable = () => {
             <button 
               onClick={() => {
                 const d = new Date(selectedDay);
-                d.setDate(d.getDate() - 1);
+                d.setDate(d.getDate() - (viewMode === 'day' ? 1 : 7));
                 setSelectedDay(d.toISOString().split('T')[0]);
               }}
               className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all"
@@ -120,7 +188,7 @@ const Timetable = () => {
             <button 
               onClick={() => {
                 const d = new Date(selectedDay);
-                d.setDate(d.getDate() + 1);
+                d.setDate(d.getDate() + (viewMode === 'day' ? 1 : 7));
                 setSelectedDay(d.toISOString().split('T')[0]);
               }}
               className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all"
@@ -132,7 +200,7 @@ const Timetable = () => {
       </div>
 
       {isRep && (
-        <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex gap-4 shrink-0 animate-in slide-in-from-top-4 duration-500">
+        <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex gap-4 shrink-0 animate-in slide-in-from-top-4 duration-500 mx-5 sm:mx-6">
           <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white shrink-0 shadow-lg shadow-accent/20">
             <Lightbulb size={20} />
           </div>
@@ -143,61 +211,122 @@ const Timetable = () => {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-6">
-        {mergedSchedule.length > 0 ? (
-          mergedSchedule.map((item, index) => (
-            <div 
-              key={index}
-              className={`bg-bg-secondary/50 border border-border rounded-2xl p-4 flex items-center justify-between hover:border-accent/30 transition-all shadow-sm ${item.isDynamic ? 'border-l-4 border-l-accent ring-1 ring-accent/5' : ''}`}
-            >
-              <div className="flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.isDynamic ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-bg-primary text-text-secondary border border-border'}`}>
-                  {item.isDynamic ? <Calendar size={18} /> : <MapPin size={18} />}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
-                    {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Updated</span>}
-                  </div>
-                  {item.isDynamic && (
-                    <div className="mt-1">
-                      {user.role === 'FACULTY' ? (
-                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{item.className}</p>
-                      ) : (
-                        <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Faculty: {item.faculty}</p>
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 sm:px-6 pb-6">
+        {viewMode === 'day' ? (
+          <div className="space-y-3">
+            {mergedSchedule.length > 0 ? (
+              mergedSchedule.map((item, index) => (
+                <div 
+                  key={index}
+                  className={`bg-bg-secondary/50 border border-border rounded-2xl p-4 flex items-center justify-between hover:border-accent/30 transition-all shadow-sm ${item.isDynamic ? 'border-l-4 border-l-accent ring-1 ring-accent/5' : ''}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.isDynamic ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-bg-primary text-text-secondary border border-border'}`}>
+                      {item.isDynamic ? <Calendar size={18} /> : <MapPin size={18} />}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
+                        {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Updated</span>}
+                      </div>
+                      {item.isDynamic && (
+                        <div className="mt-1">
+                          {user.role === 'FACULTY' ? (
+                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{item.className}</p>
+                          ) : (
+                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Faculty: {item.faculty}</p>
+                          )}
+                        </div>
                       )}
+                      <div className="flex items-center gap-3 mt-1.5">
+                        <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 uppercase tracking-tighter">
+                          <Clock size={12} className="text-accent" /> 
+                          {item.displayTime}
+                        </span>
+                        <span className="text-[11px] text-accent font-black uppercase tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/10">
+                          {item.room}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {(isRep || isFaculty) && (
+                    <button 
+                      onClick={() => handleCancelClass(item)}
+                      disabled={isCancelling}
+                      className="p-2.5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all active:scale-90 bg-bg-primary border border-border hover:border-red-500/30"
+                      title={isFaculty ? "Cancel session" : "Mark available"}
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                <div className="w-16 h-16 bg-bg-secondary rounded-3xl flex items-center justify-center text-text-secondary mb-4 border border-border">
+                  <AlertCircle size={32} />
+                </div>
+                <p className="text-xs text-text-secondary font-black uppercase tracking-widest">No classes scheduled for this day</p>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* ── Week View: Days as Rows, Slots flow horizontally ── */
+          <div className="rounded-2xl overflow-hidden border border-surface-mid">
+            {Object.entries(weeklySchedule).map(([dayName, dayInfo], rowIdx) => (
+              <div key={dayName} className={`flex items-stretch min-h-[96px] border-b border-surface-mid last:border-b-0 ${rowIdx % 2 === 0 ? 'bg-surface-low' : 'bg-surface-mid'}`}>
+                {/* Day Label */}
+                <div className="w-24 shrink-0 flex flex-col items-center justify-center py-4 border-r border-surface-mid">
+                  <p className="text-xs font-black text-accent uppercase tracking-widest">{dayName.slice(0, 3)}</p>
+                  <p className="text-[10px] text-text-secondary font-bold mt-1">{new Date(dayInfo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                </div>
+                {/* Slots Row — scrolls horizontally only */}
+                <div className="flex-1 flex gap-3 overflow-x-auto overflow-y-hidden no-scrollbar px-4 py-3 items-stretch">
+                  {dayInfo.slots.length > 0 ? (
+                    dayInfo.slots.map((item, index) => (
+                      <div
+                        key={index}
+                        className={`shrink-0 w-52 flex flex-col justify-between rounded-2xl px-4 py-3 border transition-all ${
+                          item.isDynamic
+                            ? 'bg-accent/15 border-accent/40'
+                            : 'bg-surface-high border-surface-highest'
+                        }`}
+                      >
+                        <div>
+                          <p className="text-xs font-black text-text-primary leading-snug">{item.subjectName || item.subject}</p>
+                          {item.className && (
+                            <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
+                          )}
+                          {!item.className && item.isDynamic && item.faculty && (
+                            <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.faculty}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between gap-2 mt-2">
+                          <span className="text-[10px] text-text-secondary font-bold flex items-center gap-1">
+                            <Clock size={10} className="text-accent shrink-0" /> {item.displayTime}
+                          </span>
+                          <span className="text-[10px] text-accent font-black bg-accent/15 px-2 py-0.5 rounded-lg border border-accent/30">{item.room}</span>
+                        </div>
+                        {(isRep || isFaculty) && (
+                          <button
+                            onClick={() => handleCancelClass(item)}
+                            disabled={isCancelling}
+                            className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] font-black text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl py-1.5 border border-red-500/20 hover:border-red-500/40 transition-all"
+                          >
+                            <Trash2 size={10} /> Cancel
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center text-text-secondary/40 text-xs font-bold uppercase tracking-widest">
+                      No classes
                     </div>
                   )}
-                  <div className="flex items-center gap-3 mt-1.5">
-                    <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 uppercase tracking-tighter">
-                      <Clock size={12} className="text-accent" /> 
-                      {item.displayTime}
-                    </span>
-                    <span className="text-[11px] text-accent font-black uppercase tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/10">
-                      {item.room}
-                    </span>
-                  </div>
                 </div>
               </div>
-              
-              {(isRep || isFaculty) && (
-                <button 
-                  onClick={() => handleCancelClass(item)}
-                  disabled={isCancelling}
-                  className="p-2.5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all active:scale-90 bg-bg-primary border border-border hover:border-red-500/30"
-                  title={isFaculty ? "Cancel session" : "Mark available"}
-                >
-                  <Trash2 size={18} />
-                </button>
-              )}
-            </div>
-          ))
-        ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-            <div className="w-16 h-16 bg-bg-secondary rounded-3xl flex items-center justify-center text-text-secondary mb-4 border border-border">
-              <AlertCircle size={32} />
-            </div>
-            <p className="text-xs text-text-secondary font-black uppercase tracking-widest">No classes scheduled for this day</p>
+            ))}
           </div>
         )}
       </div>

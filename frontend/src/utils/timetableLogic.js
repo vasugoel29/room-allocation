@@ -72,6 +72,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
       time: s.slot_time,
       subjectName: s.subject_name || s.content || 'Untitled Slot',
       room: s.room_name || 'N/A',
+      className: s.department ? `${s.department} Sem ${s.semester}${s.section ? ` · Sec ${s.section}` : ''}` : (s.class_name || ''),
       isOccupied: true,
       isDynamic: false
     }));
@@ -88,6 +89,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
         time: slot.slot_time,
         subjectName: slot.subject_name,
         room: slot.room_name,
+        className: slot.department ? `${slot.department} Sem ${slot.semester}${slot.section ? ` · Sec ${slot.section}` : ''}` : '',
         isDynamic: false
       }));
   }
@@ -173,12 +175,21 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
     return true;
   });
 
-  return [...finalStatic, ...relevantBookings]
+  const combined = [...finalStatic, ...relevantBookings]
     .sort((a, b) => getSortableMinutes(a.time) - getSortableMinutes(b.time))
     .map(item => ({
       ...item,
       displayTime: formatTo24h(item.time)
     }));
+
+  // Deduplicate: same subject + room + time = same slot
+  const seen = new Set();
+  return combined.filter(item => {
+    const key = `${(item.subjectName || item.subject || '').toLowerCase()}|${(item.room || '').toLowerCase()}|${(item.time || '').toLowerCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 };
 
 /**

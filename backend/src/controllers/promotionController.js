@@ -32,9 +32,26 @@ export const requestPromotion = async (req, res) => {
 };
 
 export const getPromotionRequests = async (req, res) => {
+  const { page, limit } = req.query;
   try {
-    const requests = await promotionRepository.findAllRequests();
-    res.json(requests);
+    if (page && limit) {
+      const pageNum = parseInt(page) || 1;
+      const limitNum = parseInt(limit) || 20;
+      const offset = (pageNum - 1) * limitNum;
+      const { total, requests } = await promotionRepository.findAllRequestsPaginated(limitNum, offset);
+      res.json({
+        data: requests,
+        meta: {
+          total,
+          page: pageNum,
+          limit: limitNum,
+          totalPages: Math.ceil(total / limitNum)
+        }
+      });
+    } else {
+      const requests = await promotionRepository.findAllRequests();
+      res.json(requests);
+    }
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch requests' });
   }
