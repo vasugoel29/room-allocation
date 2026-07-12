@@ -85,6 +85,32 @@ async function seed() {
   
   try {
     await seedDepartments(client);
+
+    // Seed from exact database dump snapshot if it exists
+    const dumpPath = path.join(__dirname, 'database_rooms_dump.json');
+    if (fs.existsSync(dumpPath)) {
+      console.log(`Found database rooms snapshot at: ${dumpPath}. Restoring configurations...`);
+      const dumpRooms = JSON.parse(fs.readFileSync(dumpPath, 'utf8'));
+      for (const r of dumpRooms) {
+        await client.query(
+          `INSERT INTO rooms (id, name, building, floor, capacity, has_ac, has_projector, type, description, student_access)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           ON CONFLICT (name) DO UPDATE SET
+             id = EXCLUDED.id,
+             building = EXCLUDED.building,
+             floor = EXCLUDED.floor,
+             capacity = EXCLUDED.capacity,
+             has_ac = EXCLUDED.has_ac,
+             has_projector = EXCLUDED.has_projector,
+             type = EXCLUDED.type,
+             description = EXCLUDED.description,
+             student_access = EXCLUDED.student_access`,
+          [r.id, r.name, r.building, r.floor, r.capacity, r.has_ac, r.has_projector, r.type, r.description, r.student_access]
+        );
+      }
+      console.log(`Successfully restored ${dumpRooms.length} rooms from snapshot.`);
+    }
+
     client.release();
     client = null;
 
@@ -127,23 +153,23 @@ async function processBatch(rooms) {
 
     for (const roomObj of rooms) {
       const roomName = roomObj.room;
-      const { building, floor } = getBuildingAndFloor(roomName);
       
+      const building = roomObj.metadata?.building ?? getBuildingAndFloor(roomName).building;
+      const floor = roomObj.metadata?.floor ?? getBuildingAndFloor(roomName).floor;
+      const capacity = roomObj.metadata?.capacity ?? [40, 60, 80, 100, 120][Math.floor(Math.random() * 5)];
       const hasAc = roomObj.metadata?.has_ac ?? false;
       const hasProjector = roomObj.metadata?.has_projector ?? false;
-      const capacity = [40, 60, 80, 100, 120][Math.floor(Math.random() * 5)];
-      const type = getRoomType(roomName);
+      const type = roomObj.metadata?.type ?? getRoomType(roomName);
+      const description = roomObj.metadata?.description ?? null;
+      const studentAccess = roomObj.metadata?.student_access ?? true;
 
       // 1. Insert/Update Room
       const roomRes = await client.query(
-        `INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector, type) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (name) DO UPDATE SET 
-            building = EXCLUDED.building,
-            floor = EXCLUDED.floor,
-            type = EXCLUDED.type
+        `INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector, type, description, student_access) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
          RETURNING id`,
-        [roomName, building, floor, capacity, hasAc, hasProjector, type]
+        [roomName, building, floor, capacity, hasAc, hasProjector, type, description, studentAccess]
       );
       const roomId = roomRes.rows[0].id;
 

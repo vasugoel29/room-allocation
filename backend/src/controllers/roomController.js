@@ -112,7 +112,7 @@ export const getMyOverrides = async (req, res) => {
 };
 
 export const createRoom = async (req, res) => {
-  const { name, building, floor, capacity, type, has_ac, has_projector } = req.body;
+  const { name, building, floor, capacity, type, has_ac, has_projector, description, student_access } = req.body;
   if (!name || capacity === undefined) {
     return res.status(400).json({ error: 'Missing name or capacity' });
   }
@@ -125,7 +125,9 @@ export const createRoom = async (req, res) => {
       capacity: parseInt(capacity),
       type,
       has_ac: !!has_ac,
-      has_projector: !!has_projector
+      has_projector: !!has_projector,
+      description,
+      student_access: student_access !== undefined ? student_access : true
     });
     cache.delete('room_availability_all');
     res.status(201).json(room);
@@ -137,7 +139,7 @@ export const createRoom = async (req, res) => {
 
 export const updateRoom = async (req, res) => {
   const { id } = req.params;
-  const { name, building, floor, capacity, type, has_ac, has_projector } = req.body;
+  const { name, building, floor, capacity, type, has_ac, has_projector, description, student_access } = req.body;
 
   try {
     const room = await roomRepository.update(id, {
@@ -147,7 +149,9 @@ export const updateRoom = async (req, res) => {
       capacity: parseInt(capacity),
       type,
       has_ac: !!has_ac,
-      has_projector: !!has_projector
+      has_projector: !!has_projector,
+      description,
+      student_access: student_access !== undefined ? student_access : true
     });
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });

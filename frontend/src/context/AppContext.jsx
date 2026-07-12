@@ -102,7 +102,7 @@ export const AppProvider = ({ children }) => {
   const fetchRooms = useCallback(async () => {
     try {
       const queryParams = { 
-        building: filters.building
+        building: filters.building.flatMap(b => b === 'Others' ? ['Other', 'Others'] : [b])
       };
       const data = await roomService.getRooms(queryParams);
       if (Array.isArray(data)) setRooms(data);

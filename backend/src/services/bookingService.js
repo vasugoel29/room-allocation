@@ -174,6 +174,19 @@ export const createBooking = async (client, reqData, userId, requester = null) =
   const requesterProfile = requester?.id
     ? await userRepository.findById(requester.id, client)
     : await userRepository.findById(userId, client);
+
+  const room = await roomRepository.findById(room_id, client);
+  if (!room) {
+    return { error: 'Room not found', status: 404 };
+  }
+
+  // Restrict student access
+  const isStudent = requesterProfile?.role !== 'ADMIN' && requesterProfile?.role !== 'FACULTY';
+  if (isStudent && room.student_access === false) {
+    logger.info('Permission Denied: Student cannot book room', { room_id, user_id: userId });
+    return { error: 'Students do not have permission to book this room', status: 403 };
+  }
+
   const timetableClash = await checkTimetableClash(client, requesterProfile, reqData, userId);
   if (timetableClash) {
     logger.info('Conflict: Timetable clash', { room_id, start_time, user_id: userId, clash: timetableClash });

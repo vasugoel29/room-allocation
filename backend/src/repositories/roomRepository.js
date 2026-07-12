@@ -21,9 +21,13 @@ export const roomRepository = {
   },
 
   create: async (data, client = db) => {
-    const { name, building, floor, capacity, type, has_ac, has_projector } = data;
-    const query = 'INSERT INTO rooms (name, building, floor, capacity, type, has_ac, has_projector) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *';
-    const result = await client.query(query, [name, building, floor, capacity, type || 'Lecture Room', has_ac || false, has_projector || false]);
+    const { name, building, floor, capacity, type, has_ac, has_projector, description, student_access } = data;
+    const query = 'INSERT INTO rooms (name, building, floor, capacity, type, has_ac, has_projector, description, student_access) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *';
+    const result = await client.query(query, [
+      name, building, floor, capacity, type || 'Lecture Room', 
+      has_ac || false, has_projector || false, description || null, 
+      student_access !== undefined ? student_access : true
+    ]);
     return result.rows[0];
   },
 
@@ -207,14 +211,17 @@ export const roomRepository = {
    * Update room details
    */
   update: async (id, data, client = db) => {
-    const { name, building, floor, capacity, has_ac, has_projector, type } = data;
+    const { name, building, floor, capacity, has_ac, has_projector, type, description, student_access } = data;
     const query = `
       UPDATE rooms 
-      SET name = $1, building = $2, floor = $3, capacity = $4, has_ac = $5, has_projector = $6, type = $7
-      WHERE id = $8
+      SET name = $1, building = $2, floor = $3, capacity = $4, has_ac = $5, has_projector = $6, type = $7, description = $8, student_access = $9
+      WHERE id = $10
       RETURNING *
     `;
-    const result = await client.query(query, [name, building, floor, capacity, has_ac, has_projector, type, id]);
+    const result = await client.query(query, [
+      name, building, floor, capacity, has_ac, has_projector, type, 
+      description || null, student_access !== undefined ? student_access : true, id
+    ]);
     return result.rows[0];
   },
 

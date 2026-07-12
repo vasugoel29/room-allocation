@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
-import { getDayOfWeek, isRoomReallyFree } from '../../utils/timetableLogic';
+import { getDayOfWeek, isRoomReallyFree, getHourFromTime } from '../../utils/timetableLogic';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
@@ -9,12 +9,100 @@ const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
+  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData, user } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+  const occupiedScheduleSlots = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(timetableData)) {
+      timetableData.forEach(entry => {
+        Object.entries(entry.timetable || {}).forEach(([dayName, daySchedule]) => {
+          if (Array.isArray(daySchedule)) {
+            daySchedule.forEach(sc => {
+              if (sc.time && sc.room) {
+                const roomNameLower = sc.room.trim().toLowerCase();
+                const hour = getHourFromTime(sc.time);
+                set.add(`${roomNameLower}-${dayName}-${hour}`);
+              }
+            });
+          }
+        });
+      });
+    } else if (typeof timetableData === 'object' && timetableData !== null) {
+      Object.entries(timetableData).forEach(([dayName, daySchedule]) => {
+        if (Array.isArray(daySchedule)) {
+          daySchedule.forEach(sc => {
+            if (sc.time && sc.room) {
+              const roomNameLower = sc.room.trim().toLowerCase();
+              const hour = getHourFromTime(sc.time);
+              set.add(`${roomNameLower}-${dayName}-${hour}`);
+            }
+          });
+        }
+      });
+    }
+    return set;
+  }, [timetableData]);
+
+  const availabilityIndex = useMemo(() => {
+    const map = new Map();
+    if (Array.isArray(availability)) {
+      availability.forEach(a => {
+        const roomName = (a.room_name || '').trim().toLowerCase();
+        const key1 = `${roomName}-${a.day}-${a.hour}`;
+        const key2 = `${a.room_id}-${a.day}-${a.hour}`;
+        map.set(key1, a);
+        if (a.room_id) map.set(key2, a);
+      });
+    }
+    return map;
+  }, [availability]);
+
+  const bookingsIndex = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(bookings)) {
+      bookings.forEach(b => {
+        const status = (b.status || 'ACTIVE').toUpperCase();
+        if (status === 'ACTIVE' || status === 'PENDING' || status === 'CONFIRMED') {
+          const bStart = new Date(b.start_time);
+          const bDateStr = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
+          const bHour = bStart.getHours();
+          set.add(`${b.room_id}-${bDateStr}-${bHour}`);
+        }
+      });
+    }
+    return set;
+  }, [bookings]);
+
+  const isRoomReallyFreeLocal = React.useCallback((room, dateStr, dayName, hour) => {
+    if (!room) return false;
+
+    const targetRoomName = (room.name || '').trim().toLowerCase();
+    const override = availabilityIndex.get(`${targetRoomName}-${dateStr}-${hour}`) ||
+                     availabilityIndex.get(`${room.id}-${dateStr}-${hour}`) ||
+                     availabilityIndex.get(`${targetRoomName}-${dayName}-${hour}`) ||
+                     availabilityIndex.get(`${room.id}-${dayName}-${hour}`);
+
+    let baseAvailable = true;
+
+    if (override) {
+      baseAvailable = override.is_available === true;
+    } else {
+      const isOccupiedInSchedule = occupiedScheduleSlots.has(`${targetRoomName}-${dayName}-${hour}`);
+      if (isOccupiedInSchedule) baseAvailable = false;
+    }
+
+    if (!baseAvailable) return false;
+
+    const currentBooking = bookingsIndex.has(`${room.id}-${dateStr}-${hour}`);
+    if (currentBooking) return false;
+
+    return true;
+  }, [availabilityIndex, occupiedScheduleSlots, bookingsIndex]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -86,8 +174,11 @@ function Calendar({ onSlotClick }) {
 
   const timePos = getCurrentTimePosition();
 
+  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+
   const filteredRooms = useMemo(() => {
     return rooms.filter(room => {
+      if (isStudent && room.student_access === false) return false;
       const matchesSearch = !filters.searchTerm || room.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
       const dbFloor = filters.floor === 'G' ? 0 : (filters.floor === 'all' ? 'all' : parseInt(filters.floor));
       const matchesFloor = dbFloor === 'all' || Number(room.floor) === Number(dbFloor);
@@ -95,7 +186,7 @@ function Calendar({ onSlotClick }) {
       const matchesType = !filters.roomType || filters.roomType === 'all' || room.type === filters.roomType;
       return matchesSearch && matchesFloor && matchesSmart && matchesType;
     });
-  }, [rooms, filters.searchTerm, filters.floor, filters.smartRoom, filters.roomType]);
+  }, [rooms, filters.searchTerm, filters.floor, filters.smartRoom, filters.roomType, user]);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
@@ -204,7 +295,7 @@ function Calendar({ onSlotClick }) {
                           <div className={`relative z-10 h-full overflow-y-auto no-scrollbar pt-1 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
                             {(() => {
                               const slotRooms = [...filteredRooms]
-                                .filter(room => isRoomReallyFree(room, dateStr, dayLabel, hour, bookings, availability, timetableData))
+                                .filter(room => isRoomReallyFreeLocal(room, dateStr, dayLabel, hour))
                                 .sort((a, b) => {
                                   const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                                   return score(b) - score(a);

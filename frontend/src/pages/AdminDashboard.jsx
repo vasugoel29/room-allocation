@@ -96,12 +96,12 @@ function AdminDashboard() {
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
 
-  const fetchAdminRooms = async (page = 1) => {
+  const fetchAdminRooms = async (page = roomsMeta.page) => {
     try {
       const queryParams = { 
         page, 
         limit: 10,
-        building: roomBuildingFilter !== 'all' ? roomBuildingFilter : undefined,
+        building: roomBuildingFilter === 'Others' ? ['Other', 'Others'] : (roomBuildingFilter !== 'all' ? [roomBuildingFilter] : undefined),
         type: roomTypeFilter !== 'all' ? roomTypeFilter : undefined
       };
       const data = await roomService.getRooms(queryParams);
@@ -113,7 +113,7 @@ function AdminDashboard() {
     }
   };
 
-  const fetchAdminDepartments = async (page = 1) => {
+  const fetchAdminDepartments = async (page = deptsMeta.page) => {
     try {
       const data = await adminService.getDepartments({ page, limit: 10 });
       setAdminDepartments(data.data || data);

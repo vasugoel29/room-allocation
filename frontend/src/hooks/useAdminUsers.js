@@ -9,7 +9,7 @@ export function useAdminUsers(activeTab) {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
-  const fetchUsers = async (page = 1) => {
+  const fetchUsers = async (page = usersMeta.page) => {
     try {
       const result = await adminService.getUsers(page);
       setUsers(result.data || result);

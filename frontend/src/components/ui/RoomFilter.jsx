@@ -31,7 +31,7 @@ function RoomFilter() {
         <div className="space-y-2">
           <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-50 font-display">Campus Block</label>
           <div className="grid grid-cols-3 gap-1.5 bg-tonal-secondary/10 border border-text-secondary/10 p-1.5 rounded-xl">
-            {['all', '4th Block', '5th Block', '6th Block', '8th Block'].map((b) => (
+            {['all', '4th Block', '5th Block', '6th Block', '8th Block', 'APJ Block', 'Smart Block', ...(!isStudent ? ['Others'] : [])].map((b) => (
               <button
                 key={b}
                 onClick={() => {
@@ -53,7 +53,7 @@ function RoomFilter() {
                 }}
                 className={`py-2 rounded-lg text-[10px] font-extrabold capitalize transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
-                {b === 'all' ? 'All' : b.split(' ')[0]}
+                {b === 'all' ? 'All' : b.replace(' Block', '')}
               </button>
             ))}
           </div>

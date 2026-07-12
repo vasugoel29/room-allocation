@@ -7,7 +7,8 @@ import CustomSelect from '../ui/CustomSelect';
 function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
   const [roomForm, setRoomForm] = useState({ 
     name: '', building: '', floor: 0, capacity: 50, 
-    type: 'Lecture Room', has_ac: false, has_projector: false
+    type: 'Lecture Room', has_ac: false, has_projector: false,
+    description: '', student_access: true
   });
 
   useEffect(() => {
@@ -19,12 +20,15 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
         capacity: editingRoom.capacity || 50, 
         type: editingRoom.type || 'Lecture Room',
         has_ac: !!editingRoom.has_ac,
-        has_projector: !!editingRoom.has_projector
+        has_projector: !!editingRoom.has_projector,
+        description: editingRoom.description || '',
+        student_access: editingRoom.student_access !== undefined ? !!editingRoom.student_access : true
       });
     } else {
       setRoomForm({ 
         name: '', building: '', floor: 0, capacity: 50, 
-        type: 'Lecture Room', has_ac: false, has_projector: false
+        type: 'Lecture Room', has_ac: false, has_projector: false,
+        description: '', student_access: true
       });
     }
   }, [editingRoom, isOpen]);
@@ -96,7 +100,10 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
                   { value: '5th Block', label: '5th Block' },
                   { value: '6th Block', label: '6th Block' },
                   { value: '8th Block', label: '8th Block' },
-                  ...(roomForm.building && !['4th Block', '5th Block', '6th Block', '8th Block'].includes(roomForm.building)
+                  { value: 'APJ Block', label: 'APJ Block' },
+                  { value: 'Smart Block', label: 'Smart Block' },
+                  { value: 'Others', label: 'Others' },
+                  ...(roomForm.building && !['4th Block', '5th Block', '6th Block', '8th Block', 'APJ Block', 'Smart Block', 'Others'].includes(roomForm.building)
                     ? [{ value: roomForm.building, label: roomForm.building }]
                     : [])
                 ]}
@@ -143,7 +150,18 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
             </div>
           </div>
 
-          <div className="flex gap-6 py-2 px-1">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Room Description</label>
+            <textarea 
+              rows="2"
+              placeholder="e.g. Block 5 top floor, near main lift"
+              value={roomForm.description}
+              onChange={(e) => setRoomForm({...roomForm, description: e.target.value})}
+              className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body resize-none"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-x-6 gap-y-3 py-2 px-1">
             <label className="flex items-center gap-3 cursor-pointer text-xs font-bold text-text-primary">
               <input 
                 type="checkbox"
@@ -161,6 +179,15 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
                 className="rounded text-primary focus:ring-primary w-4 h-4 bg-tonal-secondary/20 border-text-secondary/10"
               />
               Has Projector
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer text-xs font-bold text-text-primary">
+              <input 
+                type="checkbox"
+                checked={roomForm.student_access}
+                onChange={(e) => setRoomForm({...roomForm, student_access: e.target.checked})}
+                className="rounded text-primary focus:ring-primary w-4 h-4 bg-tonal-secondary/20 border-text-secondary/10"
+              />
+              Allow Student Booking
             </label>
           </div>
 

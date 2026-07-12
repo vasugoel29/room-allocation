@@ -1,5 +1,22 @@
 import { Clock, ArrowRight, Trash2 } from 'lucide-react';
 
+const getStatusClasses = (status) => {
+  switch (status) {
+    case 'ACTIVE':
+      return 'bg-green-500/10 text-green-500 border-green-500/20';
+    case 'PENDING':
+      return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    case 'CANCELLED':
+      return 'bg-red-500/10 text-red-500 border-red-500/20';
+    case 'FREED':
+      return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+    case 'BLOCKED':
+      return 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20';
+    default:
+      return 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20';
+  }
+};
+
 function AdminBookings({ bookings, searchTerm, onCancel }) {
   const filteredBookings = bookings
     .filter(b => 
@@ -23,9 +40,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
                 <span className="text-lg font-black text-text-primary">{item.room_name}</span>
                 <span className="text-sm font-bold text-text-secondary">{item.user_name}</span>
               </div>
-              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black capitalize border ${
-                item.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
-              }`}>
+              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black capitalize border ${getStatusClasses(item.status)}`}>
                 {item.status}
               </span>
             </div>
@@ -88,11 +103,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
                 </div>
               </td>
               <td className="px-6 py-4">
-                <span className={`px-2 py-1 rounded-lg text-[10px] font-black capitalize tracking-tighter shadow-sm border ${
-                  item.status === 'ACTIVE' 
-                    ? 'bg-green-500/10 text-green-500 border-green-500/20' 
-                    : 'bg-red-500/10 text-red-500 border-red-500/20'
-                }`}>
+                <span className={`px-2 py-1 rounded-lg text-[10px] font-black capitalize tracking-tighter shadow-sm border ${getStatusClasses(item.status)}`}>
                   {item.status}
                 </span>
               </td>

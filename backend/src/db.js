@@ -342,6 +342,16 @@ const migrations = [
           WHERE status = 'PENDING';
       `);
     }
+  },
+  {
+    version: 14,
+    name: 'Room Description and Student Access',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS description TEXT;
+        ALTER TABLE rooms ADD COLUMN IF NOT EXISTS student_access BOOLEAN DEFAULT TRUE;
+      `);
+    }
   }
 ];
 

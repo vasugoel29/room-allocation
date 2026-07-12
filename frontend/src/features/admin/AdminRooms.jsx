@@ -18,7 +18,7 @@ function AdminRooms({
           room.type?.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const staticBlocks = ['4th Block', '5th Block', '6th Block', '8th Block'];
+  const staticBlocks = ['4th Block', '5th Block', '6th Block', '8th Block', 'APJ Block', 'Smart Block', 'Others'];
   const buildings = ['all', ...staticBlocks];
   const types = ['all', 'Lecture Room', 'Lab', 'Auditorium', 'Committee Room'];
 
@@ -64,10 +64,20 @@ function AdminRooms({
                     <div className="flex flex-col">
                       <span className="text-lg font-black text-text-primary leading-tight font-display capitalize">{room.name}</span>
                       <span className="text-xs text-text-secondary font-bold capitalize tracking-wider mt-1">{room.building} &bull; Floor {room.floor}</span>
+                      {room.description && (
+                        <span className="text-[10px] text-text-secondary/70 font-medium font-body mt-1 leading-tight">{room.description}</span>
+                      )}
                     </div>
-                    <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black capitalize">
-                      {room.type}
-                    </span>
+                    <div className="flex flex-col gap-1 items-end shrink-0">
+                      <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black capitalize whitespace-nowrap">
+                        {room.type}
+                      </span>
+                      {room.student_access === false && (
+                        <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20 text-[8px] font-black capitalize whitespace-nowrap">
+                          Staff Only
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-text-secondary">
                     <span className="flex items-center gap-1"><Users size={14} className="opacity-40" /> {room.capacity} seats</span>
@@ -100,7 +110,14 @@ function AdminRooms({
                 {filteredRooms.map((room, idx) => (
                   <tr key={room.id} className={`hover:bg-surface-mid/60 transition-colors group ${idx % 2 === 0 ? 'row-alt' : ''}`}>
                     <td className="px-6 py-4">
-                      <span className="text-sm font-black text-text-primary font-display capitalize">{room.name}</span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-text-primary font-display capitalize">{room.name}</span>
+                        {room.description && (
+                          <span className="text-[10px] text-text-secondary/70 font-medium font-body leading-tight mt-0.5 max-w-[180px] truncate" title={room.description}>
+                            {room.description}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-xs font-bold text-text-secondary capitalize">
                       {room.building} &bull; Floor {room.floor}
@@ -109,9 +126,16 @@ function AdminRooms({
                       {room.capacity} seats
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black capitalize">
-                        {room.type}
-                      </span>
+                      <div className="flex flex-col items-start gap-1">
+                        <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black capitalize whitespace-nowrap">
+                          {room.type}
+                        </span>
+                        {room.student_access === false && (
+                          <span className="px-2 py-0.5 rounded bg-red-500/10 text-red-500 border border-red-500/20 text-[8px] font-black capitalize whitespace-nowrap">
+                            Staff Only
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-3 opacity-80">

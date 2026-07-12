@@ -90,6 +90,29 @@ describe('Rooms & Availability Integration Tests', () => {
     });
   });
 
+  describe('Student booking access control', () => {
+    it('should block student from booking a room with student_access = false', async () => {
+      // Set Test-101 student_access to false first
+      await db.query("UPDATE rooms SET student_access = false WHERE id = $1", [roomId]);
+
+      const res = await request(app)
+        .post('/api/bookings')
+        .set('Authorization', `Bearer ${token}`)
+        .send({
+          room_id: roomId,
+          start_time: new Date(Date.now() + 86400000).toISOString(),
+          end_time: new Date(Date.now() + 86400000 + 3600000).toISOString(),
+          purpose: 'Group Study Session'
+        });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.error).toBe('Students do not have permission to book this room');
+
+      // Reset
+      await db.query("UPDATE rooms SET student_access = true WHERE id = $1", [roomId]);
+    });
+  });
+
   describe('Room CRUD operations by Admin', () => {
     let newRoomId;
 
@@ -104,11 +127,15 @@ describe('Rooms & Availability Integration Tests', () => {
           capacity: 45,
           type: 'Lab',
           has_ac: true,
-          has_projector: false
+          has_projector: false,
+          description: 'A mock classroom description',
+          student_access: false
         });
 
       expect(res.statusCode).toBe(201);
       expect(res.body.name).toBe('CRUD-Room-99');
+      expect(res.body.description).toBe('A mock classroom description');
+      expect(res.body.student_access).toBe(false);
       newRoomId = res.body.id;
     });
 
@@ -135,12 +162,16 @@ describe('Rooms & Availability Integration Tests', () => {
           capacity: 50,
           type: 'Lecture Room',
           has_ac: true,
-          has_projector: true
+          has_projector: true,
+          description: 'Updated mock classroom description',
+          student_access: true
         });
 
       expect(res.statusCode).toBe(200);
       expect(res.body.capacity).toBe(50);
       expect(res.body.name).toBe('CRUD-Room-99-Updated');
+      expect(res.body.description).toBe('Updated mock classroom description');
+      expect(res.body.student_access).toBe(true);
     });
 
     it('should prevent non-admins from updating a room', async () => {
