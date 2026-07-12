@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
+import { getDayOfWeek, isRoomReallyFree } from '../../utils/timetableLogic';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
@@ -8,7 +9,7 @@ const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { user, bookings, rooms, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
+  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
@@ -84,57 +85,6 @@ function Calendar({ onSlotClick }) {
   };
 
   const timePos = getCurrentTimePosition();
-
-  const bookingsMap = useMemo(() => {
-    const map = new Map();
-    if (!bookings) return map;
-    bookings.forEach(b => {
-      const bStatus = (b.status || 'ACTIVE').toUpperCase();
-      if (bStatus !== 'ACTIVE' && bStatus !== 'PENDING' && bStatus !== 'CONFIRMED') return;
-      const bStart = new Date(b.start_time);
-      const bYear = bStart.getFullYear();
-      const bMonth = String(bStart.getMonth() + 1).padStart(2, '0');
-      const bDate = String(bStart.getDate()).padStart(2, '0');
-      const bLocalStr = `${bYear}-${bMonth}-${bDate}`;
-      const bHour = bStart.getHours();
-      
-      const key = `${bLocalStr}-${bHour}-${b.room_id}`;
-      map.set(key, b);
-    });
-    return map;
-  }, [bookings]);
-
-  const getBooking = (dateStr, hour, roomId) => {
-    return bookingsMap.get(`${dateStr}-${hour}-${roomId}`);
-  };
-
-  const timetableMap = useMemo(() => {
-    const map = new Map();
-    if (!timetableData) return map;
-    Object.entries(timetableData).forEach(([dayLabel, daySchedule]) => {
-      if (!Array.isArray(daySchedule)) return;
-      daySchedule.forEach(sc => {
-        if (!sc.room) return;
-        const key = `${dayLabel}-${sc.time}-${sc.room.trim().toLowerCase()}`;
-        map.set(key, sc);
-      });
-    });
-    return map;
-  }, [timetableData]);
-
-  const isStaticallyOccupied = (dayLabel, hour, roomName) => {
-    const normalizedRoom = roomName.trim().toLowerCase();
-    const exactKey = `${dayLabel}-${hour}-${normalizedRoom}`;
-    if (timetableMap.has(exactKey)) return timetableMap.get(exactKey);
-    
-    // Fallback: substring matching
-    const daySchedule = timetableData?.[dayLabel] || [];
-    return daySchedule.find(sc => 
-      sc.time === hour && 
-      sc.room && 
-      (sc.room.trim().toLowerCase() === normalizedRoom || sc.room.trim().toLowerCase().includes(normalizedRoom))
-    );
-  };
 
   const filteredRooms = useMemo(() => {
     return rooms.filter(room => {
@@ -238,14 +188,14 @@ function Calendar({ onSlotClick }) {
 
                     {displayDays.map(dateStr => {
                       const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
-                      const dayLabel = currentWeekDay ? currentWeekDay.day : 'Unknown';
+                      const dayLabel = currentWeekDay?.day || getDayOfWeek(dateStr);
+                      const dateObj = currentWeekDay?.fullDate || new Date(`${dateStr}T00:00:00`);
                       
                       return (
                         <div 
                           key={dateStr} 
                           className="relative p-2 h-full transition-all border-l border-text-secondary/10 hover:bg-tonal-secondary/5"
                           onClick={() => {
-                            const dateObj = currentWeekDay?.fullDate;
                             onSlotClick({ day: dayLabel, hour, date: dateObj });
                           }}
                         >
@@ -254,15 +204,8 @@ function Calendar({ onSlotClick }) {
                           <div className={`relative z-10 h-full overflow-y-auto no-scrollbar pt-1 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
                             {(() => {
                               const slotRooms = [...filteredRooms]
+                                .filter(room => isRoomReallyFree(room, dateStr, dayLabel, hour, bookings, availability, timetableData))
                                 .sort((a, b) => {
-                                  const aBooked = !!getBooking(dateStr, hour, a.id);
-                                  const bBooked = !!getBooking(dateStr, hour, b.id);
-                                  
-                                  const isAOccupied = aBooked || !!isStaticallyOccupied(dayLabel, hour, a.name);
-                                  const isBOccupied = bBooked || !!isStaticallyOccupied(dayLabel, hour, b.name);
-                                  
-                                  if (isAOccupied !== isBOccupied) return isAOccupied ? 1 : -1;
-                                  
                                   const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                                   return score(b) - score(a);
                                 });
@@ -275,35 +218,18 @@ function Calendar({ onSlotClick }) {
                               return (
                                 <>
                                   {displayedRooms.map(room => {
-                                    const booking = getBooking(dateStr, hour, room.id);
-                                    const staticClass = !booking ? isStaticallyOccupied(dayLabel, hour, room.name) : null;
-                                    
-                                    const isRestricted = booking && (booking.user_role === 'ADMIN' || booking.user_role === 'FACULTY') && user?.role !== 'ADMIN';
-                                    const isOccupied = booking || staticClass;
-                                    
                                     return (
                                       <div 
                                         key={room.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          if (isRestricted) return;
-                                          const dateObj = currentWeekDay?.fullDate;
                                           onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                         }}
-                                       className={`rounded-xl room-card ${!isRestricted ? 'hover:translate-y-[-2px] active:scale-95 cursor-pointer' : 'cursor-not-allowed opacity-60 grayscale-[0.3]'} transform transition-all text-xs sm:text-sm leading-tight truncate font-bold ${isOccupied ? (isRestricted ? 'bg-surface-lowest shadow-inner' : 'bg-surface-high/40 opacity-90') : 'text-text-primary'}`}
-                                        title={`${room.name}${booking ? ` - Booked by ${booking.user_name} ${isRestricted ? '(Restricted)' : '(Click to Request Transfer)'}` : (staticClass ? ` - Academic Class: ${staticClass.subjectName}` : '')}`}
+                                        className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all text-xs sm:text-sm leading-tight truncate font-bold text-text-primary"
+                                        title={`${room.name} - Available`}
                                       >
                                         <div className="flex flex-col overflow-hidden">
-                                          <span className={`font-black truncate tracking-tight ${isOccupied ? 'text-text-secondary text-[10px] sm:text-xs' : 'text-xs sm:text-sm'}`}>{room.name}</span>
-                                          {booking ? (
-                                            <span className="text-[8px] sm:text-[9px] text-text-secondary/70 truncate leading-none mt-0.5">
-                                              {booking.class_name || 'Booking'}
-                                            </span>
-                                          ) : staticClass ? (
-                                            <span className="text-[8px] sm:text-[9px] text-text-secondary/70 truncate leading-none mt-0.5">
-                                              {staticClass.subjectName || 'Academic Class'}
-                                            </span>
-                                          ) : null}
+                                          <span className="font-black truncate tracking-tight text-xs sm:text-sm">{room.name}</span>
                                         </div>
                                         <div className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0">
                                           <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />

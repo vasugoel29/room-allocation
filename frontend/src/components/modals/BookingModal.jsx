@@ -9,6 +9,7 @@ import { useSearchDebounce } from "../../hooks/useSearchDebounce";
 import BookingTypeSelector from "../../features/booking/BookingTypeSelector";
 import RescheduleDetails from "../../features/booking/RescheduleDetails";
 import FacultySelector from "../../features/booking/FacultySelector";
+import ConflictResolutionDialog from "./ConflictResolutionDialog";
 
 function BookingModal({ slot, onClose, onSuccess }) {
   const {
@@ -68,6 +69,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmedConflict, setConfirmedConflict] = useState(false);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictData, setConflictData] = useState(null);
 
   const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isDayOpen, setIsDayOpen] = useState(false);
@@ -224,14 +227,51 @@ function BookingModal({ slot, onClose, onSuccess }) {
       refreshAllData();
       onSuccess();
     } catch (err) {
-      setError(err.message || "Booking failed");
+      const errorMsg = err.message || "Booking failed";
+      if (err.conflict && errorMsg.includes('timetable')) {
+        setConflictData({
+          ...err.conflict,
+          date: dateStr,
+          hour: slot.hour,
+          booking_id: null
+        });
+        setShowConflictDialog(true);
+        setError("");
+      } else {
+        setError(errorMsg);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleConflictResolution = async (action) => {
+    if (action === 'cancelled') {
+      setShowConflictDialog(false);
+      setConflictData(null);
+      refreshAllData();
+      onSuccess();
+    } else if (action === 'reschedule') {
+      setShowConflictDialog(false);
+      setConflictData(null);
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+    <>
+      {showConflictDialog && conflictData && (
+        <ConflictResolutionDialog
+          conflict={conflictData}
+          onCancel={() => {
+            setShowConflictDialog(false);
+            setConflictData(null);
+          }}
+          onResolve={handleConflictResolution}
+          loading={loading}
+        />
+      )}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       <div
         className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-md"
         onClick={onClose}
@@ -394,6 +434,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
         </form>
       </div>
     </div>
+    </>
   );
 }
 

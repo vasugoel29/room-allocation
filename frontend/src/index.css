@@ -157,7 +157,8 @@ h1, h2, h3, .headline-lg {
 /* Room Grid System */
 .pill-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, 180px);
+  justify-content: start;
   gap: 0.75rem;
   width: 100%;
 }

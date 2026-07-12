@@ -6,6 +6,7 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { notifyFacultyNewRequest, notifyBookingCancelled } from '../utils/emailService.js';
 import { logActivity } from './loggerService.js';
+import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
 
 /**
  * Fetch bookings with optional filters
@@ -31,11 +32,157 @@ export const getBookings = async (filters) => {
   };
 };
 
+const getTimetableDepartment = (dept) => {
+  const normalized = String(dept || '').trim().toUpperCase();
+  const mapping = {
+    IT: 'INFORMATION TECHNOLOGY',
+    CS: 'COMPUTER SCIENCE AND ENGINEERING',
+    ICE: 'INSTRUMENTATION AND CONTROL ENGINEERING',
+    ECE: 'ELECTRONICS AND COMMUNICATION ENGINEERING',
+    ME: 'MECHANICAL ENGINEERING',
+    MPAE: 'MANUFACTURING PROCESS AND AUTOMATION ENGINEERING',
+    EE: 'ELECTRICAL ENGINEERING',
+    BT: 'BIOTECHNOLOGY'
+  };
+
+  return mapping[normalized] || dept || null;
+};
+
+const normalizeHour = (hour) => {
+  const parsedHour = Number(hour);
+  if (Number.isNaN(parsedHour)) return 0;
+  return parsedHour >= 1 && parsedHour < 8 ? parsedHour + 12 : parsedHour;
+};
+
+const hasTimetableOverlap = (slotTime, bookingStartHour, bookingEndHour) => {
+  if (!slotTime) return false;
+  
+  const parts = slotTime.split('-').map(p => p.trim());
+  if (parts.length < 2) return false;
+  
+  const [startStr, endStr] = parts;
+  const slotStartHour = normalizeHour(parseInt(startStr.split(':')[0]));
+  const slotEndHour = normalizeHour(parseInt(endStr.split(':')[0]));
+  
+  return bookingStartHour < slotEndHour && slotStartHour < bookingEndHour;
+};
+
+const checkTimetableClash = async (client, requester, reqData, userId) => {
+  const { start_time, end_time, faculty_id } = reqData;
+  if (!start_time || !end_time) return null;
+
+  const requesterRole = (requester?.role || '').toUpperCase();
+  if (requesterRole === 'ADMIN') return null;
+
+  const startDate = new Date(start_time);
+  const endDate = new Date(end_time);
+  const dayName = getDayOfWeek(startDate);
+  
+  // Create paired candidates (start hour, end hour) to avoid mixing timezones
+  const bookingHourCandidates = [
+    { start: normalizeHour(startDate.getHours()), end: normalizeHour(endDate.getHours()) },
+    { start: normalizeHour(startDate.getUTCHours()), end: normalizeHour(endDate.getUTCHours()) }
+  ];
+
+  const clashes = [];
+
+  const checkFacultySchedule = async (facultyName, label) => {
+    const facultyRows = await client.query(`
+      SELECT slot_time, subject_name, faculty_name, room_name
+      FROM timetable_slots
+      WHERE UPPER(faculty_name) = $1 AND day_of_week = $2
+    `, [facultyName.toUpperCase(), dayName]);
+
+    const facultyFacultyRows = await client.query(`
+      SELECT slot_time, content AS subject_name, faculty_name
+      FROM faculty_timetable_slots
+      WHERE is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
+    `, [facultyName.toUpperCase(), dayName]);
+
+    const combinedRows = [...facultyRows.rows, ...facultyFacultyRows.rows];
+    const matched = combinedRows.filter((slot) => {
+      return bookingHourCandidates.some((candidate) => {
+        return hasTimetableOverlap(slot.slot_time, candidate.start, candidate.end);
+      });
+    });
+
+    if (matched.length > 0) {
+      clashes.push({
+        type: 'timetable',
+        label,
+        subject: matched[0].subject_name || 'Scheduled class',
+        faculty: matched[0].faculty_name || 'Unknown',
+        room: matched[0].room_name || null,
+        day: dayName,
+        time: matched[0].slot_time || 'Unknown time'
+      });
+    }
+  };
+
+  if (requesterRole === 'FACULTY' || requesterRole === 'FACULTY MEMBER') {
+    await checkFacultySchedule(requester.name, 'your timetable');
+  } else {
+    const department = getTimetableDepartment(requester.branch || requester.department_name);
+    const semester = requester.semester || (requester.year ? requester.year * 2 : null);
+    const section = requester.section;
+
+    if (department && semester && section !== undefined && section !== null) {
+      const sectionRows = await client.query(`
+        SELECT slot_time, subject_name, faculty_name, room_name, department, semester, section
+        FROM timetable_slots
+        WHERE (UPPER(department) = $1 OR UPPER(department) = $2)
+          AND semester::TEXT = $3::TEXT
+          AND section::TEXT = $4::TEXT
+          AND day_of_week = $5
+      `, [department.toUpperCase(), (department || '').toUpperCase(), String(semester), String(section), dayName]);
+
+      const matched = sectionRows.rows.filter((slot) => {
+        return bookingHourCandidates.some((candidate) => {
+          return hasTimetableOverlap(slot.slot_time, candidate.start, candidate.end);
+        });
+      });
+      if (matched.length > 0) {
+        clashes.push({
+          type: 'timetable',
+          label: 'your section timetable',
+          subject: matched[0].subject_name || 'Scheduled class',
+          faculty: matched[0].faculty_name || 'Unknown',
+          room: matched[0].room_name || null,
+          day: dayName,
+          time: matched[0].slot_time || 'Unknown time'
+        });
+      }
+    }
+  }
+
+  if (faculty_id) {
+    const targetFaculty = await userRepository.findById(faculty_id, client);
+    if (targetFaculty?.name) {
+      await checkFacultySchedule(targetFaculty.name, 'the selected faculty timetable');
+    }
+  }
+
+  return clashes.length > 0 ? clashes[0] : null;
+};
+
 /**
  * Handles the logic for creating a single booking
  */
-export const createBooking = async (client, reqData, userId) => {
+export const createBooking = async (client, reqData, userId, requester = null) => {
   const { room_id, start_time, end_time, purpose, faculty_id } = reqData;
+
+  const requesterProfile = requester?.id
+    ? await userRepository.findById(requester.id, client)
+    : await userRepository.findById(userId, client);
+  const timetableClash = await checkTimetableClash(client, requesterProfile, reqData, userId);
+  if (timetableClash) {
+    logger.info('Conflict: Timetable clash', { room_id, start_time, user_id: userId, clash: timetableClash });
+    return {
+      error: `This booking clashes with an existing timetable slot in ${timetableClash.label}`,
+      status: 409,
+      conflict: timetableClash
+    };
+  }
 
   // Check Room conflict
   const roomConflicts = await bookingRepository.checkRoomConflict(room_id, start_time, end_time, client);
@@ -272,7 +419,7 @@ export const createBookingHandler = async (reqData, user) => {
   }
 
   const result = await db.runInTransaction(async (client) => {
-    const res = await createBooking(client, reqData, userId);
+    const res = await createBooking(client, reqData, userId, user);
     if (res.error) throw res;
     return res;
   }).catch(err => {
@@ -425,7 +572,7 @@ export const quickBookHandler = async (reqData, user) => {
       start_time: startTime.toISOString(), 
       end_time: endTime.toISOString(), 
       purpose: purpose || 'Admin Quick Booking' 
-    }, userId);
+    }, userId, user);
 
     if (res.error) throw res;
     return { res, startTime };

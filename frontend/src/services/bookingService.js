@@ -20,7 +20,9 @@ export const bookingService = {
     const res = await api.post('/bookings', data);
     if (!res.ok) {
       const err = await res.json();
-      throw new Error(err.error || 'Booking creation failed');
+      const error = new Error(err.error || 'Booking creation failed');
+      error.conflict = err.conflict;
+      throw error;
     }
     return res.json();
   },

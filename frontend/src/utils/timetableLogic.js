@@ -72,6 +72,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
       time: s.slot_time,
       subjectName: s.subject_name || s.content || 'Untitled Slot',
       room: s.room_name || 'N/A',
+      faculty: s.faculty_name || '',
       className: s.department ? `${s.department} Sem ${s.semester}${s.section ? ` · Sec ${s.section}` : ''}` : (s.class_name || ''),
       isOccupied: true,
       isDynamic: false
@@ -89,6 +90,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
         time: slot.slot_time,
         subjectName: slot.subject_name,
         room: slot.room_name,
+        faculty: slot.faculty_name || '',
         className: slot.department ? `${slot.department} Sem ${slot.semester}${slot.section ? ` · Sec ${slot.section}` : ''}` : '',
         isDynamic: false
       }));

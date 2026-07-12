@@ -18,7 +18,10 @@ export const createBooking = async (req, res) => {
       req.user,
     );
     if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+      return res.status(result.status).json({
+        error: result.error,
+        ...(result.conflict ? { conflict: result.conflict } : {}),
+      });
     }
     res.status(201).json(result.data);
   } catch (err) {

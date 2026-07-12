@@ -121,6 +121,62 @@ describe('Booking Constraints', () => {
   });
 
 
+  test('Should reject booking when it clashes with an existing student timetable slot', async () => {
+    await db.query(`
+      UPDATE users
+      SET branch = 'IT', year = 1, section = 1
+      WHERE id = $1
+    `, [userId]);
+
+    await db.query(`
+      DELETE FROM timetable_slots
+      WHERE department = 'INFORMATION TECHNOLOGY' AND section = '1' AND subject_name = 'Test Class'
+    `);
+
+    await db.query(`
+      INSERT INTO timetable_slots (department, semester, section, day_of_week, slot_time, subject_name, room_name, subject_code, faculty_name)
+      VALUES ('INFORMATION TECHNOLOGY', 2, 1, 'Mon', '09:00-10:00', 'Test Class', 'Test Room', 'CS101', 'Test Faculty')
+    `);
+
+    const futureDate = new Date();
+    while (futureDate.getDay() !== 1) {
+      futureDate.setDate(futureDate.getDate() + 1);
+    }
+    futureDate.setHours(9, 0, 0, 0);
+
+    const res = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        room_id: 999,
+        start_time: futureDate.toISOString(),
+        end_time: new Date(futureDate.getTime() + 3600000).toISOString(),
+        purpose: 'Timetable Clash'
+      });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.body.error).toContain('timetable');
+    expect(res.body.conflict).toMatchObject({
+      type: 'timetable',
+      label: 'your section timetable',
+      subject: 'Test Class',
+      faculty: 'Test Faculty',
+      room: 'Test Room',
+      day: 'Mon',
+      time: '09:00-10:00'
+    });
+
+    await db.query(`
+      DELETE FROM timetable_slots
+      WHERE department = 'INFORMATION TECHNOLOGY' AND section = '1' AND subject_name = 'Test Class'
+    `);
+    await db.query(`
+      UPDATE users
+      SET branch = NULL, year = NULL, section = NULL
+      WHERE id = $1
+    `, [userId]);
+  });
+
   test('Should allow user to cancel their own booking', async () => {
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + 5);

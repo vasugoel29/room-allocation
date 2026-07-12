@@ -1,5 +1,5 @@
 import React, { useState, useContext, useMemo } from 'react';
-import { Calendar as CalendarIcon, Clock, MapPin, X, ChevronLeft, ChevronRight, Filter, AlertCircle, Trash2, Lightbulb, Calendar } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, MapPin, X, ChevronLeft, ChevronRight, Filter, AlertCircle, Trash2, Lightbulb, Calendar, User } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
@@ -40,7 +40,7 @@ const Timetable = () => {
   };
 
   // Permission check
-  const { fetchBookings, fetchFacultyOverrides } = useContext(AppContext);
+  const { fetchBookings, fetchFacultyOverrides, fetchTimetable } = useContext(AppContext);
   const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
   const isFaculty = user?.role === 'FACULTY';
 
@@ -56,6 +56,7 @@ const Timetable = () => {
         item.subjectName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.subject?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.room?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        item.faculty?.toLowerCase().includes(searchTerm.toLowerCase()) || 
         item.instructor?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
@@ -80,6 +81,7 @@ const Timetable = () => {
       item.subjectName?.toLowerCase().includes(search) || 
       item.subject?.toLowerCase().includes(search) || 
       item.room?.toLowerCase().includes(search) ||
+      item.faculty?.toLowerCase().includes(search) ||
       item.instructor?.toLowerCase().includes(search)
     );
   }, [user, selectedDay, bookings, availability, searchTerm, timetableData, facultyTimetableData, facultyOverrides]);
@@ -118,6 +120,7 @@ const Timetable = () => {
       }
 
       fetchAvailability(); 
+      fetchTimetable?.();
       setIsCancelModalOpen(false);
       setPendingCancelClass(null);
     } catch (err) {
@@ -231,6 +234,12 @@ const Timetable = () => {
                         <span className="text-[11px] text-accent font-black uppercase tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/10">
                           {item.room}
                         </span>
+                        {item.faculty && (
+                          <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 uppercase tracking-tighter">
+                            <User size={12} className="text-accent" />
+                            {item.faculty}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -265,8 +274,8 @@ const Timetable = () => {
                 {item.className && (
                   <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
                 )}
-                {!item.className && item.isDynamic && item.faculty && (
-                  <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.faculty}</p>
+                {item.faculty && (
+                  <p className="text-[10px] font-semibold text-text-secondary mt-1">Faculty: {item.faculty}</p>
                 )}
               </>
             )}

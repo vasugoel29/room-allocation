@@ -189,11 +189,11 @@ export const getRoomWeekSchedule = async (req, res) => {
   if (!weekStart) return res.status(400).json({ error: 'weekStart (YYYY-MM-DD) is required' });
 
   try {
-    const start = new Date(weekStart);
-    start.setUTCHours(0, 0, 0, 0);
+    // Parse weekStart as LOCAL date, not UTC
+    const start = new Date(weekStart + 'T00:00:00');
     const end = new Date(start);
-    end.setUTCDate(end.getUTCDate() + 6); // Mon → Sat (6 days)
-    end.setUTCHours(23, 59, 59, 999);
+    end.setDate(end.getDate() + 6); // Add 6 days locally
+    end.setHours(23, 59, 59, 999);
 
     const [roomResult, availResult, ttResult, bookingsResult] = await Promise.all([
       // Room details
@@ -258,11 +258,14 @@ export const getRoomWeekSchedule = async (req, res) => {
     const bookings = bookingsResult.rows.map(b => {
       const st = new Date(b.start_time);
       const et = new Date(b.end_time);
+      const year = st.getFullYear();
+      const month = String(st.getMonth() + 1).padStart(2, '0');
+      const day = String(st.getDate()).padStart(2, '0');
       return {
         id: b.id,
-        date: st.toISOString().split('T')[0],
-        startHour: st.getUTCHours(),
-        endHour: et.getUTCHours(),
+        date: `${year}-${month}-${day}`,
+        startHour: st.getHours(),
+        endHour: et.getHours(),
         start_time: b.start_time.toISOString(),
         end_time: b.end_time.toISOString(),
         purpose: b.purpose,
