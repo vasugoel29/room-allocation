@@ -294,18 +294,38 @@ function BookingModal({ slot, onClose, onSuccess }) {
           <X size={20} />
         </button>
 
-        <h3
-          id="modal-title"
-          className="text-2xl sm:text-3xl font-extrabold text-text-primary mb-2 flex items-center gap-4 flex-wrap font-display capitalize tracking-tight"
-        >
-          Reserve Space
-          <span className="text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-lg bg-tonal-secondary/10 text-primary capitalize tracking-widest">
-            {slot.day} @ {slot.hour}:00
-          </span>
-        </h3>
-        <p className="text-text-secondary mb-6 sm:mb-10 text-xs sm:text-sm font-bold opacity-40 capitalize tracking-widest">
-          Architectural precision in room scheduling.
-        </p>
+        {(() => {
+          const existingBooking = selectedRoom ? getRoomBooking(selectedRoom) : null;
+          const canCancel = existingBooking && (
+            String(existingBooking.created_by) === String(user?.id) ||
+            user?.role === 'ADMIN' ||
+            user?.role === 'FACULTY'
+          );
+          const formattedDate = slot.date
+            ? new Date(slot.date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })
+            : "";
+          
+          let headerTitle = "Reserve Space";
+          if (existingBooking) {
+            headerTitle = canCancel ? "Booking Details" : "Request Transfer";
+          }
+
+          return (
+            <h3
+              id="modal-title"
+              className="text-2xl sm:text-3xl font-extrabold text-text-primary mb-2 flex items-center gap-4 flex-wrap font-display capitalize tracking-tight"
+            >
+              {headerTitle}
+              <span className="text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-lg bg-tonal-secondary/10 text-primary capitalize tracking-widest">
+                {slot.day}{formattedDate ? `, ${formattedDate}` : ""} @ {slot.hour}:00
+              </span>
+            </h3>
+          );
+        })()}
+        <div className="mb-6 sm:mb-8" />
 
         {error && (
           <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-red-500/10 text-red-500 text-xs sm:text-sm flex items-center gap-3 font-extrabold font-display capitalize tracking-tight">
@@ -326,112 +346,171 @@ function BookingModal({ slot, onClose, onSuccess }) {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-          <div className="space-y-3 sm:space-y-4">
-            <div className={`grid grid-cols-1 ${isStudent ? 'sm:grid-cols-2' : ''} gap-3 sm:gap-4`}>
-              <BookingTypeSelector
-                bookingType={bookingType}
-                setBookingType={setBookingType}
-                isTypeOpen={isTypeOpen}
-                setIsTypeOpen={setIsTypeOpen}
-              />
+        {(() => {
+          const existingBooking = selectedRoom ? getRoomBooking(selectedRoom) : null;
+          const canCancel = existingBooking && (
+            String(existingBooking.created_by) === String(user?.id) ||
+            user?.role === 'ADMIN' ||
+            user?.role === 'FACULTY'
+          );
 
-              {isStudent && (
-                <FacultySelector
-                  faculties={faculties}
-                  selectedFaculty={selectedFaculty}
-                  setSelectedFaculty={setSelectedFaculty}
-                  isFacultyOpen={isFacultyOpen}
-                  setIsFacultyOpen={setIsFacultyOpen}
-                  facultySearchTerm={facultySearchTerm}
-                  setFacultySearchTerm={setFacultySearchTerm}
-                  debouncedFacultyTerm={debouncedFacultyTerm}
-                />
-              )}
-            </div>
+          if (existingBooking && canCancel) {
+            return (
+              <div className="space-y-6 sm:space-y-8 font-body text-left">
+                <div className="bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-3xl p-6 space-y-4 shadow-sm">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                        Room
+                      </span>
+                      <span className="text-sm font-black text-text-primary">
+                        {selectedRoomData?.name || selectedRoom}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                        Status
+                      </span>
+                      <span className="text-xs font-extrabold px-2.5 py-1 rounded bg-green-500/10 text-green-500 capitalize inline-block">
+                        {existingBooking.status}
+                      </span>
+                    </div>
+                  </div>
 
-            {bookingType === "RESCHEDULE" && (
-              <RescheduleDetails
-                rooms={rooms}
-                user={user}
-                rescheduleDay={rescheduleDay}
-                setRescheduleDay={setRescheduleDay}
-                isDayOpen={isDayOpen}
-                setIsDayOpen={setIsDayOpen}
-                rescheduleHour={rescheduleHour}
-                setRescheduleHour={setRescheduleHour}
-                isHourOpen={isHourOpen}
-                setIsHourOpen={setIsHourOpen}
-                rescheduleRoom={rescheduleRoom}
-                setRescheduleRoom={setRescheduleRoom}
-                rescheduleSearchTerm={rescheduleSearchTerm}
-                setRescheduleSearchTerm={setRescheduleSearchTerm}
-                isRescheduleRoomOpen={isRescheduleRoomOpen}
-                setIsRescheduleRoomOpen={setIsRescheduleRoomOpen}
-                rescheduleDebouncedTerm={rescheduleDebouncedTerm}
-              />
-            )}
-          </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {existingBooking.class_name && (
+                      <div>
+                        <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                          Class
+                        </span>
+                        <span className="text-sm font-black text-text-primary">
+                          {existingBooking.class_name}
+                        </span>
+                      </div>
+                    )}
 
-          <div className="space-y-3">
-            <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">
-              Logistics & Context
-            </label>
-            <textarea
-              value={purpose}
-              onChange={(e) => setPurpose(e.target.value)}
-              placeholder="e.g. Special Class, Club Meeting, Portfolio Review"
-              autoComplete="off"
-              className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-[2rem] px-6 py-6 text-sm text-text-primary font-bold focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all h-28 resize-none placeholder:text-text-secondary/30 shadow-sm font-body"
-            />
-          </div>
+                    {existingBooking.purpose && (
+                      <div>
+                        <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                          Purpose
+                        </span>
+                        <span className="text-sm font-black text-text-primary font-body">
+                          {existingBooking.purpose}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-          <div className="flex gap-4 pt-2">
-            {user?.role !== "VIEWER" ? (
-              !(
-                selectedRoom &&
-                getRoomBooking(selectedRoom) &&
-                String(getRoomBooking(selectedRoom).created_by) ===
-                  String(user?.id)
-              ) && (
-                <button
-                  type="submit"
-                  disabled={loading || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
-                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest`}
-                >
-                  {loading ? (
-                    "Processing..."
+                <div className="flex gap-4">
+                  {canCancel ? (
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      disabled={loading}
+                      className="flex-1 bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600 disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest flex items-center justify-center gap-3"
+                    >
+                      {loading ? "Processing..." : (
+                        <>
+                          <X size={20} />
+                          Cancel Booking
+                        </>
+                      )}
+                    </button>
                   ) : (
-                    <>
-                      {selectedRoom && getRoomBooking(selectedRoom)
-                        ? "Request Transfer"
-                        : "Finalize Allocation"}
-                      <CheckCircle size={20} />
-                    </>
+                    <div className="flex-1 bg-tonal-secondary/5 text-text-secondary py-5 px-6 rounded-3xl text-center text-xs font-bold opacity-60 leading-relaxed border border-border/10">
+                      Only the organizer or administration can revoke this booking.
+                    </div>
                   )}
-                </button>
-              )
-            ) : (
-              <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-5 rounded-2xl text-center text-[10px] font-extrabold capitalize tracking-widest opacity-40">
-                Read Only Registry
+                </div>
               </div>
-            )}
-            {selectedRoom &&
-              getRoomBooking(selectedRoom) &&
-              String(getRoomBooking(selectedRoom).created_by) ===
-                String(user?.id) && (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={loading}
-                  className="flex-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-[2rem] text-[10px] font-extrabold capitalize tracking-widest transition-all flex items-center justify-center gap-3 font-display"
-                >
-                  <X size={20} />
-                  Revoke
-                </button>
-              )}
-          </div>
-        </form>
+            );
+          }
+
+          return (
+            <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              <div className="space-y-3 sm:space-y-4">
+                <div className={`grid grid-cols-1 ${isStudent ? 'sm:grid-cols-2' : ''} gap-3 sm:gap-4`}>
+                  <BookingTypeSelector
+                    bookingType={bookingType}
+                    setBookingType={setBookingType}
+                    isTypeOpen={isTypeOpen}
+                    setIsTypeOpen={setIsTypeOpen}
+                  />
+
+                  {isStudent && (
+                    <FacultySelector
+                      faculties={faculties}
+                      selectedFaculty={selectedFaculty}
+                      setSelectedFaculty={setSelectedFaculty}
+                      isFacultyOpen={isFacultyOpen}
+                      setIsFacultyOpen={setIsFacultyOpen}
+                      facultySearchTerm={facultySearchTerm}
+                      setFacultySearchTerm={setFacultySearchTerm}
+                      debouncedFacultyTerm={debouncedFacultyTerm}
+                    />
+                  )}
+                </div>
+
+                {bookingType === "RESCHEDULE" && (
+                  <RescheduleDetails
+                    rooms={rooms}
+                    user={user}
+                    rescheduleDay={rescheduleDay}
+                    setRescheduleDay={setRescheduleDay}
+                    isDayOpen={isDayOpen}
+                    setIsDayOpen={setIsDayOpen}
+                    rescheduleHour={rescheduleHour}
+                    setRescheduleHour={setRescheduleHour}
+                    isHourOpen={isHourOpen}
+                    setIsHourOpen={setIsHourOpen}
+                    rescheduleRoom={rescheduleRoom}
+                    setRescheduleRoom={setRescheduleRoom}
+                    rescheduleSearchTerm={rescheduleSearchTerm}
+                    setRescheduleSearchTerm={setRescheduleSearchTerm}
+                    isRescheduleRoomOpen={isRescheduleRoomOpen}
+                    setIsRescheduleRoomOpen={setIsRescheduleRoomOpen}
+                    rescheduleDebouncedTerm={rescheduleDebouncedTerm}
+                  />
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">
+                  Logistics & Context
+                </label>
+                <textarea
+                  value={purpose}
+                  onChange={(e) => setPurpose(e.target.value)}
+                  placeholder="e.g. Special Class, Club Meeting, Portfolio Review"
+                  autoComplete="off"
+                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-[2rem] px-6 py-6 text-sm text-text-primary font-bold focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all h-28 resize-none placeholder:text-text-secondary/30 shadow-sm font-body"
+                />
+              </div>
+
+              <div className="flex gap-4 pt-2">
+                {user?.role !== "VIEWER" ? (
+                  <button
+                    type="submit"
+                    disabled={loading || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
+                    className={`flex-[2] flex items-center justify-center gap-3 ${existingBooking ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest`}
+                  >
+                    {loading ? "Processing..." : (
+                      <>
+                        {existingBooking ? "Request Transfer" : "Finalize Allocation"}
+                        <CheckCircle size={20} />
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-5 rounded-2xl text-center text-[10px] font-extrabold capitalize tracking-widest opacity-40">
+                    Read Only Registry
+                  </div>
+                )}
+              </div>
+            </form>
+          );
+        })()}
       </div>
     </div>
     </>

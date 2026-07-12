@@ -63,19 +63,19 @@ function Calendar({ onSlotClick }) {
   }, [availability]);
 
   const bookingsIndex = useMemo(() => {
-    const set = new Set();
+    const map = new Map();
     if (Array.isArray(bookings)) {
       bookings.forEach(b => {
         const status = (b.status || 'ACTIVE').toUpperCase();
-        if (status === 'ACTIVE' || status === 'PENDING' || status === 'CONFIRMED') {
+        if (status === 'ACTIVE' || status === 'CONFIRMED') {
           const bStart = new Date(b.start_time);
           const bDateStr = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
           const bHour = bStart.getHours();
-          set.add(`${b.room_id}-${bDateStr}-${bHour}`);
+          map.set(`${b.room_id}-${bDateStr}-${bHour}`, b);
         }
       });
     }
-    return set;
+    return map;
   }, [bookings]);
 
   const isRoomReallyFreeLocal = React.useCallback((room, dateStr, dayName, hour) => {
@@ -190,25 +190,7 @@ function Calendar({ onSlotClick }) {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
-      {/* Page Header */}
-      <div className="p-4 sm:p-6 bg-tonal-secondary/10 backdrop-blur-md shrink-0 border-b border-text-secondary/10">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex flex-col">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight capitalize leading-none font-display">
-              Room Schedule
-            </h1>
-            <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest mt-1 opacity-60">
-              Structural precision in time and space
-            </p>
-          </div>
-          <PageSearch 
-            value={filters.searchTerm} 
-            onChange={(val) => setFilters(prev => ({ ...prev, searchTerm: val }))} 
-            placeholder="Search rooms..." 
-            className="w-full sm:w-64"
-          />
-        </div>
-      </div>
+
 
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar p-2 sm:p-4">
         <div className={`flex flex-col min-h-full w-full relative layout-transition bg-surface-low border border-text-secondary/10 rounded-2xl overflow-hidden ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
@@ -295,8 +277,21 @@ function Calendar({ onSlotClick }) {
                           <div className={`relative z-10 h-full overflow-y-auto no-scrollbar pt-1 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
                             {(() => {
                               const slotRooms = [...filteredRooms]
-                                .filter(room => isRoomReallyFreeLocal(room, dateStr, dayLabel, hour))
+                                .filter(room => {
+                                  const isFree = isRoomReallyFreeLocal(room, dateStr, dayLabel, hour);
+                                  if (isFree) return true;
+
+                                  const booking = bookingsIndex.get(`${room.id}-${dateStr}-${hour}`);
+                                  if (booking) return true;
+
+                                  return false;
+                                })
                                 .sort((a, b) => {
+                                  const aBooked = bookingsIndex.has(`${a.id}-${dateStr}-${hour}`);
+                                  const bBooked = bookingsIndex.has(`${b.id}-${dateStr}-${hour}`);
+                                  if (aBooked && !bBooked) return 1;
+                                  if (!aBooked && bBooked) return -1;
+
                                   const score = (r) => (r.has_ac ? 10 : 0) + (r.has_projector ? 5 : 0) + (r.capacity / 10);
                                   return score(b) - score(a);
                                 });
@@ -309,6 +304,32 @@ function Calendar({ onSlotClick }) {
                               return (
                                 <>
                                   {displayedRooms.map(room => {
+                                    const booking = bookingsIndex.get(`${room.id}-${dateStr}-${hour}`);
+                                    if (booking) {
+                                      return (
+                                        <div 
+                                          key={room.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id, booking });
+                                          }}
+                                          className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all opacity-45 hover:opacity-100 text-left"
+                                          title={`${room.name} - Booked for ${booking.class_name || booking.purpose}`}
+                                        >
+                                          <div className="flex flex-col text-left overflow-hidden py-1.5">
+                                            <span className="font-black truncate tracking-tight text-xs sm:text-sm">{room.name}</span>
+                                            <span className="text-[9px] font-bold text-text-secondary opacity-65 truncate block max-w-[85px] sm:max-w-[120px] leading-tight mt-0.5">
+                                              {booking.class_name || booking.purpose}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0">
+                                            <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
+                                            <Monitor size={isMobile ? 10 : 12} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+
                                     return (
                                       <div 
                                         key={room.id}

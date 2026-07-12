@@ -38,25 +38,37 @@ function getBuildingAndFloor(roomName) {
 
 async function seedDepartments(client) {
   const departments = [
-    'Computer Science (CSE)', 
-    'Information Technology (IT)', 
-    'Electronics & Communication (ECE)',
-    'Electrical Engineering (EE)',
-    'Mechanical Engineering (ME)',
-    'Instrumentation & Control (ICE)',
-    'Biotechnology',
-    'Mathematics',
-    'Physics',
-    'Humanities & Management'
+    'Department Of Computer Science (CSE)', 
+    'Department Of Information Technology (IT)', 
+    'Department Of Electronics & Communication (ECE)',
+    'Department Of Electrical Engineering (EE)',
+    'Department Of Mechanical Engineering (ME)',
+    'Department Of Instrumentation & Control (ICE)',
+    'Department Of Biotechnology',
+    'Department Of Mathematics',
+    'Department Of Physics',
+    'Department Of Humanities & Management'
   ];
 
   console.log('Seeding departments...');
   for (const dept of departments) {
-    await client.query(
-      'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) DO NOTHING',
-      [dept]
-    );
+    const existing = await client.query('SELECT id FROM departments WHERE name = $1', [dept]);
+    if (existing.rowCount === 0) {
+      await client.query(
+        'INSERT INTO departments (name) VALUES ($1)',
+        [dept]
+      );
+    }
   }
+
+  // Reset the serial sequence to match the actual maximum ID present
+  await client.query(
+    `SELECT setval(
+      pg_get_serial_sequence('departments', 'id'), 
+      COALESCE((SELECT MAX(id) FROM departments), 1), 
+      true
+    )`
+  );
 }
 
 async function seed() {

@@ -352,6 +352,182 @@ const migrations = [
         ALTER TABLE rooms ADD COLUMN IF NOT EXISTS student_access BOOLEAN DEFAULT TRUE;
       `);
     }
+  },
+  {
+    version: 15,
+    name: 'Department ON DELETE SET NULL Constraint',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE users DROP CONSTRAINT IF EXISTS users_department_id_fkey;
+        ALTER TABLE users ADD CONSTRAINT users_department_id_fkey 
+          FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL;
+      `);
+    }
+  },
+  {
+    version: 16,
+    name: 'Rename and Clean Departments to start with Department of',
+    run: async (client) => {
+      const depts = await client.query("SELECT id, name FROM departments");
+      for (const d of depts.rows) {
+        if (!d.name.startsWith('Department of')) {
+          const newName = `Department of ${d.name}`;
+          const conflict = await client.query("SELECT id FROM departments WHERE name = $1", [newName]);
+          if (conflict.rowCount > 0) {
+            await client.query("UPDATE users SET department_id = $1 WHERE department_id = $2", [conflict.rows[0].id, d.id]);
+            await client.query("DELETE FROM departments WHERE id = $1", [d.id]);
+          } else {
+            await client.query("UPDATE departments SET name = $1 WHERE id = $2", [newName, d.id]);
+          }
+        }
+      }
+      await client.query("DELETE FROM departments WHERE name NOT LIKE 'Department of%'");
+    }
+  },
+  {
+    version: 17,
+    name: 'Merge duplicate departments with normalization',
+    run: async (client) => {
+      const depts = await client.query("SELECT id, name FROM departments");
+      const groups = {};
+
+      const normalizeName = (name) => {
+        let norm = name.toLowerCase();
+        
+        // Remove parentheses ONLY if they do NOT contain 'east' or 'west'
+        norm = norm.replace(/\(([^)]+)\)/g, (match, contents) => {
+          const trimmed = contents.trim();
+          if (trimmed.includes('east') || trimmed.includes('west')) {
+            return `(${trimmed})`;
+          }
+          return '';
+        });
+
+        return norm
+          .replace(/^department of\s+/, '')
+          .replace(/&/g, 'and')
+          .replace(/engineering/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      };
+
+      for (const d of depts.rows) {
+        const norm = normalizeName(d.name);
+        if (!groups[norm]) {
+          groups[norm] = [];
+        }
+        groups[norm].push(d);
+      }
+
+      for (const [norm, list] of Object.entries(groups)) {
+        if (list.length > 1) {
+          const sorted = list.sort((a, b) => {
+            const aHasLower = /[a-z]/.test(a.name);
+            const bHasLower = /[a-z]/.test(b.name);
+            if (aHasLower && !bHasLower) return -1;
+            if (!aHasLower && bHasLower) return 1;
+
+            const aHasParens = /\(.*?\)/.test(a.name);
+            const bHasParens = /\(.*?\)/.test(b.name);
+            if (aHasParens && !bHasParens) return -1;
+            if (!aHasParens && bHasParens) return 1;
+
+            return a.name.length - b.name.length;
+          });
+
+          const best = sorted[0];
+          const duplicates = sorted.slice(1);
+
+          for (const dup of duplicates) {
+            await client.query("UPDATE users SET department_id = $1 WHERE department_id = $2", [best.id, dup.id]);
+            await client.query("DELETE FROM departments WHERE id = $1", [dup.id]);
+          }
+        }
+      }
+    }
+  },
+  {
+    version: 18,
+    name: 'Capitalize department names and merge duplicates',
+    run: async (client) => {
+      const toTitleCase = (str) => {
+        return str
+          .toLowerCase()
+          .split(' ')
+          .map(word => {
+            if (word.startsWith('(') && word.endsWith(')')) {
+              const inner = word.slice(1, -1);
+              if (inner.length <= 3 && inner !== 'and') {
+                return '(' + inner.toUpperCase() + ')';
+              }
+              return '(' + inner.charAt(0).toUpperCase() + inner.slice(1) + ')';
+            }
+            if (['cse', 'it', 'ece', 'ee', 'me', 'ice'].includes(word)) {
+              return word.toUpperCase();
+            }
+            return word.charAt(0).toUpperCase() + word.slice(1);
+          })
+          .join(' ');
+      };
+
+      const depts = await client.query("SELECT id, name FROM departments");
+      for (const d of depts.rows) {
+        const capitalized = toTitleCase(d.name);
+        if (capitalized !== d.name) {
+          // Check if a department with the capitalized name already exists
+          const conflict = await client.query("SELECT id FROM departments WHERE name = $1", [capitalized]);
+          if (conflict.rowCount > 0) {
+            // Merge users to the existing one and delete duplicate
+            await client.query("UPDATE users SET department_id = $1 WHERE department_id = $2", [conflict.rows[0].id, d.id]);
+            await client.query("DELETE FROM departments WHERE id = $1", [d.id]);
+          } else {
+            // Rename to capitalized
+            await client.query("UPDATE departments SET name = $1 WHERE id = $2", [capitalized, d.id]);
+          }
+        }
+      }
+    }
+  },
+  {
+    version: 19,
+    name: 'Capitalize faculty names to Title Case across database',
+    run: async (client) => {
+      const toTitleCase = (str) => {
+        if (!str) return str;
+        return str
+          .toLowerCase()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      };
+
+      // 1. Update users table where role = 'FACULTY'
+      const users = await client.query("SELECT id, name FROM users WHERE role = 'FACULTY'");
+      for (const u of users.rows) {
+        const capitalized = toTitleCase(u.name);
+        if (capitalized !== u.name) {
+          await client.query("UPDATE users SET name = $1 WHERE id = $2", [capitalized, u.id]);
+        }
+      }
+
+      // 2. Update timetable_slots table faculty_name column
+      const slots = await client.query("SELECT DISTINCT faculty_name FROM timetable_slots WHERE faculty_name IS NOT NULL");
+      for (const s of slots.rows) {
+        const capitalized = toTitleCase(s.faculty_name);
+        if (capitalized !== s.faculty_name) {
+          await client.query("UPDATE timetable_slots SET faculty_name = $1 WHERE faculty_name = $2", [capitalized, s.faculty_name]);
+        }
+      }
+
+      // 3. Update faculty_timetable_slots table faculty_name column
+      const fSlots = await client.query("SELECT DISTINCT faculty_name FROM faculty_timetable_slots WHERE faculty_name IS NOT NULL");
+      for (const fs of fSlots.rows) {
+        const capitalized = toTitleCase(fs.faculty_name);
+        if (capitalized !== fs.faculty_name) {
+          await client.query("UPDATE faculty_timetable_slots SET faculty_name = $1 WHERE faculty_name = $2", [capitalized, fs.faculty_name]);
+        }
+      }
+    }
   }
 ];
 

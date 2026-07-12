@@ -218,13 +218,9 @@ const Timetable = () => {
                         <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
                         {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full capitalize tracking-tighter">Updated</span>}
                       </div>
-                      {item.isDynamic && (
+                      {item.isDynamic && item.className && (user.role === 'FACULTY' || user.role === 'ADMIN') && (
                         <div className="mt-1">
-                          {user.role === 'FACULTY' ? (
-                            <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">{item.className}</p>
-                          ) : (
-                            <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">Faculty: {item.faculty}</p>
-                          )}
+                          <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">{item.className}</p>
                         </div>
                       )}
                       <div className="flex items-center gap-3 mt-1.5">

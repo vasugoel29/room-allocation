@@ -19,7 +19,7 @@ const HistoryView = ({ onClose }) => {
   const [, setError] = useState('');
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: null });
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 5;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -292,7 +292,7 @@ const HistoryView = ({ onClose }) => {
                 </thead>
                 <tbody className="text-sm">
                   {paginatedHistory.map((item) => (
-                    <tr key={item.id} className="hover:bg-tonal-secondary/5 transition-colors group">
+                    <tr key={item.id} className="hover:bg-tonal-secondary/5 transition-colors group border-b border-text-secondary/10">
                       <td className="py-8 px-6">
                         <div className="flex items-center gap-4">
                           <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-ambient shrink-0 ${item.type === 'OVERRIDE' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>

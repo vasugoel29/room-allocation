@@ -15,7 +15,20 @@ export const bookingRepository = {
              f.name as faculty_name,
              CASE 
                WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
-               ELSE CONCAT(u.branch, '-', u.section, ' ', u.year, ' Year')
+               ELSE CONCAT(
+                 u.branch, 
+                 '-', 
+                 u.section, 
+                 ' ', 
+                 CASE u.year
+                   WHEN 1 THEN '1st'
+                   WHEN 2 THEN '2nd'
+                   WHEN 3 THEN '3rd'
+                   WHEN 4 THEN '4th'
+                   ELSE CONCAT(u.year, 'th')
+                 END,
+                 ' Year'
+               )
              END as class_name
       FROM bookings b
       JOIN rooms r ON b.room_id = r.id

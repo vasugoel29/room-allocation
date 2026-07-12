@@ -182,7 +182,7 @@ export const getAnalytics = async (req, res) => {
 
     // 3. Peak Hours
     const peakHoursQuery = `
-      SELECT EXTRACT(HOUR FROM start_time) as hour, COUNT(*) as count
+      SELECT EXTRACT(HOUR FROM start_time AT TIME ZONE 'Asia/Kolkata') as hour, COUNT(*) as count
       FROM bookings
       WHERE start_time >= NOW() - INTERVAL '1 day' * $1
       AND status = 'ACTIVE'

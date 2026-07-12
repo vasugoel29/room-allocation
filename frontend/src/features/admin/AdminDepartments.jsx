@@ -40,7 +40,6 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-border/50 bg-bg-secondary/50">
-            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Department ID</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Department Name</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display text-right">Actions</th>
           </tr>
@@ -48,9 +47,6 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
         <tbody className="divide-y divide-border/30">
           {filteredDepts.map(item => (
             <tr key={item.id} className="hover:bg-bg-primary/30 transition-colors group">
-              <td className="px-6 py-4 text-xs font-bold text-text-secondary">
-                #{item.id}
-              </td>
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
                   <div className="bg-primary/5 p-1.5 rounded-lg opacity-80">
