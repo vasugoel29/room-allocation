@@ -52,7 +52,7 @@ import AdminDepartments from '../features/admin/AdminDepartments';
 import AdminDepartmentModal from '../components/modals/AdminDepartmentModal';
 
 function AdminDashboard() {
-  const { user } = useContext(AppContext);
+  const { user, filters } = useContext(AppContext);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'bookings';
@@ -80,6 +80,8 @@ function AdminDashboard() {
   const [adminRooms, setAdminRooms] = useState([]);
   const [adminDepartments, setAdminDepartments] = useState([]);
   const [paginatedPromotions, setPaginatedPromotions] = useState([]);
+  const [roomBuildingFilter, setRoomBuildingFilter] = useState('all');
+  const [roomTypeFilter, setRoomTypeFilter] = useState('all');
 
   // Pagination Metas
   const [roomsMeta, setRoomsMeta] = useState({ page: 1, totalPages: 1 });
@@ -96,7 +98,13 @@ function AdminDashboard() {
 
   const fetchAdminRooms = async (page = 1) => {
     try {
-      const data = await roomService.getRooms({ page, limit: 10 });
+      const queryParams = { 
+        page, 
+        limit: 10,
+        building: roomBuildingFilter !== 'all' ? roomBuildingFilter : undefined,
+        type: roomTypeFilter !== 'all' ? roomTypeFilter : undefined
+      };
+      const data = await roomService.getRooms(queryParams);
       setAdminRooms(data.data || data);
       if (data.meta) setRoomsMeta(data.meta);
     } catch (err) {
@@ -185,7 +193,11 @@ function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'rooms') {
       fetchAdminRooms(1);
-    } else if (activeTab === 'departments') {
+    }
+  }, [roomBuildingFilter, roomTypeFilter, activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'departments') {
       fetchAdminDepartments(1);
     } else if (activeTab === 'promotions') {
       fetchPaginatedPromotions(1);
@@ -285,7 +297,7 @@ function AdminDashboard() {
             </div>
             <h1 className="text-3xl font-extrabold text-text-primary tracking-tight font-display capitalize">Admin Console</h1>
           </div>
-          <p className="text-text-secondary font-bold capitalize text-[10px] tracking-widest opacity-40 font-display">Manage allocations and elevation requests.</p>
+          <p className="text-text-secondary font-bold capitalize text-[10px] tracking-widest opacity-60 font-display">Manage allocations and elevation requests.</p>
         </div>
       </div>
 
@@ -298,7 +310,7 @@ function AdminDashboard() {
         />
 
         {/* Right workspace panel */}
-        <div className="flex-1 bg-tonal-secondary/5 rounded-[2.5rem] overflow-hidden shadow-ambient border border-border/10 backdrop-blur-md flex flex-col min-h-0">
+        <div className="flex-1 bg-surface-low/40 rounded-[2.5rem] overflow-hidden shadow-ambient border border-border/20 backdrop-blur-md flex flex-col min-h-0">
           <AdminFilterBar 
             activeTab={activeTab}
             searchTerm={searchTerm}
@@ -372,7 +384,7 @@ function AdminDashboard() {
                       onCancel={handleCancelBooking} 
                     />
                     {bookingsMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
                         <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {bookingsMeta.page} of {bookingsMeta.totalPages}
                         </p>
@@ -404,7 +416,7 @@ function AdminDashboard() {
                       handlePromotionAction={handlePromotion} 
                     />
                     {promotionsMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
                         <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {promotionsMeta.page} of {promotionsMeta.totalPages}
                         </p>
@@ -448,7 +460,7 @@ function AdminDashboard() {
                       onApprove={handleApproveUser}
                     />
                     {usersMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
                         <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {usersMeta.page} of {usersMeta.totalPages}
                         </p>
@@ -479,9 +491,13 @@ function AdminDashboard() {
                       searchTerm={searchTerm}
                       onEdit={openRoomModal}
                       onDelete={deleteRoom}
+                      selectedBuilding={roomBuildingFilter}
+                      setSelectedBuilding={setRoomBuildingFilter}
+                      selectedType={roomTypeFilter}
+                      setSelectedType={setRoomTypeFilter}
                     />
                     {roomsMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
                         <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {roomsMeta.page} of {roomsMeta.totalPages}
                         </p>
@@ -514,7 +530,7 @@ function AdminDashboard() {
                       onDelete={deleteDepartment}
                     />
                     {deptsMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
+                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
                         <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {deptsMeta.page} of {deptsMeta.totalPages}
                         </p>
@@ -556,7 +572,7 @@ function AdminDashboard() {
                 {activeTab === 'timetable' && (
                   <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-8 p-2">
                     <AdminTimetable />
-                    <div className="border-t border-border/10 pt-6">
+                    <div className="border-t border-border/20 pt-6">
                       <AdminTimetableSlots />
                     </div>
                   </div>

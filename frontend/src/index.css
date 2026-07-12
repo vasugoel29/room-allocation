@@ -46,6 +46,8 @@
 
   --color-bg-primary: var(--color-surface-lowest);
   --color-bg-secondary: var(--color-surface-low);
+  --shadow-card: 0 2px 12px -2px rgba(0, 0, 0, 0.08);
+  --color-border-subtle: color-mix(in srgb, var(--color-text-primary), transparent 92%);
 }
 
 .dark {
@@ -62,6 +64,34 @@
   
   --color-bg-primary: var(--color-surface-lowest);
   --color-bg-secondary: var(--color-surface-low);
+  --shadow-card: 0 4px 20px -4px rgba(0, 0, 0, 0.4);
+  --color-border-subtle: color-mix(in srgb, var(--color-text-primary), transparent 90%);
+}
+
+.card {
+  background-color: var(--color-surface-low);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-card);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.separator {
+  height: 1px;
+  background-color: var(--color-border-subtle);
+  width: 100%;
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  opacity: 0.65;
+}
+
+.row-alt {
+  background-color: color-mix(in srgb, var(--color-surface-low), transparent 50%);
 }
 
 /* Global Transitions (Scoped for layout containers & interactive elements) */
@@ -127,23 +157,13 @@ h1, h2, h3, .headline-lg {
   color: var(--color-text-secondary);
 }
 
-/* Simple Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Hide Scrollbars Globally */
+*::-webkit-scrollbar {
+  display: none !important;
 }
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-surface-high);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-surface-highest);
+* {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important; /* Firefox */
 }
 
 /* Custom Utilities for tonal stacking */
@@ -215,4 +235,31 @@ h1, h2, h3, .headline-lg {
 .calendar-item:hover {
   transform: translateY(-2px);
   background-color: var(--color-surface-high);
+}
+
+/* Custom Hot Toast Styles to match the theme */
+.custom-toast {
+  background: color-mix(in srgb, var(--color-surface-low), transparent 5%) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid color-mix(in srgb, var(--color-text-primary), transparent 90%) !important;
+  border-radius: 1.25rem !important;
+  font-family: var(--font-body) !important;
+  font-weight: 700 !important;
+  box-shadow: 0 24px 64px -12px color-mix(in srgb, var(--color-secondary), transparent 85%) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  padding: 12px 20px !important;
+  font-size: 0.875rem !important;
+}
+
+/* Hide number input spinners (up/down arrows) globally */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

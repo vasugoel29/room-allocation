@@ -15,7 +15,7 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
       {/* Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
         {filteredRequests.map(item => (
-          <div key={item.id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
+          <div key={item.id} className="bg-bg-primary p-5 rounded-2xl ring-1 ring-border/20 shadow-sm space-y-4">
             <div className="flex justify-between items-start">
               <div className="flex flex-col">
                 <span className="text-lg font-black text-text-primary">{item.user_name}</span>
@@ -27,7 +27,7 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
                 {item.status}
               </span>
             </div>
-            <div className="bg-bg-secondary/50 p-3 rounded-xl border border-border">
+            <div className="bg-bg-secondary/50 p-3 rounded-xl border border-border/20">
               <p className="text-xs italic font-medium opacity-80">"{item.reason}"</p>
             </div>
             {item.status === 'PENDING' && (
@@ -43,16 +43,16 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
       {/* Desktop Table View */}
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-border/50 bg-bg-secondary/50">
+          <tr className="border-b border-border/25 bg-surface-low/60 backdrop-blur-sm">
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">User</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Reason</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Requested</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Action</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/30">
-          {filteredRequests.map(item => (
-            <tr key={item.id} className="hover:bg-bg-primary/30 transition-colors group">
+        <tbody className="divide-y divide-border/20">
+          {filteredRequests.map((item, idx) => (
+            <tr key={item.id} className={`hover:bg-surface-mid/60 transition-colors group ${idx % 2 === 0 ? 'row-alt' : ''}`}>
               <td className="px-6 py-4">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-text-primary">{item.user_name}</span>

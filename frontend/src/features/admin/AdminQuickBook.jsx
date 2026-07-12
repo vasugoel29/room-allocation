@@ -33,7 +33,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-bg-primary/50">
        {/* Discovery Header */}
-       <div className="p-4 sm:p-6 border-b border-border bg-bg-secondary/20">
+       <div className="p-4 sm:p-6 border-b border-border/20 bg-surface-low/60 backdrop-blur-sm">
          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
              <div className="space-y-1 relative z-50">
@@ -58,7 +58,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                  <ChevronDown size={14} className={`text-text-secondary transition-transform ${isSlotOpen ? 'rotate-180' : ''}`} />
                </button>
                {isSlotOpen && (
-                 <div className="absolute z-50 w-full mt-2 bg-bg-primary border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full">
+                 <div className="absolute z-50 w-full mt-2 bg-surface-low border border-border/20 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full ring-1 ring-border/10">
                    <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
                      {Array.from({length: 12}, (_, i) => i + 8).map(h => (
                        <button
@@ -89,7 +89,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                  <ChevronDown size={14} className={`text-text-secondary transition-transform shrink-0 ${isRoomJumpOpen ? 'rotate-180' : ''}`} />
                </button>
                {isRoomJumpOpen && (
-                 <div className="absolute z-50 w-full mt-2 bg-bg-primary border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full">
+                 <div className="absolute z-50 w-full mt-2 bg-surface-low border border-border/20 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full ring-1 ring-border/10">
                    <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
                      <button
                        type="button"
@@ -125,7 +125,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
           {/* Mobile View: Cards */}
           <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
             {paginatedRooms.map(room => (
-              <div key={room.room_id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
+              <div key={room.room_id} className="bg-bg-primary p-5 rounded-2xl ring-1 ring-border/20 shadow-sm space-y-4">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-lg font-black text-text-primary tracking-tight">{room.room_name}</span>
@@ -155,7 +155,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                      </button>
 
                      {userDropdownOpen === room.room_id && (
-                       <div className="absolute z-[100] mt-2 w-full bg-bg-primary border border-border rounded-2xl shadow-2xl overflow-hidden">
+                       <div className="absolute z-[100] mt-2 w-full bg-surface-low border border-border/20 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-border/10">
                           <div className="p-3 border-b border-border">
                             <input 
                               autoFocus
@@ -245,7 +245,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                          </button>
 
                          {userDropdownOpen === room.room_id && (
-                           <div className="fixed sm:absolute z-[100] mt-2 w-full max-w-[240px] bg-bg-primary border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                           <div className="fixed sm:absolute z-[100] mt-2 w-full max-w-[240px] bg-surface-low border border-border/20 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-border/10">
                               <div className="p-3 border-b border-border bg-bg-secondary/30">
                                 <div className="relative">
                                   <input 

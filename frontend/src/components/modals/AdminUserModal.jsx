@@ -4,6 +4,7 @@ import { adminService } from '../../services/adminService';
 import toast from 'react-hot-toast';
 import DepartmentSelect from '../../features/auth/DepartmentSelect';
 import StudentFields from '../../features/auth/StudentFields';
+import CustomSelect from '../ui/CustomSelect';
 
 function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments }) {
   const [userForm, setUserForm] = useState({ 
@@ -56,8 +57,8 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
 
   return (
     <div className="fixed inset-0 bg-neutral/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-       <div className="bg-neutral/90 w-full max-w-md rounded-[3rem] shadow-ambient overflow-hidden animate-in fade-in zoom-in duration-300 font-display">
-          <div className="p-8 flex justify-between items-center bg-tonal-secondary/10">
+       <div className="bg-neutral/90 w-full max-w-md rounded-[3rem] shadow-ambient animate-in fade-in zoom-in duration-300 font-display">
+          <div className="p-8 flex justify-between items-center bg-tonal-secondary/10 rounded-t-[3rem]">
              <div className="flex items-center gap-4">
                 <div className="bg-primary/10 p-3 rounded-2xl shadow-ambient">
                    <UserIcon className="text-primary" size={24} />
@@ -81,7 +82,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                   placeholder="e.g. John Doe"
                   value={userForm.name}
                   onChange={(e) => setUserForm({...userForm, name: e.target.value})}
-                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
                 />
              </div>
              <div className="space-y-2">
@@ -92,21 +93,22 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                   placeholder="john@campus.edu"
                   value={userForm.email}
                   onChange={(e) => setUserForm({...userForm, email: e.target.value})}
-                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
                 />
              </div>
              <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Authority Role</label>
-                <select 
+                <CustomSelect 
                   value={userForm.role}
-                  onChange={(e) => setUserForm({...userForm, role: e.target.value})}
-                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-extrabold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner appearance-none capitalize tracking-tight"
-                >
-                    <option value="VIEWER">VIEWER (Student)</option>
-                    <option value="STUDENT_REP">STUDENT_REP (Lead)</option>
-                    <option value="FACULTY">FACULTY (Staff)</option>
-                    <option value="admin">ADMIN (Root Access)</option>
-                </select>
+                  onChange={(val) => setUserForm({...userForm, role: val})}
+                  options={[
+                    { value: 'VIEWER', label: 'VIEWER (Student)' },
+                    { value: 'STUDENT_REP', label: 'STUDENT_REP (Lead)' },
+                    { value: 'FACULTY', label: 'FACULTY (Staff)' },
+                    { value: 'admin', label: 'ADMIN (Root Access)' }
+                  ]}
+                  buttonClassName="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-body flex items-center justify-between text-left"
+                />
              </div>
 
              <DepartmentSelect 
@@ -143,7 +145,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                     placeholder="••••••••"
                     value={userForm.password}
                     onChange={(e) => setUserForm({...userForm, password: e.target.value})}
-                    className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+                    className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
                   />
                </div>
              )}

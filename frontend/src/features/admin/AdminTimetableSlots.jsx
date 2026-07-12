@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../../services/adminService';
 import { toast } from 'react-hot-toast';
 import { Plus, Pencil, Trash2, Search, X, ChevronLeft, ChevronRight, CalendarClock } from 'lucide-react';
+import CustomSelect from '../../components/ui/CustomSelect';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const EMPTY_FORM = {
@@ -71,15 +72,13 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                         </div>
                         <div>
                             <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Day *</label>
-                            <select
+                            <CustomSelect
                                 value={form.day_of_week}
-                                onChange={e => set('day_of_week', e.target.value)}
-                                className="w-full bg-surface-mid border border-border/20 rounded-xl px-4 py-3 text-sm text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors"
-                                required
-                            >
-                                <option value="">Select day</option>
-                                {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                            </select>
+                                onChange={val => set('day_of_week', val)}
+                                options={DAYS.map(d => ({ value: d, label: d }))}
+                                placeholder="Select day"
+                                buttonClassName="w-full bg-surface-mid border border-border/20 rounded-xl px-4 py-3 text-sm text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors flex items-center justify-between text-left"
+                            />
                         </div>
                         <div>
                             <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Slot Time *</label>
@@ -102,14 +101,16 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                         </div>
                         <div>
                             <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Room</label>
-                            <select
+                            <CustomSelect
                                 value={form.room_id}
-                                onChange={e => set('room_id', e.target.value)}
-                                className="w-full bg-surface-mid border border-border/20 rounded-xl px-4 py-3 text-sm text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors"
-                            >
-                                <option value="">No room assigned</option>
-                                {rooms.map(r => <option key={r.id} value={r.id}>{r.name}{r.floor ? ` (Floor ${r.floor})` : ''}</option>)}
-                            </select>
+                                onChange={val => set('room_id', val)}
+                                options={[
+                                    { value: '', label: 'No room assigned' },
+                                    ...rooms.map(r => ({ value: String(r.id), label: `${r.name}${r.floor ? ` (Floor ${r.floor})` : ''}` }))
+                                ]}
+                                placeholder="No room assigned"
+                                buttonClassName="w-full bg-surface-mid border border-border/20 rounded-xl px-4 py-3 text-sm text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors flex items-center justify-between text-left"
+                            />
                         </div>
                         <div className="col-span-2">
                             <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Content / Subject</label>
@@ -263,14 +264,16 @@ const AdminTimetableSlots = () => {
                 </div>
                 <div className="min-w-[130px]">
                     <label className="block text-[9px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Day</label>
-                    <select
+                    <CustomSelect
                         value={draftFilters.day_of_week}
-                        onChange={e => setDraftFilters(f => ({ ...f, day_of_week: e.target.value }))}
-                        className="w-full bg-surface border border-border/20 rounded-xl px-3 py-2.5 text-xs text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors"
-                    >
-                        <option value="">All Days</option>
-                        {DAYS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
+                        onChange={val => setDraftFilters(f => ({ ...f, day_of_week: val }))}
+                        options={[
+                            { value: '', label: 'All Days' },
+                            ...DAYS.map(d => ({ value: d, label: d }))
+                        ]}
+                        placeholder="All Days"
+                        buttonClassName="w-full bg-surface border border-border/20 rounded-xl px-3 py-2.5 text-xs text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors flex items-center justify-between text-left"
+                    />
                 </div>
                 <div className="min-w-[90px]">
                     <label className="block text-[9px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Semester</label>

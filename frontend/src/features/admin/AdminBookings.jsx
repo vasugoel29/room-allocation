@@ -17,7 +17,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
       {/* Mobile Card View */}
       <div className="grid grid-cols-1 gap-4 p-4 sm:hidden">
         {filteredBookings.map(item => (
-          <div key={item.id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
+          <div key={item.id} className="bg-bg-primary p-5 rounded-2xl ring-1 ring-border/20 shadow-sm space-y-4">
             <div className="flex justify-between items-start">
               <div className="flex flex-col">
                 <span className="text-lg font-black text-text-primary">{item.room_name}</span>
@@ -55,7 +55,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
       {/* Desktop Table View */}
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
-          <tr className="border-b border-border/50 bg-bg-secondary/50">
+          <tr className="border-b border-border/25 bg-surface-low/60 backdrop-blur-sm">
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Member</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Room</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Time Slot</th>
@@ -63,9 +63,9 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-border/30">
-          {filteredBookings.map(item => (
-            <tr key={item.id} className="hover:bg-bg-primary/30 transition-colors group">
+        <tbody className="divide-y divide-border/20">
+          {filteredBookings.map((item, idx) => (
+            <tr key={item.id} className={`hover:bg-surface-mid/60 transition-colors group ${idx % 2 === 0 ? 'row-alt' : ''}`}>
               <td className="px-6 py-4">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-text-primary">{item.user_name}</span>

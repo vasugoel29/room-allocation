@@ -1,7 +1,17 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
 
-const CustomSelect = ({ value, onChange, options, placeholder = "Select option", label, icon: Icon }) => {
+const CustomSelect = ({ 
+  value, 
+  onChange, 
+  options, 
+  placeholder = "Select option", 
+  label, 
+  icon: Icon,
+  buttonClassName,
+  labelClassName,
+  menuClassName
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -20,7 +30,7 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
   return (
     <div className="space-y-2 relative" ref={containerRef}>
       {label && (
-        <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
+        <label className={labelClassName || "text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3"}>
           {Icon && <Icon size={14} className="text-accent" />}
           {label}
         </label>
@@ -29,16 +39,16 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full bg-bg-primary/50 border border-border rounded-xl px-4 py-3 flex items-center justify-between text-left transition-all hover:border-accent/50 focus:outline-none focus:border-accent shadow-sm"
+        className={buttonClassName || "w-full bg-bg-primary/50 border border-border rounded-xl px-4 py-3 flex items-center justify-between text-left transition-all hover:border-accent/50 focus:outline-none focus:border-accent shadow-sm"}
       >
-        <span className={`truncate font-bold ${selectedOption ? 'text-text-primary' : 'text-text-secondary opacity-50'}`}>
+        <span className={`truncate ${selectedOption ? 'font-bold text-text-primary' : 'font-medium text-text-secondary/50'}`}>
           {selectedOption ? selectedOption.label : placeholder}
         </span>
         <ChevronDown size={18} className={`text-text-secondary transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-surface-low border border-border rounded-2xl shadow-ambient z-[100] py-2 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className={menuClassName || "absolute top-full left-0 right-0 mt-2 bg-surface-low border border-border rounded-2xl shadow-ambient z-[100] py-2 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300"}>
           {options.map((option) => (
             <div
               key={option.value}

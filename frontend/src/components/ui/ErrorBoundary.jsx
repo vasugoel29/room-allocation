@@ -1,41 +1,35 @@
 import React from "react";
 
 const ErrorFallback = ({ error, onReset }) => (
-  <div style={{ padding: '40px', textAlign: 'center', fontFamily: 'sans-serif' }}>
-    <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Something went wrong.</h1>
-    <p style={{ color: '#ef4444', marginBottom: '0.5rem', fontWeight: 'bold' }}>Error Details:</p>
-    <p style={{ color: '#64748b', marginBottom: '2rem', fontStyle: 'italic' }}>{error?.message || 'Unknown error'}</p>
-    <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-      <button 
-        type="button"
-        onClick={onReset}
-        style={{
-          backgroundColor: '#6366f1',
-          color: 'white',
-          padding: '12px 24px',
-          borderRadius: '12px',
-          border: 'none',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        Try Again
-      </button>
-      <button 
-        type="button"
-        onClick={() => window.location.reload()}
-        style={{
-          backgroundColor: '#f1f5f9',
-          color: '#475569',
-          padding: '12px 24px',
-          borderRadius: '12px',
-          border: 'none',
-          fontWeight: 'bold',
-          cursor: 'pointer'
-        }}
-      >
-        Refresh Page
-      </button>
+  <div className="min-h-screen w-full flex flex-col items-center justify-center bg-surface-lowest text-text-primary p-8 text-center font-body">
+    <div className="max-w-md w-full bg-surface-low border border-border/10 rounded-[2.5rem] p-8 sm:p-10 shadow-ambient space-y-6">
+      <h1 className="text-2xl sm:text-3xl font-display font-black text-text-primary leading-tight">
+        Something went wrong.
+      </h1>
+      <div className="space-y-2">
+        <p className="text-xs font-black text-red-500 capitalize tracking-widest">
+          Error Details
+        </p>
+        <p className="text-sm font-medium text-text-secondary bg-tonal-secondary/5 rounded-2xl p-4 border border-border/10 font-mono break-words">
+          {error?.message || 'Unknown error'}
+        </p>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-4 pt-2">
+        <button 
+          type="button"
+          onClick={onReset}
+          className="flex-1 px-6 py-4 bg-primary text-white rounded-2xl font-extrabold text-[10px] capitalize tracking-widest shadow-ambient hover:opacity-90 active:scale-95 transition-all"
+        >
+          Try Again
+        </button>
+        <button 
+          type="button"
+          onClick={() => window.location.reload()}
+          className="flex-1 px-6 py-4 bg-tonal-secondary/10 hover:bg-tonal-secondary/20 text-text-primary rounded-2xl font-extrabold text-[10px] capitalize tracking-widest active:scale-95 transition-all"
+        >
+          Refresh Page
+        </button>
+      </div>
     </div>
   </div>
 );

@@ -18,6 +18,7 @@ import api from '../utils/api';
 import { getDatesOfWeek } from '../utils/dateHelpers';
 import { toTitleCase, getShortDept } from '../utils/roleUtils';
 import { WeekView } from '../components/ui/WeekView';
+import CustomSelect from '../components/ui/CustomSelect';
 
 function AdminTimetable() {
   const [searchType, setSearchType] = useState('FACULTY'); // 'FACULTY' | 'SECTION'
@@ -277,35 +278,34 @@ function AdminTimetable() {
             <div className="flex-1 grid grid-cols-3 gap-4">
               <div className="space-y-2 text-text-primary">
                 <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Branch</label>
-                <select 
+                <CustomSelect 
                   value={dept} 
-                  onChange={(e) => setDept(e.target.value)}
-                  className="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary"
-                >
-                  <option value="IT">IT</option>
-                  <option value="CS">CS</option>
-                  <option value="ECE">ECE</option>
-                </select>
+                  onChange={setDept}
+                  options={[
+                    { value: 'IT', label: 'IT' },
+                    { value: 'CS', label: 'CS' },
+                    { value: 'ECE', label: 'ECE' }
+                  ]}
+                  buttonClassName="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary flex items-center justify-between text-left"
+                />
               </div>
               <div className="space-y-2 text-text-primary">
                 <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Year</label>
-                <select 
+                <CustomSelect 
                   value={year} 
-                  onChange={(e) => setYear(e.target.value)}
-                  className="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary"
-                >
-                  {[1,2,3,4].map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+                  onChange={setYear}
+                  options={[1,2,3,4].map(y => ({ value: String(y), label: String(y) }))}
+                  buttonClassName="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary flex items-center justify-between text-left"
+                />
               </div>
               <div className="space-y-2 text-text-primary">
                 <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Section</label>
-                <select 
+                <CustomSelect 
                   value={section} 
-                  onChange={(e) => setSection(e.target.value)}
-                  className="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary"
-                >
-                  {[1,2,3,4].map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                  onChange={setSection}
+                  options={[1,2,3,4].map(s => ({ value: String(s), label: String(s) }))}
+                  buttonClassName="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary flex items-center justify-between text-left"
+                />
               </div>
             </div>
           )}

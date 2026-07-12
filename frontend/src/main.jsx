@@ -48,7 +48,25 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <Toaster position="top-center" reverseOrder={false} />
+        <Toaster 
+          position="top-center" 
+          reverseOrder={false} 
+          toastOptions={{
+            className: 'custom-toast',
+            success: {
+              iconTheme: {
+                primary: 'var(--color-primary)',
+                secondary: 'var(--color-surface-lowest)'
+              }
+            },
+            error: {
+              iconTheme: {
+                primary: '#EF4444',
+                secondary: 'var(--color-surface-lowest)'
+              }
+            }
+          }}
+        />
         <AppProvider>
           <App />
         </AppProvider>

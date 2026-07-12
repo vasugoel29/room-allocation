@@ -191,7 +191,7 @@ function MobileBooking({ onBack }) {
   return (
     <div className="flex flex-col h-full w-full bg-surface-lowest fixed inset-0 z-[60] overflow-y-auto no-scrollbar pb-20">
       {/* Header */}
-      <div className="p-4 flex items-center gap-4 bg-tonal-secondary/10 sticky top-0 z-10 backdrop-blur-md font-display">
+      <div className="p-4 flex items-center gap-4 bg-surface-low/80 sticky top-0 z-10 backdrop-blur-md font-display border-b border-border/20">
         <button onClick={onBack} className="p-2 rounded-full text-text-secondary">
           <ArrowLeft size={24} />
         </button>
@@ -274,13 +274,13 @@ function MobileBooking({ onBack }) {
         {/* Step 2: Room Selection */}
         {step === 2 && (
           <div className="space-y-5 animate-in slide-in-from-right duration-300">
-            <div className="bg-tonal-secondary/10 p-5 rounded-3xl flex items-center justify-between shadow-ambient">
+            <div className="bg-surface-low/60 p-5 rounded-3xl flex items-center justify-between shadow-sm ring-1 ring-border/15">
               <div className="flex items-center gap-4">
                 <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                    <CalendarIcon size={20} />
                 </div>
                 <div className="font-display">
-                   <p className="text-[10px] font-extrabold capitalize tracking-widest text-text-secondary opacity-40">Selected Time</p>
+                   <p className="text-[10px] font-extrabold capitalize tracking-widest text-text-secondary opacity-60">Selected Time</p>
                    <p className="text-sm font-extrabold text-text-primary capitalize tracking-tight">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                 </div>
               </div>
@@ -311,8 +311,8 @@ function MobileBooking({ onBack }) {
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">Floor Level</label>
-                  <div className="flex bg-tonal-secondary/10 p-1.5 rounded-xl">
+                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">Floor Level</label>
+                  <div className="flex bg-tonal-secondary/10 p-1.5 rounded-xl ring-1 ring-border/15">
                     {['all', '0', '1', '2', '3'].map(f => (
                       <button
                         key={f}
@@ -326,8 +326,8 @@ function MobileBooking({ onBack }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">Room Type</label>
-                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5">
+                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">Room Type</label>
+                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5 ring-1 ring-border/15">
                     {[
                       { id: 'all', label: 'ALL' },
                       { id: 'Lecture Room', label: 'LECTURE ROOMS' },
@@ -349,8 +349,8 @@ function MobileBooking({ onBack }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">Block / Building</label>
-                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5">
+                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">Block / Building</label>
+                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5 ring-1 ring-border/15">
                     {blocks.map(b => (
                       <button
                         key={b}
@@ -375,7 +375,7 @@ function MobileBooking({ onBack }) {
                   <button
                     key={room.id}
                     onClick={() => setSelectedRoom(room.id)}
-                    className={`flex items-center justify-between p-4.5 rounded-[1.75rem] transition-all shadow-ambient ${selectedRoom === room.id ? 'bg-primary text-white' : 'bg-surface-low text-text-primary'}`}
+                    className={`flex items-center justify-between p-4.5 rounded-[1.75rem] transition-all shadow-sm ring-1 ${selectedRoom === room.id ? 'bg-primary text-white ring-primary/30' : 'bg-surface-low text-text-primary ring-border/15'}`}
                   >
                     <div className="flex items-center gap-4 flex-1 overflow-hidden">
                       <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${selectedRoom === room.id ? 'bg-white/20' : 'bg-tonal-secondary/10 text-secondary'}`}>
@@ -388,7 +388,7 @@ function MobileBooking({ onBack }) {
                             {room.building}
                           </span>
                         </div>
-                        <p className={`text-[10px] font-extrabold capitalize tracking-widest mt-1.5 font-display ${selectedRoom === room.id ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.capacity} Seats</p>
+                        <p className={`text-[10px] font-extrabold capitalize tracking-widest mt-1.5 font-display ${selectedRoom === room.id ? 'text-white/60' : 'text-text-secondary opacity-60'}`}>{room.capacity} Seats</p>
                       </div>
                     </div>
 
@@ -421,7 +421,7 @@ function MobileBooking({ onBack }) {
         {/* Step 3: Details & Confirm */}
         {step === 3 && (
           <div className="space-y-6 animate-in slide-in-from-right duration-300">
-            <div className="bg-tonal-secondary/10 p-6 rounded-[2rem] shadow-ambient space-y-5 font-display">
+            <div className="bg-surface-low/60 p-6 rounded-[2rem] shadow-sm ring-1 ring-border/15 space-y-5 font-display">
                <div className="flex items-center gap-5">
                   <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center shadow-ambient">
                      <Hash size={28} strokeWidth={2.5}/>
@@ -436,7 +436,7 @@ function MobileBooking({ onBack }) {
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-40">
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-60">
                   <Clock size={12} className="text-primary" />
                   Purpose of Booking
                 </label>
@@ -450,7 +450,7 @@ function MobileBooking({ onBack }) {
 
               {isStudent && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-40">
+                  <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-60">
                     <User size={12} className="text-primary" />
                     Select Faculty
                   </label>
@@ -460,14 +460,14 @@ function MobileBooking({ onBack }) {
                       onClick={() => setIsFacultyOpen(!isFacultyOpen)}
                       className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-5 text-sm font-extrabold text-text-primary focus:outline-none transition-all flex items-center justify-between font-display capitalize tracking-tight"
                     >
-                      <span className={selectedFaculty ? 'text-text-primary' : 'text-text-secondary opacity-40'}>
+                      <span className={selectedFaculty ? 'text-text-primary' : 'text-text-secondary opacity-60'}>
                         {selectedFaculty ? faculties.find(f => String(f.id) === String(selectedFaculty))?.name : 'Choose a Faculty...'}
                       </span>
                       <ChevronRight size={18} className={`transition-transform duration-200 text-secondary ${isFacultyOpen ? 'rotate-90' : ''}`} />
                     </button>
 
-                    {isFacultyOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-3 bg-neutral rounded-3xl shadow-ambient z-50 max-h-[300px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300 backdrop-blur-md">
+                     {isFacultyOpen && (
+                      <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low border border-border/20 rounded-3xl shadow-2xl z-50 max-h-[300px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300 backdrop-blur-md ring-1 ring-border/10">
                         {faculties.map(f => (
                           <div
                             key={f.id}
@@ -475,11 +475,11 @@ function MobileBooking({ onBack }) {
                               setSelectedFaculty(f.id);
                               setIsFacultyOpen(false);
                             }}
-                            className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-white/5 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-extrabold text-white/60'}`}
+                            className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-accent/10 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-extrabold text-text-primary hover:text-text-primary'}`}
                           >
                             <div className="flex flex-col">
                               <span className="text-sm font-display capitalize tracking-tight">{f.name}</span>
-                              <span className={`text-[9px] capitalize tracking-widest mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
+                              <span className={`text-[9px] capitalize tracking-widest mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/80' : 'text-text-secondary opacity-70'}`}>
                                 {f.department || 'Faculty'}
                               </span>
                             </div>

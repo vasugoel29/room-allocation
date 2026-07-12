@@ -82,7 +82,7 @@ function Profile() {
       </div>
 
       {/* Main Distributed Content Card */}
-      <div className="glass p-6 sm:p-10 rounded-[2.5rem] border border-border/50 flex-1 flex flex-col justify-between overflow-hidden shadow-2xl">
+      <div className="glass p-6 sm:p-10 rounded-[2.5rem] flex-1 flex flex-col justify-between overflow-hidden shadow-xl ring-1 ring-border/20">
         
         {/* TOP: User Info Header */}
         <div className="flex items-center gap-6 pb-6 sm:pb-10 border-b border-border/50 shrink-0">
@@ -196,7 +196,7 @@ function Profile() {
 
         {/* BOTTOM: Preferences and Account Actions */}
         <div className="pt-6 sm:pt-10 border-t border-border/50 space-y-6 sm:space-y-8 shrink-0">
-          <div className="flex items-center justify-between pl-6 pr-4 py-3 sm:py-4 bg-bg-secondary/50 rounded-2xl sm:rounded-full border border-border/50 group">
+          <div className="flex items-center justify-between pl-6 pr-4 py-3 sm:py-4 bg-bg-secondary/50 rounded-2xl sm:rounded-full border border-border/30 group">
             <div className="flex flex-col">
               <p className="text-sm sm:text-base font-black text-text-primary capitalize tracking-widest">Theme Mode</p>
               <p className="text-[10px] sm:text-xs text-text-secondary font-bold">Switch Appearance</p>

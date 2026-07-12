@@ -2,6 +2,7 @@ import { X, Home } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { adminService } from '../../services/adminService';
 import toast from 'react-hot-toast';
+import CustomSelect from '../ui/CustomSelect';
 
 function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
   const [roomForm, setRoomForm] = useState({ 
@@ -51,8 +52,8 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
 
   return (
     <div className="fixed inset-0 bg-neutral/60 backdrop-blur-md flex items-center justify-center z-[100] p-4">
-      <div className="bg-neutral/90 w-full max-w-md rounded-[3rem] shadow-ambient overflow-hidden animate-in fade-in zoom-in duration-300 font-display border border-white/5">
-        <div className="p-8 flex justify-between items-center bg-tonal-secondary/10">
+      <div className="bg-neutral/90 w-full max-w-md rounded-[3rem] shadow-ambient animate-in fade-in zoom-in duration-300 font-display border border-white/5">
+        <div className="p-8 flex justify-between items-center bg-tonal-secondary/10 rounded-t-[3rem]">
           <div className="flex items-center gap-4">
             <div className="bg-primary/10 p-3 rounded-2xl shadow-ambient">
               <Home className="text-primary" size={24} />
@@ -80,20 +81,27 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
               placeholder="e.g. 5013, Audi-2"
               value={roomForm.name}
               onChange={(e) => setRoomForm({...roomForm, name: e.target.value})}
-              className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+              className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Building/Block</label>
-              <input 
-                required
-                type="text"
-                placeholder="e.g. Block VI"
+              <CustomSelect 
                 value={roomForm.building}
-                onChange={(e) => setRoomForm({...roomForm, building: e.target.value})}
-                className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+                onChange={(val) => setRoomForm({...roomForm, building: val})}
+                options={[
+                  { value: '4th Block', label: '4th Block' },
+                  { value: '5th Block', label: '5th Block' },
+                  { value: '6th Block', label: '6th Block' },
+                  { value: '8th Block', label: '8th Block' },
+                  ...(roomForm.building && !['4th Block', '5th Block', '6th Block', '8th Block'].includes(roomForm.building)
+                    ? [{ value: roomForm.building, label: roomForm.building }]
+                    : [])
+                ]}
+                placeholder="Select Building/Block"
+                buttonClassName="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-body flex items-center justify-between text-left"
               />
             </div>
             <div className="space-y-1.5">
@@ -106,7 +114,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
                 placeholder="0 for G, 1 for 1st"
                 value={roomForm.floor}
                 onChange={(e) => setRoomForm({...roomForm, floor: parseInt(e.target.value) || 0})}
-                className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+                className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
               />
             </div>
           </div>
@@ -121,20 +129,17 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
                 placeholder="e.g. 60"
                 value={roomForm.capacity}
                 onChange={(e) => setRoomForm({...roomForm, capacity: parseInt(e.target.value) || 0})}
-                className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+                className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
               />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Room Type</label>
-              <select 
+              <CustomSelect 
                 value={roomForm.type}
-                onChange={(e) => setRoomForm({...roomForm, type: e.target.value})}
-                className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
-              >
-                {roomTypes.map(t => (
-                  <option key={t} value={t} className="bg-surface-mid text-text-primary">{t}</option>
-                ))}
-              </select>
+                onChange={(val) => setRoomForm({...roomForm, type: val})}
+                options={roomTypes.map(t => ({ value: t, label: t }))}
+                buttonClassName="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-body flex items-center justify-between text-left"
+              />
             </div>
           </div>
 

@@ -27,7 +27,7 @@ export const AdminFilterBar = ({
   const showSearch = ['bookings', 'promotions', 'users', 'rooms', 'departments'].includes(activeTab);
 
   return (
-    <div className="p-4 sm:p-6 border-b border-border/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-secondary/20 shrink-0">
+    <div className="p-4 sm:p-6 border-b border-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-low/60 backdrop-blur-sm shrink-0">
       <div>
         <h2 className="text-xl font-extrabold text-text-primary capitalize tracking-tight font-display">
           {headerTitle}
@@ -43,7 +43,7 @@ export const AdminFilterBar = ({
               placeholder={`Search ${activeTab}...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-56 bg-bg-primary/50 border border-border/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary transition-all font-bold placeholder:text-text-secondary/30 pl-9 text-text-primary"
+              className="w-full sm:w-56 bg-bg-primary/50 border border-border/20 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary transition-all font-bold placeholder:text-text-secondary/30 pl-9 text-text-primary"
             />
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/40" size={14} />
           </div>
@@ -52,7 +52,7 @@ export const AdminFilterBar = ({
         {/* Action buttons */}
         {activeTab === 'bookings' && (
           <>
-            <div className="flex items-center gap-1.5 bg-tonal-secondary/10 p-1 rounded-xl font-display font-bold text-[10px]">
+            <div className="flex items-center gap-1.5 bg-tonal-secondary/10 p-1 rounded-xl font-display font-bold text-[10px] ring-1 ring-border/15">
               <button 
                 onClick={() => setFilterRange('day')}
                 className={`px-3 py-1 rounded-lg capitalize font-extrabold transition-all tracking-widest ${filterRange === 'day' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}

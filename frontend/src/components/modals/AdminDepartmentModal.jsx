@@ -64,7 +64,7 @@ function AdminDepartmentModal({ isOpen, onClose, editingDept, fetchDepts }) {
               placeholder="e.g. Department of CSE"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-bold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner font-body"
+              className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-secondary/40 placeholder:font-normal font-body"
             />
           </div>
 

@@ -52,7 +52,7 @@ const Login = () => {
       {/* Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary-accent/10 blur-[120px] rounded-full"></div>
       
-      <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-10 shadow-ambient space-y-8 animate-in fade-in zoom-in duration-300">
+      <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-10 shadow-xl ring-1 ring-border/20 space-y-8 animate-in fade-in zoom-in duration-300">
         <div className="text-center space-y-2">
           <div className="inline-flex mb-4">
             <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.5rem] shadow-ambient" />
@@ -76,7 +76,7 @@ const Login = () => {
             <input
               id="email"
               type="email"
-              className="w-full bg-surface-highest/10 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
+              className="w-full bg-surface-mid/40 ring-1 ring-border/20 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
               placeholder="rollno@nsut.ac.in"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -96,7 +96,7 @@ const Login = () => {
             <input
               id="password"
               type="password"
-              className="w-full bg-surface-highest/10 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
+              className="w-full bg-surface-mid/40 ring-1 ring-border/20 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

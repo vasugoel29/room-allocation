@@ -157,6 +157,7 @@ function App() {
   const { isDesktop } = useWindowSize();
   const location = useLocation();
   const navigate = useNavigate();
+  const activeTab = new URLSearchParams(location.search).get('tab');
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
@@ -286,7 +287,7 @@ function App() {
                     </div>
                   </div>
 
-                  {(location.pathname === '/calendar' || location.pathname === '/admin') && (
+                  {location.pathname === '/calendar' && (
                     <div className="space-y-4 pt-4">
                       <p className="px-4 text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] mb-2 opacity-50 font-display">Discovery</p>
                       <RoomFilter />

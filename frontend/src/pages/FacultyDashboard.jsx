@@ -155,10 +155,10 @@ function FacultyDashboard() {
     <div className="p-4 sm:p-8 w-full h-full overflow-y-auto no-scrollbar space-y-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-2xl font-extrabold tracking-tight text-text-primary capitalize font-display">Faculty Portal</h2>
-        <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest opacity-40 font-display">Review student requests and manage your scheduled bookings.</p>
+        <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest opacity-60 font-display">Review student requests and manage your scheduled bookings.</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 bg-tonal-secondary/10 p-1.5 rounded-2xl font-display">
+      <div className="grid grid-cols-3 gap-2 bg-tonal-secondary/10 p-1.5 rounded-2xl font-display ring-1 ring-border/15">
         {[
           { id: 'PENDING', label: `Pending (${pendingRequests.length})` },
           { id: 'ACCEPTED', label: 'Approved' },
@@ -193,17 +193,17 @@ function FacultyDashboard() {
           ))}
         </div>
       ) : DISPLAY_BOOKINGS.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 px-4 text-center rounded-[2.5rem] bg-tonal-secondary/5 m-4">
+        <div className="flex flex-col items-center justify-center py-24 px-4 text-center rounded-[2.5rem] bg-surface-low/60 ring-1 ring-border/10 m-4 shadow-sm">
           <div className="w-16 h-16 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-6">
             <Check size={32} />
           </div>
           <h3 className="text-xl font-extrabold text-text-primary mb-2 font-display capitalize tracking-tight">System Synchronized</h3>
-          <p className="text-text-secondary max-w-sm text-[10px] font-extrabold opacity-40 capitalize tracking-widest leading-loose">There are no pending actions in this architectural quadrant right now.</p>
+          <p className="text-text-secondary max-w-sm text-[10px] font-extrabold opacity-60 capitalize tracking-widest leading-loose">There are no pending actions in this architectural quadrant right now.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {DISPLAY_BOOKINGS.map(req => (
-            <div key={req.id} className="bg-surface-low rounded-2xl p-5 shadow-ambient flex flex-col gap-4">
+            <div key={req.id} className="bg-surface-low rounded-2xl p-5 shadow-sm ring-1 ring-border/15 flex flex-col gap-4">
               <div className="flex justify-between items-start gap-3 pb-2">
                 <div className="flex-1">
                   {activeTab === 'PENDING' && (

@@ -66,17 +66,17 @@ export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = 
   return (
     <>
       {/* Left Sub-Sidebar (Desktop view) */}
-      <div className="hidden md:flex w-64 flex-col shrink-0 gap-6 border-r border-border/10 pr-6 overflow-y-auto no-scrollbar">
+      <div className="hidden md:flex w-64 flex-col shrink-0 gap-6 border-r border-border/20 pr-6 overflow-y-auto no-scrollbar">
         <div className="flex flex-col gap-6">
           {categories.map(cat => (
             <div key={cat} className="space-y-2">
-              <span className="text-[10px] font-black tracking-widest text-text-secondary capitalize opacity-45 px-3">{cat}</span>
+              <span className="text-[10px] font-black tracking-widest text-text-secondary capitalize opacity-65 px-3">{cat}</span>
               <div className="flex flex-col gap-1 font-display">
                 {tabOptions.filter(opt => opt.category === cat).map(opt => (
                   <button 
                     key={opt.id}
                     onClick={() => setActiveTab(opt.id)}
-                    className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all text-left ${activeTab === opt.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all text-left ${activeTab === opt.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-surface-mid'}`}
                   >
                     <div className="flex items-center gap-3">
                       {opt.icon}
