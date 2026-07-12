@@ -1,4 +1,5 @@
 import { Clock, ArrowRight, Trash2 } from 'lucide-react';
+import { CAMPUS_TIME_ZONE, getIstHour } from '../../utils/timezone';
 
 const getStatusClasses = (status) => {
   switch (status) {
@@ -48,10 +49,10 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
               <Clock size={16} />
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-text-primary">
-                  {new Date(item.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                  {new Date(item.start_time).toLocaleDateString([], { timeZone: CAMPUS_TIME_ZONE, weekday: 'short', month: 'short', day: 'numeric' })}
                 </span>
                 <span className="text-[10px] font-medium opacity-60">
-                  {new Date(item.start_time).getHours().toString().padStart(2, '0')}:00 - {(new Date(item.start_time).getHours() + 1).toString().padStart(2, '0')}:00
+                  {getIstHour(item.start_time).toString().padStart(2, '0')}:00 - {(getIstHour(item.start_time) + 1).toString().padStart(2, '0')}:00
                 </span>
               </div>
             </div>
@@ -94,11 +95,11 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
                 <div className="flex items-center gap-2 text-text-primary">
                   <Clock size={14} className="text-text-secondary opacity-40" />
                   <span className="text-xs font-bold whitespace-nowrap">
-                    {new Date(item.start_time).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {new Date(item.start_time).toLocaleDateString([], { timeZone: CAMPUS_TIME_ZONE, weekday: 'short', month: 'short', day: 'numeric' })}
                   </span>
                   <ArrowRight size={12} className="text-text-secondary opacity-20" />
                   <span className="text-xs font-black bg-bg-secondary px-1.5 py-0.5 rounded border border-border">
-                    {new Date(item.start_time).getHours().toString().padStart(2, '0')}:00
+                    {getIstHour(item.start_time).toString().padStart(2, '0')}:00
                   </span>
                 </div>
               </td>

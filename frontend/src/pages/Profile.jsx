@@ -12,8 +12,9 @@ function Profile() {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     branch: user?.branch || '',
-    year: user?.year || '',
+    semester: user?.semester || '',
     section: user?.section || '',
+    group_name: user?.group_name || '',
     departmentName: user?.department_name || '',
   });
   const [loading, setLoading] = useState(false);
@@ -162,29 +163,45 @@ function Profile() {
                 <div className="space-y-2">
                   <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
                     <BookOpen size={14} className="text-accent" />
-                    Year & Section
+                    Semester, Section & Group
                   </label>
                   <div className="flex gap-3">
                     {isEditing ? (
                       <>
                         <input 
-                          name="year"
-                          value={formData.year}
+                          name="semester"
+                          type="number"
+                          min="1"
+                          max="8"
+                          value={formData.semester}
                           onChange={handleChange}
-                          placeholder="Year"
+                          placeholder="Sem"
                           className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
                         />
                         <input 
                           name="section"
+                          type="number"
+                          min="1"
+                          max="15"
                           value={formData.section}
                           onChange={handleChange}
                           placeholder="Sec"
                           className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
                         />
+                        <input 
+                          name="group_name"
+                          type="number"
+                          value={formData.group_name}
+                          onChange={handleChange}
+                          placeholder="Group"
+                          className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
+                        />
                       </>
                     ) : (
                       <p className="font-bold text-base sm:text-lg text-text-primary">
-                        {user.year ? `Year ${user.year}` : ''} {user.section ? `Section ${user.section}` : 'Not set'}
+                        {user.semester ? `Semester ${user.semester}` : 'No Semester'} 
+                        {user.section ? ` · Section ${user.section}` : ''} 
+                        {user.group_name ? ` · Group ${user.group_name}` : ''}
                       </p>
                     )}
                   </div>

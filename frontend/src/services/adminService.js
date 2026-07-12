@@ -70,6 +70,16 @@ export const adminService = {
     return res.json();
   },
 
+  getBranches: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const res = await api.get(`/branches?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch branches');
+    return res.json();
+  },
+
   approveUser: async (id) => {
     const res = await api.patch(`/auth/approve-user/${id}`);
     if (!res.ok) throw new Error('Approval failed');
@@ -186,6 +196,24 @@ export const adminService = {
       const err = await res.json();
       throw new Error(err.error || 'Failed to delete department');
     }
+    return res.json();
+  },
+
+  createBranch: async (data) => {
+    const res = await api.post('/branches', data);
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed to create branch');
+    return res.json();
+  },
+
+  updateBranch: async (id, data) => {
+    const res = await api.patch(`/branches/${id}`, data);
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed to update branch');
+    return res.json();
+  },
+
+  deleteBranch: async (id) => {
+    const res = await api.delete(`/branches/${id}`);
+    if (!res.ok) throw new Error((await res.json()).error || 'Failed to delete branch');
     return res.json();
   },
 

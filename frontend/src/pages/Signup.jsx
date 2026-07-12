@@ -13,8 +13,9 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [branch, setBranch] = useState('');
-  const [year, setYear] = useState(1);
+  const [semester, setSemester] = useState(1);
   const [section, setSection] = useState(1);
+  const [groupName, setGroupName] = useState('');
   const [role, setRole] = useState('VIEWER'); // VIEWER (Student) or FACULTY
   const [departmentName, setDepartmentName] = useState('');
   const { departments } = useDepartments();
@@ -24,7 +25,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
   
   // Dropdown states
   const [isDeptOpen, setIsDeptOpen] = useState(false);
-  const [isYearOpen, setIsYearOpen] = useState(false);
+  const [isSemesterOpen, setIsSemesterOpen] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
   const [isFetching, setIsFetching] = useState(false);
 
@@ -57,7 +58,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           if (apiStudent.branch.branchName) setDepartmentName(apiStudent.branch.branchName);
         }
 
-        // Smart Academic Year Calculation
+        // Smart Academic Semester Calculation
         if (apiStudent.year) {
           const batchYear = parseInt(apiStudent.year);
           const now = new Date();
@@ -67,7 +68,9 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           let calcYear = currentYear - batchYear;
           if (currentMonth >= 6) calcYear += 1;
           
-          setYear(Math.min(4, Math.max(1, calcYear)));
+          const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
+          const calculatedSemester = isEvenSemester ? calcYear * 2 : (calcYear * 2) - 1;
+          setSemester(Math.min(8, Math.max(1, calculatedSemester)));
         }
 
         if (apiStudent.section) setSection(parseInt(apiStudent.section));
@@ -75,13 +78,13 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
         toast.success(`Welcome, ${apiStudent.name || 'Student'}! Details loaded.`);
       }
 
-      // Fallback: Parse Roll Number for Year and Branch if API data is missing some fields
+      // Fallback: Parse Roll Number for Semester and Branch if API data is missing some fields
       const normalizedRoll = rollNo.toUpperCase();
       
       // Email Fallback
       if (!email) setEmail(`${normalizedRoll.toLowerCase()}@nsut.ac.in`);
 
-      // 1. Extract Batch/Year (e.g. 2022, 22)
+      // 1. Extract Batch/Year (e.g. 2022, 22) and calculate semester
       const yearMatch = normalizedRoll.match(/(20\d{2})|(\d{2})/);
       if (yearMatch && (!apiStudent || !apiStudent.year)) {
         const batch = yearMatch[1] || `20${yearMatch[2]}`;
@@ -91,8 +94,9 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
         let acadYear = currentYear - parseInt(batch);
         if (currentMonth >= 6) acadYear += 1;
 
-        const calculatedYear = Math.max(1, Math.min(4, acadYear));
-        setYear(calculatedYear);
+        const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
+        const calculatedSemester = isEvenSemester ? acadYear * 2 : (acadYear * 2) - 1;
+        setSemester(Math.min(8, Math.max(1, calculatedSemester)));
       }
 
       // 2. Extract Branch (common codes)

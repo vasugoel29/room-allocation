@@ -20,14 +20,15 @@ import { getDatesOfWeek } from '../utils/dateHelpers';
 import { toTitleCase, getShortDept } from '../utils/roleUtils';
 import { WeekView } from '../components/ui/WeekView';
 import CustomSelect from '../components/ui/CustomSelect';
+import { getIstDateKey, getIstHour, getIstWeekday } from '../utils/timezone';
 
 function AdminTimetable() {
   const [searchType, setSearchType] = useState('FACULTY'); // 'FACULTY' | 'SECTION'
   const [facultyName, setFacultyName] = useState('');
   const [dept, setDept] = useState('IT');
-  const [year, setYear] = useState('3');
+  const [semester, setSemester] = useState('6');
   const [section, setSection] = useState('1');
-  const [selectedDay, setSelectedDay] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDay, setSelectedDay] = useState(getIstDateKey(new Date()));
   const [viewMode, setViewMode] = useState('day'); // 'day' | 'week'
   
   const [data, setData] = useState(null);
@@ -72,11 +73,8 @@ function AdminTimetable() {
         params.append('name', targetName);
       }
       else {
-        // Calculate Semester from Year (matching student portal even semester database mapping)
-        const calculatedSemester = Number(year) * 2;
-
         params.append('department', dept);
-        params.append('semester', String(calculatedSemester));
+        params.append('semester', String(semester));
         params.append('section', section);
       }
 
@@ -102,7 +100,7 @@ function AdminTimetable() {
     if (!data) return [];
     
     const targetDay = dateStr || selectedDay;
-    const dayOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][new Date(targetDay).getDay()];
+    const dayOfWeek = getIstWeekday(targetDay);
     
     // 1. Static Slots
     const staticItems = (data.staticSlots || [])
@@ -113,7 +111,7 @@ function AdminTimetable() {
         if (hour >= 1 && hour < 8) realHour += 12;
 
         const isOverridden = data.overrides?.some(o => 
-          new Date(o.date).toISOString().split('T')[0] === targetDay && o.hour === realHour
+          getIstDateKey(o.date) === targetDay && o.hour === realHour
         );
         
         if (isOverridden) return null;
@@ -131,10 +129,10 @@ function AdminTimetable() {
 
     // 2. Dynamic Bookings
     const dynamicItems = (data.dynamicBookings || [])
-      .filter(b => new Date(b.start_time).toISOString().split('T')[0] === targetDay)
+      .filter(b => getIstDateKey(b.start_time) === targetDay)
       .map(b => {
         const bStart = new Date(b.start_time);
-        const hour = bStart.getHours();
+        const hour = getIstHour(bStart);
         return {
           time: hour,
           displayTime: `${String(hour).padStart(2, '0')}:00 - ${String(hour + 1).padStart(2, '0')}:00`,
@@ -165,7 +163,7 @@ function AdminTimetable() {
     
     dates.forEach(date => {
       const merged = getMergedSchedule(date);
-      const dayName = new Date(date).toLocaleDateString('en-US', { weekday: 'long' });
+      const dayName = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }).format(new Date(`${date}T12:00:00+05:30`));
       weekData[dayName] = {
         date,
         slots: merged
@@ -289,11 +287,11 @@ function AdminTimetable() {
                 />
               </div>
               <div className="space-y-2 text-text-primary">
-                <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Year</label>
+                <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Semester</label>
                 <CustomSelect 
-                  value={year} 
-                  onChange={setYear}
-                  options={[1,2,3,4].map(y => ({ value: String(y), label: String(y) }))}
+                  value={semester} 
+                  onChange={setSemester}
+                  options={[1,2,3,4,5,6,7,8].map(s => ({ value: String(s), label: `Semester ${s}` }))}
                   buttonClassName="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary flex items-center justify-between text-left"
                 />
               </div>

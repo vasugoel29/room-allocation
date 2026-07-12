@@ -46,6 +46,7 @@ import promotionRoutes from './routes/promotionRoutes.js';
 import facultyRoutes from './routes/facultyRoutes.js';
 import transferRoutes from './routes/transferRoutes.js';
 import departmentRoutes from './routes/departmentRoutes.js';
+import branchRoutes from './routes/branchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
 
@@ -176,6 +177,7 @@ app.use('/api/promotions', promotionRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/branches', branchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/timetable', timetableRoutes);
 

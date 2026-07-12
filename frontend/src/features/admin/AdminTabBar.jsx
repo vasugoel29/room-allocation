@@ -11,7 +11,8 @@ import {
   Download, 
   Database,
   ChevronDown,
-  LayoutGrid
+  LayoutGrid,
+  GitBranch
 } from 'lucide-react';
 
 export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = [] }) => {
@@ -34,7 +35,7 @@ export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = 
         </span>
       ) : null
     },
-    { id: 'timetable', label: 'Timetable Overrides', icon: <Database size={16} />, category: 'Operations' },
+    { id: 'timetable', label: 'Timetable', icon: <Database size={16} />, category: 'Operations' },
     { id: 'room-grid', label: 'Room Grid', icon: <LayoutGrid size={16} />, category: 'Operations' },
     
     { 
@@ -50,6 +51,7 @@ export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = 
     },
     { id: 'rooms', label: 'Rooms', icon: <Home size={16} />, category: 'Registry' },
     { id: 'departments', label: 'Departments', icon: <Layers size={16} />, category: 'Registry' },
+    { id: 'branches', label: 'Branches', icon: <GitBranch size={16} />, category: 'Registry' },
     
     { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={16} />, category: 'System' },
     { id: 'audit', label: 'Audit Log', icon: <Activity size={16} />, category: 'System' },

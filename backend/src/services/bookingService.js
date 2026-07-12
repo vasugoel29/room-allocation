@@ -6,7 +6,8 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { notifyFacultyNewRequest, notifyBookingCancelled } from '../utils/emailService.js';
 import { logActivity } from './loggerService.js';
-import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
+import { getHourFromTime } from '../utils/timetableLogic.js';
+import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 
 /**
  * Fetch bookings with optional filters
@@ -61,8 +62,8 @@ const hasTimetableOverlap = (slotTime, bookingStartHour, bookingEndHour) => {
   if (parts.length < 2) return false;
   
   const [startStr, endStr] = parts;
-  const slotStartHour = normalizeHour(parseInt(startStr.split(':')[0]));
-  const slotEndHour = normalizeHour(parseInt(endStr.split(':')[0]));
+  const slotStartHour = getHourFromTime(startStr);
+  const slotEndHour = getHourFromTime(endStr);
   
   return bookingStartHour < slotEndHour && slotStartHour < bookingEndHour;
 };
@@ -72,17 +73,14 @@ const checkTimetableClash = async (client, requester, reqData, userId) => {
   if (!start_time || !end_time) return null;
 
   const requesterRole = (requester?.role || '').toUpperCase();
-  if (requesterRole === 'ADMIN') return null;
+  // Admins may book outside a student section timetable, but a booking that
+  // names a faculty member must never overlap that faculty member's timetable.
+  if (requesterRole === 'ADMIN' && !faculty_id) return null;
 
-  const startDate = new Date(start_time);
-  const endDate = new Date(end_time);
-  const dayName = getDayOfWeek(startDate);
-  
-  // Create paired candidates (start hour, end hour) to avoid mixing timezones
-  const bookingHourCandidates = [
-    { start: normalizeHour(startDate.getHours()), end: normalizeHour(endDate.getHours()) },
-    { start: normalizeHour(startDate.getUTCHours()), end: normalizeHour(endDate.getUTCHours()) }
-  ];
+  const startParts = getIstParts(start_time);
+  const endParts = getIstParts(end_time);
+  const dayName = startParts.day;
+  const bookingHourCandidates = [{ start: normalizeHour(startParts.hour), end: normalizeHour(endParts.hour) }];
 
   const clashes = [];
 
@@ -190,10 +188,15 @@ export const createBooking = async (client, reqData, userId, requester = null) =
   const timetableClash = await checkTimetableClash(client, requesterProfile, reqData, userId);
   if (timetableClash) {
     logger.info('Conflict: Timetable clash', { room_id, start_time, user_id: userId, clash: timetableClash });
+    const isSelectedFacultyBusy = timetableClash.label === 'the selected faculty timetable';
     return {
-      error: `This booking clashes with an existing timetable slot in ${timetableClash.label}`,
+      error: isSelectedFacultyBusy
+        ? 'The selected faculty member is busy during this slot.'
+        : `This booking clashes with an existing timetable slot in ${timetableClash.label}`,
       status: 409,
-      conflict: timetableClash
+      conflict: isSelectedFacultyBusy
+        ? { type: 'faculty_busy' }
+        : timetableClash
     };
   }
 
@@ -254,10 +257,9 @@ const handleRescheduleFreedUpRoom = async (client, reqData, start_time) => {
     dayName = reschedule_day;
     hour = parseInt(reschedule_hour);
   } else {
-    const dateObj = new Date(start_time);
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    dayName = days[dateObj.getDay()];
-    hour = dateObj.getHours();
+    const parts = getIstParts(start_time);
+    dayName = parts.day;
+    hour = parts.hour;
   }
 
   await roomRepository.upsertAvailability(resRoomId, dayName, hour, true, client);
@@ -405,11 +407,11 @@ export const createBookingHandler = async (reqData, user) => {
   const { start_time } = reqData;
   const userId = user.id;
   const startTimeObj = new Date(start_time);
+  const startParts = getIstParts(start_time);
   const now = new Date();
 
   // Weekend check for students (roles other than ADMIN and FACULTY)
-  const dayOfWeek = startTimeObj.getDay(); // 0 is Sunday, 6 is Saturday
-  if ((dayOfWeek === 0 || dayOfWeek === 6) && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
+  if ((startParts.day === 'Sun' || startParts.day === 'Sat') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
     return { error: 'Students are not allowed to book rooms on weekends', status: 400 };
   }
 
@@ -575,10 +577,8 @@ export const quickBookHandler = async (reqData, user) => {
       roomId = room.id;
     }
 
-    const startTime = new Date(date);
-    startTime.setHours(parseInt(slot), 0, 0, 0);
-    const endTime = new Date(startTime);
-    endTime.setHours(startTime.toISOString() ? startTime.getHours() + 1 : 0);
+    const startTime = new Date(istDateTimeToUtc(date, parseInt(slot)));
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
 
     const res = await createBooking(client, { 
       room_id: roomId, 

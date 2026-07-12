@@ -2,6 +2,7 @@ import * as db from '../db.js';
 import cache from '../utils/cache.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import logger from '../utils/logger.js';
+import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 
 export const getRooms = async (req, res) => {
   const { capacity, ac, projector, building, floor, type, page, limit } = req.query;
@@ -69,10 +70,8 @@ export const getAdminRoomStatus = async (req, res) => {
     const cached = cache.get(cacheKey);
     if (cached) return res.json(cached);
 
-    const startTime = new Date(date);
-    startTime.setHours(parseInt(slot), 0, 0, 0);
-    const endTime = new Date(startTime);
-    endTime.setHours(startTime.getHours() + 1);
+    const startTime = new Date(istDateTimeToUtc(date, parseInt(slot)));
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
 
     const statuses = await roomRepository.getAdminRoomStatus(startTime.toISOString(), endTime.toISOString());
     
@@ -193,11 +192,9 @@ export const getRoomWeekSchedule = async (req, res) => {
   if (!weekStart) return res.status(400).json({ error: 'weekStart (YYYY-MM-DD) is required' });
 
   try {
-    // Parse weekStart as LOCAL date, not UTC
-    const start = new Date(weekStart + 'T00:00:00');
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6); // Add 6 days locally
-    end.setHours(23, 59, 59, 999);
+    // weekStart is a campus-local calendar date. Query the full IST week.
+    const start = new Date(istDateTimeToUtc(weekStart, 0));
+    const end = new Date(start.getTime() + (7 * 24 * 60 * 60 * 1000) - 1);
 
     const [roomResult, availResult, ttResult, bookingsResult] = await Promise.all([
       // Room details
@@ -260,16 +257,13 @@ export const getRoomWeekSchedule = async (req, res) => {
 
     // Normalise bookings to {date, startHour, endHour, ...}
     const bookings = bookingsResult.rows.map(b => {
-      const st = new Date(b.start_time);
-      const et = new Date(b.end_time);
-      const year = st.getFullYear();
-      const month = String(st.getMonth() + 1).padStart(2, '0');
-      const day = String(st.getDate()).padStart(2, '0');
+      const st = getIstParts(b.start_time);
+      const et = getIstParts(b.end_time);
       return {
         id: b.id,
-        date: `${year}-${month}-${day}`,
-        startHour: st.getHours(),
-        endHour: et.getHours(),
+        date: st.date,
+        startHour: st.hour,
+        endHour: et.hour,
         start_time: b.start_time.toISOString(),
         end_time: b.end_time.toISOString(),
         purpose: b.purpose,

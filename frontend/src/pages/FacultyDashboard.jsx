@@ -7,6 +7,7 @@ import { bookingService } from '../services/bookingService';
 import toast from 'react-hot-toast';
 import { useFacultyRequests } from '../hooks/useFacultyRequests';
 import { api } from '../utils/api';
+import { getIstDateKey, getIstHour } from '../utils/timezone';
 
 function FacultyDashboard() {
   const { user, bookings, refreshAllData } = useContext(AppContext);
@@ -55,9 +56,8 @@ function FacultyDashboard() {
         // Check for conflicts
         try {
           const startTimeRaw = new Date(req.start_time);
-          const date = startTimeRaw.toISOString().split('T')[0];
-          // Use IST hour for comparison with static slots
-          const hour = startTimeRaw.getHours();
+          const date = getIstDateKey(startTimeRaw);
+          const hour = getIstHour(startTimeRaw);
           console.log('[DEBUG] Checking conflict at approve for:', user.id, date, hour);
           const check = await roomService.checkFacultyAvailability(user.id, date, hour);
           

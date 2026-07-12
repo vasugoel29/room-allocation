@@ -5,6 +5,7 @@ import { X, AlertCircle, CheckCircle } from "lucide-react";
 import { bookingService } from "../../services/bookingService";
 import { roomService } from "../../services/roomService";
 import { useSearchDebounce } from "../../hooks/useSearchDebounce";
+import { addMinutesToUtc, getIstDateKey, getIstHour, istDateTimeToUtc } from '../../utils/timezone';
 
 import BookingTypeSelector from "../../features/booking/BookingTypeSelector";
 import RescheduleDetails from "../../features/booking/RescheduleDetails";
@@ -17,6 +18,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
     rooms,
     faculties,
     bookings,
+    availability,
+    timetableData,
     refreshAllData,
   } = useContext(AppContext);
   const modalRef = useRef(null);
@@ -68,7 +71,6 @@ function BookingModal({ slot, onClose, onSuccess }) {
   const [purpose, setPurpose] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [confirmedConflict, setConfirmedConflict] = useState(false);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictData, setConflictData] = useState(null);
 
@@ -97,10 +99,10 @@ function BookingModal({ slot, onClose, onSuccess }) {
       const bStatus = b.status || "ACTIVE";
       if (bStatus !== "ACTIVE" && bStatus !== "PENDING") return false;
       const bStart = new Date(b.start_time);
-      const bHour = bStart.getHours();
+      const bHour = getIstHour(bStart);
 
-      const bDateStr = bStart.toDateString();
-      const slotDateStr = new Date(slot.date).toDateString();
+      const bDateStr = getIstDateKey(bStart);
+      const slotDateStr = getIstDateKey(slot.date);
 
       return (
         bDateStr === slotDateStr && bHour === slot.hour && b.room_id === roomId
@@ -142,26 +144,17 @@ function BookingModal({ slot, onClose, onSuccess }) {
     setLoading(true);
     setError("");
 
-    const targetDate = new Date(slot.date);
-    targetDate.setHours(slot.hour, 0, 0, 0);
-    const dateStr = targetDate.toISOString().split('T')[0];
+    const dateStr = getIstDateKey(slot.date);
 
     // Faculty availability check for students
-    if (isStudent && selectedFaculty && !confirmedConflict) {
+    if (isStudent && selectedFaculty) {
       try {
-        console.log('[DEBUG] Student check faculty availability for:', selectedFaculty, dateStr, slot.hour);
         const check = await roomService.checkFacultyAvailability(selectedFaculty, dateStr, slot.hour);
         if (check.isOccupied) {
-          const typeLabel = check.type === 'STATIC' ? 'Academic Class' : 'Existing Booking';
-          const facultyName = faculties.find(f => String(f.id) === String(selectedFaculty))?.name;
-          const confirmMsg = `Prof. ${facultyName} is busy with an ${typeLabel} (${check.content}) in this slot. \n\nDo you want to find another slot or CONTINUE ANYWAY?`;
-          
-          if (!window.confirm(confirmMsg)) {
-            setLoading(false);
-            return;
-          }
-          
-          setConfirmedConflict(true);
+          setConflictData({ type: 'faculty_busy', date: dateStr, hour: slot.hour });
+          setShowConflictDialog(true);
+          setLoading(false);
+          return;
         }
       } catch (err) {
         console.warn('Faculty check failed:', err);
@@ -169,11 +162,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
       }
     }
 
-    const start_time = targetDate.toISOString();
-
-    const endDate = new Date(targetDate);
-    endDate.setHours(slot.hour + 1);
-    const end_time = endDate.toISOString();
+    const start_time = istDateTimeToUtc(dateStr, slot.hour);
+    const end_time = addMinutesToUtc(start_time, 60);
 
     const isTransfer = !!getRoomBooking(selectedRoom);
 
@@ -228,7 +218,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
       onSuccess();
     } catch (err) {
       const errorMsg = err.message || "Booking failed";
-      if (err.conflict && errorMsg.includes('timetable')) {
+      if (err.conflict && (err.conflict.type === 'faculty_busy' || errorMsg.includes('timetable'))) {
         setConflictData({
           ...err.conflict,
           date: dateStr,
@@ -245,30 +235,21 @@ function BookingModal({ slot, onClose, onSuccess }) {
     }
   };
 
-  const handleConflictResolution = async (action) => {
-    if (action === 'cancelled') {
-      setShowConflictDialog(false);
-      setConflictData(null);
-      refreshAllData();
-      onSuccess();
-    } else if (action === 'reschedule') {
-      setShowConflictDialog(false);
-      setConflictData(null);
-      onClose();
-    }
-  };
-
   return (
     <>
       {showConflictDialog && conflictData && (
         <ConflictResolutionDialog
           conflict={conflictData}
+          facultyId={selectedFaculty}
+          facultyName={faculties.find((faculty) => String(faculty.id) === String(selectedFaculty))?.name}
+          user={user}
+          bookings={bookings}
+          availability={availability}
+          timetableData={timetableData}
           onCancel={() => {
             setShowConflictDialog(false);
             setConflictData(null);
           }}
-          onResolve={handleConflictResolution}
-          loading={loading}
         />
       )}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">

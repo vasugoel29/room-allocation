@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Download, UserPlus, Home, Layers } from 'lucide-react';
+import { Search, Download, UserPlus, Home, Layers, GitBranch } from 'lucide-react';
 
 export const AdminFilterBar = ({
   activeTab,
@@ -10,7 +10,8 @@ export const AdminFilterBar = ({
   exportCSV,
   openUserModal,
   openRoomModal,
-  openDeptModal
+  openDeptModal,
+  openBranchModal
 }) => {
   if (activeTab === 'timetable') return null;
 
@@ -24,7 +25,7 @@ export const AdminFilterBar = ({
           ? 'System Audit Log' 
           : `${activeTab} Management`;
 
-  const showSearch = ['bookings', 'promotions', 'users', 'rooms', 'departments'].includes(activeTab);
+  const showSearch = ['bookings', 'promotions', 'users', 'rooms', 'departments', 'branches'].includes(activeTab);
 
   return (
     <div className="p-4 sm:p-6 border-b border-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-low/60 backdrop-blur-sm shrink-0">
@@ -113,6 +114,13 @@ export const AdminFilterBar = ({
           >
             <Layers size={14} />
             Add Dept
+          </button>
+        )}
+
+        {activeTab === 'branches' && (
+          <button onClick={() => openBranchModal()} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient">
+            <GitBranch size={14} />
+            Add Branch
           </button>
         )}
       </div>

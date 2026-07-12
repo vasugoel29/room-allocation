@@ -1,56 +1,55 @@
 import React, { useState } from 'react';
 import { X, AlertTriangle, Clock, User, BookOpen } from 'lucide-react';
-import { bookingService } from '../../services/bookingService';
+import { formatTo24h, getClassConflict } from '../../utils/timetableLogic';
 import { roomService } from '../../services/roomService';
-import { formatTo24h, getHourFromTime } from '../../utils/timetableLogic';
 
-function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
-  const [resolution, setResolution] = useState(null);
+const BOOKING_HOURS = Array.from({ length: 10 }, (_, index) => index + 8); // 08:00–18:00 IST
 
-  const handleCancelClass = async () => {
-    if (!conflict?.booking_id && !conflict?.room) return;
-    setResolution('cancelling');
+function ConflictResolutionDialog({ conflict, onCancel, facultyId, facultyName, user, bookings = [], availability = [], timetableData = [] }) {
+  const isFacultyBusy = conflict?.type === 'faculty_busy' || /selected faculty timetable/i.test(conflict?.label || '');
+  const [availableSlots, setAvailableSlots] = useState(null);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  const showAvailableSlots = async () => {
+    if (!facultyId || !conflict?.date) return;
+    setLoadingSlots(true);
     try {
-      if (conflict.booking_id) {
-        await bookingService.cancelBooking(conflict.booking_id);
-      } else {
-        await roomService.createAvailabilityOverride({
-          room_name: conflict.room,
-          day: conflict.date || conflict.dateStr,
-          hour: conflict.hour ?? getHourFromTime(conflict.time),
-          is_available: true,
-          reason: `Class ${conflict.subject || 'Scheduled class'} cancelled for room booking`
-        });
-      }
-      onResolve('cancelled');
+      const checks = await Promise.all(BOOKING_HOURS.map(async (hour) => ({ hour, ...(await roomService.checkFacultyAvailability(facultyId, conflict.date, hour)) })));
+      
+      const freeSlots = checks.filter((slot) => {
+        // 1. Faculty must be free
+        if (slot.isOccupied) return false;
+        
+        // 2. Student section must be free (if student role)
+        const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+        if (isStudent) {
+          const hasClash = getClassConflict(user, conflict.date, slot.hour, bookings, availability, timetableData);
+          if (hasClash) return false;
+        }
+        return true;
+      });
+
+      setAvailableSlots(freeSlots.map((slot) => slot.hour));
     } catch (err) {
-      console.error('Failed to cancel class:', err);
-      setResolution(null);
+      console.error(err);
+      setAvailableSlots([]);
+    } finally {
+      setLoadingSlots(false);
     }
-  };
-
-  const handleReschedule = () => {
-    setResolution('reschedule');
-    onResolve('reschedule');
-  };
-
-  const handleDismiss = () => {
-    setResolution(null);
-    onCancel();
   };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4">
       <div
         className="absolute inset-0 bg-black/40 dark:bg-black/70 backdrop-blur-md"
-        onClick={handleDismiss}
+        onClick={onCancel}
         aria-hidden="true"
         tabIndex="-1"
       />
 
       <div className="relative w-full max-w-md glass rounded-[2.5rem] p-6 sm:p-8 shadow-ambient border-none max-h-[90dvh] overflow-y-auto no-scrollbar">
         <button
-          onClick={handleDismiss}
+          onClick={onCancel}
           aria-label="Close modal"
           className="absolute top-4 right-4 p-2 hover:bg-tonal-secondary/10 rounded-full text-text-secondary transition-all"
         >
@@ -63,15 +62,19 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
           </div>
           <div className="flex-1">
             <h2 className="text-xl sm:text-2xl font-extrabold text-text-primary font-display capitalize tracking-tight">
-              Class Conflict
+              {availableSlots ? 'Available Slots' : (isFacultyBusy ? 'Faculty Unavailable' : 'Class Conflict')}
             </h2>
             <p className="text-text-secondary text-xs sm:text-sm font-bold opacity-40 capitalize tracking-widest mt-1">
-              An existing class is scheduled for this time
+              {availableSlots ? `Available times for ${facultyName || 'the selected faculty member'}` : (isFacultyBusy ? 'The selected faculty member is busy' : 'An existing class is scheduled for this time')}
             </p>
           </div>
         </div>
 
-        <div className="bg-surface-mid rounded-2xl p-4 sm:p-5 mb-6 space-y-4">
+        {availableSlots ? (
+          <div className="bg-surface-mid rounded-2xl p-4 sm:p-5 mb-6">
+            {availableSlots.length ? <div className="grid grid-cols-2 gap-2">{availableSlots.map((hour) => <span key={hour} className="rounded-xl bg-surface-high px-3 py-2 text-center text-sm font-extrabold text-text-primary">{String(hour).padStart(2, '0')}:00 – {String(hour + 1).padStart(2, '0')}:00</span>)}</div> : <p className="text-sm font-bold text-text-secondary">No available slots remain from 08:00 to 18:00 IST.</p>}
+          </div>
+        ) : !isFacultyBusy && <div className="bg-surface-mid rounded-2xl p-4 sm:p-5 mb-6 space-y-4">
           <div className="space-y-3">
             {conflict?.subject && (
               <div className="flex items-start gap-3">
@@ -129,30 +132,22 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
               </div>
             )}
           </div>
-        </div>
+        </div>}
 
         <p className="text-text-secondary text-xs sm:text-sm font-bold mb-6 leading-relaxed">
-          This class already occupies the selected time. Cancel this class to free the room, or reschedule your booking for another slot.
+          {!availableSlots && (isFacultyBusy
+            ? 'The selected faculty member is busy during this slot. Please choose a different time or faculty member.'
+            : 'This timetable slot is unavailable. Please choose a different time or faculty member for your booking.')}
         </p>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex">
           <button
-            onClick={handleReschedule}
-            disabled={loading}
-            className="flex-1 px-4 py-3 rounded-[1.5rem] bg-surface-high hover:bg-surface-highest text-text-primary font-extrabold text-xs capitalize tracking-widest transition-all disabled:opacity-50"
+            onClick={availableSlots ? onCancel : (isFacultyBusy ? showAvailableSlots : onCancel)}
+            disabled={loadingSlots}
+            className="w-full px-4 py-3 rounded-[1.5rem] bg-surface-high hover:bg-surface-highest text-text-primary font-extrabold text-xs capitalize tracking-widest transition-all"
           >
-            Reschedule Booking
+            {availableSlots ? 'Choose a Listed Slot on the Calendar' : (loadingSlots ? 'Checking Availability…' : 'Choose Another Slot')}
           </button>
-
-          {(conflict?.booking_id || conflict?.room) && (
-            <button
-              onClick={handleCancelClass}
-              disabled={loading || resolution === 'reschedule'}
-              className="flex-1 px-4 py-3 rounded-[1.5rem] bg-red-500/15 hover:bg-red-500 text-red-500 hover:text-white font-extrabold text-xs capitalize tracking-widest transition-all disabled:opacity-50"
-            >
-              {resolution === 'cancelling' ? 'Cancelling...' : 'Cancel This Class'}
-            </button>
-          )}
         </div>
       </div>
     </div>

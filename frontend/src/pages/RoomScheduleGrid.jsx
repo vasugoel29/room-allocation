@@ -3,6 +3,7 @@ import { roomService } from '../services/roomService';
 import { bookingService } from '../services/bookingService';
 import { adminService } from '../services/adminService';
 import { toast } from 'react-hot-toast';
+import { getIstDateKey, getIstHour } from '../utils/timezone';
 import { 
   LayoutGrid, Calendar, ChevronLeft, ChevronRight, Search, 
   AlertTriangle, Check, Loader, User, Clock, Trash2, X, Plus
@@ -115,12 +116,9 @@ const RoomScheduleGrid = () => {
       if (b.start_time && b.end_time) {
         const st = new Date(b.start_time);
         const et = new Date(b.end_time);
-        const year = st.getFullYear();
-        const month = String(st.getMonth() + 1).padStart(2, '0');
-        const day = String(st.getDate()).padStart(2, '0');
-        const localDateStr = `${year}-${month}-${day}`;
-        const startHour = st.getHours();
-        const endHour = et.getHours();
+        const localDateStr = getIstDateKey(st);
+        const startHour = getIstHour(st);
+        const endHour = getIstHour(et);
         return localDateStr === dateStr && hour >= startHour && hour < endHour;
       }
       return b.date === dateStr && hour >= b.startHour && hour < b.endHour;

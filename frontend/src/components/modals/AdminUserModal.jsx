@@ -9,7 +9,7 @@ import CustomSelect from '../ui/CustomSelect';
 function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments }) {
   const [userForm, setUserForm] = useState({ 
     name: '', email: '', role: 'VIEWER', password: '', 
-    branch: '', year: 1, section: 1, departmentName: '' 
+    branch: '', year: 1, semester: 1, section: 1, group_name: 1, departmentName: '' 
   });
   
   const [isDeptOpen, setIsDeptOpen] = useState(false);
@@ -25,13 +25,15 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
         password: '',
         branch: editingUser.branch || '',
         year: editingUser.year || 1,
+        semester: editingUser.semester || Math.min((editingUser.year || 1) * 2, 8),
         section: editingUser.section || 1,
+        group_name: editingUser.group_name || 1,
         departmentName: editingUser.department_name || ''
       });
     } else {
       setUserForm({ 
         name: '', email: '', role: 'VIEWER', password: '', 
-        branch: '', year: 1, section: 1, departmentName: '' 
+        branch: '', year: 1, semester: 1, section: 1, group_name: 1, departmentName: '' 
       });
     }
   }, [editingUser, isOpen]);
@@ -133,6 +135,29 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                     isSectionOpen={isSectionOpen}
                     setIsSectionOpen={setIsSectionOpen}
                  />
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="space-y-2">
+                     <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Semester</label>
+                     <CustomSelect
+                       value={String(userForm.semester)}
+                       onChange={(value) => {
+                         const semester = Number(value);
+                         setUserForm({ ...userForm, semester, year: Math.ceil(semester / 2) });
+                       }}
+                       options={Array.from({ length: 8 }, (_, index) => ({ value: String(index + 1), label: `Semester ${index + 1}` }))}
+                       buttonClassName="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-body flex items-center justify-between text-left"
+                     />
+                   </div>
+                   <div className="space-y-2">
+                     <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Group</label>
+                     <CustomSelect
+                       value={String(userForm.group_name)}
+                       onChange={(value) => setUserForm({ ...userForm, group_name: Number(value) })}
+                       options={Array.from({ length: 10 }, (_, index) => ({ value: String(index + 1), label: `Group ${index + 1}` }))}
+                       buttonClassName="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-body flex items-center justify-between text-left"
+                     />
+                   </div>
+                 </div>
                </div>
              )}
 

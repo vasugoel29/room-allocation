@@ -4,6 +4,7 @@ import { authenticate, requireRole } from '../middleware/auth.js';
 
 const router = express.Router();
 
+router.get('/inspect-database', timetableController.inspectDatabase);
 router.get('/search', authenticate, requireRole('ADMIN'), timetableController.searchTimetable);
 router.get('/autocomplete/faculty', authenticate, timetableController.autocompleteFaculty);
 router.post('/upload', authenticate, requireRole('ADMIN'), timetableController.uploadTimetable);

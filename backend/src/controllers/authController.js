@@ -12,7 +12,7 @@ import {
 } from "../utils/emailService.js";
 
 export const signup = async (req, res) => {
-  const { name, email, password, branch, year, section, role, departmentName } =
+  const { name, email, password, branch, semester, section, group_name, role, departmentName } =
     req.body;
   try {
     const hash = await bcrypt.hash(password, 10);
@@ -27,17 +27,21 @@ export const signup = async (req, res) => {
     const allowedRoles = ["VIEWER", "STUDENT_REP", "FACULTY"];
     const finalRole = allowedRoles.includes(role) ? role : "VIEWER";
 
-    // Faculty requires approval
+    // Faculty requires approval; faculty has no student-specific fields
     const is_approved = finalRole === "FACULTY" ? false : true;
+    // Derive year from semester for backward compatibility (e.g. sem 6 → year 3)
+    const derivedYear = semester ? Math.ceil(parseInt(semester) / 2) : null;
 
     const user = await userService.createUser({
       name,
       email,
       passwordHash: hash,
       role: finalRole,
-      branch,
-      year,
-      section,
+      branch: finalRole === 'FACULTY' ? null : branch,
+      year: finalRole === 'FACULTY' ? null : derivedYear,
+      semester: finalRole === 'FACULTY' ? null : (semester ? parseInt(semester) : null),
+      section: finalRole === 'FACULTY' ? null : (section ? parseInt(section) : null),
+      group_name: finalRole === 'FACULTY' ? null : (group_name ? parseInt(group_name) : null),
       department_id,
       is_approved,
     });
@@ -80,7 +84,10 @@ export const login = async (req, res) => {
         name: user.name,
         branch: user.branch,
         year: user.year,
-        section: user.section
+        semester: user.semester,
+        section: user.section,
+        group_name: user.group_name,
+        department_id: user.department_id
       },
       JWT_SECRET,
       { expiresIn: "30d" },
@@ -96,8 +103,11 @@ export const login = async (req, res) => {
         name: user.name,
         branch: user.branch,
         year: user.year,
+        semester: user.semester,
         section: user.section,
+        group_name: user.group_name,
         department_name: user.department_name,
+        department_id: user.department_id,
       },
     });
   } catch (err) {
@@ -144,7 +154,7 @@ export const approveUser = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-  const { name, email, password, role, branch, year, section, departmentName } =
+  const { name, email, password, role, branch, semester, section, group_name, departmentName } =
     req.body;
   if (!password) {
     return res
@@ -159,14 +169,18 @@ export const createUser = async (req, res) => {
       department_id = await departmentService.ensureDepartment(departmentName);
     }
 
+    const derivedYear = semester ? Math.ceil(parseInt(semester) / 2) : null;
+
     const user = await userService.createUser({
       name,
       email,
       passwordHash: hash,
       role: role || "VIEWER",
-      branch,
-      year,
-      section,
+      branch: role === 'FACULTY' ? null : branch,
+      year: role === 'FACULTY' ? null : derivedYear,
+      semester: role === 'FACULTY' ? null : (semester ? parseInt(semester) : null),
+      section: role === 'FACULTY' ? null : (section ? parseInt(section) : null),
+      group_name: role === 'FACULTY' ? null : (group_name ? parseInt(group_name) : null),
       department_id,
       is_approved: true,
     });

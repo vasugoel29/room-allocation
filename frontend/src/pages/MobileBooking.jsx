@@ -7,6 +7,7 @@ import { getClassConflict, isRoomReallyFree } from '../utils/timetableLogic';
 import { getInitialBookingDateObject } from '../utils/dateHelpers';
 import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
+import { addMinutesToUtc, istDateTimeToUtc } from '../utils/timezone';
 
 function MobileBooking({ onBack }) {
   const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
@@ -68,7 +69,7 @@ function MobileBooking({ onBack }) {
   };
 
   // Step 1: Date & Time logic
-  const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
+  const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // final slot is 17:00–18:00
 
   const getDayName = (date) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
 
@@ -107,13 +108,9 @@ function MobileBooking({ onBack }) {
     setLoading(true);
     setError('');
 
-    const targetDate = new Date(selectedDate);
-    targetDate.setHours(selectedHour, 0, 0, 0);
-    const start_time = targetDate.toISOString();
-    
-    const endDate = new Date(targetDate);
-    endDate.setHours(selectedHour + 1);
-    const end_time = endDate.toISOString();
+    const start_time = istDateTimeToUtc(dateStr, selectedHour);
+    const end_time = addMinutesToUtc(start_time, 60);
+    const targetDate = new Date(start_time);
 
     const payload = {
       room_id: selectedRoom,
@@ -128,7 +125,7 @@ function MobileBooking({ onBack }) {
       const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
       const conflict = getClassConflict(user, dateStr, selectedHour, bookings, availability || []);
       
-      if (conflict && !conflictingClass) {
+      if (conflict) {
         if (isRep) {
           setConflictingClass(conflict);
           setIsConflictModalOpen(true);
@@ -141,20 +138,7 @@ function MobileBooking({ onBack }) {
         }
       }
 
-      const finalPayload = { ...payload };
-      if (conflictingClass) {
-         // Auto-cancel the old slot
-         await roomService.createAvailabilityOverride({
-           room_name: conflictingClass.room,
-           day: dateStr,
-           hour: selectedHour,
-           is_available: true,
-           reason: `Auto-cancelled for rescheduling to ${selectedRoom}`
-         });
-         toast.success(`Old class in Room ${conflictingClass.room} cancelled!`);
-      }
-
-      await bookingService.createBooking(finalPayload);
+      await bookingService.createBooking(payload);
       
       const roomName = rooms.find(r => r.id === selectedRoom)?.name || selectedRoom;
       const formattedDateStr = targetDate.toLocaleDateString("en-US", {
@@ -550,24 +534,19 @@ function MobileBooking({ onBack }) {
               </div>
 
               <p className="text-[11px] text-text-secondary font-medium leading-relaxed px-2">
-                Would you like to <span className="text-red-500 font-black">CANCEL</span> that class to free up the room and proceed with your new booking?
+                This timetable slot is unavailable. Select a different time or faculty member to continue.
               </p>
 
               <div className="flex flex-col gap-3 pt-3 font-display">
                 <button 
-                  onClick={handleSubmit}
-                  className="w-full bg-primary text-white font-extrabold py-5 rounded-2xl shadow-ambient active:scale-95 transition-all text-[11px] capitalize tracking-widest"
-                >
-                  Confirm & Resolve Conflict
-                </button>
-                <button 
                   onClick={() => {
                     setIsConflictModalOpen(false);
                     setConflictingClass(null);
+                    setStep(1);
                   }}
                   className="w-full bg-tonal-secondary/10 text-text-secondary font-extrabold py-5 rounded-2xl active:scale-95 transition-all text-[11px] capitalize tracking-widest"
                 >
-                  Return to Booking
+                  Choose Another Time
                 </button>
               </div>
             </div>

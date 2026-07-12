@@ -50,6 +50,8 @@ import AdminRooms from '../features/admin/AdminRooms';
 import AdminRoomModal from '../components/modals/AdminRoomModal';
 import AdminDepartments from '../features/admin/AdminDepartments';
 import AdminDepartmentModal from '../components/modals/AdminDepartmentModal';
+import AdminBranches from '../features/admin/AdminBranches';
+import AdminBranchModal from '../components/modals/AdminBranchModal';
 
 function AdminDashboard() {
   const { user, filters } = useContext(AppContext);
@@ -79,6 +81,7 @@ function AdminDashboard() {
   // Rooms and Departments state
   const [adminRooms, setAdminRooms] = useState([]);
   const [adminDepartments, setAdminDepartments] = useState([]);
+  const [adminBranches, setAdminBranches] = useState([]);
   const [paginatedPromotions, setPaginatedPromotions] = useState([]);
   const [roomBuildingFilter, setRoomBuildingFilter] = useState('all');
   const [roomTypeFilter, setRoomTypeFilter] = useState('all');
@@ -86,6 +89,7 @@ function AdminDashboard() {
   // Pagination Metas
   const [roomsMeta, setRoomsMeta] = useState({ page: 1, totalPages: 1 });
   const [deptsMeta, setDeptsMeta] = useState({ page: 1, totalPages: 1 });
+  const [branchesMeta, setBranchesMeta] = useState({ page: 1, totalPages: 1 });
   const [promotionsMeta, setPromotionsMeta] = useState({ page: 1, totalPages: 1 });
 
   // Room modal state
@@ -95,6 +99,8 @@ function AdminDashboard() {
   // Department modal state
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
   const [editingDept, setEditingDept] = useState(null);
+  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
+  const [editingBranch, setEditingBranch] = useState(null);
 
   const fetchAdminRooms = async (page = roomsMeta.page) => {
     try {
@@ -121,6 +127,17 @@ function AdminDashboard() {
     } catch (err) {
       console.error(err);
       toast.error('Failed to fetch departments');
+    }
+  };
+
+  const fetchAdminBranches = async (page = branchesMeta.page) => {
+    try {
+      const data = await adminService.getBranches({ page, limit: 10 });
+      setAdminBranches(data.data || data);
+      if (data.meta) setBranchesMeta(data.meta);
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to fetch branches');
     }
   };
 
@@ -190,6 +207,31 @@ function AdminDashboard() {
     setIsDeptModalOpen(true);
   };
 
+  const deleteBranch = (id) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Delete Branch',
+      message: 'Are you sure you want to delete this branch? Existing users will keep their branch name, but their branch link will be removed.',
+      confirmText: 'Delete Branch',
+      confirmType: 'danger',
+      action: async () => {
+        try {
+          await adminService.deleteBranch(id);
+          toast.success('Branch deleted successfully');
+          fetchAdminBranches(branchesMeta.page);
+        } catch (err) {
+          console.error(err);
+          toast.error(err.message || 'Failed to delete branch');
+        }
+      }
+    });
+  };
+
+  const openBranchModal = (branch = null) => {
+    setEditingBranch(branch);
+    setIsBranchModalOpen(true);
+  };
+
   useEffect(() => {
     if (activeTab === 'rooms') {
       fetchAdminRooms(1);
@@ -199,6 +241,8 @@ function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'departments') {
       fetchAdminDepartments(1);
+    } else if (activeTab === 'branches') {
+      fetchAdminBranches(1);
     } else if (activeTab === 'promotions') {
       fetchPaginatedPromotions(1);
     }
@@ -321,6 +365,7 @@ function AdminDashboard() {
             openUserModal={openUserModal}
             openRoomModal={openRoomModal}
             openDeptModal={openDeptModal}
+            openBranchModal={openBranchModal}
           />
 
           {/* Active section body content */}
@@ -554,6 +599,25 @@ function AdminDashboard() {
                     )}
                   </div>
                 )}
+                {activeTab === 'branches' && (
+                  <div className="flex-1 flex flex-col min-h-0">
+                    <AdminBranches
+                      branches={adminBranches}
+                      searchTerm={searchTerm}
+                      onEdit={openBranchModal}
+                      onDelete={deleteBranch}
+                    />
+                    {branchesMeta.totalPages > 1 && (
+                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
+                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Page {branchesMeta.page} of {branchesMeta.totalPages}</p>
+                        <div className="flex gap-2">
+                          <button disabled={branchesMeta.page <= 1} onClick={() => fetchAdminBranches(branchesMeta.page - 1)} className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30">Prev</button>
+                          <button disabled={branchesMeta.page >= branchesMeta.totalPages} onClick={() => fetchAdminBranches(branchesMeta.page + 1)} className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30">Next</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {activeTab === 'audit' && (
                   <div className="flex-1 p-6 overflow-y-auto min-h-0">
                     <AdminAuditLog />
@@ -608,6 +672,13 @@ function AdminDashboard() {
         onClose={() => setIsDeptModalOpen(false)}
         editingDept={editingDept}
         fetchDepts={fetchAdminDepartments}
+      />
+      <AdminBranchModal
+        isOpen={isBranchModalOpen}
+        onClose={() => setIsBranchModalOpen(false)}
+        editingBranch={editingBranch}
+        departments={departments}
+        fetchBranches={fetchAdminBranches}
       />
       
       <AdminPromotionActionModal 

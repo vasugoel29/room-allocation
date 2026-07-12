@@ -1,24 +1,29 @@
 /**
  * Utility for Timetable and Booking logic
  */
+import { getIstDateKey, getIstHour, getIstTime } from './timezone';
 
 /**
  * Gets the base 5-day week name (Mon, Tue, etc.) from a date string or Date object
  */
 export const getDayOfWeek = (dateInput) => {
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput)) {
+    const [year, month, day] = dateInput.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return days[d.getDay()];
+  }
   const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return days[d.getDay()];
 };
 
-/**
- * Normalizes time strings (e.g., "01:00-02:00") into a 24-hour integer hour
- * Handles the 12-hour slots in the source JSON (e.g., 01:00 becomes 13:00)
- */
 export const getHourFromTime = (timeStr) => {
   if (!timeStr) return 0;
   const startPart = timeStr.split('-')[0].trim();
-  let [hours] = startPart.split(':').map(Number);
+  const match = startPart.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return 0;
+  let hours = Number(match[1]);
   
   // Heuristic for 12-hour data in the source JSON: 1-7 likely PM, 8-12 likely AM/Noon
   if (hours >= 1 && hours < 8) hours += 12;
@@ -32,7 +37,10 @@ export const getHourFromTime = (timeStr) => {
 export const getSortableMinutes = (timeStr) => {
   if (!timeStr) return 0;
   const startPart = timeStr.split('-')[0].trim();
-  let [hours, minutes] = startPart.split(':').map(Number);
+  const match = startPart.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return 0;
+  let hours = Number(match[1]);
+  const minutes = Number(match[2]);
   
   if (hours >= 1 && hours < 8) hours += 12;
   return (hours * 60) + (minutes || 0);
@@ -44,7 +52,10 @@ export const getSortableMinutes = (timeStr) => {
 export const formatTo24h = (timeStr) => {
   if (!timeStr) return '';
   return timeStr.split('-').map(part => {
-    let [hours, minutes] = part.trim().split(':').map(Number);
+    const match = part.trim().match(/(\d{1,2}):(\d{2})/);
+    if (!match) return part.trim();
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
     if (hours >= 1 && hours < 8) hours += 12;
     return `${String(hours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
   }).join(' - ');
@@ -101,7 +112,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
     .filter(b => {
       // Date Check
       const bStart = new Date(b.start_time);
-      const bDateStr = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
+      const bDateStr = getIstDateKey(bStart);
       if (bDateStr !== dateStr) return false;
       if (b.status !== 'ACTIVE' && b.status !== 'CONFIRMED' && b.status != null) return false;
 
@@ -122,7 +133,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
         const bBranch = normalize(b.branch);
         const uBranch = normalize(user.branch);
         const userSection = String(user.section).trim();
-        const userYear = String(user.year).trim();
+        const userYear = String(user.year || Math.ceil(Number(user.semester || 0) / 2)).trim();
         const bYear = String(b.year).trim();
 
         return (bBranch === uBranch) && (String(b.section) === userSection) && (bYear === userYear);
@@ -131,8 +142,8 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
     .map(b => {
       const start = new Date(b.start_time);
       const end = new Date(b.end_time);
-      const localStartTime = `${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`;
-      const localEndTime = `${String(end.getHours()).padStart(2, '0')}:${String(end.getMinutes()).padStart(2, '0')}`;
+      const localStartTime = getIstTime(start);
+      const localEndTime = getIstTime(end);
       
       return {
         subjectName: b.purpose || 'Rescheduled Class',
@@ -261,8 +272,8 @@ export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], av
     
     // Use Local Date parts for consistency with UI
     const bStart = new Date(b.start_time);
-    const bDateStr = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
-    const bHour = bStart.getHours();
+    const bDateStr = getIstDateKey(bStart);
+    const bHour = getIstHour(bStart);
     
     return bDateStr === dateStr && bHour === hour && String(b.room_id) === String(room.id);
   });
@@ -280,7 +291,9 @@ export const getClassConflict = (user, dateStr, hour, bookings = [], availabilit
   
   return schedule.find(item => {
     if (!item.time) return false;
-    const itemHour = getHourFromTime(item.time);
-    return itemHour === hour;
+    const [startStr, endStr] = item.time.split('-');
+    const startHour = getHourFromTime(startStr);
+    const endHour = getHourFromTime(endStr || startStr);
+    return Number(hour) >= startHour && Number(hour) < endHour;
   });
 };

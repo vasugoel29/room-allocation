@@ -2,9 +2,10 @@ import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 import { getDayOfWeek, isRoomReallyFree, getHourFromTime } from '../../utils/timetableLogic';
+import { getIstDateKey, getIstHour } from '../../utils/timezone';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const HOURS = Array.from({ length: 11 }, (_, i) => i + 8); // 8am to 6pm
+const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 08:00–18:00; final slot is 17:00–18:00
 
 import PageSearch from './PageSearch';
 
@@ -69,8 +70,8 @@ function Calendar({ onSlotClick }) {
         const status = (b.status || 'ACTIVE').toUpperCase();
         if (status === 'ACTIVE' || status === 'CONFIRMED') {
           const bStart = new Date(b.start_time);
-          const bDateStr = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
-          const bHour = bStart.getHours();
+          const bDateStr = getIstDateKey(bStart);
+          const bHour = getIstHour(bStart);
           map.set(`${b.room_id}-${bDateStr}-${bHour}`, b);
         }
       });

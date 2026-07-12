@@ -20,12 +20,12 @@ export const bookingRepository = {
                  '-', 
                  u.section, 
                  ' ', 
-                 CASE u.year
+                 CASE CEIL(u.semester::float / 2)::int
                    WHEN 1 THEN '1st'
                    WHEN 2 THEN '2nd'
                    WHEN 3 THEN '3rd'
                    WHEN 4 THEN '4th'
-                   ELSE CONCAT(u.year, 'th')
+                   ELSE CONCAT(CEIL(u.semester::float / 2)::text, 'th')
                  END,
                  ' Year'
                )

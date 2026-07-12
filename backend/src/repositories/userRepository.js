@@ -9,9 +9,10 @@ export const userRepository = {
    */
   findById: async (id, client = db) => {
     const query = `
-      SELECT u.*, d.name as department_name 
+      SELECT u.*, d.name as department_name, b.name as branch_name, b.short_code as branch_code
       FROM users u 
       LEFT JOIN departments d ON u.department_id = d.id 
+      LEFT JOIN branches b ON u.branch_id = b.id
       WHERE u.id = $1
     `;
     const result = await client.query(query, [id]);
@@ -23,9 +24,10 @@ export const userRepository = {
    */
   findByEmail: async (email, client = db) => {
     const query = `
-      SELECT u.*, d.name as department_name 
+      SELECT u.*, d.name as department_name, b.name as branch_name, b.short_code as branch_code
       FROM users u 
       LEFT JOIN departments d ON u.department_id = d.id 
+      LEFT JOIN branches b ON u.branch_id = b.id
       WHERE u.email = $1
     `;
     const result = await client.query(query, [email]);
@@ -37,9 +39,12 @@ export const userRepository = {
    */
   findAll: async (limit, offset) => {
     let query = `
-      SELECT u.id, u.name, u.email, u.role, u.branch, u.year, u.section, u.is_approved, u.created_at, d.name as department_name
+      SELECT u.id, u.name, u.email, u.role, u.branch, u.branch_id, u.year, u.semester, u.section,
+             u.group_name, u.is_approved, u.created_at,
+             d.name as department_name, b.name as branch_name, b.short_code as branch_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
+      LEFT JOIN branches b ON u.branch_id = b.id
       ORDER BY u.created_at DESC
     `;
     const params = [];
@@ -68,13 +73,19 @@ export const userRepository = {
    * Create a new user
    */
   create: async (userData, client = db) => {
-    const { name, email, passwordHash, role, branch, year, section, department_id, is_approved } = userData;
+    const { name, email, passwordHash, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved } = userData;
     const query = `
-      INSERT INTO users (name, email, password, role, branch, year, section, department_id, is_approved) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) 
-      RETURNING id, name, email, role, branch, year, section, department_id, is_approved, created_at
+      INSERT INTO users (name, email, password, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
+      RETURNING id, name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved, created_at
     `;
-    const values = [name, email, passwordHash, role || 'VIEWER', branch, year, section, department_id, is_approved !== undefined ? is_approved : true];
+    const values = [
+      name, email, passwordHash, role || 'VIEWER',
+      branch || null, branch_id || null,
+      year || null, semester || null,
+      section || null, group_name || null,
+      department_id, is_approved !== undefined ? is_approved : true
+    ];
     const result = await client.query(query, values);
     return result.rows[0];
   },
@@ -83,21 +94,24 @@ export const userRepository = {
    * Update user data
    */
   update: async (id, userData, client = db) => {
-    const { name, email, role, branch, year, section, department_id, is_approved } = userData;
+    const { name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved } = userData;
     const query = `
       UPDATE users 
       SET name = COALESCE($1, name), 
           email = COALESCE($2, email), 
           role = COALESCE($3, role), 
           branch = COALESCE($4, branch), 
-          year = COALESCE($5, year), 
-          section = COALESCE($6, section), 
-          department_id = COALESCE($7, department_id), 
-          is_approved = COALESCE($8, is_approved) 
-      WHERE id = $9 
-      RETURNING id, name, email, role, branch, year, section, department_id, is_approved
+          branch_id = COALESCE($5, branch_id),
+          year = COALESCE($6, year), 
+          semester = COALESCE($7, semester),
+          section = COALESCE($8, section),
+          group_name = COALESCE($9, group_name),
+          department_id = COALESCE($10, department_id), 
+          is_approved = COALESCE($11, is_approved) 
+      WHERE id = $12
+      RETURNING id, name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved
     `;
-    const values = [name, email, role, branch, year, section, department_id, is_approved, id];
+    const values = [name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved, id];
     const result = await client.query(query, values);
     return result.rows[0];
   },

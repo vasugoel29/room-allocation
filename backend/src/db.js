@@ -528,6 +528,72 @@ const migrations = [
         }
       }
     }
+  },
+  {
+    version: 20,
+    name: 'Student/Faculty Schema Restructure: branches table, semester, group',
+    run: async (client) => {
+      // 1. Create normalized branches table
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS branches (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          short_code VARCHAR(100),
+          department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          UNIQUE(name, department_id)
+        );
+        ALTER TABLE branches ALTER COLUMN short_code TYPE VARCHAR(100);
+        CREATE INDEX IF NOT EXISTS idx_branches_dept ON branches(department_id);
+      `);
+
+      // 2. Seed branches from existing distinct user branch values
+      await client.query(`
+        INSERT INTO branches (name, short_code, department_id)
+        SELECT DISTINCT ON (UPPER(u.branch))
+          u.branch AS name,
+          UPPER(u.branch) AS short_code,
+          u.department_id
+        FROM users u
+        WHERE u.branch IS NOT NULL AND u.branch != ''
+        ON CONFLICT DO NOTHING
+      `);
+
+      // 3. Add new columns to users table
+      await client.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS branch_id INTEGER REFERENCES branches(id) ON DELETE SET NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS semester INTEGER CHECK (semester BETWEEN 1 AND 8);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS group_name INTEGER;
+      `);
+
+      // 4. Back-fill branch_id from existing branch text for students
+      await client.query(`
+        UPDATE users u
+        SET branch_id = b.id
+        FROM branches b
+        WHERE UPPER(u.branch) = UPPER(b.name)
+          AND u.role IN ('VIEWER', 'STUDENT_REP')
+          AND u.branch IS NOT NULL
+      `);
+
+      // 5. Back-fill semester from year (even semester mapping: year * 2).
+      // The legacy schema permits year 5, but semesters are constrained to 1–8.
+      // Do not derive an invalid semester (10) for those legacy records.
+      await client.query(`
+        UPDATE users
+        SET semester = year * 2
+        WHERE role IN ('VIEWER', 'STUDENT_REP')
+          AND year BETWEEN 1 AND 4
+          AND semester IS NULL
+      `);
+
+      // 6. NULL out student-only fields for faculty rows
+      await client.query(`
+        UPDATE users
+        SET branch = NULL, branch_id = NULL, section = NULL, year = NULL, semester = NULL, group_name = NULL
+        WHERE role = 'FACULTY'
+      `);
+    }
   }
 ];
 
@@ -595,4 +661,3 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export { pool };
-
