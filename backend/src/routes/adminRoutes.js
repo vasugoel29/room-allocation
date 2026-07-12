@@ -25,4 +25,7 @@ router.post('/uploads/import/students', authenticate, requireRole('ADMIN'), uplo
 router.post('/uploads/import/faculty', authenticate, requireRole('ADMIN'), uploadController.importFaculty);
 router.post('/uploads/import/timetable', authenticate, requireRole('ADMIN'), uploadController.importTimetable);
 
+// Async job status polling
+router.get('/uploads/status/:jobId', authenticate, requireRole('ADMIN'), uploadController.getJobStatus);
+
 export default router;

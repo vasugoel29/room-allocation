@@ -32,9 +32,13 @@ import AdminAuditLog from '../features/admin/AdminAuditLog';
 import AdminAnalytics from '../features/admin/AdminAnalytics';
 import AdminUploads from '../features/admin/AdminUploads';
 import AdminTimetable from './AdminTimetable';
+import { AdminTabBar } from '../features/admin/AdminTabBar';
+import { AdminFilterBar } from '../features/admin/AdminFilterBar';
+import AdminTimetableSlots from '../features/admin/AdminTimetableSlots';
+import RoomScheduleGrid from './RoomScheduleGrid';
 
 // Services & Hooks
-import adminService from '../services/adminService';
+import { adminService } from '../services/adminService';
 import { bookingService } from '../services/bookingService';
 import { roomService } from '../services/roomService';
 import { useAdminData } from '../hooks/useAdminData';
@@ -178,22 +182,6 @@ function AdminDashboard() {
     setIsDeptModalOpen(true);
   };
 
-  const getTabLabel = (tabId) => {
-    const tabMap = {
-      quick: { label: 'Quick Book', icon: <Zap size={16} /> },
-      bookings: { label: 'Bookings', icon: <CalendarIcon size={16} /> },
-      promotions: { label: 'Requests', icon: <Users size={16} /> },
-      users: { label: 'Users', icon: <ShieldAlert size={16} /> },
-      rooms: { label: 'Rooms', icon: <Home size={16} /> },
-      departments: { label: 'Departments', icon: <Layers size={16} /> },
-      analytics: { label: 'Analytics', icon: <TrendingUp size={16} /> },
-      audit: { label: 'Audit Log', icon: <Activity size={16} /> },
-      uploads: { label: 'CSV Uploads', icon: <Download size={16} /> },
-      timetable: { label: 'Timetable Overrides', icon: <Database size={16} /> }
-    };
-    return tabMap[tabId] || { label: 'Bookings', icon: <CalendarIcon size={16} /> };
-  };
-
   useEffect(() => {
     if (activeTab === 'rooms') {
       fetchAdminRooms(1);
@@ -302,259 +290,26 @@ function AdminDashboard() {
       </div>
 
       <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-0">
-        {/* Left Sub-Sidebar (Desktop view) */}
-        <div className="hidden md:flex w-64 flex-col shrink-0 gap-6 border-r border-border/10 pr-6 overflow-y-auto no-scrollbar">
-          <div className="flex flex-col gap-6">
-            {/* Category: Operations */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-black tracking-widest text-text-secondary uppercase opacity-45 px-3">Operations</span>
-              <div className="flex flex-col gap-1 font-display">
-                <button 
-                  onClick={() => setActiveTab('quick')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'quick' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <Zap size={16} />
-                  <span>Quick Book</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('bookings')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'bookings' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <CalendarIcon size={16} />
-                  <span>Bookings</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('promotions')}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'promotions' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Users size={16} />
-                    <span>Requests</span>
-                  </div>
-                  {promotions.filter(p => p.status === 'PENDING').length > 0 && (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${activeTab === 'promotions' ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
-                      {promotions.filter(p => p.status === 'PENDING').length}
-                    </span>
-                  )}
-                </button>
-                <button 
-                  onClick={() => setActiveTab('timetable')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all text-left ${activeTab === 'timetable' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <Database size={16} />
-                  <span>Timetable Overrides</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Category: Registry */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-black tracking-widest text-text-secondary uppercase opacity-45 px-3">Registry</span>
-              <div className="flex flex-col gap-1 font-display">
-                <button 
-                  onClick={() => setActiveTab('users')}
-                  className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'users' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <ShieldAlert size={16} />
-                    <span>Users</span>
-                  </div>
-                  {users.filter(u => !u.is_approved).length > 0 && (
-                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${activeTab === 'users' ? 'bg-white text-tertiary shadow-tertiary' : 'bg-tertiary text-white shadow-tertiary'}`}>
-                      {users.filter(u => !u.is_approved).length}
-                    </span>
-                  )}
-                </button>
-                <button 
-                  onClick={() => setActiveTab('rooms')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'rooms' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <Home size={16} />
-                  <span>Rooms</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('departments')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'departments' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <Layers size={16} />
-                  <span>Departments</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Category: System */}
-            <div className="space-y-2">
-              <span className="text-[10px] font-black tracking-widest text-text-secondary uppercase opacity-45 px-3">System</span>
-              <div className="flex flex-col gap-1 font-display">
-                <button 
-                  onClick={() => setActiveTab('analytics')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'analytics' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <TrendingUp size={16} />
-                  <span>Analytics</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('audit')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'audit' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <Activity size={16} />
-                  <span>Audit Log</span>
-                </button>
-                <button 
-                  onClick={() => setActiveTab('uploads')}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${activeTab === 'uploads' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary hover:bg-tonal-secondary/10'}`}
-                >
-                  <Download size={16} />
-                  <span>CSV Uploads</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Custom Mobile Dropdown Selector */}
-        <div className="md:hidden w-full relative z-50 font-display">
-          <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 mb-1.5 block">Active Section</label>
-          <button 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="w-full flex items-center justify-between bg-tonal-secondary/10 border border-border/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-text-primary focus:outline-none transition-all active:scale-98"
-          >
-            <div className="flex items-center gap-2.5">
-              {getTabLabel(activeTab).icon}
-              <span>{getTabLabel(activeTab).label}</span>
-            </div>
-            <ChevronDown size={16} className={`transition-transform duration-200 ${isMobileMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {isMobileMenuOpen && (
-            <>
-              {/* Click-away backdrop */}
-              <div className="fixed inset-0 z-40" onClick={() => setIsMobileMenuOpen(false)} />
-              <div className="absolute top-full left-0 right-0 mt-2 bg-surface-low border border-border/15 backdrop-blur-md rounded-2xl shadow-xl z-50 overflow-hidden py-1.5 animate-in fade-in slide-in-from-top-2 duration-150 max-h-[60vh] overflow-y-auto">
-                {[
-                  { id: 'quick', label: 'Quick Book', icon: <Zap size={14} /> },
-                  { id: 'bookings', label: 'Bookings', icon: <CalendarIcon size={14} /> },
-                  { id: 'promotions', label: 'Requests', icon: <Users size={14} /> },
-                  { id: 'users', label: 'Users', icon: <ShieldAlert size={14} /> },
-                  { id: 'rooms', label: 'Rooms', icon: <Home size={14} /> },
-                  { id: 'departments', label: 'Departments', icon: <Layers size={14} /> },
-                  { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={14} /> },
-                  { id: 'audit', label: 'Audit Log', icon: <Activity size={14} /> },
-                  { id: 'uploads', label: 'CSV Uploads', icon: <Download size={14} /> },
-                  { id: 'timetable', label: 'Timetable Overrides', icon: <Database size={14} /> }
-                ].map(opt => (
-                  <button
-                    key={opt.id}
-                    onClick={() => {
-                      setActiveTab(opt.id);
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-bold transition-all text-left ${activeTab === opt.id ? 'bg-primary/10 text-primary' : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
-                  >
-                    {opt.icon}
-                    <span>{opt.label}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+        <AdminTabBar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          promotions={promotions} 
+          users={users} 
+        />
 
         {/* Right workspace panel */}
         <div className="flex-1 bg-tonal-secondary/5 rounded-[2.5rem] overflow-hidden shadow-ambient border border-border/10 backdrop-blur-md flex flex-col min-h-0">
-          {/* Workspace Active Header */}
-          {activeTab !== 'timetable' && (
-            <div className="p-4 sm:p-6 border-b border-border/10 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-bg-secondary/20 shrink-0">
-              <div>
-                <h2 className="text-xl font-extrabold text-text-primary capitalize tracking-tight font-display">
-                  {activeTab === 'promotions' ? 'Promotion Requests' : activeTab === 'quick' ? 'Quick Allocation' : activeTab === 'uploads' ? 'CSV Data Uploads' : activeTab === 'audit' ? 'System Audit Log' : `${activeTab} Management`}
-                </h2>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Contextual search input */}
-                {['bookings', 'promotions', 'users', 'rooms', 'departments'].includes(activeTab) && (
-                  <div className="relative flex-1 sm:flex-none">
-                    <input 
-                      type="text" 
-                      placeholder={`Search ${activeTab}...`}
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full sm:w-56 bg-bg-primary/50 border border-border/10 rounded-xl px-4 py-2 text-xs focus:outline-none focus:border-primary transition-all font-bold placeholder:text-text-secondary/30 pl-9 text-text-primary"
-                    />
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/40" size={14} />
-                  </div>
-                )}
-
-                {/* Action buttons */}
-                {activeTab === 'bookings' && (
-                  <>
-                    <div className="flex items-center gap-1.5 bg-tonal-secondary/10 p-1 rounded-xl font-display font-bold text-[10px]">
-                      <button 
-                        onClick={() => setFilterRange('day')}
-                        className={`px-3 py-1 rounded-lg uppercase font-extrabold transition-all tracking-widest ${filterRange === 'day' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
-                      >
-                        Today
-                      </button>
-                      <button 
-                        onClick={() => setFilterRange('week')}
-                        className={`px-3 py-1 rounded-lg uppercase font-extrabold transition-all tracking-widest ${filterRange === 'week' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
-                      >
-                        Week
-                      </button>
-                    </div>
-                    <button 
-                      onClick={exportCSV}
-                      className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-                    >
-                      <Download size={14} />
-                      Export
-                    </button>
-                  </>
-                )}
-
-                {activeTab === 'promotions' && (
-                  <button 
-                    onClick={exportCSV}
-                    className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-                  >
-                    <Download size={14} />
-                    Export
-                  </button>
-                )}
-
-                {activeTab === 'users' && (
-                  <button 
-                    onClick={() => openUserModal()}
-                    className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-                  >
-                    <UserPlus size={14} />
-                    Add User
-                  </button>
-                )}
-
-                {activeTab === 'rooms' && (
-                  <button 
-                    onClick={() => openRoomModal()}
-                    className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-                  >
-                    <Home size={14} />
-                    Add Room
-                  </button>
-                )}
-
-                {activeTab === 'departments' && (
-                  <button 
-                    onClick={() => openDeptModal()}
-                    className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-                  >
-                    <Layers size={14} />
-                    Add Dept
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          <AdminFilterBar 
+            activeTab={activeTab}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            filterRange={filterRange}
+            setFilterRange={setFilterRange}
+            exportCSV={exportCSV}
+            openUserModal={openUserModal}
+            openRoomModal={openRoomModal}
+            openDeptModal={openDeptModal}
+          />
 
           {/* Active section body content */}
           <div className="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar">
@@ -799,8 +554,16 @@ function AdminDashboard() {
                   </div>
                 )}
                 {activeTab === 'timetable' && (
-                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-8 p-2">
                     <AdminTimetable />
+                    <div className="border-t border-border/10 pt-6">
+                      <AdminTimetableSlots />
+                    </div>
+                  </div>
+                )}
+                {activeTab === 'room-grid' && (
+                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+                    <RoomScheduleGrid />
                   </div>
                 )}
               </>

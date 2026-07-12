@@ -22,6 +22,20 @@ export const getSmartTodayDate = (now = new Date()) => {
   return targetDate;
 };
 
+export const getInitialBookingDateObject = (now = new Date()) => {
+  const targetDate = getSmartTodayDate(now);
+  targetDate.setHours(8, 0, 0, 0);
+  return targetDate;
+};
+
+export const getInitialBookingDateString = (now = new Date()) => {
+  const targetDate = getSmartTodayDate(now);
+  const year = targetDate.getFullYear();
+  const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+  const dayNum = String(targetDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${dayNum}`;
+};
+
 export const getTodayRange = (now = new Date()) => {
   const targetDate = getSmartTodayDate(now);
   
@@ -53,3 +67,20 @@ export const formatRangeToISO = ({ start, end }) => ({
   start: start.toISOString(),
   end: end.toISOString()
 });
+
+export const getDatesOfWeek = (baseDateStr) => {
+  const baseDate = new Date(baseDateStr);
+  const currentDay = baseDate.getDay();
+  
+  const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+  const monday = new Date(baseDate);
+  monday.setDate(baseDate.getDate() + mondayOffset);
+
+  const days = [];
+  for (let i = 0; i < 5; i++) {
+    const day = new Date(monday);
+    day.setDate(monday.getDate() + i);
+    days.push(day.toISOString().split('T')[0]);
+  }
+  return days;
+};

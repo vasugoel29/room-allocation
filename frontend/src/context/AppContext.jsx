@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { authService } from '../services/authService';
 import { bookingService } from '../services/bookingService';
+import { getInitialBookingDateString } from '../utils/dateHelpers';
 import { roomService } from '../services/roomService';
 
 export const AppContext = createContext();
@@ -45,24 +46,7 @@ export const AppProvider = ({ children }) => {
     };
   }, []);
 
-  const initialDay = useMemo(() => {
-    const now = new Date();
-    const day = now.getDay();
-    const hour = now.getHours();
-    
-    const targetDate = new Date(now);
-    if (day === 0) targetDate.setDate(now.getDate() + 1);
-    else if (day === 6) targetDate.setDate(now.getDate() + 2);
-    else if (hour >= 18) {
-      if (day === 5) targetDate.setDate(now.getDate() + 3);
-      else targetDate.setDate(now.getDate() + 1);
-    }
-    
-    const year = targetDate.getFullYear();
-    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
-    const dayNum = String(targetDate.getDate()).padStart(2, '0');
-    return `${year}-${month}-${dayNum}`;
-  }, []);
+  const initialDay = useMemo(() => getInitialBookingDateString(), []);
 
   const [faculties, setFaculties] = useState([]);
   const [incomingTransfers, setIncomingTransfers] = useState([]);

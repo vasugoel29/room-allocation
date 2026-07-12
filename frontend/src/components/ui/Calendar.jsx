@@ -206,7 +206,7 @@ function Calendar({ onSlotClick }) {
                 <div className="flex items-center w-full">
                   <div className="w-[50px] sm:w-[120px] flex justify-end pr-1 sm:pr-2">
                     <span className="bg-tertiary text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded shadow-tertiary whitespace-nowrap">
-                      {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
                   </div>
                   <div className="flex-1 h-[1px] sm:h-[1.5px] bg-tertiary relative">

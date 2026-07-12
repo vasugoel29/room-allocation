@@ -8,23 +8,8 @@ import toast from 'react-hot-toast';
 
 import PageSearch from '../components/ui/PageSearch';
 
-const getDatesOfWeek = (baseDateStr) => {
-  const baseDate = new Date(baseDateStr);
-  const currentDay = baseDate.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
-  
-  // Find Monday of the current week
-  const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
-  const monday = new Date(baseDate);
-  monday.setDate(baseDate.getDate() + mondayOffset);
-
-  const days = [];
-  for (let i = 0; i < 5; i++) { // Mon, Tue, Wed, Thu, Fri
-    const day = new Date(monday);
-    day.setDate(monday.getDate() + i);
-    days.push(day.toISOString().split('T')[0]);
-  }
-  return days;
-};
+import { getDatesOfWeek } from '../utils/dateHelpers';
+import { WeekView } from '../components/ui/WeekView';
 
 const Timetable = () => {
   const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData, facultyTimetableData, facultyOverrides } = useContext(AppContext);
@@ -272,62 +257,31 @@ const Timetable = () => {
             )}
           </div>
         ) : (
-          /* ── Week View: Days as Rows, Slots flow horizontally ── */
-          <div className="rounded-2xl overflow-hidden border border-surface-mid">
-            {Object.entries(weeklySchedule).map(([dayName, dayInfo], rowIdx) => (
-              <div key={dayName} className={`flex items-stretch min-h-[96px] border-b border-surface-mid last:border-b-0 ${rowIdx % 2 === 0 ? 'bg-surface-low' : 'bg-surface-mid'}`}>
-                {/* Day Label */}
-                <div className="w-24 shrink-0 flex flex-col items-center justify-center py-4 border-r border-surface-mid">
-                  <p className="text-xs font-black text-accent uppercase tracking-widest">{dayName.slice(0, 3)}</p>
-                  <p className="text-[10px] text-text-secondary font-bold mt-1">{new Date(dayInfo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
-                </div>
-                {/* Slots Row — scrolls horizontally only */}
-                <div className="flex-1 flex gap-3 overflow-x-auto overflow-y-hidden no-scrollbar px-4 py-3 items-stretch">
-                  {dayInfo.slots.length > 0 ? (
-                    dayInfo.slots.map((item, index) => (
-                      <div
-                        key={index}
-                        className={`shrink-0 w-52 flex flex-col justify-between rounded-2xl px-4 py-3 border transition-all ${
-                          item.isDynamic
-                            ? 'bg-accent/15 border-accent/40'
-                            : 'bg-surface-high border-surface-highest'
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs font-black text-text-primary leading-snug">{item.subjectName || item.subject}</p>
-                          {item.className && (
-                            <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
-                          )}
-                          {!item.className && item.isDynamic && item.faculty && (
-                            <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.faculty}</p>
-                          )}
-                        </div>
-                        <div className="flex items-center justify-between gap-2 mt-2">
-                          <span className="text-[10px] text-text-secondary font-bold flex items-center gap-1">
-                            <Clock size={10} className="text-accent shrink-0" /> {item.displayTime}
-                          </span>
-                          <span className="text-[10px] text-accent font-black bg-accent/15 px-2 py-0.5 rounded-lg border border-accent/30">{item.room}</span>
-                        </div>
-                        {(isRep || isFaculty) && (
-                          <button
-                            onClick={() => handleCancelClass(item)}
-                            disabled={isCancelling}
-                            className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] font-black text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl py-1.5 border border-red-500/20 hover:border-red-500/40 transition-all"
-                          >
-                            <Trash2 size={10} /> Cancel
-                          </button>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex items-center text-text-secondary/40 text-xs font-bold uppercase tracking-widest">
-                      No classes
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+          <WeekView
+            weeklySchedule={weeklySchedule}
+            accentColor="accent"
+            renderSlotSubtitle={(item) => (
+              <>
+                {item.className && (
+                  <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
+                )}
+                {!item.className && item.isDynamic && item.faculty && (
+                  <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.faculty}</p>
+                )}
+              </>
+            )}
+            renderSlotActions={(item) =>
+              (isRep || isFaculty) && (
+                <button
+                  onClick={() => handleCancelClass(item)}
+                  disabled={isCancelling}
+                  className="mt-2 w-full flex items-center justify-center gap-1.5 text-[10px] font-black text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl py-1.5 border border-red-500/20 hover:border-red-500/40 transition-all"
+                >
+                  <Trash2 size={10} /> Cancel
+                </button>
+              )
+            }
+          />
         )}
       </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import adminService from '../services/adminService';
+import { adminService } from '../services/adminService';
 
 export function useDepartments() {
   const [departments, setDepartments] = useState([]);

@@ -303,3 +303,95 @@ export async function autocompleteFaculty(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
+// ─── Admin CRUD for timetable slots ────────────────────────────────────────
+
+export async function listSlots(req, res) {
+  try {
+    const { faculty_name, day_of_week, semester, page = 1, limit = 50 } = req.query;
+    const conditions = [];
+    const values = [];
+    let idx = 1;
+
+    if (faculty_name) { conditions.push(`fts.faculty_name ILIKE $${idx++}`); values.push(`%${faculty_name}%`); }
+    if (day_of_week)  { conditions.push(`fts.day_of_week ILIKE $${idx++}`); values.push(day_of_week); }
+    if (semester)     { conditions.push(`fts.semester = $${idx++}`);         values.push(semester); }
+
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    const [dataResult, countResult] = await Promise.all([
+      db.query(`
+        SELECT fts.id, fts.faculty_name, fts.semester, fts.day_of_week,
+               fts.slot_time, fts.content, fts.is_occupied,
+               fts.room_id, r.name AS room_name, fts.created_at
+        FROM faculty_timetable_slots fts
+        LEFT JOIN rooms r ON r.id = fts.room_id
+        ${where}
+        ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
+        LIMIT $${idx} OFFSET $${idx + 1}
+      `, [...values, parseInt(limit), offset]),
+      db.query(`SELECT COUNT(*) FROM faculty_timetable_slots fts ${where}`, values)
+    ]);
+
+    res.json({
+      data: dataResult.rows,
+      meta: { total: parseInt(countResult.rows[0].count), page: parseInt(page), limit: parseInt(limit) }
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function createSlot(req, res) {
+  try {
+    const { faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id } = req.body;
+    if (!faculty_name || !day_of_week || !slot_time) {
+      return res.status(400).json({ error: 'faculty_name, day_of_week, and slot_time are required' });
+    }
+    const result = await db.query(`
+      INSERT INTO faculty_timetable_slots (faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id, created_at
+    `, [faculty_name, semester || '', day_of_week, slot_time, content || '', is_occupied ?? false, room_id ?? null]);
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function updateSlot(req, res) {
+  try {
+    const { id } = req.params;
+    const { faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id } = req.body;
+
+    const result = await db.query(`
+      UPDATE faculty_timetable_slots
+      SET faculty_name = COALESCE($1, faculty_name),
+          semester     = COALESCE($2, semester),
+          day_of_week  = COALESCE($3, day_of_week),
+          slot_time    = COALESCE($4, slot_time),
+          content      = COALESCE($5, content),
+          is_occupied  = COALESCE($6, is_occupied),
+          room_id      = $7
+      WHERE id = $8
+      RETURNING id, faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id
+    `, [faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id ?? null, id]);
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function deleteSlot(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await db.query('DELETE FROM faculty_timetable_slots WHERE id = $1 RETURNING id', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}

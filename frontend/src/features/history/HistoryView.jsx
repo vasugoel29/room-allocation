@@ -329,7 +329,7 @@ const HistoryView = ({ onClose }) => {
                             {new Date(item.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}
                           </span>
                           <span className="text-accent text-[10px] uppercase font-black tracking-widest mt-2 leading-none opacity-80">
-                            {new Date(item.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            {new Date(item.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                           </span>
                         </div>
                       </td>
@@ -402,7 +402,7 @@ const HistoryView = ({ onClose }) => {
                        {new Date(item.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}
                      </div>
                      <div className="px-5 py-2.5 rounded-2xl bg-tonal-secondary/10 text-text-primary font-extrabold text-[10px] uppercase tracking-widest shadow-ambient">
-                       {new Date(item.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                       {new Date(item.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                      </div>
                      <div className="px-5 py-2.5 rounded-2xl bg-tonal-secondary/10 text-text-primary font-extrabold text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-ambient opacity-40">
                        {item.type === 'OVERRIDE' ? <AlertCircle size={12} strokeWidth={3}/> : <User size={12} strokeWidth={3}/>} {item.class_name}

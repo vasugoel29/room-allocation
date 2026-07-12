@@ -306,6 +306,17 @@ const migrations = [
         UPDATE rooms SET type = 'Lab' WHERE name IN ('5310', '5311', '5312', '5138');
       `);
     }
+  },
+  {
+    version: 12,
+    name: 'Timetable Slot Room Association',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE faculty_timetable_slots
+          ADD COLUMN IF NOT EXISTS room_id INTEGER REFERENCES rooms(id) ON DELETE SET NULL;
+        CREATE INDEX IF NOT EXISTS idx_faculty_tt_room ON faculty_timetable_slots(room_id);
+      `);
+    }
   }
 ];
 

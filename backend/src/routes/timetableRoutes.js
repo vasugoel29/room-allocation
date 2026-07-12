@@ -11,6 +11,13 @@ router.get('/faculty', authenticate, requireRole('FACULTY'), timetableController
 router.get('/faculty/check/:id', authenticate, timetableController.checkFacultyAvailability);
 router.post('/faculty/override', authenticate, requireRole('FACULTY'), timetableController.overrideFacultySlot);
 router.get('/faculty/overrides', authenticate, requireRole('FACULTY'), timetableController.getFacultyOverrides);
+
+// Admin CRUD for individual timetable slots
+router.get('/slots', authenticate, requireRole('ADMIN'), timetableController.listSlots);
+router.post('/slots', authenticate, requireRole('ADMIN'), timetableController.createSlot);
+router.patch('/slots/:id', authenticate, requireRole('ADMIN'), timetableController.updateSlot);
+router.delete('/slots/:id', authenticate, requireRole('ADMIN'), timetableController.deleteSlot);
+
 router.get('/', authenticate, timetableController.getTimetable);
 
 export default router;

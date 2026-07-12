@@ -4,6 +4,7 @@ import { AppContext } from '../context/AppContext';
 import { bookingService } from '../services/bookingService';
 import { roomService } from '../services/roomService';
 import { getClassConflict, isRoomReallyFree } from '../utils/timetableLogic';
+import { getInitialBookingDateObject } from '../utils/dateHelpers';
 import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
 
@@ -26,25 +27,9 @@ function MobileBooking({ onBack }) {
     loadRooms();
     return () => { active = false; };
   }, []);
-  
-  const getInitialDate = () => {
-    const now = new Date();
-    const day = now.getDay();
-    const hour = now.getHours();
-    
-    const targetDate = new Date(now);
-    if (day === 0) targetDate.setDate(now.getDate() + 1);
-    else if (day === 6) targetDate.setDate(now.getDate() + 2);
-    else if (hour >= 18) {
-      if (day === 5) targetDate.setDate(now.getDate() + 3);
-      else targetDate.setDate(now.getDate() + 1);
-    }
-    targetDate.setHours(8, 0, 0, 0);
-    return targetDate;
-  };
 
   const [step, setStep] = useState(1);
-  const [selectedDate, setSelectedDate] = useState(getInitialDate());
+  const [selectedDate, setSelectedDate] = useState(() => getInitialBookingDateObject());
   const [selectedHour, setSelectedHour] = useState(8);
   const [selectedRoom, setSelectedRoom] = useState('');
   const [purpose, setPurpose] = useState('');

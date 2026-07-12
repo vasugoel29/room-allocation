@@ -186,6 +186,56 @@ export const adminService = {
       throw new Error(err.error || 'Failed to delete department');
     }
     return res.json();
+  },
+
+  // Async upload job polling
+  pollJobStatus: async (jobId) => {
+    const res = await api.get(`/admin/uploads/status/${jobId}`);
+    if (!res.ok) {
+      if (res.status === 404) return { status: 'not_found' };
+      throw new Error('Failed to poll job status');
+    }
+    return res.json();
+  },
+
+  // Timetable slot CRUD
+  listTimetableSlots: async ({ faculty_name, day_of_week, semester, page = 1, limit = 50 } = {}) => {
+    const params = new URLSearchParams();
+    if (faculty_name) params.append('faculty_name', faculty_name);
+    if (day_of_week) params.append('day_of_week', day_of_week);
+    if (semester) params.append('semester', semester);
+    params.append('page', page);
+    params.append('limit', limit);
+    const res = await api.get(`/timetable/slots?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch timetable slots');
+    return res.json();
+  },
+
+  createTimetableSlot: async (data) => {
+    const res = await api.post('/timetable/slots', data);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to create slot');
+    }
+    return res.json();
+  },
+
+  updateTimetableSlot: async (id, data) => {
+    const res = await api.patch(`/timetable/slots/${id}`, data);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to update slot');
+    }
+    return res.json();
+  },
+
+  deleteTimetableSlot: async (id) => {
+    const res = await api.delete(`/timetable/slots/${id}`);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to delete slot');
+    }
+    return res.json();
   }
 };
 

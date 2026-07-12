@@ -84,6 +84,18 @@ export const roomService = {
     const res = await api.get('/timetable/faculty/overrides');
     if (!res.ok) throw new Error('Failed to fetch faculty overrides');
     return res.json();
+  },
+
+  getRoomWeekSchedule: async (roomId, weekStart) => {
+    const res = await api.get(`/rooms/${roomId}/week-schedule?weekStart=${weekStart}`);
+    if (!res.ok) throw new Error('Failed to fetch room week schedule');
+    return res.json();
+  },
+
+  checkRoomConflict: async (roomId, date, startHour, endHour) => {
+    const res = await api.get(`/rooms/${roomId}/conflict-check?date=${date}&startHour=${startHour}&endHour=${endHour}`);
+    if (!res.ok) throw new Error('Failed to check room conflicts');
+    return res.json();
   }
 };
 
