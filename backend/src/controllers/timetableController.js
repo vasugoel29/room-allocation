@@ -334,10 +334,11 @@ export async function searchTimetable(req, res) {
 
         // 2. Dynamic Bookings for this section
         const bookingRes = await db.query(`
-          SELECT b.*, r.name as room_name, u.name as creator_name
+          SELECT b.*, r.name as room_name, u.name as creator_name, f.name as faculty_name
           FROM bookings b
           JOIN rooms r ON b.room_id = r.id
           JOIN users u ON b.created_by = u.id
+          LEFT JOIN users f ON b.faculty_id = f.id
           WHERE (UPPER(u.branch) = $1 OR UPPER(u.branch) = $2 OR UPPER(u.department_name) = $1 OR UPPER(u.department_name) = $2)
           AND u.year = CEIL($3::float / 2)
           AND u.section::TEXT = $4::TEXT

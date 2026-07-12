@@ -10,6 +10,7 @@ import PageSearch from '../components/ui/PageSearch';
 
 import { getDatesOfWeek } from '../utils/dateHelpers';
 import { WeekView } from '../components/ui/WeekView';
+import { toTitleCase } from '../utils/roleUtils';
 
 const Timetable = () => {
   const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData, facultyTimetableData, facultyOverrides } = useContext(AppContext);
@@ -234,7 +235,7 @@ const Timetable = () => {
                         {!isFaculty && item.faculty && (
                           <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 capitalize tracking-tighter">
                             <User size={12} className="text-accent" />
-                            {item.faculty}
+                            {toTitleCase(item.faculty)}
                           </span>
                         )}
                       </div>
@@ -266,16 +267,24 @@ const Timetable = () => {
           <WeekView
             weeklySchedule={weeklySchedule}
             accentColor="accent"
-            renderSlotSubtitle={(item) => (
-              <>
-                {item.className && (
-                  <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
-                )}
-                {!isFaculty && item.faculty && (
-                  <p className="text-[10px] font-semibold text-text-secondary mt-1">Faculty: {item.faculty}</p>
-                )}
-              </>
-            )}
+            renderSlotSubtitle={(item) => {
+              const isAdmin = user?.role === 'ADMIN';
+              const isFaculty = user?.role === 'FACULTY';
+              const isStudent = !isAdmin && !isFaculty;
+              return (
+                <>
+                  {item.className && (isAdmin || isFaculty) && (
+                    <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
+                  )}
+                  {item.faculty && (isAdmin || isStudent) && (
+                    <p className="text-[10px] font-semibold text-text-secondary mt-1 flex items-center gap-1">
+                      <User size={10} className="shrink-0 text-text-secondary/60" />
+                      {toTitleCase(item.faculty)}
+                    </p>
+                  )}
+                </>
+              );
+            }}
             renderSlotActions={(item) =>
               (isRep || isFaculty) && (
                 <button

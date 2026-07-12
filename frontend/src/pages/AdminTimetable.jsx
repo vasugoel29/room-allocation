@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
   MapPin, 
-  Clock, 
+  Clock,
   Users, 
+  User,
   GraduationCap, 
   Calendar, 
   TrendingUp, 
@@ -71,10 +72,8 @@ function AdminTimetable() {
         params.append('name', targetName);
       }
       else {
-        // Calculate Semester from Year
-        const currentMonth = new Date().getMonth();
-        const isEvenSemester = currentMonth >= 0 && currentMonth <= 5;
-        const calculatedSemester = isEvenSemester ? Number(year) * 2 : (Number(year) * 2) - 1;
+        // Calculate Semester from Year (matching student portal even semester database mapping)
+        const calculatedSemester = Number(year) * 2;
 
         params.append('department', dept);
         params.append('semester', String(calculatedSemester));
@@ -141,7 +140,7 @@ function AdminTimetable() {
           displayTime: `${String(hour).padStart(2, '0')}:00 - ${String(hour + 1).padStart(2, '0')}:00`,
           subject: b.purpose,
           room: b.room_name,
-          instructor: b.creator_name || 'Booked Slot',
+          instructor: b.faculty_name || b.creator_name || 'Booked Slot',
           className: 'Dynamic Booking',
           isDynamic: true
         };
@@ -366,11 +365,15 @@ function AdminTimetable() {
                                     <h3 className="text-lg font-black text-text-primary tracking-tight leading-none">{item.subject}</h3>
                                     {item.isDynamic && <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize tracking-tighter">Updated</span>}
                                  </div>
-                                 {searchType === 'FACULTY' ? (
-                                   item.className ? <p className="text-[10px] font-extrabold text-text-secondary tracking-wider mt-1.5 opacity-60">{item.className}</p> : null
-                                 ) : (
-                                   item.instructor ? <p className="text-[10px] font-extrabold text-text-secondary tracking-wider mt-1.5 opacity-60">{toTitleCase(item.instructor)}</p> : null
-                                 )}
+                                 {item.className && (
+                                    <p className="text-[10px] font-extrabold text-text-secondary tracking-wider mt-1.5 opacity-60">{item.className}</p>
+                                  )}
+                                  {item.instructor && (
+                                    <p className="text-[10px] font-bold text-text-secondary tracking-wider mt-1 opacity-60 flex items-center gap-1">
+                                      <User size={10} className="shrink-0 text-text-secondary/60" />
+                                      {toTitleCase(item.instructor)}
+                                    </p>
+                                  )}
                                  <div className="flex items-center gap-4 mt-2">
                                     <span className="text-xs font-black text-text-primary flex items-center gap-2">
                                        <Clock size={14} className="text-primary" /> {item.displayTime}
@@ -393,11 +396,19 @@ function AdminTimetable() {
                       weeklySchedule={weeklySchedule}
                       accentColor="primary"
                       getSubject={(item) => item.subject}
-                      renderSlotSubtitle={(item) =>
-                        searchType === 'FACULTY'
-                          ? item.className ? <p className="text-[10px] font-bold text-text-secondary mt-1">{item.className}</p> : null
-                          : item.instructor ? <p className="text-[10px] font-bold text-text-secondary mt-1">{toTitleCase(item.instructor)}</p> : null
-                      }
+                      renderSlotSubtitle={(item) => (
+                        <>
+                          {item.className && (
+                            <p className="text-[10px] font-bold text-text-secondary mt-1">{item.className}</p>
+                          )}
+                           {item.instructor && (
+                            <p className="text-[10px] font-semibold text-text-secondary mt-1 flex items-center gap-1">
+                              <User size={10} className="shrink-0 text-text-secondary/60" />
+                              {toTitleCase(item.instructor)}
+                            </p>
+                          )}
+                        </>
+                      )}
                     />
                   )
               ) : (
