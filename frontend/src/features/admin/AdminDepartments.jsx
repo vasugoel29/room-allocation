@@ -9,7 +9,7 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
   if (filteredDepts.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
-        <span className="text-text-secondary uppercase font-black tracking-widest opacity-40">No departments found</span>
+        <span className="text-text-secondary capitalize font-black tracking-widest opacity-40">No departments found</span>
       </div>
     );
   }
@@ -25,12 +25,12 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
                 <div className="bg-primary/10 p-2.5 rounded-xl">
                   <Layers size={18} className="text-primary" />
                 </div>
-                <span className="text-lg font-black text-text-primary leading-tight font-display uppercase">{item.name}</span>
+                <span className="text-lg font-black text-text-primary leading-tight font-display capitalize">{item.name}</span>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => onEdit(item)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border text-xs uppercase tracking-wider"><Edit size={14} /> Edit</button>
-              <button onClick={() => onDelete(item.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border text-xs uppercase tracking-wider"><Trash2 size={14} /> Delete</button>
+              <button onClick={() => onEdit(item)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border text-xs capitalize tracking-wider"><Edit size={14} /> Edit</button>
+              <button onClick={() => onDelete(item.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border text-xs capitalize tracking-wider"><Trash2 size={14} /> Delete</button>
             </div>
           </div>
         ))}
@@ -40,9 +40,9 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-border/50 bg-bg-secondary/50">
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Department ID</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Department Name</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display text-right">Actions</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Department ID</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Department Name</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -56,7 +56,7 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
                   <div className="bg-primary/5 p-1.5 rounded-lg opacity-80">
                     <Layers size={14} className="text-primary" />
                   </div>
-                  <span className="text-sm font-black text-text-primary font-display uppercase">{item.name}</span>
+                  <span className="text-sm font-black text-text-primary font-display capitalize">{item.name}</span>
                 </div>
               </td>
               <td className="px-6 py-4 text-right">

@@ -26,14 +26,14 @@ function RescheduleDetails({
     <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300 bg-tonal-secondary/5 p-6 rounded-[2rem] shadow-inner font-display">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
-           <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Day to free up</label>
+           <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest">Day to free up</label>
            <div className="relative">
              <div className="relative cursor-pointer" onClick={() => setIsDayOpen(!isDayOpen)}>
                 <input
                   type="text"
                   readOnly
                   value={rescheduleDay}
-                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-[11px] font-extrabold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer pr-10 pointer-events-none uppercase tracking-widest"
+                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-[11px] font-extrabold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer pr-10 pointer-events-none capitalize tracking-widest"
                 />
                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isDayOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -48,7 +48,7 @@ function RescheduleDetails({
                         setRescheduleDay(d);
                         setIsDayOpen(false);
                       }}
-                      className={`px-5 py-3.5 cursor-pointer transition-colors text-[11px] font-extrabold uppercase tracking-widest ${rescheduleDay === d ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+                      className={`px-5 py-3.5 cursor-pointer transition-colors text-[11px] font-extrabold capitalize tracking-widest ${rescheduleDay === d ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       {d}
                     </div>
@@ -58,14 +58,14 @@ function RescheduleDetails({
            </div>
         </div>
         <div className="space-y-1.5">
-           <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Slot to free up</label>
+           <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest">Slot to free up</label>
            <div className="relative">
              <div className="relative cursor-pointer" onClick={() => setIsHourOpen(!isHourOpen)}>
                 <input
                   type="text"
                   readOnly
                   value={`${rescheduleHour}:00`}
-                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-[11px] font-extrabold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer pr-10 pointer-events-none uppercase tracking-widest"
+                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-xl px-4 py-3 text-[11px] font-extrabold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 shadow-sm cursor-pointer pr-10 pointer-events-none capitalize tracking-widest"
                 />
                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary/50">
                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isHourOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -80,7 +80,7 @@ function RescheduleDetails({
                         setRescheduleHour(h);
                         setIsHourOpen(false);
                       }}
-                      className={`px-5 py-3.5 cursor-pointer transition-colors text-[11px] font-extrabold uppercase tracking-widest ${rescheduleHour === h ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+                      className={`px-5 py-3.5 cursor-pointer transition-colors text-[11px] font-extrabold capitalize tracking-widest ${rescheduleHour === h ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       {h}:00
                     </div>
@@ -138,8 +138,8 @@ function RescheduleDetails({
                     className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 ${rescheduleRoom === room.name ? 'bg-primary text-white shadow-ambient' : ''}`}
                   >
                     <div className="flex flex-col gap-0.5 max-w-[70%]">
-                      <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${rescheduleRoom === room.name ? 'text-white' : 'text-text-primary'}`}>{room.name}</span>
-                      <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${rescheduleRoom === room.name ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.building} &bull; {room.type}</span>
+                      <span className={`font-extrabold text-lg tracking-tight capitalize font-display ${rescheduleRoom === room.name ? 'text-white' : 'text-text-primary'}`}>{room.name}</span>
+                      <span className={`text-[10px] capitalize tracking-widest font-extrabold truncate ${rescheduleRoom === room.name ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.building} &bull; {room.type}</span>
                     </div>
                     <div className="flex gap-2 items-center opacity-80">
                       {room.has_ac && <Wind size={14} className={rescheduleRoom === room.name ? 'text-white' : 'text-primary'} />}

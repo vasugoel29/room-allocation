@@ -57,8 +57,8 @@ const Login = () => {
           <div className="inline-flex mb-4">
             <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.5rem] shadow-ambient" />
           </div>
-          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight uppercase font-display">Welcome Back</h2>
-          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60 font-display">Sign in to manage your bookings</p>
+          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight capitalize font-display">Welcome Back</h2>
+          <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-60 font-display">Sign in to manage your bookings</p>
         </div>
 
         {error && (
@@ -69,7 +69,7 @@ const Login = () => {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <label htmlFor="email" className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+            <label htmlFor="email" className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
               <Mail size={14} className="text-primary-accent" />
               Email Address
             </label>
@@ -89,7 +89,7 @@ const Login = () => {
           </div>
 
           <div className="space-y-2">
-            <label htmlFor="password" className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+            <label htmlFor="password" className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
               <Lock size={14} className="text-primary-accent" />
               Password
             </label>
@@ -109,7 +109,7 @@ const Login = () => {
           <div className="text-right">
             <Link 
               to="/forgot-password"
-              className="text-[10px] text-primary-accent font-extrabold uppercase tracking-widest opacity-70 hover:opacity-100 transition-opacity"
+              className="text-[10px] text-primary-accent font-extrabold capitalize tracking-widest opacity-70 hover:opacity-100 transition-opacity"
             >
               Forgot Password?
             </Link>
@@ -119,7 +119,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex flex-col items-center justify-center gap-1 bg-primary-accent disabled:opacity-50 text-white py-5 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
+              className="w-full flex flex-col items-center justify-center gap-1 bg-primary-accent disabled:opacity-50 text-white py-5 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
             >
               <div className="flex items-center gap-2">
                 <LogIn size={20} />

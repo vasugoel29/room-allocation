@@ -54,8 +54,8 @@ function FacultySelector({
                     }}
                     className={`p-5 cursor-pointer transition-colors flex flex-col hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'bg-primary text-white shadow-ambient' : ''}`}
                   >
-                    <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>{f.name}</span>
-                    <span className={`text-[10px] uppercase tracking-widest font-extrabold truncate ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{f.department || 'Faculty'}</span>
+                    <span className={`font-extrabold text-lg tracking-tight capitalize font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>{f.name}</span>
+                    <span className={`text-[10px] capitalize tracking-widest font-extrabold truncate ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{f.department || 'Faculty'}</span>
                   </div>
                 );
               })}

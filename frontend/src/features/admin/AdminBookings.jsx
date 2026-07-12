@@ -9,7 +9,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
     .sort((a, b) => (b.id || 0) - (a.id || 0));
 
   if (filteredBookings.length === 0) {
-    return <div className="p-20 text-center text-text-secondary uppercase font-black tracking-widest opacity-40">No bookings found</div>;
+    return <div className="p-20 text-center text-text-secondary capitalize font-black tracking-widest opacity-40">No bookings found</div>;
   }
 
   return (
@@ -23,7 +23,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
                 <span className="text-lg font-black text-text-primary">{item.room_name}</span>
                 <span className="text-sm font-bold text-text-secondary">{item.user_name}</span>
               </div>
-              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase border ${
+              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black capitalize border ${
                 item.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
               }`}>
                 {item.status}
@@ -56,11 +56,11 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-border/50 bg-bg-secondary/50">
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Member</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Room</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Time Slot</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Status</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Member</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Room</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Time Slot</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Status</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -69,7 +69,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
               <td className="px-6 py-4">
                 <div className="flex flex-col">
                   <span className="text-sm font-bold text-text-primary">{item.user_name}</span>
-                  <span className="text-[10px] text-text-secondary opacity-70 font-bold uppercase tracking-wider">{item.department_name || item.branch || 'General'}</span>
+                  <span className="text-[10px] text-text-secondary opacity-70 font-bold capitalize tracking-wider">{item.department_name || item.branch || 'General'}</span>
                 </div>
               </td>
               <td className="px-6 py-4">
@@ -88,7 +88,7 @@ function AdminBookings({ bookings, searchTerm, onCancel }) {
                 </div>
               </td>
               <td className="px-6 py-4">
-                <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-tighter shadow-sm border ${
+                <span className={`px-2 py-1 rounded-lg text-[10px] font-black capitalize tracking-tighter shadow-sm border ${
                   item.status === 'ACTIVE' 
                     ? 'bg-green-500/10 text-green-500 border-green-500/20' 
                     : 'bg-red-500/10 text-red-500 border-red-500/20'

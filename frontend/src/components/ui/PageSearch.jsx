@@ -15,7 +15,7 @@ function PageSearch({ value, onChange, placeholder = "Search...", className = ""
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full bg-bg-primary/50 border border-border/50 rounded-xl pl-9 pr-9 py-2 text-xs font-bold text-text-primary focus:outline-none focus:border-accent/40 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-text-secondary/50 placeholder:font-black placeholder:uppercase placeholder:tracking-widest"
+        className="w-full bg-bg-primary/50 border border-border/50 rounded-xl pl-9 pr-9 py-2 text-xs font-bold text-text-primary focus:outline-none focus:border-accent/40 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-text-secondary/50 placeholder:font-black placeholder:capitalize placeholder:tracking-widest"
       />
       {value && (
         <button

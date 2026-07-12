@@ -63,8 +63,8 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                    <UserIcon className="text-primary" size={24} />
                 </div>
                 <div>
-                   <h2 className="text-xl font-extrabold text-text-primary uppercase tracking-tight leading-none">{editingUser ? 'Edit Registry' : 'New Observer'}</h2>
-                   <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-widest mt-1 opacity-40">User Access Management</p>
+                   <h2 className="text-xl font-extrabold text-text-primary capitalize tracking-tight leading-none">{editingUser ? 'Edit Registry' : 'New Observer'}</h2>
+                   <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest mt-1 opacity-40">User Access Management</p>
                 </div>
              </div>
              <button onClick={onClose} className="p-3 hover:bg-tonal-secondary/10 rounded-full transition-all text-text-secondary">
@@ -74,7 +74,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
 
           <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Legal Identity / Name</label>
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Legal Identity / Name</label>
                 <input 
                   required
                   type="text"
@@ -85,7 +85,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                 />
              </div>
              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Operational Email</label>
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Operational Email</label>
                 <input 
                   required
                   type="email"
@@ -96,11 +96,11 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                 />
              </div>
              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Authority Role</label>
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Authority Role</label>
                 <select 
                   value={userForm.role}
                   onChange={(e) => setUserForm({...userForm, role: e.target.value})}
-                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-extrabold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner appearance-none uppercase tracking-tight"
+                  className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-4 text-sm font-extrabold text-text-primary focus:outline-none focus:bg-tonal-secondary/20 transition-all shadow-inner appearance-none capitalize tracking-tight"
                 >
                     <option value="VIEWER">VIEWER (Student)</option>
                     <option value="STUDENT_REP">STUDENT_REP (Lead)</option>
@@ -136,7 +136,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
 
              {!editingUser && (
                <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Temporal Access Key</label>
+                  <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Temporal Access Key</label>
                   <input 
                     required
                     type="password"
@@ -149,7 +149,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
              )}
              <button 
                type="submit"
-               className="w-full bg-primary text-white py-5 rounded-[2rem] font-extrabold shadow-ambient active:scale-[0.98] transition-all mt-6 uppercase tracking-widest text-xs"
+               className="w-full bg-primary text-white py-5 rounded-[2rem] font-extrabold shadow-ambient active:scale-[0.98] transition-all mt-6 capitalize tracking-widest text-xs"
              >
                {editingUser ? 'Synchronize Registry' : 'Establish Access'}
              </button>

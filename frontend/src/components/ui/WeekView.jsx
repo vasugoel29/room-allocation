@@ -24,7 +24,7 @@ export const WeekView = ({
         <div key={dayName} className={`flex items-stretch min-h-[96px] border-b border-surface-mid last:border-b-0 ${rowIdx % 2 === 0 ? 'bg-surface-low' : 'bg-surface-mid'}`}>
           {/* Day Label */}
           <div className="w-24 shrink-0 flex flex-col items-center justify-center py-4 border-r border-surface-mid">
-            <p className={`text-xs font-black uppercase tracking-widest ${textAccentClass}`}>{dayName.slice(0, 3)}</p>
+            <p className={`text-xs font-black capitalize tracking-widest ${textAccentClass}`}>{dayName.slice(0, 3)}</p>
             <p className="text-[10px] text-text-secondary font-bold mt-1">
               {new Date(dayInfo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </p>
@@ -57,7 +57,7 @@ export const WeekView = ({
                 </div>
               ))
             ) : (
-              <div className="flex items-center text-text-secondary/40 text-xs font-bold uppercase tracking-widest">
+              <div className="flex items-center text-text-secondary/40 text-xs font-bold capitalize tracking-widest">
                 No classes
               </div>
             )}

@@ -47,10 +47,10 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
             <div className="bg-surface rounded-3xl border border-border/20 shadow-2xl w-full max-w-lg p-8 space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h3 className="text-lg font-extrabold text-text-primary uppercase tracking-tight font-display">
+                        <h3 className="text-lg font-extrabold text-text-primary capitalize tracking-tight font-display">
                             {slot ? 'Edit Slot' : 'Add Slot'}
                         </h3>
-                        <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold opacity-40 mt-0.5">Timetable Entry</p>
+                        <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40 mt-0.5">Timetable Entry</p>
                     </div>
                     <button onClick={onClose} className="p-2 rounded-xl hover:bg-surface-mid text-text-secondary transition-colors">
                         <X size={18} />
@@ -60,7 +60,7 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-2">
-                            <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Faculty Name *</label>
+                            <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Faculty Name *</label>
                             <input
                                 value={form.faculty_name}
                                 onChange={e => set('faculty_name', e.target.value)}
@@ -70,7 +70,7 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Day *</label>
+                            <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Day *</label>
                             <select
                                 value={form.day_of_week}
                                 onChange={e => set('day_of_week', e.target.value)}
@@ -82,7 +82,7 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Slot Time *</label>
+                            <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Slot Time *</label>
                             <input
                                 value={form.slot_time}
                                 onChange={e => set('slot_time', e.target.value)}
@@ -92,7 +92,7 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Semester</label>
+                            <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Semester</label>
                             <input
                                 value={form.semester}
                                 onChange={e => set('semester', e.target.value)}
@@ -101,7 +101,7 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Room</label>
+                            <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Room</label>
                             <select
                                 value={form.room_id}
                                 onChange={e => set('room_id', e.target.value)}
@@ -112,7 +112,7 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                             </select>
                         </div>
                         <div className="col-span-2">
-                            <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Content / Subject</label>
+                            <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Content / Subject</label>
                             <input
                                 value={form.content}
                                 onChange={e => set('content', e.target.value)}
@@ -128,17 +128,17 @@ const SlotModal = ({ slot, rooms, onSave, onClose }) => {
                             >
                                 <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${form.is_occupied ? 'left-5' : 'left-1'}`} />
                             </button>
-                            <span className="text-[11px] uppercase tracking-widest font-extrabold text-text-secondary">
+                            <span className="text-[11px] capitalize tracking-widest font-extrabold text-text-secondary">
                                 Slot is occupied
                             </span>
                         </div>
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={onClose} className="flex-1 bg-surface-mid text-text-secondary px-4 py-3 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:bg-surface transition-all">
+                        <button type="button" onClick={onClose} className="flex-1 bg-surface-mid text-text-secondary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-surface transition-all">
                             Cancel
                         </button>
-                        <button type="submit" disabled={saving} className="flex-1 bg-primary text-white px-4 py-3 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all disabled:opacity-50">
+                        <button type="submit" disabled={saving} className="flex-1 bg-primary text-white px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 active:scale-95 transition-all disabled:opacity-50">
                             {saving ? 'Saving...' : slot ? 'Update Slot' : 'Create Slot'}
                         </button>
                     </div>
@@ -230,17 +230,17 @@ const AdminTimetableSlots = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-2xl font-extrabold text-white tracking-tight font-display uppercase italic flex items-center gap-3">
+                    <h2 className="text-2xl font-extrabold text-white tracking-tight font-display capitalize italic flex items-center gap-3">
                         <CalendarClock size={22} className="text-secondary" />
                         Timetable Slots
                     </h2>
-                    <p className="text-text-secondary text-[10px] uppercase tracking-widest font-bold opacity-40 mt-1">
+                    <p className="text-text-secondary text-[10px] capitalize tracking-widest font-bold opacity-40 mt-1">
                         {meta.total} total slot{meta.total !== 1 ? 's' : ''}
                     </p>
                 </div>
                 <button
                     onClick={() => setModal({ mode: 'add' })}
-                    className="flex items-center gap-2 bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/20 px-5 py-2.5 rounded-xl font-extrabold text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                    className="flex items-center gap-2 bg-secondary/20 hover:bg-secondary/30 text-secondary border border-secondary/20 px-5 py-2.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95"
                 >
                     <Plus size={14} /> Add Slot
                 </button>
@@ -249,7 +249,7 @@ const AdminTimetableSlots = () => {
             {/* Filters */}
             <div className="bg-surface-mid/50 rounded-2xl border border-border/10 p-4 flex flex-wrap gap-3 items-end">
                 <div className="flex-1 min-w-[160px]">
-                    <label className="block text-[9px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Faculty Name</label>
+                    <label className="block text-[9px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Faculty Name</label>
                     <div className="relative">
                         <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
                         <input
@@ -262,7 +262,7 @@ const AdminTimetableSlots = () => {
                     </div>
                 </div>
                 <div className="min-w-[130px]">
-                    <label className="block text-[9px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Day</label>
+                    <label className="block text-[9px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Day</label>
                     <select
                         value={draftFilters.day_of_week}
                         onChange={e => setDraftFilters(f => ({ ...f, day_of_week: e.target.value }))}
@@ -273,7 +273,7 @@ const AdminTimetableSlots = () => {
                     </select>
                 </div>
                 <div className="min-w-[90px]">
-                    <label className="block text-[9px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Semester</label>
+                    <label className="block text-[9px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Semester</label>
                     <input
                         value={draftFilters.semester}
                         onChange={e => setDraftFilters(f => ({ ...f, semester: e.target.value }))}
@@ -282,10 +282,10 @@ const AdminTimetableSlots = () => {
                     />
                 </div>
                 <div className="flex gap-2">
-                    <button onClick={applyFilters} className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 px-4 py-2.5 rounded-xl font-extrabold text-[9px] uppercase tracking-widest transition-all">
+                    <button onClick={applyFilters} className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 px-4 py-2.5 rounded-xl font-extrabold text-[9px] capitalize tracking-widest transition-all">
                         Filter
                     </button>
-                    <button onClick={clearFilters} className="bg-surface hover:bg-surface-mid text-text-secondary border border-border/10 px-4 py-2.5 rounded-xl font-extrabold text-[9px] uppercase tracking-widest transition-all">
+                    <button onClick={clearFilters} className="bg-surface hover:bg-surface-mid text-text-secondary border border-border/10 px-4 py-2.5 rounded-xl font-extrabold text-[9px] capitalize tracking-widest transition-all">
                         Clear
                     </button>
                 </div>
@@ -298,7 +298,7 @@ const AdminTimetableSlots = () => {
                         <thead>
                             <tr className="bg-surface-mid/60 border-b border-border/10">
                                 {['Faculty', 'Day', 'Slot Time', 'Semester', 'Room', 'Content', 'Occupied', ''].map(h => (
-                                    <th key={h} className="text-left px-4 py-3 text-[9px] uppercase tracking-widest font-extrabold text-text-secondary">{h}</th>
+                                    <th key={h} className="text-left px-4 py-3 text-[9px] capitalize tracking-widest font-extrabold text-text-secondary">{h}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -322,7 +322,7 @@ const AdminTimetableSlots = () => {
                                     </td>
                                     <td className="px-4 py-3 text-text-secondary text-xs max-w-[200px] truncate">{slot.content || '—'}</td>
                                     <td className="px-4 py-3">
-                                        <span className={`px-2 py-0.5 rounded-lg font-extrabold text-[9px] uppercase tracking-widest ${slot.is_occupied ? 'bg-primary/15 text-primary' : 'bg-surface-mid text-text-secondary'}`}>
+                                        <span className={`px-2 py-0.5 rounded-lg font-extrabold text-[9px] capitalize tracking-widest ${slot.is_occupied ? 'bg-primary/15 text-primary' : 'bg-surface-mid text-text-secondary'}`}>
                                             {slot.is_occupied ? 'Yes' : 'No'}
                                         </span>
                                     </td>
@@ -353,7 +353,7 @@ const AdminTimetableSlots = () => {
                 {/* Pagination */}
                 {totalPages > 1 && (
                     <div className="flex items-center justify-between px-4 py-3 border-t border-border/10 bg-surface-mid/30">
-                        <span className="text-[10px] uppercase tracking-widest font-bold text-text-secondary">
+                        <span className="text-[10px] capitalize tracking-widest font-bold text-text-secondary">
                             Page {meta.page} of {totalPages} · {meta.total} slots
                         </span>
                         <div className="flex gap-2">
@@ -385,8 +385,8 @@ const AdminTimetableSlots = () => {
                         <p className="text-sm font-bold text-text-primary">Delete this timetable slot?</p>
                         <p className="text-xs text-text-secondary">This action cannot be undone.</p>
                         <div className="flex gap-3">
-                            <button onClick={() => setDeleteConfirm(null)} className="flex-1 bg-surface-mid text-text-secondary px-4 py-2.5 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:bg-surface transition-all">Cancel</button>
-                            <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-2.5 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:bg-red-500/30 transition-all">Delete</button>
+                            <button onClick={() => setDeleteConfirm(null)} className="flex-1 bg-surface-mid text-text-secondary px-4 py-2.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-surface transition-all">Cancel</button>
+                            <button onClick={() => handleDelete(deleteConfirm)} className="flex-1 bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-2.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-red-500/30 transition-all">Delete</button>
                         </div>
                     </div>
                 </div>

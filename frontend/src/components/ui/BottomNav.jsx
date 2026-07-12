@@ -30,7 +30,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                   <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''}`}>
                     <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                   </div>
-                  <span className="text-[9px] font-bold uppercase tracking-tight">{label}</span>
+                  <span className="text-[9px] font-bold capitalize tracking-tight">{label}</span>
                 </>
               )}
             </NavLink>
@@ -58,7 +58,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                         </span>
                       )}
                     </div>
-                    <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+                    <span className="text-[9px] font-black capitalize tracking-widest">{label}</span>
                   </>
                 )}
               </NavLink>
@@ -88,7 +88,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                     <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''}`}>
                       <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                     </div>
-                    <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+                    <span className="text-[9px] font-black capitalize tracking-widest">{label}</span>
                   </>
                 )}
               </NavLink>

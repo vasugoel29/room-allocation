@@ -103,10 +103,10 @@ function Calendar({ onSlotClick }) {
       <div className="p-4 sm:p-6 bg-tonal-secondary/10 backdrop-blur-md shrink-0 border-b border-text-secondary/10">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight uppercase leading-none font-display">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight capitalize leading-none font-display">
               Room Schedule
             </h1>
-            <p className="text-[10px] sm:text-xs text-text-secondary font-bold uppercase tracking-widest mt-1 opacity-60">
+            <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest mt-1 opacity-60">
               Structural precision in time and space
             </p>
           </div>
@@ -171,7 +171,7 @@ function Calendar({ onSlotClick }) {
                 <div className="p-6 bg-tonal-secondary/10 rounded-full mb-6">
                   <Filter className="text-secondary/60" size={48} strokeWidth={1.5} />
                 </div>
-                <p className="text-text-secondary text-base sm:text-lg font-extrabold uppercase tracking-widest opacity-40 font-display text-center">No structural matches found</p>
+                <p className="text-text-secondary text-base sm:text-lg font-extrabold capitalize tracking-widest opacity-40 font-display text-center">No structural matches found</p>
               </div>
             ) : (
               filteredHours.map((hour) => {
@@ -248,7 +248,7 @@ function Calendar({ onSlotClick }) {
                                     >
                                       <div className="flex flex-col items-center gap-1">
                                         <Filter size={14} className="text-text-secondary/50 group-hover:text-primary transition-colors" />
-                                        <span className="text-text-secondary/60 text-[9px] font-black uppercase tracking-tighter group-hover:text-primary">+{slotRooms.length - 3} More</span>
+                                        <span className="text-text-secondary/60 text-[9px] font-black capitalize tracking-tighter group-hover:text-primary">+{slotRooms.length - 3} More</span>
                                       </div>
                                     </button>
                                   )}
@@ -258,7 +258,7 @@ function Calendar({ onSlotClick }) {
                                         e.stopPropagation();
                                         setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: false }));
                                       }}
-                                      className="px-3 py-2 rounded-xl bg-surface-lowest text-text-secondary text-[8px] sm:text-[10px] font-black uppercase hover:bg-bg-primary transition-all flex items-center justify-center gap-2 mt-1"
+                                      className="px-3 py-2 rounded-xl bg-surface-lowest text-text-secondary text-[8px] sm:text-[10px] font-black capitalize hover:bg-bg-primary transition-all flex items-center justify-center gap-2 mt-1"
                                     >
                                       Show Less
                                     </button>

@@ -39,8 +39,8 @@ const ForgotPassword = () => {
           <div className="inline-flex mb-4">
             <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.5rem] shadow-ambient" />
           </div>
-          <h2 className="text-2xl font-extrabold text-text-primary tracking-tight uppercase font-display">Reset Password</h2>
-          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60 font-display">
+          <h2 className="text-2xl font-extrabold text-text-primary tracking-tight capitalize font-display">Reset Password</h2>
+          <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-60 font-display">
             {sent ? 'Check your email inbox' : 'Enter your NSUT email to get a reset link'}
           </p>
         </div>
@@ -59,14 +59,14 @@ const ForgotPassword = () => {
                 If an account with <strong>{email}</strong> exists, we've sent a password reset link. Please check your inbox (and spam folder).
               </p>
             </div>
-            <p className="text-center text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60">
+            <p className="text-center text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-60">
               The link expires in 1 hour.
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
                 <Mail size={14} className="text-primary-accent" />
                 Email Address
               </label>
@@ -85,7 +85,7 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-primary-accent disabled:opacity-50 text-white py-4 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
+              className="w-full flex items-center justify-center gap-2 bg-primary-accent disabled:opacity-50 text-white py-4 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
             >
               <Send size={18} />
               {loading ? 'Sending...' : 'Send Reset Link'}
@@ -96,7 +96,7 @@ const ForgotPassword = () => {
         <div className="text-center pt-2 font-display">
           <Link
             to="/"
-            className="text-[10px] text-primary-accent font-extrabold uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+            className="text-[10px] text-primary-accent font-extrabold capitalize tracking-widest opacity-80 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
           >
             <ArrowLeft size={14} />
             Back to Login

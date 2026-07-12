@@ -37,14 +37,14 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
              <div className="space-y-1 relative z-50">
-               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1">Date</label>
+               <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em] px-1">Date</label>
                <DatePickerDropdown 
                  selectedDate={quickBookForm.date}
                  onChange={(val) => setQuickBookForm({...quickBookForm, date: val})}
                />
              </div>
              <div className="space-y-1 relative">
-               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 flex items-center gap-1.5">
+               <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em] px-1 flex items-center gap-1.5">
                  <Clock size={12} className="text-accent" /> Slot
                </label>
                <button
@@ -75,7 +75,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                )}
              </div>
              <div className="space-y-1 relative">
-               <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 flex items-center gap-1.5">
+               <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em] px-1 flex items-center gap-1.5">
                  <MapPin size={12} className="text-accent" /> Room Jump
                </label>
                <button
@@ -115,7 +115,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
            </div>
            <div className="hidden sm:flex bg-accent/5 px-4 py-2 rounded-xl border border-accent/10 items-center gap-3">
              <Zap size={14} className="text-accent" />
-             <span className="text-[10px] font-black text-accent uppercase tracking-widest italic">Rapid Discovery</span>
+             <span className="text-[10px] font-black text-accent capitalize tracking-widest italic">Rapid Discovery</span>
            </div>
          </div>
        </div>
@@ -129,18 +129,18 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-lg font-black text-text-primary tracking-tight">{room.room_name}</span>
-                    <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
+                    <span className="text-[10px] text-text-secondary font-bold capitalize tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
                   </div>
                   {room.booking_id ? (
-                    <span className="text-[10px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Booked</span>
+                    <span className="text-[10px] font-black capitalize text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">Booked</span>
                   ) : (
-                    <span className="text-[10px] font-black uppercase text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Available</span>
+                    <span className="text-[10px] font-black capitalize text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20">Available</span>
                   )}
                 </div>
 
                 <div className="space-y-4">
                   <div className="relative">
-                     <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 mb-1 block">Recipient</label>
+                     <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em] px-1 mb-1 block">Recipient</label>
                      <button 
                        onClick={() => setUserDropdownOpen(userDropdownOpen === room.room_id ? null : room.room_id)}
                        className="w-full flex items-center justify-between gap-3 bg-bg-secondary/50 border border-border rounded-xl px-4 py-3 text-sm font-bold"
@@ -204,10 +204,10 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
           <table className="hidden sm:table w-full text-left border-collapse">
             <thead className="sticky top-0 z-10 bg-bg-secondary/90 backdrop-blur-md">
               <tr className="border-b border-border/50">
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Room</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Status</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Member (Recipient)</th>
-                <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Action</th>
+                <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Room</th>
+                <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Status</th>
+                <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Member (Recipient)</th>
+                <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/30">
@@ -216,17 +216,17 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                    <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-text-primary tracking-tight">{room.room_name}</span>
-                        <span className="text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
+                        <span className="text-[10px] text-text-secondary font-bold capitalize tracking-widest opacity-50">{room.building} • Floor {room.floor}</span>
                       </div>
                    </td>
                    <td className="px-6 py-4">
                       {room.booking_id ? (
                         <div className="flex flex-col">
-                           <span className="text-[10px] font-black uppercase text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 w-fit mb-1">Booked</span>
+                           <span className="text-[10px] font-black capitalize text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 w-fit mb-1">Booked</span>
                            <span className="text-[10px] text-text-secondary font-medium italic truncate max-w-[120px]">"{room.purpose}" by {room.booked_by_name}</span>
                         </div>
                       ) : (
-                        <span className="text-[10px] font-black uppercase text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 w-fit">Available</span>
+                        <span className="text-[10px] font-black capitalize text-green-500 bg-green-500/10 px-2 py-0.5 rounded border border-green-500/20 w-fit">Available</span>
                       )}
                    </td>
                    <td className="px-6 py-4">
@@ -261,7 +261,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                               </div>
                               <div className="max-h-[200px] overflow-auto no-scrollbar">
                                 {filteredUsers.length === 0 ? (
-                                  <div className="p-4 text-center text-xs text-text-secondary font-bold uppercase tracking-widest">No users found</div>
+                                  <div className="p-4 text-center text-xs text-text-secondary font-bold capitalize tracking-widest">No users found</div>
                                 ) : (
                                   filteredUsers.map(u => (
                                     <button 
@@ -309,21 +309,21 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
 
           {totalPages > 1 && (
              <div className="flex items-center justify-between p-4 bg-bg-secondary/40 border-t border-border/50">
-               <span className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+               <span className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                  Page {currentPage} of {totalPages}
                </span>
                <div className="flex gap-2">
                  <button 
                    disabled={currentPage <= 1}
                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                   className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed text-text-primary"
+                   className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed text-text-primary"
                  >
                    Prev
                  </button>
                  <button 
                    disabled={currentPage >= totalPages}
                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                   className="px-4 py-2 bg-accent text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                   className="px-4 py-2 bg-accent text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
                  >
                    Next
                  </button>

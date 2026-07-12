@@ -197,8 +197,8 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           <div className="inline-flex p-3 bg-primary-accent/10 rounded-2xl text-primary-accent mb-4">
             <UserPlus size={32} />
           </div>
-          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight uppercase font-display">Create Account</h2>
-          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60 font-display">Join the Room Allocation System</p>
+          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight capitalize font-display">Create Account</h2>
+          <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-60 font-display">Join the Room Allocation System</p>
         </div>
 
         {/* Role Selector */}
@@ -216,7 +216,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               setDepartmentName('');
               setError('');
             }}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-extrabold uppercase transition-all tracking-tight ${role === 'VIEWER' ? 'bg-surface-low text-primary-accent shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-extrabold capitalize transition-all tracking-tight ${role === 'VIEWER' ? 'bg-surface-low text-primary-accent shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
           >
             <GraduationCap size={16} /> Student
           </button>
@@ -233,7 +233,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               setDepartmentName('');
               setError('');
             }}
-            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-extrabold uppercase transition-all tracking-tight ${role === 'FACULTY' ? 'bg-surface-low text-primary-accent shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[10px] font-extrabold capitalize transition-all tracking-tight ${role === 'FACULTY' ? 'bg-surface-low text-primary-accent shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
           >
             <Building2 size={16} /> Faculty
           </button>
@@ -249,12 +249,12 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           /* Step 1: Roll Number Collection */
           <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 font-display">Roll Number</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 font-display">Roll Number</label>
               <div className="relative group">
                 <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40 group-focus-within:text-primary-accent transition-colors" />
                 <input
                   type="text"
-                  className="w-full bg-surface-highest/10 rounded-xl pl-11 pr-4 py-4 text-base font-bold text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all placeholder:text-text-secondary/30 uppercase font-body"
+                  className="w-full bg-surface-highest/10 rounded-xl pl-11 pr-4 py-4 text-base font-bold text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all placeholder:text-text-secondary/30 capitalize font-body"
                   placeholder="e.g. 2021UCM2365"
                   value={rollNo}
                   onChange={(e) => setRollNo(e.target.value)}
@@ -270,7 +270,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             <button
               onClick={handleFetchStudent}
               disabled={isFetching || !rollNo}
-              className="w-full bg-primary-accent text-white py-5 rounded-2xl font-extrabold uppercase tracking-widest text-[10px] shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 font-display"
+              className="w-full bg-primary-accent text-white py-5 rounded-2xl font-extrabold capitalize tracking-widest text-[10px] shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 font-display"
             >
               {isFetching ? (
                 <>
@@ -289,7 +289,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
           /* Step 2: Full Form (Manual or Auto-filled) */
           <form onSubmit={handleSubmit} className="space-y-4 animate-in slide-in-from-right-4 duration-300">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 font-display">Full Name</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 font-display">Full Name</label>
               <div className="relative">
                 <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />
                 <input
@@ -304,7 +304,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 font-display">Email Address</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 font-display">Email Address</label>
               <div className="relative">
                 <Mail size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />
                 <input
@@ -344,7 +344,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             )}
 
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 font-display">Password</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 font-display">Password</label>
               <div className="relative">
                 <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />
                 <input
@@ -361,7 +361,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
             {role === 'FACULTY' && (
                <div className="p-4 rounded-xl bg-primary-accent/5 flex gap-3 animate-in slide-in-from-top-2 font-display">
                   <ShieldCheck size={20} className="text-primary-accent shrink-0" />
-                  <p className="text-[11px] font-extrabold text-primary-accent leading-relaxed uppercase tracking-tight">Account will be activated following administrator verification.</p>
+                  <p className="text-[11px] font-extrabold text-primary-accent leading-relaxed capitalize tracking-tight">Account will be activated following administrator verification.</p>
                </div>
             )}
 
@@ -378,7 +378,7 @@ const Signup = ({ onSignupSuccess, onBackToLogin }) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="flex-1 bg-primary-accent text-white py-5 rounded-2xl font-extrabold uppercase tracking-widest text-[10px] shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 font-display"
+                className="flex-1 bg-primary-accent text-white py-5 rounded-2xl font-extrabold capitalize tracking-widest text-[10px] shadow-ambient hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2 font-display"
               >
                 {loading ? (status || 'Creating...') : (role === 'FACULTY' ? 'Request Access' : 'Create Account')}
                 {!loading && <ChevronRight size={18} />}

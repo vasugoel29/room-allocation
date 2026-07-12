@@ -109,14 +109,15 @@ const Timetable = () => {
         fetchFacultyOverrides?.();
         fetchBookings?.();
       } else {
-        await roomService.createAvailabilityOverride({
+        const result = await roomService.requestClassCancellation({
           room_name: pendingCancelClass.room,
-          day: selectedDay,
+          date: selectedDay,
           hour: hour,
-          is_available: true,
-          reason: `Class ${pendingCancelClass.subjectName} cancelled by Rep`
+          subject_name: pendingCancelClass.subjectName || pendingCancelClass.subject,
+          faculty_name: pendingCancelClass.faculty,
+          booking_id: pendingCancelClass.isDynamic ? pendingCancelClass.bookingId : null
         });
-        toast.success(`Room ${pendingCancelClass.room} is now available!`);
+        toast.success(result.message);
       }
 
       fetchAvailability(); 
@@ -133,10 +134,10 @@ const Timetable = () => {
   return (
     <div className="flex flex-col overflow-hidden" style={{ height: '100%' }}>
       {/* ── Header Controls ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 px-5 sm:px-6 pt-5 sm:pt-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 px-5 sm:px-6 pt-5 pb-5 sm:pt-6 sm:pb-6">
         <div className="flex flex-col">
-          <h1 className="text-xl font-black text-text-primary tracking-tighter uppercase italic">Academic Timetable</h1>
-          <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest mt-0.5">
+          <h1 className="text-xl font-black text-text-primary tracking-tighter capitalize italic">Academic Timetable</h1>
+          <p className="text-[10px] text-text-secondary font-black capitalize tracking-widest mt-0.5">
             {viewMode === 'day' ? formatDateDisplay(selectedDay) : formatWeekDisplay(selectedDay)}
           </p>
         </div>
@@ -145,13 +146,13 @@ const Timetable = () => {
           <div className="flex bg-tonal-secondary/15 p-1 rounded-xl shrink-0">
             <button
               onClick={() => setViewMode('day')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'day' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black capitalize tracking-widest transition-all ${viewMode === 'day' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
             >
               Day
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'week' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-black capitalize tracking-widest transition-all ${viewMode === 'week' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
             >
               Week
             </button>
@@ -188,13 +189,13 @@ const Timetable = () => {
       </div>
 
       {isRep && (
-        <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex gap-4 shrink-0 animate-in slide-in-from-top-4 duration-500 mx-5 sm:mx-6">
+        <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex gap-4 shrink-0 animate-in slide-in-from-top-4 duration-500 mx-5 sm:mx-6 mb-4">
           <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white shrink-0 shadow-lg shadow-accent/20">
             <Lightbulb size={20} />
           </div>
           <div>
-            <h4 className="text-xs font-black text-accent uppercase tracking-widest">Pro Tip for Reps</h4>
-            <p className="text-[11px] text-text-secondary font-bold leading-relaxed mt-1">If a class is cancelled, tap the trash icon to free up the room for others. This will mark it as available in the booking search.</p>
+            <h4 className="text-xs font-black text-accent capitalize tracking-widest">Pro Tip for Reps</h4>
+            <p className="text-[11px] text-text-secondary font-bold leading-relaxed mt-1">Request a class cancellation here. The room becomes available only after the assigned faculty member approves it.</p>
           </div>
         </div>
       )}
@@ -215,27 +216,27 @@ const Timetable = () => {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
-                        {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Updated</span>}
+                        {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full capitalize tracking-tighter">Updated</span>}
                       </div>
                       {item.isDynamic && (
                         <div className="mt-1">
                           {user.role === 'FACULTY' ? (
-                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{item.className}</p>
+                            <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">{item.className}</p>
                           ) : (
-                            <p className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">Faculty: {item.faculty}</p>
+                            <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">Faculty: {item.faculty}</p>
                           )}
                         </div>
                       )}
                       <div className="flex items-center gap-3 mt-1.5">
-                        <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 uppercase tracking-tighter">
+                        <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 capitalize tracking-tighter">
                           <Clock size={12} className="text-accent" /> 
                           {item.displayTime}
                         </span>
-                        <span className="text-[11px] text-accent font-black uppercase tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/10">
+                        <span className="text-[11px] text-accent font-black capitalize tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/10">
                           {item.room}
                         </span>
-                        {item.faculty && (
-                          <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 uppercase tracking-tighter">
+                        {!isFaculty && item.faculty && (
+                          <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 capitalize tracking-tighter">
                             <User size={12} className="text-accent" />
                             {item.faculty}
                           </span>
@@ -261,7 +262,7 @@ const Timetable = () => {
                 <div className="w-16 h-16 bg-bg-secondary rounded-3xl flex items-center justify-center text-text-secondary mb-4 border border-border">
                   <AlertCircle size={32} />
                 </div>
-                <p className="text-xs text-text-secondary font-black uppercase tracking-widest">No classes scheduled for this day</p>
+                <p className="text-xs text-text-secondary font-black capitalize tracking-widest">No classes scheduled for this day</p>
               </div>
             )}
           </div>
@@ -274,7 +275,7 @@ const Timetable = () => {
                 {item.className && (
                   <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
                 )}
-                {item.faculty && (
+                {!isFaculty && item.faculty && (
                   <p className="text-[10px] font-semibold text-text-secondary mt-1">Faculty: {item.faculty}</p>
                 )}
               </>
@@ -315,8 +316,8 @@ const Timetable = () => {
               
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-text-primary tracking-tight">Free This Room?</h2>
-                <p className="text-xs font-bold text-text-secondary uppercase tracking-widest leading-relaxed px-4">
-                  This class will be marked as cancelled for this specific date only.
+                <p className="text-xs font-bold text-text-secondary capitalize tracking-widest leading-relaxed px-4">
+                  This cancellation will be sent to the class faculty member for approval.
                 </p>
               </div>
 
@@ -331,12 +332,12 @@ const Timetable = () => {
                     <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
                        <MapPin size={16} />
                     </div>
-                    <p className="text-xs font-bold text-text-secondary italic uppercase tracking-widest">Room {pendingCancelClass?.room} @ {pendingCancelClass?.displayTime}</p>
+                    <p className="text-xs font-bold text-text-secondary italic capitalize tracking-widest">Room {pendingCancelClass?.room} @ {pendingCancelClass?.displayTime}</p>
                  </div>
               </div>
 
               <p className="text-[11px] text-text-secondary font-medium leading-relaxed px-2">
-                Once confirmed, this room will become <span className="text-accent font-black">AVAILABLE</span> in the search results for others to book.
+                The room will become <span className="text-accent font-black">AVAILABLE</span> only after faculty approval.
               </p>
 
               <div className="flex flex-col gap-2 pt-2">
@@ -345,7 +346,7 @@ const Timetable = () => {
                   disabled={isCancelling}
                   className="w-full bg-red-600 text-white font-black py-4 rounded-2xl shadow-lg shadow-red-600/20 active:scale-95 transition-all text-sm disabled:opacity-50"
                 >
-                  {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
+                  {isCancelling ? 'Sending Request...' : 'Request Cancellation'}
                 </button>
                 <button 
                   onClick={() => {

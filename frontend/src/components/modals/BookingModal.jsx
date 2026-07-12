@@ -296,26 +296,26 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
         <h3
           id="modal-title"
-          className="text-2xl sm:text-3xl font-extrabold text-text-primary mb-2 flex items-center gap-4 flex-wrap font-display uppercase tracking-tight"
+          className="text-2xl sm:text-3xl font-extrabold text-text-primary mb-2 flex items-center gap-4 flex-wrap font-display capitalize tracking-tight"
         >
           Reserve Space
-          <span className="text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-lg bg-tonal-secondary/10 text-primary uppercase tracking-widest">
+          <span className="text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-lg bg-tonal-secondary/10 text-primary capitalize tracking-widest">
             {slot.day} @ {slot.hour}:00
           </span>
         </h3>
-        <p className="text-text-secondary mb-6 sm:mb-10 text-xs sm:text-sm font-bold opacity-40 uppercase tracking-widest">
+        <p className="text-text-secondary mb-6 sm:mb-10 text-xs sm:text-sm font-bold opacity-40 capitalize tracking-widest">
           Architectural precision in room scheduling.
         </p>
 
         {error && (
-          <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-red-500/10 text-red-500 text-xs sm:text-sm flex items-center gap-3 font-extrabold font-display uppercase tracking-tight">
+          <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-red-500/10 text-red-500 text-xs sm:text-sm flex items-center gap-3 font-extrabold font-display capitalize tracking-tight">
             <AlertCircle size={20} />
             {error}
           </div>
         )}
 
         {isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium') && (
-          <div className="mb-6 sm:mb-8 p-5 rounded-[1.75rem] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-xs sm:text-sm flex flex-col gap-2 font-display uppercase tracking-tight">
+          <div className="mb-6 sm:mb-8 p-5 rounded-[1.75rem] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-xs sm:text-sm flex flex-col gap-2 font-display capitalize tracking-tight">
             <div className="flex items-center gap-3 font-extrabold text-sm">
               <AlertCircle size={20} />
               Booking Restricted
@@ -374,7 +374,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
           </div>
 
           <div className="space-y-3">
-            <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] ml-1 opacity-40 font-display">
+            <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">
               Logistics & Context
             </label>
             <textarea
@@ -397,7 +397,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 <button
                   type="submit"
                   disabled={loading || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
-                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display uppercase tracking-widest`}
+                  className={`flex-[2] flex items-center justify-center gap-3 ${selectedRoom && getRoomBooking(selectedRoom) ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest`}
                 >
                   {loading ? (
                     "Processing..."
@@ -412,7 +412,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 </button>
               )
             ) : (
-              <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-5 rounded-2xl text-center text-[10px] font-extrabold uppercase tracking-widest opacity-40">
+              <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-5 rounded-2xl text-center text-[10px] font-extrabold capitalize tracking-widest opacity-40">
                 Read Only Registry
               </div>
             )}
@@ -424,7 +424,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   type="button"
                   onClick={handleCancel}
                   disabled={loading}
-                  className="flex-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-[2rem] text-[10px] font-extrabold uppercase tracking-widest transition-all flex items-center justify-center gap-3 font-display"
+                  className="flex-1 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-[2rem] text-[10px] font-extrabold capitalize tracking-widest transition-all flex items-center justify-center gap-3 font-display"
                 >
                   <X size={20} />
                   Revoke

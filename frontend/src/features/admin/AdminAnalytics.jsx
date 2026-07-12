@@ -96,7 +96,7 @@ const AdminAnalytics = () => {
                                 <stat.icon className="w-5 h-5" />
                             </div>
                         </div>
-                        <h3 className="text-gray-500 text-xs font-bold uppercase tracking-wider">{stat.label}</h3>
+                        <h3 className="text-gray-500 text-xs font-bold capitalize tracking-wider">{stat.label}</h3>
                         <p className="text-3xl font-bold text-white mt-1">{stat.value}</p>
                         <p className="text-gray-600 text-[10px] mt-1 font-medium">{stat.sub}</p>
                     </div>

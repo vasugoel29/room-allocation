@@ -79,14 +79,14 @@ function RoomSelector({
                     className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'bg-primary text-white font-extrabold shadow-ambient' : ''}`}
                   >
                     <div className="flex flex-col gap-0.5 max-w-[70%]">
-                      <span className={`font-extrabold text-lg tracking-tight uppercase font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>
+                      <span className={`font-extrabold text-lg tracking-tight capitalize font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>
                         {room.name}
                       </span>
-                      <span className={`text-[10px] uppercase tracking-widest font-extrabold ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
+                      <span className={`text-[10px] capitalize tracking-widest font-extrabold ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
                         {room.building} &bull; {room.type}
                       </span>
                       {booking && (
-                        <span className="text-[10px] text-tertiary font-extrabold uppercase tracking-widest bg-tonal-tertiary px-3 py-1 rounded-full mt-2 w-fit shadow-tertiary">
+                        <span className="text-[10px] text-tertiary font-extrabold capitalize tracking-widest bg-tonal-tertiary px-3 py-1 rounded-full mt-2 w-fit shadow-tertiary">
                           Occupied by {booking.user_name}
                         </span>
                       )}

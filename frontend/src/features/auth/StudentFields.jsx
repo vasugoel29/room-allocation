@@ -16,7 +16,7 @@ function StudentFields({
   return (
     <>
       <div className="space-y-2">
-        <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.1em] px-1">
+        <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.1em] px-1">
           Branch
         </label>
         <div className="relative">
@@ -37,7 +37,7 @@ function StudentFields({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.1em] px-1">
+          <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.1em] px-1">
             Year
           </label>
           <div className="relative">
@@ -111,7 +111,7 @@ function StudentFields({
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.1em] px-1">
+          <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.1em] px-1">
             Section
           </label>
           <div className="relative">

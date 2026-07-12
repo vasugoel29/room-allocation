@@ -72,8 +72,8 @@ const PromotionRequest = () => {
           <Sparkles size={48} />
         </div>
         <div className="space-y-2">
-          <h2 className="text-3xl font-black text-text-primary tracking-tight italic uppercase">You are a Rep!</h2>
-          <p className="text-sm font-bold text-text-secondary uppercase tracking-widest leading-relaxed">
+          <h2 className="text-3xl font-black text-text-primary tracking-tight italic capitalize">You are a Rep!</h2>
+          <p className="text-sm font-bold text-text-secondary capitalize tracking-widest leading-relaxed">
             Congratulations! You already have Student Representative privileges. You can now book and manage rooms for your class.
           </p>
         </div>
@@ -84,8 +84,8 @@ const PromotionRequest = () => {
   return (
     <div className="flex flex-col h-full space-y-6 p-5 sm:p-8 overflow-y-auto no-scrollbar">
       <div className="flex flex-col">
-        <h1 className="text-2xl font-black text-text-primary tracking-tighter uppercase italic">Representative Request</h1>
-        <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest mt-1">Upgrade your account to manage class bookings</p>
+        <h1 className="text-2xl font-black text-text-primary tracking-tighter capitalize italic">Representative Request</h1>
+        <p className="text-[10px] text-text-secondary font-black capitalize tracking-widest mt-1">Upgrade your account to manage class bookings</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -100,14 +100,14 @@ const PromotionRequest = () => {
                   <UserPlus size={24} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-black text-text-primary uppercase tracking-widest">Apply for Rep Status</h3>
-                  <p className="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Help your class find rooms easily</p>
+                  <h3 className="text-sm font-black text-text-primary capitalize tracking-widest">Apply for Rep Status</h3>
+                  <p className="text-[10px] text-text-secondary font-bold capitalize tracking-wider">Help your class find rooms easily</p>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] ml-2">Reason for Request</label>
+                  <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em] ml-2">Reason for Request</label>
                   <textarea
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
@@ -120,7 +120,7 @@ const PromotionRequest = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || currentRequest?.status === 'PENDING'}
-                  className="w-full bg-accent text-white font-black py-4 rounded-2xl shadow-lg shadow-accent/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-widest disabled:opacity-50 disabled:grayscale"
+                  className="w-full bg-accent text-white font-black py-4 rounded-2xl shadow-lg shadow-accent/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-xs capitalize tracking-widest disabled:opacity-50 disabled:grayscale"
                 >
                   {isSubmitting ? 'Submitting...' : currentRequest?.status === 'PENDING' ? 'Request Pending' : 'Submit Request'}
                   <Send size={16} />
@@ -130,7 +130,7 @@ const PromotionRequest = () => {
           </div>
 
           <div className="bg-bg-secondary/50 border border-border rounded-2xl p-6 space-y-4">
-            <h4 className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em]">Why become a Rep?</h4>
+            <h4 className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em]">Why become a Rep?</h4>
             <div className="space-y-3">
               {[
                 "Book rooms for your entire section",
@@ -142,7 +142,7 @@ const PromotionRequest = () => {
                   <div className="mt-1 w-4 h-4 rounded-full bg-accent/10 text-accent flex items-center justify-center shrink-0">
                     <CheckCircle2 size={12} />
                   </div>
-                  <p className="text-[11px] font-bold text-text-primary leading-tight uppercase tracking-tight">{benefit}</p>
+                  <p className="text-[11px] font-bold text-text-primary leading-tight capitalize tracking-tight">{benefit}</p>
                 </div>
               ))}
             </div>
@@ -152,7 +152,7 @@ const PromotionRequest = () => {
         {/* Right: Status Tracker */}
         <div className="space-y-6">
           <div className="flex flex-col">
-            <h3 className="text-xs font-black text-text-secondary uppercase tracking-[0.2em] ml-2">Current Status</h3>
+            <h3 className="text-xs font-black text-text-secondary capitalize tracking-[0.2em] ml-2">Current Status</h3>
             <div className="h-px bg-border flex-1 mt-2 mb-4" />
           </div>
 
@@ -162,7 +162,7 @@ const PromotionRequest = () => {
                 <AlertCircle size={32} />
               </div>
               <div>
-                <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest">No Active Request</p>
+                <p className="text-[10px] font-black text-text-secondary capitalize tracking-widest">No Active Request</p>
                 <p className="text-[11px] font-bold text-text-secondary/60 mt-1 max-w-[200px]">Fill out the form to the left to apply for representative status.</p>
               </div>
             </div>
@@ -170,24 +170,24 @@ const PromotionRequest = () => {
             <div className="glass rounded-[2rem] p-8 border border-white/10 space-y-8 animate-in slide-in-from-right-4 duration-500">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest">Request Status</p>
+                  <p className="text-[10px] font-black text-text-secondary capitalize tracking-widest">Request Status</p>
                   <div className="flex items-center gap-2 mt-2">
                     {currentRequest.status === 'PENDING' && (
                        <>
                          <Clock className="text-amber-500" size={18} />
-                         <span className="text-sm font-black text-amber-500 uppercase italic">Pending Review</span>
+                         <span className="text-sm font-black text-amber-500 capitalize italic">Pending Review</span>
                        </>
                     )}
                     {currentRequest.status === 'APPROVED' && (
                        <>
                          <CheckCircle2 className="text-green-500" size={18} />
-                         <span className="text-sm font-black text-green-500 uppercase italic">Approved</span>
+                         <span className="text-sm font-black text-green-500 capitalize italic">Approved</span>
                        </>
                     )}
                     {currentRequest.status === 'REJECTED' && (
                        <>
                          <XCircle className="text-red-500" size={18} />
-                         <span className="text-sm font-black text-red-500 uppercase italic">Rejected</span>
+                         <span className="text-sm font-black text-red-500 capitalize italic">Rejected</span>
                        </>
                     )}
                   </div>
@@ -199,7 +199,7 @@ const PromotionRequest = () => {
 
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">Your Reason</p>
+                  <p className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1">Your Reason</p>
                   <div className="p-4 bg-bg-primary/30 rounded-2xl border border-border">
                     <p className="text-xs font-medium text-text-primary leading-relaxed italic">"{currentRequest.reason}"</p>
                   </div>
@@ -207,7 +207,7 @@ const PromotionRequest = () => {
 
                 {currentRequest.admin_comment && (
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1">Admin Comment</p>
+                    <p className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1">Admin Comment</p>
                     <div className="p-4 bg-accent/5 rounded-2xl border border-accent/10">
                       <p className="text-xs font-bold text-accent leading-relaxed italic">{currentRequest.admin_comment}</p>
                     </div>
@@ -216,10 +216,10 @@ const PromotionRequest = () => {
               </div>
 
               <div className="flex items-center justify-between pt-4 border-t border-border">
-                <p className="text-[9px] font-black text-text-secondary uppercase tracking-widest">
+                <p className="text-[9px] font-black text-text-secondary capitalize tracking-widest">
                   Submitted on {new Date(currentRequest.created_at).toLocaleDateString()}
                 </p>
-                <div className="flex items-center gap-1 text-[9px] font-black text-accent uppercase tracking-widest">
+                <div className="flex items-center gap-1 text-[9px] font-black text-accent capitalize tracking-widest">
                    Live Tracking <ChevronRight size={10} />
                 </div>
               </div>

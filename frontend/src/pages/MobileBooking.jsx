@@ -196,8 +196,8 @@ function MobileBooking({ onBack }) {
           <ArrowLeft size={24} />
         </button>
         <div className="flex flex-col">
-          <h1 className="text-xl font-extrabold text-text-primary tracking-tight leading-none uppercase">Create Booking</h1>
-          <p className="text-[10px] font-extrabold text-primary uppercase tracking-widest mt-1 opacity-80">Step {step} of 3</p>
+          <h1 className="text-xl font-extrabold text-text-primary tracking-tight leading-none capitalize">Create Booking</h1>
+          <p className="text-[10px] font-extrabold text-primary capitalize tracking-widest mt-1 opacity-80">Step {step} of 3</p>
         </div>
       </div>
 
@@ -205,7 +205,7 @@ function MobileBooking({ onBack }) {
         {error && (
           <div className="p-4 rounded-2xl bg-red-500/10 text-red-600 text-sm flex items-center gap-3 animate-in fade-in zoom-in duration-300">
             <AlertCircle size={20} />
-            <p className="font-extrabold tracking-tight uppercase text-[11px] font-display">{error}</p>
+            <p className="font-extrabold tracking-tight capitalize text-[11px] font-display">{error}</p>
           </div>
         )}
 
@@ -213,7 +213,7 @@ function MobileBooking({ onBack }) {
         {step === 1 && (
           <div className="space-y-6 animate-in slide-in-from-right duration-300">
             <div className="space-y-3">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-50">
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-50">
                 <CalendarIcon size={14} className="text-primary" />
                 Select Date
               </label>
@@ -225,7 +225,7 @@ function MobileBooking({ onBack }) {
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display opacity-50">
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display opacity-50">
                 <Clock size={14} className="text-primary" />
                 Select Start Time
               </label>
@@ -263,7 +263,7 @@ function MobileBooking({ onBack }) {
                 }
                 setStep(2);
               }}
-              className="w-full bg-primary text-white font-extrabold py-5 rounded-2xl shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-lg mt-2 font-display uppercase tracking-tight"
+              className="w-full bg-primary text-white font-extrabold py-5 rounded-2xl shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-lg mt-2 font-display capitalize tracking-tight"
             >
               Next: Select Room
               <ChevronRight size={20} />
@@ -280,11 +280,11 @@ function MobileBooking({ onBack }) {
                    <CalendarIcon size={20} />
                 </div>
                 <div className="font-display">
-                   <p className="text-[10px] font-extrabold uppercase tracking-widest text-text-secondary opacity-40">Selected Time</p>
-                   <p className="text-sm font-extrabold text-text-primary uppercase tracking-tight">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
+                   <p className="text-[10px] font-extrabold capitalize tracking-widest text-text-secondary opacity-40">Selected Time</p>
+                   <p className="text-sm font-extrabold text-text-primary capitalize tracking-tight">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                 </div>
               </div>
-              <button onClick={() => setStep(1)} className="text-primary font-extrabold text-[10px] uppercase tracking-widest underline font-display">Edit</button>
+              <button onClick={() => setStep(1)} className="text-primary font-extrabold text-[10px] capitalize tracking-widest underline font-display">Edit</button>
             </div>
 
             {/* Filters */}
@@ -302,7 +302,7 @@ function MobileBooking({ onBack }) {
                 </div>
                 <button 
                   onClick={() => setSmartRoomFilter(!smartRoomFilter)}
-                  className={`px-5 rounded-2xl text-[10px] font-extrabold uppercase tracking-widest transition-all flex items-center gap-2 h-12 font-display ${smartRoomFilter ? 'bg-tertiary text-white shadow-tertiary' : 'bg-tonal-secondary/10 text-text-secondary'}`}
+                  className={`px-5 rounded-2xl text-[10px] font-extrabold capitalize tracking-widest transition-all flex items-center gap-2 h-12 font-display ${smartRoomFilter ? 'bg-tertiary text-white shadow-tertiary' : 'bg-tonal-secondary/10 text-text-secondary'}`}
                 >
                   <Monitor size={16} />
                   <span>AC & Projector</span>
@@ -311,7 +311,7 @@ function MobileBooking({ onBack }) {
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary uppercase tracking-[0.2em] ml-1 opacity-40 font-display">Floor Level</label>
+                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">Floor Level</label>
                   <div className="flex bg-tonal-secondary/10 p-1.5 rounded-xl">
                     {['all', '0', '1', '2', '3'].map(f => (
                       <button
@@ -326,7 +326,7 @@ function MobileBooking({ onBack }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary uppercase tracking-[0.2em] ml-1 opacity-40 font-display">Room Type</label>
+                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">Room Type</label>
                   <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5">
                     {[
                       { id: 'all', label: 'ALL' },
@@ -349,7 +349,7 @@ function MobileBooking({ onBack }) {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary uppercase tracking-[0.2em] ml-1 opacity-40 font-display">Block / Building</label>
+                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">Block / Building</label>
                   <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5">
                     {blocks.map(b => (
                       <button
@@ -366,7 +366,7 @@ function MobileBooking({ onBack }) {
             </div>
 
             <div className="space-y-4">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display opacity-50">
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display opacity-50">
                 <Hash size={14} className="text-primary" />
                 Available Spaces
               </label>
@@ -383,12 +383,12 @@ function MobileBooking({ onBack }) {
                       </div>
                       <div className="text-left overflow-hidden">
                         <div className="flex items-center gap-2">
-                          <p className="font-extrabold text-lg tracking-tight leading-none truncate font-display uppercase">{room.name}</p>
+                          <p className="font-extrabold text-lg tracking-tight leading-none truncate font-display capitalize">{room.name}</p>
                           <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shrink-0 font-display ${selectedRoom === room.id ? 'bg-white/10 text-white/80' : 'bg-surface-highest/20 text-text-secondary opacity-60'}`}>
                             {room.building}
                           </span>
                         </div>
-                        <p className={`text-[10px] font-extrabold uppercase tracking-widest mt-1.5 font-display ${selectedRoom === room.id ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.capacity} Seats</p>
+                        <p className={`text-[10px] font-extrabold capitalize tracking-widest mt-1.5 font-display ${selectedRoom === room.id ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.capacity} Seats</p>
                       </div>
                     </div>
 
@@ -410,7 +410,7 @@ function MobileBooking({ onBack }) {
             <button 
               disabled={!selectedRoom}
               onClick={() => setStep(3)}
-              className="w-full bg-primary text-white font-extrabold py-5 rounded-3xl shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-lg disabled:opacity-50 font-display uppercase tracking-tight"
+              className="w-full bg-primary text-white font-extrabold py-5 rounded-3xl shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-lg disabled:opacity-50 font-display capitalize tracking-tight"
             >
               Next: Details
               <ChevronRight size={20} />
@@ -427,16 +427,16 @@ function MobileBooking({ onBack }) {
                      <Hash size={28} strokeWidth={2.5}/>
                   </div>
                   <div>
-                    <h2 className="text-xl font-extrabold text-text-primary tracking-tight leading-none mb-1.5 uppercase">Room {rooms.find(r => r.id === selectedRoom)?.name}</h2>
-                    <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-widest opacity-40">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
+                    <h2 className="text-xl font-extrabold text-text-primary tracking-tight leading-none mb-1.5 capitalize">Room {rooms.find(r => r.id === selectedRoom)?.name}</h2>
+                    <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest opacity-40">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                   </div>
                </div>
-               <button onClick={() => setStep(2)} className="w-full py-3.5 bg-tonal-secondary/10 rounded-xl text-[10px] font-extrabold uppercase tracking-widest text-primary">Change Selection</button>
+               <button onClick={() => setStep(2)} className="w-full py-3.5 bg-tonal-secondary/10 rounded-xl text-[10px] font-extrabold capitalize tracking-widest text-primary">Change Selection</button>
             </div>
 
             <div className="space-y-5">
               <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-40">
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-40">
                   <Clock size={12} className="text-primary" />
                   Purpose of Booking
                 </label>
@@ -450,7 +450,7 @@ function MobileBooking({ onBack }) {
 
               {isStudent && (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-40">
+                  <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-40">
                     <User size={12} className="text-primary" />
                     Select Faculty
                   </label>
@@ -458,7 +458,7 @@ function MobileBooking({ onBack }) {
                     <button 
                       type="button"
                       onClick={() => setIsFacultyOpen(!isFacultyOpen)}
-                      className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-5 text-sm font-extrabold text-text-primary focus:outline-none transition-all flex items-center justify-between font-display uppercase tracking-tight"
+                      className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-5 text-sm font-extrabold text-text-primary focus:outline-none transition-all flex items-center justify-between font-display capitalize tracking-tight"
                     >
                       <span className={selectedFaculty ? 'text-text-primary' : 'text-text-secondary opacity-40'}>
                         {selectedFaculty ? faculties.find(f => String(f.id) === String(selectedFaculty))?.name : 'Choose a Faculty...'}
@@ -478,8 +478,8 @@ function MobileBooking({ onBack }) {
                             className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-white/5 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-extrabold text-white/60'}`}
                           >
                             <div className="flex flex-col">
-                              <span className="text-sm font-display uppercase tracking-tight">{f.name}</span>
-                              <span className={`text-[9px] uppercase tracking-widest mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
+                              <span className="text-sm font-display capitalize tracking-tight">{f.name}</span>
+                              <span className={`text-[9px] capitalize tracking-widest mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>
                                 {f.department || 'Faculty'}
                               </span>
                             </div>
@@ -496,7 +496,7 @@ function MobileBooking({ onBack }) {
             <button 
               disabled={loading || !purpose || (isStudent && !selectedFaculty)}
               onClick={handleSubmit}
-              className="w-full bg-primary text-white font-extrabold py-5 rounded-[2rem] shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-xl disabled:opacity-50 mt-10 font-display uppercase tracking-tight"
+              className="w-full bg-primary text-white font-extrabold py-5 rounded-[2rem] shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-xl disabled:opacity-50 mt-10 font-display capitalize tracking-tight"
             >
               {loading ? 'Authenticating...' : (
                 <>
@@ -529,7 +529,7 @@ function MobileBooking({ onBack }) {
               
               <div className="space-y-2">
                 <h2 className="text-2xl font-black text-text-primary tracking-tight">Conflict Detected!</h2>
-                <p className="text-xs font-bold text-text-secondary uppercase tracking-widest leading-relaxed">
+                <p className="text-xs font-bold text-text-secondary capitalize tracking-widest leading-relaxed">
                   You already have a class scheduled for this particular time slot.
                 </p>
               </div>
@@ -539,13 +539,13 @@ function MobileBooking({ onBack }) {
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                        <Clock size={20} />
                     </div>
-                    <p className="text-sm font-extrabold text-text-primary uppercase tracking-tight font-display">{conflictingClass?.subjectName || conflictingClass?.subject}</p>
+                    <p className="text-sm font-extrabold text-text-primary capitalize tracking-tight font-display">{conflictingClass?.subjectName || conflictingClass?.subject}</p>
                  </div>
                  <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
                        <Hash size={18} />
                     </div>
-                    <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-widest leading-relaxed">Room {conflictingClass?.room} <span className="opacity-40">@</span> {conflictingClass?.displayTime}</p>
+                    <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest leading-relaxed">Room {conflictingClass?.room} <span className="opacity-40">@</span> {conflictingClass?.displayTime}</p>
                  </div>
               </div>
 
@@ -556,7 +556,7 @@ function MobileBooking({ onBack }) {
               <div className="flex flex-col gap-3 pt-3 font-display">
                 <button 
                   onClick={handleSubmit}
-                  className="w-full bg-primary text-white font-extrabold py-5 rounded-2xl shadow-ambient active:scale-95 transition-all text-[11px] uppercase tracking-widest"
+                  className="w-full bg-primary text-white font-extrabold py-5 rounded-2xl shadow-ambient active:scale-95 transition-all text-[11px] capitalize tracking-widest"
                 >
                   Confirm & Resolve Conflict
                 </button>
@@ -565,7 +565,7 @@ function MobileBooking({ onBack }) {
                     setIsConflictModalOpen(false);
                     setConflictingClass(null);
                   }}
-                  className="w-full bg-tonal-secondary/10 text-text-secondary font-extrabold py-5 rounded-2xl active:scale-95 transition-all text-[11px] uppercase tracking-widest"
+                  className="w-full bg-tonal-secondary/10 text-text-secondary font-extrabold py-5 rounded-2xl active:scale-95 transition-all text-[11px] capitalize tracking-widest"
                 >
                   Return to Booking
                 </button>

@@ -1,5 +1,7 @@
 import * as db from '../db.js';
 import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
+import { roomRepository } from '../repositories/roomRepository.js';
+import cache from '../utils/cache.js';
 
 function toTitleCase(str) {
   if (!str) return '';
@@ -189,6 +191,92 @@ export async function getFacultyOverrides(req, res) {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
+}
+
+export async function createCancellationRequest(req, res) {
+  try {
+    const { room_name, subject_name, date, hour, faculty_name, booking_id } = req.body;
+    if (!room_name || !date || hour === undefined || !faculty_name) {
+      return res.status(400).json({ error: 'Room, date, hour, and faculty are required.' });
+    }
+
+    const facultyResult = await db.query(
+      `SELECT id FROM users WHERE role = 'FACULTY' AND UPPER(TRIM(name)) = UPPER(TRIM($1)) LIMIT 1`,
+      [faculty_name]
+    );
+    if (!facultyResult.rows[0]) {
+      return res.status(404).json({ error: 'The class faculty could not be found, so approval cannot be requested.' });
+    }
+
+    const result = await db.query(`
+      INSERT INTO class_cancellation_requests
+        (requested_by, faculty_id, room_name, subject_name, class_date, hour, booking_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [req.user.id, facultyResult.rows[0].id, room_name, subject_name || null, date, Number(hour), booking_id || null]);
+
+    res.status(201).json({ message: 'Cancellation request sent to the faculty member for approval.', request: result.rows[0] });
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'A cancellation request for this class is already awaiting faculty approval.' });
+    }
+    res.status(500).json({ error: err.message || 'Failed to create cancellation request.' });
+  }
+}
+
+export async function getPendingCancellationRequests(req, res) {
+  try {
+    const result = await db.query(`
+      SELECT c.*, u.name AS user_name
+      FROM class_cancellation_requests c
+      JOIN users u ON u.id = c.requested_by
+      WHERE c.faculty_id = $1 AND c.status = 'PENDING'
+      ORDER BY c.created_at DESC
+    `, [req.user.id]);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to load cancellation requests.' });
+  }
+}
+
+export async function reviewCancellationRequest(req, res) {
+  const approved = req.params.action === 'approve';
+  if (!approved && req.params.action !== 'reject') return res.status(400).json({ error: 'Invalid action.' });
+
+  try {
+    const result = await db.runInTransaction(async (client) => {
+      const requestResult = await client.query(`
+        SELECT * FROM class_cancellation_requests
+        WHERE id = $1 AND faculty_id = $2 AND status = 'PENDING'
+        FOR UPDATE
+      `, [req.params.id, req.user.id]);
+      const request = requestResult.rows[0];
+      if (!request) return null;
+
+      if (approved) {
+        if (request.booking_id) {
+          await client.query(`UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW() WHERE id = $1`, [request.booking_id]);
+        } else {
+          const room = await roomRepository.findByName(request.room_name, client);
+          if (!room) throw new Error('Room no longer exists.');
+          await roomRepository.upsertAvailability(room.id, request.class_date, request.hour, true, req.user.id, client);
+        }
+      }
+
+      await client.query(`
+        UPDATE class_cancellation_requests
+        SET status = $1, reviewed_at = NOW()
+        WHERE id = $2
+      `, [approved ? 'APPROVED' : 'REJECTED', request.id]);
+      return request;
+    });
+
+    if (!result) return res.status(404).json({ error: 'Cancellation request was not found or has already been reviewed.' });
+    cache.delete('room_availability_all');
+    res.json({ message: approved ? 'Cancellation approved; the room is now available.' : 'Cancellation request rejected.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Failed to review cancellation request.' });
+  }
 }
 
 /**

@@ -49,7 +49,7 @@ function DateScroller({ selectedDate, onChange }) {
         <div className="flex-1 flex flex-col items-center">
           <button onClick={() => handleScroll('month', 'up')} className="p-2 text-text-secondary hover:text-accent transition-colors"><ChevronUp size={20} /></button>
           <div className="w-full text-center bg-bg-primary/50 py-3 rounded-2xl border border-border shadow-sm">
-            <span className="text-sm font-black text-text-primary uppercase tracking-widest">{months[month].substring(0, 3)}</span>
+            <span className="text-sm font-black text-text-primary capitalize tracking-widest">{months[month].substring(0, 3)}</span>
           </div>
           <button onClick={() => handleScroll('month', 'down')} className="p-2 text-text-secondary hover:text-accent transition-colors"><ChevronDown size={20} /></button>
         </div>
@@ -74,7 +74,7 @@ function DateScroller({ selectedDate, onChange }) {
       </div>
 
       <div className="mt-2 text-center">
-         <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/20 rounded-full text-accent font-black text-[10px] uppercase tracking-widest shadow-sm">
+         <div className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 border border-accent/20 rounded-full text-accent font-black text-[10px] capitalize tracking-widest shadow-sm">
            <CalendarIcon size={12} />
            {new Date(year, month, day).toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
          </div>

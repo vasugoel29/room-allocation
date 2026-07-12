@@ -213,22 +213,22 @@ function AdminTimetable() {
             <LayoutGrid size={24} className="text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-black text-text-primary tracking-tighter uppercase italic">Timetable</h1>
-            <p className="text-[10px] text-text-secondary font-black uppercase tracking-widest opacity-40">View class schedules</p>
+            <h1 className="text-3xl font-black text-text-primary tracking-tighter capitalize italic">Timetable</h1>
+            <p className="text-[10px] text-text-secondary font-black capitalize tracking-widest opacity-40">View class schedules</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3 bg-tonal-secondary/10 p-1.5 rounded-2xl border border-border/30 backdrop-blur-md">
            <button 
              onClick={() => { setSearchType('FACULTY'); setData(null); }}
-             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchType === 'FACULTY' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black capitalize tracking-widest transition-all ${searchType === 'FACULTY' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
            >
              <GraduationCap size={16} />
              Faculty
            </button>
            <button 
              onClick={() => { setSearchType('SECTION'); setData(null); }}
-             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${searchType === 'SECTION' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+             className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black capitalize tracking-widest transition-all ${searchType === 'SECTION' ? 'bg-surface-low text-primary shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
            >
              <Users size={16} />
              Section
@@ -241,7 +241,7 @@ function AdminTimetable() {
         <div className="glass rounded-3xl p-6 shadow-ambient border-none flex flex-col sm:flex-row items-end gap-6 animate-in slide-in-from-top-4 duration-500">
           {searchType === 'FACULTY' ? (
             <div className="flex-1 space-y-2">
-              <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Faculty Identity</label>
+              <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Faculty Identity</label>
               <div className="relative z-50">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-primary" size={20} />
                 <input 
@@ -276,7 +276,7 @@ function AdminTimetable() {
           ) : (
             <div className="flex-1 grid grid-cols-3 gap-4">
               <div className="space-y-2 text-text-primary">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Branch</label>
+                <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Branch</label>
                 <select 
                   value={dept} 
                   onChange={(e) => setDept(e.target.value)}
@@ -288,7 +288,7 @@ function AdminTimetable() {
                 </select>
               </div>
               <div className="space-y-2 text-text-primary">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Year</label>
+                <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Year</label>
                 <select 
                   value={year} 
                   onChange={(e) => setYear(e.target.value)}
@@ -298,7 +298,7 @@ function AdminTimetable() {
                 </select>
               </div>
               <div className="space-y-2 text-text-primary">
-                <label className="text-[10px] font-black text-text-secondary uppercase tracking-widest ml-1 opacity-50">Section</label>
+                <label className="text-[10px] font-black text-text-secondary capitalize tracking-widest ml-1 opacity-50">Section</label>
                 <select 
                   value={section} 
                   onChange={(e) => setSection(e.target.value)}
@@ -313,7 +313,7 @@ function AdminTimetable() {
           <button 
             onClick={handleSearch}
             disabled={loading}
-            className="w-full sm:w-48 bg-primary text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
+            className="w-full sm:w-48 bg-primary text-white py-4 rounded-2xl font-black capitalize tracking-widest text-xs shadow-lg shadow-primary/20 hover:opacity-90 active:scale-95 transition-all disabled:opacity-50"
           >
             {loading ? "Searching..." : "Fetch Schedule"}
           </button>
@@ -327,18 +327,18 @@ function AdminTimetable() {
               <div className="flex items-center gap-4">
                  <div className="flex items-center gap-2">
                     <Calendar size={20} className="text-primary" />
-                    <h2 className="text-sm font-extrabold uppercase text-text-primary tracking-widest">{viewMode === 'day' ? new Date(selectedDay).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : formatWeekDisplay(selectedDay)}</h2>
+                    <h2 className="text-sm font-extrabold capitalize text-text-primary tracking-widest">{viewMode === 'day' ? new Date(selectedDay).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) : formatWeekDisplay(selectedDay)}</h2>
                  </div>
                  <div className="flex bg-tonal-secondary/15 p-1 rounded-xl shrink-0">
                     <button
                       onClick={() => setViewMode('day')}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'day' ? 'bg-primary text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black capitalize tracking-widest transition-all ${viewMode === 'day' ? 'bg-primary text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
                     >
                       Day
                     </button>
                     <button
                       onClick={() => setViewMode('week')}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === 'week' ? 'bg-primary text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-black capitalize tracking-widest transition-all ${viewMode === 'week' ? 'bg-primary text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
                     >
                       Week
                     </button>
@@ -364,7 +364,7 @@ function AdminTimetable() {
                               <div>
                                  <div className="flex items-center gap-3">
                                     <h3 className="text-lg font-black text-text-primary tracking-tight leading-none">{item.subject}</h3>
-                                    {item.isDynamic && <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter">Updated</span>}
+                                    {item.isDynamic && <span className="text-[10px] font-black bg-primary/10 text-primary px-2 py-0.5 rounded-full capitalize tracking-tighter">Updated</span>}
                                  </div>
                                  {searchType === 'FACULTY' ? (
                                    item.className ? <p className="text-[10px] font-extrabold text-text-secondary tracking-wider mt-1.5 opacity-60">{item.className}</p> : null
@@ -385,7 +385,7 @@ function AdminTimetable() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 grayscale opacity-20">
                        <AlertCircle size={64} className="mb-4" />
-                       <p className="text-sm font-black uppercase tracking-[.3em]">No Entries Logged</p>
+                       <p className="text-sm font-black capitalize tracking-[.3em]">No Entries Logged</p>
                     </div>
                   )
                   ) : (
@@ -403,7 +403,7 @@ function AdminTimetable() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-20 grayscale opacity-10">
                    <Search size={80} className="mb-6" />
-                   <p className="text-sm font-black uppercase tracking-[.3em]">Search for a schedule</p>
+                   <p className="text-sm font-black capitalize tracking-[.3em]">Search for a schedule</p>
                 </div>
               )}
            </div>

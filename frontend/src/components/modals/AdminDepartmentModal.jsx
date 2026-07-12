@@ -42,10 +42,10 @@ function AdminDepartmentModal({ isOpen, onClose, editingDept, fetchDepts }) {
               <Layers className="text-primary" size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-text-primary uppercase tracking-tight leading-none animate-pulse">
+              <h2 className="text-xl font-extrabold text-text-primary capitalize tracking-tight leading-none animate-pulse">
                 {editingDept ? 'Edit Dept' : 'New Dept'}
               </h2>
-              <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-widest mt-1 opacity-40">
+              <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest mt-1 opacity-40">
                 Department Configuration
               </p>
             </div>
@@ -57,7 +57,7 @@ function AdminDepartmentModal({ isOpen, onClose, editingDept, fetchDepts }) {
 
         <form onSubmit={handleDeptSubmit} className="p-8 space-y-6">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Department Name</label>
+            <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Department Name</label>
             <input 
               required
               type="text"
@@ -70,7 +70,7 @@ function AdminDepartmentModal({ isOpen, onClose, editingDept, fetchDepts }) {
 
           <button 
             type="submit" 
-            className="w-full py-4.5 bg-primary text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-ambient active:scale-[0.98] transition-all"
+            className="w-full py-4.5 bg-primary text-white rounded-2xl font-black capitalize text-xs tracking-widest shadow-ambient active:scale-[0.98] transition-all"
           >
             {editingDept ? 'Save Changes' : 'Create Department'}
           </button>

@@ -70,11 +70,11 @@ const AdminAuditLog = () => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-white/[0.02] border-b border-white/[0.05]">
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Timestamp</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">User</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Action</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Entity</th>
-                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Details</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 capitalize tracking-wider">Timestamp</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 capitalize tracking-wider">User</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 capitalize tracking-wider">Action</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 capitalize tracking-wider">Entity</th>
+                                <th className="px-6 py-4 text-xs font-semibold text-gray-500 capitalize tracking-wider">Details</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/[0.03]">
@@ -100,7 +100,7 @@ const AdminAuditLog = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${getActionColor(log.action)}`}>
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider capitalize ${getActionColor(log.action)}`}>
                                                 {log.action.replace(/_/g, ' ')}
                                             </span>
                                         </td>

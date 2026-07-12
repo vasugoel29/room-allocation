@@ -173,12 +173,12 @@ function App() {
           <div className="inline-flex p-4 bg-red-500/10 rounded-2xl text-red-500 mb-2">
             <ShieldAlert size={48} />
           </div>
-          <h2 className="text-2xl font-bold text-text-primary uppercase font-display tracking-tight">Connection Error</h2>
+          <h2 className="text-2xl font-bold text-text-primary capitalize font-display tracking-tight">Connection Error</h2>
           <p className="text-text-secondary font-medium">{backendError}</p>
           <button 
             type="button"
             onClick={() => window.location.reload()} 
-            className="w-full bg-primary text-white py-4 rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-primary/90 transition-all shadow-lg active:scale-95 font-display"
+            className="w-full bg-primary text-white py-4 rounded-xl font-bold capitalize tracking-widest text-[11px] hover:bg-primary/90 transition-all shadow-lg active:scale-95 font-display"
           >
             Retry Connection
           </button>
@@ -259,7 +259,7 @@ function App() {
                       title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                     >
                       <Menu size={32} className="shrink-0" />
-                      {!isSidebarCollapsed && <h1 className="text-lg font-extrabold tracking-tighter text-text-primary whitespace-nowrap font-display uppercase leading-tight pr-8 lg:pr-0">ROOM ALLOCATION</h1>}
+                      {!isSidebarCollapsed && <h1 className="text-lg font-extrabold tracking-tighter text-text-primary whitespace-nowrap font-display capitalize leading-tight pr-8 lg:pr-0">ROOM ALLOCATION</h1>}
                     </button>
                   </div>
                   {!isSidebarCollapsed && (
@@ -269,7 +269,7 @@ function App() {
 
                 <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 flex flex-col gap-8`}>
                   <div className="space-y-1">
-                    <p className="px-4 text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] mb-4 opacity-50 font-display">Navigation</p>
+                    <p className="px-4 text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] mb-4 opacity-50 font-display">Navigation</p>
                     <div className="flex flex-col gap-1">
                       {getNavigationTabs().map(tab => (
                         <NavButton 
@@ -288,7 +288,7 @@ function App() {
 
                   {(location.pathname === '/calendar' || location.pathname === '/admin') && (
                     <div className="space-y-4 pt-4">
-                      <p className="px-4 text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] mb-2 opacity-50 font-display">Discovery</p>
+                      <p className="px-4 text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] mb-2 opacity-50 font-display">Discovery</p>
                       <RoomFilter />
                     </div>
                   )}
@@ -298,7 +298,7 @@ function App() {
                   <div className={`flex items-center ${isSidebarCollapsed ? 'lg:flex-col lg:gap-2' : 'justify-between'}`}>
                     <div className={`overflow-hidden ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
                       <p className="text-sm font-black text-text-primary truncate">{user?.name}</p>
-                      <p className="text-[9px] text-primary-accent uppercase tracking-widest font-black opacity-60">{getRoleLabel(user?.role)}</p>
+                      <p className="text-[9px] text-primary-accent capitalize tracking-widest font-black opacity-60">{getRoleLabel(user?.role)}</p>
                     </div>
                     <div className={`flex items-center gap-1 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
                       <ThemeToggle theme={theme} setTheme={setTheme} />
@@ -312,7 +312,7 @@ function App() {
                 <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"><Menu size={24} /></button>
-                    <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight uppercase font-display">
+                    <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight capitalize font-display">
                       {(location.pathname.split('/')[1] || 'Schedule').replace(/-/g, ' ')}
                     </h2>
                   </div>
@@ -320,8 +320,8 @@ function App() {
                     <ThemeToggle theme={theme} setTheme={setTheme} className="lg:hidden" />
                     {location.pathname === '/calendar' && (
                       <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
-                        <button onClick={() => setViewMode('day')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold uppercase transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
-                        <button onClick={() => setViewMode('week')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold uppercase transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
+                        <button onClick={() => setViewMode('day')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
+                        <button onClick={() => setViewMode('week')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
                       </div>
                     )}
                   </div>

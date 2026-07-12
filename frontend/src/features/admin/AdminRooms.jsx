@@ -23,7 +23,7 @@ function AdminRooms({ rooms, searchTerm, onEdit, onDelete }) {
   if (filteredRooms.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-20 text-center">
-        <span className="text-text-secondary uppercase font-black tracking-widest opacity-40">No rooms found</span>
+        <span className="text-text-secondary capitalize font-black tracking-widest opacity-40">No rooms found</span>
       </div>
     );
   }
@@ -33,7 +33,7 @@ function AdminRooms({ rooms, searchTerm, onEdit, onDelete }) {
       {/* Internal filters */}
       <div className="flex flex-wrap items-center gap-3 p-4 border-b border-border/10 font-display">
         <div className="flex items-center gap-2">
-          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Building:</label>
+          <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider">Building:</label>
           <select 
             value={selectedBuilding} 
             onChange={(e) => setSelectedBuilding(e.target.value)}
@@ -46,7 +46,7 @@ function AdminRooms({ rooms, searchTerm, onEdit, onDelete }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-wider">Type:</label>
+          <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider">Type:</label>
           <select 
             value={selectedType} 
             onChange={(e) => setSelectedType(e.target.value)}
@@ -66,10 +66,10 @@ function AdminRooms({ rooms, searchTerm, onEdit, onDelete }) {
             <div key={room.id} className="bg-bg-primary p-5 rounded-2xl border border-border shadow-sm space-y-4">
               <div className="flex justify-between items-start">
                 <div className="flex flex-col">
-                  <span className="text-lg font-black text-text-primary leading-tight font-display uppercase">{room.name}</span>
-                  <span className="text-xs text-text-secondary font-bold uppercase tracking-wider mt-1">{room.building} &bull; Floor {room.floor}</span>
+                  <span className="text-lg font-black text-text-primary leading-tight font-display capitalize">{room.name}</span>
+                  <span className="text-xs text-text-secondary font-bold capitalize tracking-wider mt-1">{room.building} &bull; Floor {room.floor}</span>
                 </div>
-                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase">
+                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black capitalize">
                   {room.type}
                 </span>
               </div>
@@ -81,8 +81,8 @@ function AdminRooms({ rooms, searchTerm, onEdit, onDelete }) {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => onEdit(room)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border text-xs uppercase tracking-wider"><Edit size={14} /> Edit</button>
-                <button onClick={() => onDelete(room.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border text-xs uppercase tracking-wider"><Trash2 size={14} /> Delete</button>
+                <button onClick={() => onEdit(room)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border text-xs capitalize tracking-wider"><Edit size={14} /> Edit</button>
+                <button onClick={() => onDelete(room.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border text-xs capitalize tracking-wider"><Trash2 size={14} /> Delete</button>
               </div>
             </div>
           ))}
@@ -92,28 +92,28 @@ function AdminRooms({ rooms, searchTerm, onEdit, onDelete }) {
         <table className="hidden sm:table w-full text-left border-collapse font-body">
           <thead>
             <tr className="border-b border-border/50 bg-bg-secondary/50">
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Room Name</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Location</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Capacity</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Type</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display">Amenities</th>
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 font-display text-right">Actions</th>
+              <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Room Name</th>
+              <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Location</th>
+              <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Capacity</th>
+              <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Type</th>
+              <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Amenities</th>
+              <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/30">
             {filteredRooms.map(room => (
               <tr key={room.id} className="hover:bg-bg-primary/30 transition-colors group">
                 <td className="px-6 py-4">
-                  <span className="text-sm font-black text-text-primary font-display uppercase">{room.name}</span>
+                  <span className="text-sm font-black text-text-primary font-display capitalize">{room.name}</span>
                 </td>
-                <td className="px-6 py-4 text-xs font-bold text-text-secondary uppercase">
+                <td className="px-6 py-4 text-xs font-bold text-text-secondary capitalize">
                   {room.building} &bull; Floor {room.floor}
                 </td>
                 <td className="px-6 py-4 text-xs font-bold text-text-primary">
                   {room.capacity} seats
                 </td>
                 <td className="px-6 py-4">
-                  <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black uppercase">
+                  <span className="px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/20 text-[9px] font-black capitalize">
                     {room.type}
                   </span>
                 </td>

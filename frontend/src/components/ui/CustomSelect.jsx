@@ -20,7 +20,7 @@ const CustomSelect = ({ value, onChange, options, placeholder = "Select option",
   return (
     <div className="space-y-2 relative" ref={containerRef}>
       {label && (
-        <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+        <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
           {Icon && <Icon size={14} className="text-accent" />}
           {label}
         </label>

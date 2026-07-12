@@ -317,6 +317,31 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_faculty_tt_room ON faculty_timetable_slots(room_id);
       `);
     }
+  },
+  {
+    version: 13,
+    name: 'Class Cancellation Approval Requests',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS class_cancellation_requests (
+          id SERIAL PRIMARY KEY,
+          requested_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          faculty_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+          room_name VARCHAR(255) NOT NULL,
+          subject_name VARCHAR(255),
+          class_date DATE NOT NULL,
+          hour INTEGER NOT NULL CHECK (hour BETWEEN 0 AND 23),
+          booking_id INTEGER REFERENCES bookings(id) ON DELETE SET NULL,
+          status VARCHAR(20) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+          reviewed_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_cancellation_requests_faculty ON class_cancellation_requests(faculty_id, status);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_cancellation_request
+          ON class_cancellation_requests(faculty_id, room_name, class_date, hour)
+          WHERE status = 'PENDING';
+      `);
+    }
   }
 ];
 
@@ -384,5 +409,4 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export { pool };
-
 

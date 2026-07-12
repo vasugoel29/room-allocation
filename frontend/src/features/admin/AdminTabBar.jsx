@@ -70,7 +70,7 @@ export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = 
         <div className="flex flex-col gap-6">
           {categories.map(cat => (
             <div key={cat} className="space-y-2">
-              <span className="text-[10px] font-black tracking-widest text-text-secondary uppercase opacity-45 px-3">{cat}</span>
+              <span className="text-[10px] font-black tracking-widest text-text-secondary capitalize opacity-45 px-3">{cat}</span>
               <div className="flex flex-col gap-1 font-display">
                 {tabOptions.filter(opt => opt.category === cat).map(opt => (
                   <button 
@@ -93,7 +93,7 @@ export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = 
 
       {/* Custom Mobile Dropdown Selector */}
       <div className="md:hidden w-full relative z-50 font-display">
-        <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] px-1 mb-1.5 block">Active Section</label>
+        <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.2em] px-1 mb-1.5 block">Active Section</label>
         <button 
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           className="w-full flex items-center justify-between bg-tonal-secondary/10 border border-border/10 rounded-2xl px-4 py-3.5 text-sm font-bold text-text-primary focus:outline-none transition-all active:scale-98"

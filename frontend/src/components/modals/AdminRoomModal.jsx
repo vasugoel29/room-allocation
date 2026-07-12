@@ -58,10 +58,10 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
               <Home className="text-primary" size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-text-primary uppercase tracking-tight leading-none">
+              <h2 className="text-xl font-extrabold text-text-primary capitalize tracking-tight leading-none">
                 {editingRoom ? 'Edit Room' : 'New Room'}
               </h2>
-              <p className="text-[10px] font-extrabold text-text-secondary uppercase tracking-widest mt-1 opacity-40">
+              <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest mt-1 opacity-40">
                 Resource Configuration
               </p>
             </div>
@@ -73,7 +73,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
 
         <form onSubmit={handleRoomSubmit} className="p-8 space-y-5">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Room Name/Number</label>
+            <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Room Name/Number</label>
             <input 
               required
               type="text"
@@ -86,7 +86,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Building/Block</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Building/Block</label>
               <input 
                 required
                 type="text"
@@ -97,7 +97,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Floor Level</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Floor Level</label>
               <input 
                 required
                 type="number"
@@ -113,7 +113,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Capacity</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Capacity</label>
               <input 
                 required
                 type="number"
@@ -125,7 +125,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-40">Room Type</label>
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Room Type</label>
               <select 
                 value={roomForm.type}
                 onChange={(e) => setRoomForm({...roomForm, type: e.target.value})}
@@ -161,7 +161,7 @@ function AdminRoomModal({ isOpen, onClose, editingRoom, fetchRooms }) {
 
           <button 
             type="submit" 
-            className="w-full py-4.5 bg-primary text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-ambient active:scale-[0.98] transition-all"
+            className="w-full py-4.5 bg-primary text-white rounded-2xl font-black capitalize text-xs tracking-widest shadow-ambient active:scale-[0.98] transition-all"
           >
             {editingRoom ? 'Save Settings' : 'Create Room'}
           </button>

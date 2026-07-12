@@ -37,7 +37,7 @@ function PromotionModal({ onClose }) {
             </div>
             <div>
               <h2 className="text-xl font-black text-text-primary">Request Access</h2>
-              <p className="text-[10px] text-text-secondary font-bold uppercase tracking-widest">Student Rep Elevation</p>
+              <p className="text-[10px] text-text-secondary font-bold capitalize tracking-widest">Student Rep Elevation</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-bg-secondary rounded-xl transition-colors">
@@ -49,12 +49,12 @@ function PromotionModal({ onClose }) {
           <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl flex gap-3">
             <AlertTriangle className="text-amber-500 shrink-0" size={20} />
             <p className="text-xs text-amber-700 font-medium leading-relaxed">
-              Requesting <span className="font-bold text-amber-900 uppercase">Student Rep</span> access will allow you to book rooms. Please state your department or project context for the admin to review.
+              Requesting <span className="font-bold text-amber-900 capitalize">Student Rep</span> access will allow you to book rooms. Please state your department or project context for the admin to review.
             </p>
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-black text-text-secondary uppercase tracking-widest px-1">Reason for Request</label>
+            <label className="text-xs font-black text-text-secondary capitalize tracking-widest px-1">Reason for Request</label>
             <textarea
               required
               value={reason}

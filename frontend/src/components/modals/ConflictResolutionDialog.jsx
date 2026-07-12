@@ -62,10 +62,10 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
             <AlertTriangle size={24} />
           </div>
           <div className="flex-1">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-text-primary font-display uppercase tracking-tight">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-text-primary font-display capitalize tracking-tight">
               Class Conflict
             </h2>
-            <p className="text-text-secondary text-xs sm:text-sm font-bold opacity-40 uppercase tracking-widest mt-1">
+            <p className="text-text-secondary text-xs sm:text-sm font-bold opacity-40 capitalize tracking-widest mt-1">
               An existing class is scheduled for this time
             </p>
           </div>
@@ -77,7 +77,7 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
               <div className="flex items-start gap-3">
                 <BookOpen size={18} className="text-primary mt-1 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-text-secondary text-xs font-bold uppercase tracking-widest opacity-60">
+                  <p className="text-text-secondary text-xs font-bold capitalize tracking-widest opacity-60">
                     Subject
                   </p>
                   <p className="text-text-primary font-extrabold text-sm sm:text-base truncate">
@@ -91,7 +91,7 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
               <div className="flex items-start gap-3">
                 <User size={18} className="text-primary mt-1 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-text-secondary text-xs font-bold uppercase tracking-widest opacity-60">
+                  <p className="text-text-secondary text-xs font-bold capitalize tracking-widest opacity-60">
                     Faculty
                   </p>
                   <p className="text-text-primary font-extrabold text-sm sm:text-base truncate">
@@ -105,7 +105,7 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
               <div className="flex items-start gap-3">
                 <BookOpen size={18} className="text-primary mt-1 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-text-secondary text-xs font-bold uppercase tracking-widest opacity-60">
+                  <p className="text-text-secondary text-xs font-bold capitalize tracking-widest opacity-60">
                     Room
                   </p>
                   <p className="text-text-primary font-extrabold text-sm sm:text-base truncate">
@@ -119,7 +119,7 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
               <div className="flex items-start gap-3">
                 <Clock size={18} className="text-primary mt-1 flex-shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-text-secondary text-xs font-bold uppercase tracking-widest opacity-60">
+                  <p className="text-text-secondary text-xs font-bold capitalize tracking-widest opacity-60">
                     Scheduled Time
                   </p>
                   <p className="text-text-primary font-extrabold text-sm sm:text-base">
@@ -139,7 +139,7 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
           <button
             onClick={handleReschedule}
             disabled={loading}
-            className="flex-1 px-4 py-3 rounded-[1.5rem] bg-surface-high hover:bg-surface-highest text-text-primary font-extrabold text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+            className="flex-1 px-4 py-3 rounded-[1.5rem] bg-surface-high hover:bg-surface-highest text-text-primary font-extrabold text-xs capitalize tracking-widest transition-all disabled:opacity-50"
           >
             Reschedule Booking
           </button>
@@ -148,7 +148,7 @@ function ConflictResolutionDialog({ conflict, onCancel, onResolve, loading }) {
             <button
               onClick={handleCancelClass}
               disabled={loading || resolution === 'reschedule'}
-              className="flex-1 px-4 py-3 rounded-[1.5rem] bg-red-500/15 hover:bg-red-500 text-red-500 hover:text-white font-extrabold text-xs uppercase tracking-widest transition-all disabled:opacity-50"
+              className="flex-1 px-4 py-3 rounded-[1.5rem] bg-red-500/15 hover:bg-red-500 text-red-500 hover:text-white font-extrabold text-xs capitalize tracking-widest transition-all disabled:opacity-50"
             >
               {resolution === 'cancelling' ? 'Cancelling...' : 'Cancel This Class'}
             </button>

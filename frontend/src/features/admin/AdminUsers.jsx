@@ -8,7 +8,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
   );
 
   if (filteredUsers.length === 0) {
-    return <div className="p-20 text-center text-text-secondary uppercase font-black tracking-widest opacity-40">No users found</div>;
+    return <div className="p-20 text-center text-text-secondary capitalize font-black tracking-widest opacity-40">No users found</div>;
   }
 
   return (
@@ -26,13 +26,13 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
                 </div>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black capitalize border ${
                   item.role === 'ADMIN' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                 }`}>
                   {getRoleLabel(item.role)}
                 </span>
                 {!item.is_approved && (
-                  <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
+                  <span className="px-2 py-0.5 rounded-md text-[9px] font-black capitalize bg-amber-500/10 text-amber-600 border border-amber-500/20 flex items-center gap-1">
                     <ShieldAlert size={10} /> Pending
                   </span>
                 )}
@@ -53,11 +53,11 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-border/50 bg-bg-secondary/50">
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Name & Status</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Email</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Role</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Department / Academic</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Name & Status</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Email</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Role</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Department / Academic</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -67,7 +67,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-black text-text-primary">{item.name}</span>
                   {!item.is_approved && (
-                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] font-black uppercase flex items-center gap-1 animate-pulse">
+                    <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 border border-amber-500/20 text-[9px] font-black capitalize flex items-center gap-1 animate-pulse">
                       <ShieldAlert size={10} /> Pending Approval
                     </span>
                   )}
@@ -80,7 +80,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
                 </div>
               </td>
               <td className="px-6 py-4">
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider border ${
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black capitalize tracking-wider border ${
                   item.role === 'ADMIN' 
                     ? 'bg-red-500/10 text-red-500 border-red-500/20' 
                     : item.role === 'STUDENT_REP' 
@@ -98,7 +98,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
                     {item.department_name || item.branch || 'General'}
                   </span>
                   {(item.role === 'STUDENT_REP' || item.role === 'VIEWER') && (
-                    <span className="text-[10px] font-medium text-text-secondary uppercase">
+                    <span className="text-[10px] font-medium text-text-secondary capitalize">
                       {item.year ? `Year ${item.year}` : ''} {item.section ? `• Sec ${item.section}` : ''}
                     </span>
                   )}
@@ -109,7 +109,7 @@ function AdminUsers({ users, searchTerm, onEdit, onDelete, onApprove }) {
                    {!item.is_approved && (
                      <button 
                        onClick={() => onApprove(item.id)}
-                       className="p-2 bg-accent text-white rounded-lg hover:opacity-90 transition-all shadow-sm flex items-center gap-1.5 px-3 text-[10px] font-black uppercase"
+                       className="p-2 bg-accent text-white rounded-lg hover:opacity-90 transition-all shadow-sm flex items-center gap-1.5 px-3 text-[10px] font-black capitalize"
                      >
                        <CheckCircle size={14} /> Approve
                      </button>

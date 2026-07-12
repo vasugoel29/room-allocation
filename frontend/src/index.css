@@ -100,7 +100,7 @@ h1, h2, h3, .headline-lg {
   font-family: var(--font-display);
   font-weight: 800;
   letter-spacing: -0.02em;
-  text-transform: uppercase;
+  text-transform: capitalize;
 }
 
 /* No-Line Divider Fallback (High Sunlight) */

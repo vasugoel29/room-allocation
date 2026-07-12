@@ -283,9 +283,9 @@ function AdminDashboard() {
             <div className="bg-primary p-3 rounded-2xl shadow-ambient">
               <Shield size={24} className="text-white" />
             </div>
-            <h1 className="text-3xl font-extrabold text-text-primary tracking-tight font-display uppercase">Admin Console</h1>
+            <h1 className="text-3xl font-extrabold text-text-primary tracking-tight font-display capitalize">Admin Console</h1>
           </div>
-          <p className="text-text-secondary font-bold uppercase text-[10px] tracking-widest opacity-40 font-display">Manage allocations and elevation requests.</p>
+          <p className="text-text-secondary font-bold capitalize text-[10px] tracking-widest opacity-40 font-display">Manage allocations and elevation requests.</p>
         </div>
       </div>
 
@@ -373,21 +373,21 @@ function AdminDashboard() {
                     />
                     {bookingsMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {bookingsMeta.page} of {bookingsMeta.totalPages}
                         </p>
                         <div className="flex gap-2">
                           <button 
                             disabled={bookingsMeta.page <= 1}
                             onClick={() => fetchData(bookingsMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Prev
                           </button>
                           <button 
                             disabled={bookingsMeta.page >= bookingsMeta.totalPages}
                             onClick={() => fetchData(bookingsMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Next
                           </button>
@@ -405,21 +405,21 @@ function AdminDashboard() {
                     />
                     {promotionsMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {promotionsMeta.page} of {promotionsMeta.totalPages}
                         </p>
                         <div className="flex gap-2">
                           <button 
                             disabled={promotionsMeta.page <= 1}
                             onClick={() => fetchPaginatedPromotions(promotionsMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Prev
                           </button>
                           <button 
                             disabled={promotionsMeta.page >= promotionsMeta.totalPages}
                             onClick={() => fetchPaginatedPromotions(promotionsMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Next
                           </button>
@@ -449,21 +449,21 @@ function AdminDashboard() {
                     />
                     {usersMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {usersMeta.page} of {usersMeta.totalPages}
                         </p>
                         <div className="flex gap-2">
                           <button 
                             disabled={usersMeta.page <= 1}
                             onClick={() => fetchUsers(usersMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Prev
                           </button>
                           <button 
                             disabled={usersMeta.page >= usersMeta.totalPages}
                             onClick={() => fetchUsers(usersMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Next
                           </button>
@@ -482,21 +482,21 @@ function AdminDashboard() {
                     />
                     {roomsMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {roomsMeta.page} of {roomsMeta.totalPages}
                         </p>
                         <div className="flex gap-2">
                           <button 
                             disabled={roomsMeta.page <= 1}
                             onClick={() => fetchAdminRooms(roomsMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Prev
                           </button>
                           <button 
                             disabled={roomsMeta.page >= roomsMeta.totalPages}
                             onClick={() => fetchAdminRooms(roomsMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Next
                           </button>
@@ -515,21 +515,21 @@ function AdminDashboard() {
                     />
                     {deptsMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border flex items-center justify-between">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">
+                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
                           Page {deptsMeta.page} of {deptsMeta.totalPages}
                         </p>
                         <div className="flex gap-2">
                           <button 
                             disabled={deptsMeta.page <= 1}
                             onClick={() => fetchAdminDepartments(deptsMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black uppercase tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Prev
                           </button>
                           <button 
                             disabled={deptsMeta.page >= deptsMeta.totalPages}
                             onClick={() => fetchAdminDepartments(deptsMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
                           >
                             Next
                           </button>

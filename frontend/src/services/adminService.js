@@ -119,8 +119,9 @@ export const adminService = {
     return res.blob();
   },
 
-  exportXLSX: async (type) => {
-    const res = await api.get(`/admin/uploads/export/${type}`);
+  exportXLSX: async (type, view) => {
+    const query = view ? `?view=${encodeURIComponent(view)}` : '';
+    const res = await api.get(`/admin/uploads/export/${type}${query}`);
     if (!res.ok) throw new Error('Export failed');
     return res.blob();
   },

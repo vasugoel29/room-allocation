@@ -29,7 +29,7 @@ function RoomFilter() {
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Campus Block</label>
+          <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-50 font-display">Campus Block</label>
           <div className="grid grid-cols-3 gap-1.5 bg-tonal-secondary/10 border border-text-secondary/10 p-1.5 rounded-xl">
             {['all', '4th Block', '5th Block', '6th Block', '8th Block'].map((b) => (
               <button
@@ -51,7 +51,7 @@ function RoomFilter() {
                     updateFilter('building', next.length === 0 ? ['all'] : next);
                   }
                 }}
-                className={`py-2 rounded-lg text-[10px] font-extrabold uppercase transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`py-2 rounded-lg text-[10px] font-extrabold capitalize transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 {b === 'all' ? 'All' : b.split(' ')[0]}
               </button>
@@ -60,13 +60,13 @@ function RoomFilter() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Floor Level</label>
+          <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-50 font-display">Floor Level</label>
           <div className="flex bg-tonal-secondary/10 border border-text-secondary/10 p-1 rounded-xl">
             {['all', 'G', '1', '2', '3'].map((f) => (
               <button
                 key={f}
                 onClick={() => updateFilter('floor', f)}
-                className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold uppercase transition-all font-display ${filters.floor === f ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold capitalize transition-all font-display ${filters.floor === f ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 {f === 'all' ? 'All' : f}
               </button>
@@ -75,7 +75,7 @@ function RoomFilter() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] px-1 opacity-50 font-display">Room Type</label>
+          <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-50 font-display">Room Type</label>
           <div className="grid grid-cols-2 gap-1.5 bg-tonal-secondary/10 border border-text-secondary/10 p-1.5 rounded-xl">
             {[
               { id: 'all', label: 'All Spaces' },
@@ -89,7 +89,7 @@ function RoomFilter() {
               <button
                 key={t.id}
                 onClick={() => updateFilter('roomType', t.id)}
-                className={`py-2 rounded-lg text-[10px] font-extrabold uppercase transition-all font-display ${filters.roomType === t.id ? 'bg-primary text-white shadow-ambient' : (!filters.roomType && t.id === 'all') ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'} ${t.id === 'all' ? 'col-span-2' : ''}`}
+                className={`py-2 rounded-lg text-[10px] font-extrabold capitalize transition-all font-display ${filters.roomType === t.id ? 'bg-primary text-white shadow-ambient' : (!filters.roomType && t.id === 'all') ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'} ${t.id === 'all' ? 'col-span-2' : ''}`}
               >
                 {t.label}
               </button>
@@ -104,7 +104,7 @@ function RoomFilter() {
           >
             <div className="flex items-center gap-3">
               <Wind size={18} className={filters.smartRoom ? 'text-tertiary shadow-tertiary' : 'text-text-secondary/40'} />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest">AC & Projector Only</span>
+              <span className="text-[10px] font-extrabold capitalize tracking-widest">AC & Projector Only</span>
             </div>
             <div className={`w-8 h-4 rounded-full transition-all relative ${filters.smartRoom ? 'bg-tertiary' : 'bg-text-secondary/20'}`}>
               <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${filters.smartRoom ? 'left-4.5' : 'left-0.5'}`} />

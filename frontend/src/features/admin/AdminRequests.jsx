@@ -7,7 +7,7 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
   );
 
   if (filteredRequests.length === 0) {
-    return <div className="p-20 text-center text-text-secondary uppercase font-black tracking-widest opacity-40">No pending requests</div>;
+    return <div className="p-20 text-center text-text-secondary capitalize font-black tracking-widest opacity-40">No pending requests</div>;
   }
 
   return (
@@ -21,7 +21,7 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
                 <span className="text-lg font-black text-text-primary">{item.user_name}</span>
                 <span className="text-xs font-medium text-text-secondary">{item.user_email}</span>
               </div>
-              <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border ${
+              <span className={`px-2 py-1 rounded-lg text-[10px] font-black capitalize border ${
                 item.status === 'APPROVED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
               }`}>
                 {item.status}
@@ -44,10 +44,10 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
       <table className="hidden sm:table w-full text-left border-collapse">
         <thead>
           <tr className="border-b border-border/50 bg-bg-secondary/50">
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">User</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Reason</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Requested</th>
-            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-text-secondary opacity-50">Action</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">User</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Reason</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Requested</th>
+            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Action</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -63,7 +63,7 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
                 <p className="text-xs text-text-primary font-medium line-clamp-2 italic opacity-80">"{item.reason}"</p>
               </td>
               <td className="px-6 py-4">
-                <span className="text-[10px] font-bold text-text-secondary uppercase">
+                <span className="text-[10px] font-bold text-text-secondary capitalize">
                   {new Date(item.created_at).toLocaleDateString()}
                 </span>
               </td>
@@ -86,7 +86,7 @@ function AdminRequests({ promotions, searchTerm, handlePromotionAction }) {
                     </button>
                   </div>
                 ) : (
-                  <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${
+                  <span className={`text-[10px] font-black capitalize px-2 py-1 rounded-lg border ${
                     item.status === 'APPROVED' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'
                   }`}>
                     {item.status}

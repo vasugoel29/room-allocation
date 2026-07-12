@@ -17,6 +17,7 @@ export function useFacultyRequests(user) {
       const data = await res.json();
       
       let mappedTransfers = [];
+      let mappedCancellations = [];
       try {
         const trRes = await api.get('/transfers/incoming');
         const trData = await trRes.json();
@@ -34,8 +35,31 @@ export function useFacultyRequests(user) {
         console.warn('Failed to fetch transfers incoming requests', e);
       }
 
+      try {
+        const cancellationRes = await api.get('/timetable/cancellation-requests/pending');
+        const cancellations = await cancellationRes.json();
+        if (cancellationRes.ok && Array.isArray(cancellations)) {
+          mappedCancellations = cancellations.map(request => {
+            const date = String(request.class_date).slice(0, 10);
+            const hour = String(request.hour).padStart(2, '0');
+            const endHour = String(Number(request.hour) + 1).padStart(2, '0');
+            return {
+              ...request,
+              id: `cancellation-${request.id}`,
+              cancellationRequestId: request.id,
+              isCancellationRequest: true,
+              purpose: `Cancel class: ${request.subject_name || 'Scheduled class'}`,
+              start_time: `${date}T${hour}:00:00`,
+              end_time: `${date}T${endHour}:00:00`
+            };
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to fetch class cancellation requests', e);
+      }
+
       if (res.ok) {
-        setPendingRequests([...data, ...mappedTransfers]);
+        setPendingRequests([...data, ...mappedTransfers, ...mappedCancellations]);
       } else {
         toast.error(data.error || 'Failed to fetch pending requests');
       }

@@ -44,11 +44,11 @@ const ResetPassword = () => {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-red-500/10 blur-[120px] rounded-full"></div>
         <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-10 shadow-ambient space-y-6 text-center">
           <div className="text-red-500 text-4xl mb-4">⚠️</div>
-          <h2 className="text-xl font-extrabold text-text-primary uppercase font-display">Invalid Reset Link</h2>
+          <h2 className="text-xl font-extrabold text-text-primary capitalize font-display">Invalid Reset Link</h2>
           <p className="text-sm text-text-secondary">This password reset link is missing or malformed. Please request a new one.</p>
           <Link
             to="/forgot-password"
-            className="inline-flex items-center gap-2 text-primary-accent text-[10px] font-extrabold uppercase tracking-widest"
+            className="inline-flex items-center gap-2 text-primary-accent text-[10px] font-extrabold capitalize tracking-widest"
           >
             <ArrowLeft size={14} /> Request New Link
           </Link>
@@ -67,8 +67,8 @@ const ResetPassword = () => {
           <div className="inline-flex mb-4">
             <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.5rem] shadow-ambient" />
           </div>
-          <h2 className="text-2xl font-extrabold text-text-primary tracking-tight uppercase font-display">New Password</h2>
-          <p className="text-[10px] text-text-secondary font-extrabold uppercase tracking-widest opacity-60 font-display">
+          <h2 className="text-2xl font-extrabold text-text-primary tracking-tight capitalize font-display">New Password</h2>
+          <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-60 font-display">
             {success ? 'Password updated successfully' : 'Choose a strong new password'}
           </p>
         </div>
@@ -89,7 +89,7 @@ const ResetPassword = () => {
             </div>
             <Link
               to="/"
-              className="w-full flex items-center justify-center gap-2 bg-primary-accent text-white py-4 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
+              className="w-full flex items-center justify-center gap-2 bg-primary-accent text-white py-4 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
             >
               <ShieldCheck size={18} />
               Go to Login
@@ -98,7 +98,7 @@ const ResetPassword = () => {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
                 <Lock size={14} className="text-primary-accent" />
                 New Password
               </label>
@@ -115,7 +115,7 @@ const ResetPassword = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-extrabold text-text-secondary uppercase tracking-[0.2em] flex items-center gap-2 font-display">
+              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
                 <Lock size={14} className="text-primary-accent" />
                 Confirm Password
               </label>
@@ -134,7 +134,7 @@ const ResetPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-primary-accent disabled:opacity-50 text-white py-4 rounded-2xl font-extrabold text-[10px] uppercase tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
+              className="w-full flex items-center justify-center gap-2 bg-primary-accent disabled:opacity-50 text-white py-4 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
             >
               <ShieldCheck size={18} />
               {loading ? 'Resetting...' : 'Reset Password'}
@@ -145,7 +145,7 @@ const ResetPassword = () => {
         <div className="text-center pt-2 font-display">
           <Link
             to="/"
-            className="text-[10px] text-primary-accent font-extrabold uppercase tracking-widest opacity-80 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+            className="text-[10px] text-primary-accent font-extrabold capitalize tracking-widest opacity-80 hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
           >
             <ArrowLeft size={14} />
             Back to Login

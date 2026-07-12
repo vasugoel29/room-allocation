@@ -238,11 +238,11 @@ const RoomScheduleGrid = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight font-display uppercase italic flex items-center gap-3">
+          <h2 className="text-3xl font-extrabold text-white tracking-tight font-display capitalize italic flex items-center gap-3">
             <LayoutGrid className="text-secondary" size={28} />
             Room Schedule Grid
           </h2>
-          <p className="text-text-secondary text-xs uppercase tracking-widest font-bold opacity-50 mt-1">
+          <p className="text-text-secondary text-xs capitalize tracking-widest font-bold opacity-50 mt-1">
             Visualise slots, resolve conflicts, and reserve space in real-time
           </p>
         </div>
@@ -255,7 +255,7 @@ const RoomScheduleGrid = () => {
           >
             <ChevronLeft size={16} />
           </button>
-          <span className="text-[10px] uppercase font-extrabold tracking-widest text-text-primary px-3 flex items-center gap-2">
+          <span className="text-[10px] capitalize font-extrabold tracking-widest text-text-primary px-3 flex items-center gap-2">
             <Calendar size={14} className="text-secondary" />
             {weekDates[0] && weekDates[0].toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} 
             {' – '} 
@@ -269,7 +269,7 @@ const RoomScheduleGrid = () => {
           </button>
           <button 
             onClick={handleToday}
-            className="bg-tonal-secondary/15 hover:bg-tonal-secondary/25 px-3 py-1.5 rounded-xl text-[9px] uppercase font-bold tracking-widest text-text-primary transition-colors"
+            className="bg-tonal-secondary/15 hover:bg-tonal-secondary/25 px-3 py-1.5 rounded-xl text-[9px] capitalize font-bold tracking-widest text-text-primary transition-colors"
           >
             Today
           </button>
@@ -278,7 +278,7 @@ const RoomScheduleGrid = () => {
 
       {/* Room Selector Dropdown */}
       <div className="relative w-full max-w-sm z-20">
-        <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary mb-1.5">Select Room</label>
+        <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary mb-1.5">Select Room</label>
         <div 
           onClick={() => setShowRoomDropdown(!showRoomDropdown)}
           className="flex items-center justify-between w-full bg-surface-mid/50 border border-border/10 rounded-2xl px-4 py-3.5 text-sm text-text-primary font-bold cursor-pointer hover:border-border/30 transition-colors"
@@ -332,9 +332,9 @@ const RoomScheduleGrid = () => {
           <div className="min-w-[1000px]">
             {/* Hour headers */}
             <div className="grid grid-cols-11 gap-2 border-b border-border/10 pb-3 mb-3 text-center">
-              <div className="text-left text-[9px] uppercase tracking-widest font-extrabold text-text-secondary flex items-center pl-2">Day &amp; Date</div>
+              <div className="text-left text-[9px] capitalize tracking-widest font-extrabold text-text-secondary flex items-center pl-2">Day &amp; Date</div>
               {HOURS.map(h => (
-                <div key={h} className="text-[9px] uppercase tracking-widest font-extrabold text-text-secondary font-mono">
+                <div key={h} className="text-[9px] capitalize tracking-widest font-extrabold text-text-secondary font-mono">
                   {String(h).padStart(2, '0')}:00
                 </div>
               ))}
@@ -350,7 +350,7 @@ const RoomScheduleGrid = () => {
                     {/* Y-axis Day Header */}
                     <div className="bg-surface-mid/40 rounded-2xl p-3 border border-border/5 flex flex-col justify-center">
                       <span className="text-xs font-bold text-text-primary">{dayName}</span>
-                      <span className="text-[9px] uppercase tracking-widest text-text-secondary font-extrabold opacity-60">
+                      <span className="text-[9px] capitalize tracking-widest text-text-secondary font-extrabold opacity-60">
                         {date ? date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) : ''}
                       </span>
                     </div>
@@ -366,10 +366,10 @@ const RoomScheduleGrid = () => {
                             className="bg-primary/10 border border-primary/20 rounded-2xl p-2 flex flex-col justify-between group relative overflow-hidden"
                             title={`${status.isTimetable.faculty || 'Timetable'}: ${status.isTimetable.subject || 'Scheduled Class'}`}
                           >
-                            <span className="text-[9px] uppercase font-bold tracking-tight text-primary leading-tight truncate">
+                            <span className="text-[9px] capitalize font-bold tracking-tight text-primary leading-tight truncate">
                               {status.isTimetable.subject || 'Scheduled Class'}
                             </span>
-                            <span className="text-[8px] uppercase tracking-widest font-extrabold text-text-secondary opacity-75 truncate">
+                            <span className="text-[8px] capitalize tracking-widest font-extrabold text-text-secondary opacity-75 truncate">
                               {status.isTimetable.faculty || 'Timetable'}
                             </span>
                           </div>
@@ -383,10 +383,10 @@ const RoomScheduleGrid = () => {
                             className="bg-secondary/15 border border-secondary/25 rounded-2xl p-2 flex flex-col justify-between group relative overflow-hidden"
                             title={`Booked by ${status.activeBooking.bookerName}: ${status.activeBooking.purpose}`}
                           >
-                            <span className="text-[9px] uppercase font-bold tracking-tight text-secondary leading-tight truncate">
+                            <span className="text-[9px] capitalize font-bold tracking-tight text-secondary leading-tight truncate">
                               {status.activeBooking.purpose}
                             </span>
-                            <span className="text-[8px] uppercase tracking-widest font-extrabold text-text-secondary opacity-75 truncate">
+                            <span className="text-[8px] capitalize tracking-widest font-extrabold text-text-secondary opacity-75 truncate">
                               {status.activeBooking.bookerName}
                             </span>
                           </div>
@@ -401,10 +401,10 @@ const RoomScheduleGrid = () => {
                             className="bg-red-500/10 border border-red-500/30 rounded-2xl p-2 flex flex-col justify-between group relative cursor-pointer hover:bg-red-500/20 transition-colors"
                             title="Conflict detected! Click to resolve."
                           >
-                            <span className="text-[9px] uppercase font-bold tracking-tight text-red-400 leading-tight">
+                            <span className="text-[9px] capitalize font-bold tracking-tight text-red-400 leading-tight">
                               CONFLT
                             </span>
-                            <span className="bg-secondary text-white font-extrabold text-[8px] rounded px-1 self-start uppercase">
+                            <span className="bg-secondary text-white font-extrabold text-[8px] rounded px-1 self-start capitalize">
                               Resolve
                             </span>
                           </div>
@@ -442,8 +442,8 @@ const RoomScheduleGrid = () => {
         <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-shift-low border-l border-border/20 shadow-2xl flex flex-col p-6 animate-in slide-in-from-right duration-300">
           <div className="flex items-center justify-between pb-4 border-b border-border/10">
             <div>
-              <h3 className="text-lg font-extrabold text-white uppercase tracking-tight font-display">Create Booking</h3>
-              <p className="text-[10px] text-text-secondary uppercase tracking-widest font-bold opacity-40 mt-0.5">
+              <h3 className="text-lg font-extrabold text-white capitalize tracking-tight font-display">Create Booking</h3>
+              <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40 mt-0.5">
                 Room {selectedRoom?.name}
               </p>
             </div>
@@ -468,7 +468,7 @@ const RoomScheduleGrid = () => {
 
               {/* Conflict Panel */}
               <div className="space-y-2">
-                <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary">Availability Status</label>
+                <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">Availability Status</label>
                 {conflictChecking ? (
                   <div className="flex items-center gap-2 text-xs text-text-secondary">
                     <Loader size={14} className="animate-spin text-primary" />
@@ -479,7 +479,7 @@ const RoomScheduleGrid = () => {
                     <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
                       <AlertTriangle className="text-red-400 shrink-0 mt-0.5" size={16} />
                       <div className="space-y-1">
-                        <span className="text-xs font-bold text-red-400 block uppercase">Conflict Detected!</span>
+                        <span className="text-xs font-bold text-red-400 block capitalize">Conflict Detected!</span>
                         <p className="text-[11px] text-text-secondary leading-normal">
                           This slot overlaps with existing schedules. Resolve below to unlock booking.
                         </p>
@@ -490,7 +490,7 @@ const RoomScheduleGrid = () => {
                       {conflictData.conflicts.map((conflict, i) => (
                         <div key={i} className="bg-surface-mid/50 border border-border/10 rounded-xl p-3 flex items-center justify-between gap-3">
                           <div className="space-y-0.5">
-                            <span className="text-[9px] uppercase font-extrabold tracking-wider text-text-secondary px-1.5 py-0.5 bg-shift-high rounded block w-fit mb-1">
+                            <span className="text-[9px] capitalize font-extrabold tracking-wider text-text-secondary px-1.5 py-0.5 bg-shift-high rounded block w-fit mb-1">
                               {conflict.type}
                             </span>
                             <span className="text-xs font-bold text-text-primary block">
@@ -515,14 +515,14 @@ const RoomScheduleGrid = () => {
                 ) : (
                   <div className="bg-green-400/10 border border-green-400/20 rounded-2xl p-4 flex items-center gap-3">
                     <Check className="text-green-400" size={16} />
-                    <span className="text-xs font-bold text-green-400 uppercase">Slot is free &amp; available</span>
+                    <span className="text-xs font-bold text-green-400 capitalize">Slot is free &amp; available</span>
                   </div>
                 )}
               </div>
 
               {/* Purpose Input */}
               <div className="space-y-1.5">
-                <label className="block text-[10px] uppercase tracking-widest font-extrabold text-text-secondary">Booking Purpose *</label>
+                <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">Booking Purpose *</label>
                 <input
                   value={bookingPurpose}
                   onChange={e => setBookingPurpose(e.target.value)}
@@ -538,14 +538,14 @@ const RoomScheduleGrid = () => {
               <button 
                 type="button" 
                 onClick={() => setDrawer(null)}
-                className="flex-1 bg-surface-mid text-text-secondary px-4 py-3.5 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:bg-surface-mid/75 transition-all"
+                className="flex-1 bg-surface-mid text-text-secondary px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-surface-mid/75 transition-all"
               >
                 Cancel
               </button>
               <button 
                 type="submit"
                 disabled={conflictData.hasConflict || conflictChecking || submittingBooking}
-                className="flex-1 bg-primary disabled:opacity-30 disabled:pointer-events-none text-white px-4 py-3.5 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="flex-1 bg-primary disabled:opacity-30 disabled:pointer-events-none text-white px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 {submittingBooking ? (
                   <>

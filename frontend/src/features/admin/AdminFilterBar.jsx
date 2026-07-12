@@ -55,20 +55,20 @@ export const AdminFilterBar = ({
             <div className="flex items-center gap-1.5 bg-tonal-secondary/10 p-1 rounded-xl font-display font-bold text-[10px]">
               <button 
                 onClick={() => setFilterRange('day')}
-                className={`px-3 py-1 rounded-lg uppercase font-extrabold transition-all tracking-widest ${filterRange === 'day' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1 rounded-lg capitalize font-extrabold transition-all tracking-widest ${filterRange === 'day' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Today
               </button>
               <button 
                 onClick={() => setFilterRange('week')}
-                className={`px-3 py-1 rounded-lg uppercase font-extrabold transition-all tracking-widest ${filterRange === 'week' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`px-3 py-1 rounded-lg capitalize font-extrabold transition-all tracking-widest ${filterRange === 'week' ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
               >
                 Week
               </button>
             </div>
             <button 
               onClick={exportCSV}
-              className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
+              className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
             >
               <Download size={14} />
               Export
@@ -79,7 +79,7 @@ export const AdminFilterBar = ({
         {activeTab === 'promotions' && (
           <button 
             onClick={exportCSV}
-            className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
+            className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
           >
             <Download size={14} />
             Export
@@ -89,7 +89,7 @@ export const AdminFilterBar = ({
         {activeTab === 'users' && (
           <button 
             onClick={() => openUserModal()}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
           >
             <UserPlus size={14} />
             Add User
@@ -99,7 +99,7 @@ export const AdminFilterBar = ({
         {activeTab === 'rooms' && (
           <button 
             onClick={() => openRoomModal()}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
           >
             <Home size={14} />
             Add Room
@@ -109,7 +109,7 @@ export const AdminFilterBar = ({
         {activeTab === 'departments' && (
           <button 
             onClick={() => openDeptModal()}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] uppercase tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
           >
             <Layers size={14} />
             Add Dept

@@ -86,6 +86,15 @@ export const roomService = {
     return res.json();
   },
 
+  requestClassCancellation: async (data) => {
+    const res = await api.post('/timetable/cancellation-requests', data);
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Failed to request class cancellation');
+    }
+    return res.json();
+  },
+
   getRoomWeekSchedule: async (roomId, weekStart) => {
     const res = await api.get(`/rooms/${roomId}/week-schedule?weekStart=${weekStart}`);
     if (!res.ok) throw new Error('Failed to fetch room week schedule');

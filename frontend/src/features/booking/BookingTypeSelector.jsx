@@ -29,7 +29,7 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
                   setBookingType(type.id);
                   setIsTypeOpen(false);
                 }}
-                className={`p-5 cursor-pointer transition-colors flex items-center font-extrabold text-[11px] uppercase tracking-widest ${bookingType === type.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`p-5 cursor-pointer transition-colors flex items-center font-extrabold text-[11px] capitalize tracking-widest ${bookingType === type.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
               >
                 {type.label}
               </div>

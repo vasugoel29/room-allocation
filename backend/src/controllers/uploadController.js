@@ -1,5 +1,5 @@
 import * as db from '../db.js';
-import XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import bcrypt from 'bcrypt';
 import logger from '../utils/logger.js';
 import { logActivity } from '../services/loggerService.js';
@@ -102,6 +102,152 @@ const exportToXLSX = (data, filename, res) => {
   res.send(buffer);
 };
 
+const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const GRID_HOURS = Array.from({ length: 10 }, (_, index) => index + 8); // Matches the Admin Room Grid: 08:00–18:00
+
+const normaliseDay = (value = '') => {
+  const day = String(value).trim().toLowerCase();
+  return WEEK_DAYS.find(candidate => candidate.toLowerCase().startsWith(day.slice(0, 3))) || value;
+};
+
+const getGridHour = (slotTime = '') => {
+  const match = String(slotTime).match(/(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  // Imported timetable values can use 12-hour times, e.g. T702:00-03:00.
+  // The Room Grid represents those as 14:00–15:00.
+  return hour < 8 ? hour + 12 : hour;
+};
+
+const formatGridHour = (hour) => `${String(hour).padStart(2, '0')}:00`;
+
+const safeSheetName = (name, usedNames) => {
+  const base = (name || 'Timetable').replace(/[\\/*?:\[\]]/g, ' ').trim().slice(0, 31) || 'Timetable';
+  let sheetName = base;
+  let suffix = 2;
+  while (usedNames.has(sheetName)) {
+    sheetName = `${base.slice(0, 28)} (${suffix++})`;
+  }
+  usedNames.add(sheetName);
+  return sheetName;
+};
+
+const appendCalendarSheet = (workbook, title, slots, usedSheetNames, cellDetails) => {
+    const cellEntries = new Map();
+    slots.forEach(slot => {
+      const hour = getGridHour(slot.slot_time);
+      if (!GRID_HOURS.includes(hour)) return;
+      const key = `${hour}|${normaliseDay(slot.day_of_week)}`;
+      const details = cellDetails(slot);
+      cellEntries.set(key, [...(cellEntries.get(key) || []), details]);
+    });
+
+    const sheetRows = [
+      [`Weekly Timetable — ${title}`],
+      ['Time', ...WEEK_DAYS],
+      ...GRID_HOURS.map(hour => [formatGridHour(hour), ...WEEK_DAYS.map(day => (cellEntries.get(`${hour}|${day}`) || []).join('\n\n'))])
+    ];
+    const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
+    worksheet['!merges'] = [XLSX.utils.decode_range('A1:F1')];
+    worksheet['!cols'] = [{ wch: 16 }, ...WEEK_DAYS.map(() => ({ wch: 28 }))];
+    worksheet['!rows'] = [{ hpt: 26 }, { hpt: 22 }, ...GRID_HOURS.map(() => ({ hpt: 54 }))];
+    worksheet['!freeze'] = { xSplit: 1, ySplit: 2 };
+
+    const titleStyle = { font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+    const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '312E81' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+    const cellStyle = { alignment: { vertical: 'top', wrapText: true }, border: { top: { style: 'thin', color: { rgb: 'D1D5DB' } }, bottom: { style: 'thin', color: { rgb: 'D1D5DB' } }, left: { style: 'thin', color: { rgb: 'D1D5DB' } }, right: { style: 'thin', color: { rgb: 'D1D5DB' } } } };
+    for (let column = 0; column <= 5; column++) {
+      const address = XLSX.utils.encode_cell({ r: 0, c: column });
+      if (worksheet[address]) worksheet[address].s = titleStyle;
+      const headerAddress = XLSX.utils.encode_cell({ r: 1, c: column });
+      if (worksheet[headerAddress]) worksheet[headerAddress].s = headerStyle;
+    }
+    for (let row = 2; row < sheetRows.length; row++) {
+      for (let column = 0; column <= 5; column++) {
+        const address = XLSX.utils.encode_cell({ r: row, c: column });
+        if (worksheet[address]) worksheet[address].s = cellStyle;
+      }
+    }
+    XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName(title, usedSheetNames));
+};
+
+const appendRoomGridSheet = (workbook, title, slots, usedSheetNames) => {
+  const cellEntries = new Map();
+  slots.forEach(slot => {
+    const hour = getGridHour(slot.slot_time);
+    const day = normaliseDay(slot.day_of_week);
+    if (!GRID_HOURS.includes(hour) || !WEEK_DAYS.includes(day)) return;
+    const key = `${day}|${hour}`;
+    const details = [slot.content || 'Scheduled class', slot.faculty_name ? `Faculty: ${slot.faculty_name}` : '']
+      .filter(Boolean)
+      .join('\n');
+    cellEntries.set(key, [...(cellEntries.get(key) || []), details]);
+  });
+
+  const sheetRows = [
+    [`Room Schedule Grid — ${title}`],
+    ['Day', ...GRID_HOURS.map(formatGridHour)],
+    ...WEEK_DAYS.map(day => [day, ...GRID_HOURS.map(hour => (cellEntries.get(`${day}|${hour}`) || []).join('\n\n'))])
+  ];
+  const worksheet = XLSX.utils.aoa_to_sheet(sheetRows);
+  worksheet['!merges'] = [XLSX.utils.decode_range('A1:K1')];
+  worksheet['!cols'] = [{ wch: 16 }, ...GRID_HOURS.map(() => ({ wch: 24 }))];
+  worksheet['!rows'] = [{ hpt: 26 }, { hpt: 22 }, ...WEEK_DAYS.map(() => ({ hpt: 105 }))];
+  worksheet['!freeze'] = { xSplit: 1, ySplit: 2 };
+  const titleStyle = { font: { bold: true, sz: 14, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '4F46E5' } }, alignment: { horizontal: 'center', vertical: 'center' } };
+  const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '312E81' } }, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+  const cellStyle = { alignment: { vertical: 'top', wrapText: true }, border: { top: { style: 'thin', color: { rgb: 'D1D5DB' } }, bottom: { style: 'thin', color: { rgb: 'D1D5DB' } }, left: { style: 'thin', color: { rgb: 'D1D5DB' } }, right: { style: 'thin', color: { rgb: 'D1D5DB' } } } };
+  for (let column = 0; column <= 10; column++) {
+    const titleAddress = XLSX.utils.encode_cell({ r: 0, c: column });
+    if (worksheet[titleAddress]) worksheet[titleAddress].s = titleStyle;
+    const headerAddress = XLSX.utils.encode_cell({ r: 1, c: column });
+    if (worksheet[headerAddress]) worksheet[headerAddress].s = headerStyle;
+  }
+  for (let row = 2; row < sheetRows.length; row++) {
+    for (let column = 0; column <= 10; column++) {
+      const address = XLSX.utils.encode_cell({ r: row, c: column });
+      if (worksheet[address]) worksheet[address].s = cellStyle;
+    }
+  }
+  XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName(title, usedSheetNames));
+};
+
+const exportTimetableCalendar = (rows, res, view) => {
+  const workbook = XLSX.utils.book_new();
+  const usedSheetNames = new Set();
+  const groupBy = (getName) => rows.reduce((groups, slot) => {
+    const name = getName(slot);
+    if (!name) return groups;
+    if (!groups[name]) groups[name] = [];
+    groups[name].push(slot);
+    return groups;
+  }, {});
+
+  if (view === 'faculty') {
+    const slotsByFaculty = groupBy(slot => slot.faculty_name || 'Unassigned');
+    Object.entries(slotsByFaculty).forEach(([faculty, slots]) => {
+      appendCalendarSheet(
+        workbook,
+        `Faculty - ${faculty}`,
+        slots,
+        usedSheetNames,
+        slot => [slot.content || 'Scheduled class', slot.room_name ? `Room: ${slot.room_name}` : '', slot.semester ? `Semester: ${slot.semester}` : ''].filter(Boolean).join('\n')
+      );
+    });
+  } else {
+    const slotsByRoom = groupBy(slot => slot.room_name);
+    Object.entries(slotsByRoom).forEach(([room, slots]) => appendRoomGridSheet(workbook, `Room - ${room}`, slots, usedSheetNames));
+  }
+
+  if (workbook.SheetNames.length === 0) {
+    XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([['Weekly Timetable'], ['No timetable entries found']]), 'Timetable');
+  }
+  const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', cellStyles: true });
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=${view}_timetable_calendar.xlsx`);
+  res.send(buffer);
+};
+
 export const exportStudents = async (req, res) => {
   try {
     if (req.user?.id) {
@@ -140,12 +286,13 @@ export const exportFaculty = async (req, res) => {
 
 export const exportTimetable = async (req, res) => {
   try {
+    const view = req.query.view === 'room' ? 'room' : 'faculty';
     if (req.user?.id) {
       await logActivity({
         userId: req.user.id,
         action: 'EXPORT_TIMETABLE_XLSX',
         entityType: 'upload',
-        details: { format: 'xlsx' }
+        details: { format: 'xlsx', view }
       });
     }
     const result = await db.query(`
@@ -155,7 +302,7 @@ export const exportTimetable = async (req, res) => {
       LEFT JOIN rooms r ON r.id = fts.room_id
       ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
     `);
-    return exportToXLSX(result.rows, 'timetable_export.xlsx', res);
+    return exportTimetableCalendar(result.rows, res, view);
   } catch (err) {
     logger.error('Failed to export timetable XLSX', err);
     res.status(500).json({ error: 'Failed to export timetable XLSX' });

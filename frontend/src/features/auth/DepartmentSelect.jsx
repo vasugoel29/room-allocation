@@ -10,7 +10,7 @@ function DepartmentSelect({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-[10px] font-black text-text-secondary uppercase tracking-[0.1em] px-1">Department</label>
+      <label className="text-[10px] font-black text-text-secondary capitalize tracking-[0.1em] px-1">Department</label>
       <div className="relative">
         <div className="relative">
           <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" />

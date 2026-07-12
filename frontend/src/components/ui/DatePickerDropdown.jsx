@@ -97,7 +97,7 @@ function DatePickerDropdown({ selectedDate, onChange }) {
           
           <div className="grid grid-cols-7 gap-1 mb-2">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(dayName => (
-              <div key={dayName} className="text-[10px] font-black text-text-secondary opacity-50 text-center uppercase">
+              <div key={dayName} className="text-[10px] font-black text-text-secondary opacity-50 text-center capitalize">
                 {dayName}
               </div>
             ))}

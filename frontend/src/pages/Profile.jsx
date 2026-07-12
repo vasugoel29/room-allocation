@@ -52,7 +52,7 @@ function Profile() {
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-hidden flex flex-col no-scrollbar pb-2 lg:pb-8">
       {/* Header with Title */}
       <div className="flex justify-between items-center mb-6 sm:mb-10 shrink-0">
-        <h1 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tighter uppercase font-display italic">My Profile</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tighter capitalize font-display italic">My Profile</h1>
         {!isEditing ? (
           <button 
             onClick={() => setIsEditing(true)}
@@ -101,7 +101,7 @@ function Profile() {
             ) : (
               <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
             )}
-            <p className="text-accent font-black uppercase tracking-[0.2em] text-[10px] sm:text-xs bg-accent/10 px-3 py-1 rounded-full inline-block mt-2">
+            <p className="text-accent font-black capitalize tracking-[0.2em] text-[10px] sm:text-xs bg-accent/10 px-3 py-1 rounded-full inline-block mt-2">
               {getRoleLabel(user.role)}
             </p>
           </div>
@@ -111,7 +111,7 @@ function Profile() {
         <div className="flex-1 py-6 sm:py-10">
           <div className={`grid grid-cols-1 gap-8 sm:gap-10 ${isAdmin ? '' : 'sm:grid-cols-2'}`}>
             <div className="space-y-2">
-              <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+              <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
                 <Mail size={14} className="text-accent" />
                 Email Address
               </label>
@@ -121,7 +121,7 @@ function Profile() {
             {/* Admin has no department, Faculty/Student does */}
             {!isAdmin && (
               <div className="space-y-2">
-                <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+                <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
                   <Shield size={14} className="text-accent" />
                   Department
                 </label>
@@ -142,7 +142,7 @@ function Profile() {
             {isStudent && (
               <>
                 <div className="space-y-2">
-                  <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
                     <Building size={14} className="text-accent" />
                     Branch / Program
                   </label>
@@ -160,7 +160,7 @@ function Profile() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] sm:text-xs font-black text-text-secondary uppercase tracking-[0.2em] flex items-center gap-3">
+                  <label className="text-[10px] sm:text-xs font-black text-text-secondary capitalize tracking-[0.2em] flex items-center gap-3">
                     <BookOpen size={14} className="text-accent" />
                     Year & Section
                   </label>
@@ -198,7 +198,7 @@ function Profile() {
         <div className="pt-6 sm:pt-10 border-t border-border/50 space-y-6 sm:space-y-8 shrink-0">
           <div className="flex items-center justify-between pl-6 pr-4 py-3 sm:py-4 bg-bg-secondary/50 rounded-2xl sm:rounded-full border border-border/50 group">
             <div className="flex flex-col">
-              <p className="text-sm sm:text-base font-black text-text-primary uppercase tracking-widest">Theme Mode</p>
+              <p className="text-sm sm:text-base font-black text-text-primary capitalize tracking-widest">Theme Mode</p>
               <p className="text-[10px] sm:text-xs text-text-secondary font-bold">Switch Appearance</p>
             </div>
             <button 

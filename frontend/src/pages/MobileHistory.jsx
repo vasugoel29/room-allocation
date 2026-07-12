@@ -9,7 +9,7 @@ function MobileHistory({ onBack }) {
         <button onClick={onBack} className="p-2 rounded-full text-text-secondary">
           <ArrowLeft size={24} />
         </button>
-        <h1 className="text-xl font-extrabold text-text-primary uppercase tracking-tight font-display">My Bookings</h1>
+        <h1 className="text-xl font-extrabold text-text-primary capitalize tracking-tight font-display">My Bookings</h1>
       </div>
       <div className="flex-1 overflow-hidden relative">
         <HistoryView />

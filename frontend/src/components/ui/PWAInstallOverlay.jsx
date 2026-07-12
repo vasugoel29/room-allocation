@@ -77,19 +77,19 @@ const PWAInstallOverlay = () => {
               <h2 className="text-2xl font-black text-text-primary tracking-tight">Level Up CRAS!</h2>
               <Sparkles size={18} className="text-yellow-500 animate-pulse" />
             </div>
-            <p className="text-xs font-bold text-text-secondary uppercase tracking-widest leading-relaxed">
+            <p className="text-xs font-bold text-text-secondary capitalize tracking-widest leading-relaxed">
               Install the app for a faster, full-screen experience and instant notifications.
             </p>
           </div>
 
           <div className="space-y-3 pt-2">
-             <div className="flex items-center gap-3 text-[11px] font-black text-text-primary/70 uppercase tracking-tighter">
+             <div className="flex items-center gap-3 text-[11px] font-black text-text-primary/70 capitalize tracking-tighter">
                 <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                    <Zap size={14} />
                 </div>
                 <span>Lightning Fast Access</span>
              </div>
-             <div className="flex items-center gap-3 text-[11px] font-black text-text-primary/70 uppercase tracking-tighter">
+             <div className="flex items-center gap-3 text-[11px] font-black text-text-primary/70 capitalize tracking-tighter">
                 <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                    <Download size={14} />
                 </div>
@@ -107,7 +107,7 @@ const PWAInstallOverlay = () => {
             </button>
             <button 
               onClick={handleDismiss}
-              className="w-full bg-bg-secondary/50 border border-border text-text-secondary font-black py-3 rounded-2xl active:scale-95 transition-all text-[11px] uppercase tracking-widest"
+              className="w-full bg-bg-secondary/50 border border-border text-text-secondary font-black py-3 rounded-2xl active:scale-95 transition-all text-[11px] capitalize tracking-widest"
             >
               Maybe Later
             </button>
