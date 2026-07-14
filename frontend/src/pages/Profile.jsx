@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { AppContext } from '../context/AppContext';
 import { User, Mail, Shield, Building, BookOpen, Edit2, Save, X, LogOut, Sun, Moon } from 'lucide-react';
 import { authService } from '../services/authService';
+import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
 import { getRoleLabel } from '../utils/roleUtils';
 import CustomSelect from '../components/ui/CustomSelect';
@@ -9,15 +10,37 @@ import CustomSelect from '../components/ui/CustomSelect';
 function Profile() {
   const { user, setUser, logout, theme, setTheme, departments } = useContext(AppContext);
   const [isEditing, setIsEditing] = useState(false);
+  const [branches, setBranches] = useState([]);
   const [formData, setFormData] = useState({
     name: user?.name || '',
-    branch: user?.branch || '',
+    branch_id: user?.branch_id || '',
     semester: user?.semester || '',
     section: user?.section || '',
     group_name: user?.group_name || '',
-    departmentName: user?.department_name || '',
+    department_id: user?.department_id || '',
   });
   const [loading, setLoading] = useState(false);
+
+  // Fetch branches for dropdown selection
+  useEffect(() => {
+    adminService.getBranches()
+      .then(data => setBranches(Array.isArray(data) ? data : (data.branches || [])))
+      .catch(e => console.error('Failed to load branches', e));
+  }, []);
+
+  // Update form state if user changes
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        branch_id: user.branch_id || '',
+        semester: user.semester || '',
+        section: user.section || '',
+        group_name: user.group_name || '',
+        department_id: user.department_id || '',
+      });
+    }
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -27,11 +50,24 @@ function Profile() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const updatedUser = await authService.updateUser(user.id, formData);
+      const payload = {
+        name: formData.name,
+        semester: formData.semester ? Number(formData.semester) : null,
+        section: formData.section ? Number(formData.section) : null,
+        group_name: formData.group_name ? Number(formData.group_name) : null,
+        department_id: formData.department_id ? Number(formData.department_id) : null,
+        branch_id: formData.branch_id ? Number(formData.branch_id) : null,
+      };
+
+      const updatedUser = await authService.updateUser(user.id, payload);
+      
       setUser(prev => ({ 
         ...prev, 
         ...updatedUser,
-        department_name: formData.departmentName
+        department_name: departments.find(d => d.id === payload.department_id)?.name || prev.department_name,
+        branch: branches.find(b => b.id === payload.branch_id)?.name || prev.branch,
+        branch_id: payload.branch_id,
+        department_id: payload.department_id
       }));
       setIsEditing(false);
       toast.success('Profile updated successfully!');
@@ -47,7 +83,8 @@ function Profile() {
 
   if (!user) return null;
 
-  const departmentOptions = departments.map(d => ({ value: d.name, label: d.name }));
+  const departmentOptions = departments.map(d => ({ value: d.id, label: d.name }));
+  const branchOptions = branches.map(b => ({ value: b.id, label: `${b.name} (${b.short_code})` }));
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-hidden flex flex-col no-scrollbar pb-2 lg:pb-8">
@@ -90,14 +127,14 @@ function Profile() {
           <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-[1.5rem] sm:rounded-3xl bg-accent flex items-center justify-center text-white shadow-xl shadow-accent/30 flex-shrink-0 animate-in zoom-in duration-500">
             <User size={32} sm:size={48} strokeWidth={2.5} />
           </div>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 font-body">
             {isEditing ? (
               <input 
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Full Name"
-                className="text-2xl sm:text-3xl font-black text-text-primary bg-bg-primary border border-border rounded-xl px-3 py-2 focus:outline-none focus:border-accent w-full"
+                className="text-2xl sm:text-3xl font-black text-text-primary bg-bg-primary border border-border rounded-xl px-3 py-2 focus:outline-none focus:border-accent w-full font-bold"
               />
             ) : (
               <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
@@ -108,7 +145,7 @@ function Profile() {
           </div>
         </div>
 
-        {/* MIDDLE: Detailed Info (Grid stretches to fill available height) */}
+        {/* MIDDLE: Detailed Info */}
         <div className="flex-1 py-6 sm:py-10">
           <div className={`grid grid-cols-1 gap-8 sm:gap-10 ${isAdmin ? '' : 'sm:grid-cols-2'}`}>
             <div className="space-y-2">
@@ -128,8 +165,8 @@ function Profile() {
                 </label>
                 {isEditing ? (
                   <CustomSelect 
-                    value={formData.departmentName}
-                    onChange={(val) => setFormData(prev => ({ ...prev, departmentName: val }))}
+                    value={formData.department_id}
+                    onChange={(val) => setFormData(prev => ({ ...prev, department_id: val }))}
                     options={departmentOptions}
                     placeholder="Select Department"
                   />
@@ -148,12 +185,11 @@ function Profile() {
                     Branch / Program
                   </label>
                   {isEditing ? (
-                    <input 
-                      name="branch"
-                      value={formData.branch}
-                      onChange={handleChange}
-                      placeholder="Branch"
-                      className="w-full bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
+                    <CustomSelect 
+                      value={formData.branch_id}
+                      onChange={(val) => setFormData(prev => ({ ...prev, branch_id: val }))}
+                      options={branchOptions}
+                      placeholder="Select Branch"
                     />
                   ) : (
                     <p className="font-bold text-base sm:text-lg text-text-primary">{user.branch || 'Not set'}</p>

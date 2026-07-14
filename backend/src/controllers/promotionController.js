@@ -6,6 +6,9 @@ import { notifyPromotionResult } from '../utils/emailService.js';
 import { logActivity } from '../services/loggerService.js';
 
 export const requestPromotion = async (req, res) => {
+  const { reason } = req.body;
+  const userId = req.user.id;
+
   if (!reason || reason.trim().length > 100) {
     return res.status(400).json({ error: 'Reason is required and must be under 100 characters' });
   }

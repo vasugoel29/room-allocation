@@ -104,9 +104,9 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
           // No target faculty either! Complete immediately.
           await client.query(`
             UPDATE bookings 
-            SET created_by = $1, faculty_id = $2, purpose = $3, status = 'ACTIVE', updated_at = NOW()
-            WHERE id = $4
-          `, [t.requested_by, null, t.new_purpose, t.booking_id]);
+            SET created_by = $1, purpose = $2, status = 'ACTIVE', updated_at = NOW()
+            WHERE id = $3
+          `, [t.requested_by, t.new_purpose, t.booking_id]);
 
           await transferRepository.updateStatus(transferId, 'ACCEPTED', client);
           await transferRepository.rejectOtherPending(t.booking_id, transferId, client);
@@ -147,9 +147,9 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
         // Complete transfer directly if no target faculty
         await client.query(`
           UPDATE bookings 
-          SET created_by = $1, faculty_id = $2, purpose = $3, status = 'ACTIVE', updated_at = NOW()
-          WHERE id = $4
-        `, [t.requested_by, null, t.new_purpose, t.booking_id]);
+          SET created_by = $1, purpose = $2, status = 'ACTIVE', updated_at = NOW()
+          WHERE id = $3
+        `, [t.requested_by, t.new_purpose, t.booking_id]);
 
         await transferRepository.updateStatus(transferId, 'ACCEPTED', client);
         await transferRepository.rejectOtherPending(t.booking_id, transferId, client);
@@ -174,9 +174,9 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
 
       await client.query(`
         UPDATE bookings 
-        SET created_by = $1, faculty_id = $2, purpose = $3, status = 'ACTIVE', updated_at = NOW()
-        WHERE id = $4
-      `, [t.requested_by, t.target_faculty_id, t.new_purpose, t.booking_id]);
+        SET created_by = $1, purpose = $2, status = 'ACTIVE', updated_at = NOW()
+        WHERE id = $3
+      `, [t.requested_by, t.new_purpose, t.booking_id]);
 
       await transferRepository.updateStatus(transferId, 'ACCEPTED', client);
       await transferRepository.rejectOtherPending(t.booking_id, transferId, client);

@@ -11,12 +11,12 @@ export const bookingRepository = {
     const { room_id, user_id, start_date, end_date, slot, limit, offset } = filters;
     let query = `
       SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
-             u.branch, u.year, u.section, d.name as department_name,
+             br.name as branch, u.year, u.section, d.name as department_name,
              f.name as faculty_name,
              CASE 
                WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
                ELSE CONCAT(
-                 u.branch, 
+                 COALESCE(br.short_code, ''), 
                  '-', 
                  u.section, 
                  ' ', 
@@ -33,7 +33,10 @@ export const bookingRepository = {
       FROM bookings b
       JOIN rooms r ON b.room_id = r.id
       JOIN users u ON b.created_by = u.id
-      LEFT JOIN users f ON b.faculty_id = f.id
+      LEFT JOIN branches br ON u.branch_id = br.id
+      LEFT JOIN booking_requests bq ON bq.resulting_booking_id = b.id
+      LEFT JOIN requests req ON bq.request_id = req.id
+      LEFT JOIN users f ON req.reviewed_by = f.id
       LEFT JOIN departments d ON u.department_id = d.id
       WHERE 1=1
     `;
@@ -117,12 +120,12 @@ export const bookingRepository = {
    * Insert a new booking
    */
   create: async (data, client = db) => {
-    const { room_id, start_time, end_time, created_by, purpose, faculty_id, status } = data;
+    const { room_id, start_time, end_time, created_by, purpose, status } = data;
     const query = `
-      INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose, faculty_id, status) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose, status) 
+      VALUES ($1, $2, $3, $4, $5, $6) 
       RETURNING *`;
-    const values = [room_id, start_time, end_time, created_by, purpose, faculty_id || null, status];
+    const values = [room_id, start_time, end_time, created_by, purpose, status];
     const result = await client.query(query, values);
     return result.rows[0];
   },
@@ -164,12 +167,22 @@ export const bookingRepository = {
    */
   findPendingByFaculty: async (facultyId) => {
     const query = `
-      SELECT b.*, r.name as room_name, u.name as user_name, u.email as user_email
-      FROM bookings b
-      JOIN rooms r ON b.room_id = r.id
-      JOIN users u ON b.created_by = u.id
-      WHERE b.faculty_id = $1 AND b.status = 'PENDING'
-      ORDER BY b.created_at DESC
+      SELECT 
+        br.request_id as id, 
+        br.room_id, 
+        br.start_time, 
+        br.end_time, 
+        br.purpose,
+        r.name as room_name, 
+        u.name as user_name, 
+        u.email as user_email,
+        req.created_at
+      FROM requests req
+      JOIN booking_requests br ON req.id = br.request_id
+      JOIN rooms r ON br.room_id = r.id
+      JOIN users u ON req.requested_by = u.id
+      WHERE req.reviewed_by = $1 AND req.status = 'PENDING'
+      ORDER BY req.created_at DESC
     `;
     const result = await db.query(query, [facultyId]);
     return result.rows;
@@ -178,11 +191,17 @@ export const bookingRepository = {
   /**
    * Reject conflicting pending bookings
    */
-  rejectConflicts: async (roomId, approvedId, startTime, endTime, client = db) => {
+  rejectConflicts: async (roomId, approvedRequestId, startTime, endTime, client = db) => {
     const query = `
-      UPDATE bookings SET status = 'REJECTED', updated_at = NOW() 
-      WHERE room_id = $1 AND status = 'PENDING' AND id != $2
-      AND tstzrange(start_time, end_time) && tstzrange($3::timestamptz, $4::timestamptz)`;
-    return client.query(query, [roomId, approvedId, startTime, endTime]);
+      UPDATE requests 
+      SET status = 'REJECTED', updated_at = NOW()
+      WHERE id IN (
+        SELECT br.request_id 
+        FROM booking_requests br
+        JOIN requests r ON r.id = br.request_id
+        WHERE br.room_id = $1 AND r.status = 'PENDING' AND r.id != $2
+          AND tstzrange(br.start_time, br.end_time) && tstzrange($3::timestamptz, $4::timestamptz)
+      )`;
+    return client.query(query, [roomId, approvedRequestId, startTime, endTime]);
   }
 };

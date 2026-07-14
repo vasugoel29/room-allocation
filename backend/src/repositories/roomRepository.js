@@ -31,30 +31,7 @@ export const roomRepository = {
     return result.rows[0];
   },
 
-  /**
-   * Upsert room availability
-   */
-  upsertAvailability: async (roomId, day, hour, isAvailable, userId = null, client = db) => {
-    const query = `
-      INSERT INTO room_availability (room_id, day, hour, is_available, user_id) 
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (room_id, day, hour) DO UPDATE SET is_available = $4, user_id = $5`;
-    return client.query(query, [roomId, day, hour, isAvailable, userId]);
-  },
 
-  /**
-   * Bulk insert default availability
-   */
-  insertDefaultAvailability: async (roomId, days, hours, client = db) => {
-    for (const d of days) {
-      for (const h of hours) {
-        await client.query(
-          'INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, $3, FALSE) ON CONFLICT DO NOTHING', 
-          [roomId, d, h]
-        );
-      }
-    }
-  },
   /**
    * Get all rooms with their booking status for a specific time slot (Admin)
    */
@@ -170,42 +147,7 @@ export const roomRepository = {
     };
   },
 
-  /**
-   * Get all room availability entries
-   */
-  getAllAvailability: async () => {
-    const result = await db.query(`
-      SELECT ra.*, r.name as room_name 
-      FROM room_availability ra
-      JOIN rooms r ON ra.room_id = r.id
-    `);
-    return result.rows;
-  },
 
-  /**
-   * Override room availability (e.g. for cancelled classes)
-   */
-  overrideAvailability: async (roomName, day, hour, isAvailable, userId = null) => {
-    const room = await roomRepository.findByName(roomName);
-    if (!room) throw new Error('Room not found');
-    
-    return roomRepository.upsertAvailability(room.id, day, hour, isAvailable, userId);
-  },
-
-  /**
-   * Get availability overrides created by a specific user
-   */
-  getUserOverrides: async (userId) => {
-    const query = `
-      SELECT ra.*, r.name as room_name 
-      FROM room_availability ra
-      JOIN rooms r ON ra.room_id = r.id
-      WHERE ra.user_id = $1
-      ORDER BY ra.created_at DESC
-    `;
-    const result = await db.query(query, [userId]);
-    return result.rows;
-  },
 
   /**
    * Update room details

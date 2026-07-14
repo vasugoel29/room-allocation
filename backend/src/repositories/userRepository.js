@@ -39,7 +39,7 @@ export const userRepository = {
    */
   findAll: async (limit, offset) => {
     let query = `
-      SELECT u.id, u.name, u.email, u.role, u.branch, u.branch_id, u.year, u.semester, u.section,
+      SELECT u.id, u.name, u.email, u.role, b.name as branch, u.branch_id, u.year, u.semester, u.section,
              u.group_name, u.is_approved, u.created_at,
              d.name as department_name, b.name as branch_name, b.short_code as branch_code
       FROM users u
@@ -73,15 +73,15 @@ export const userRepository = {
    * Create a new user
    */
   create: async (userData, client = db) => {
-    const { name, email, passwordHash, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved } = userData;
+    const { name, email, passwordHash, role, branch_id, year, semester, section, group_name, department_id, is_approved } = userData;
     const query = `
-      INSERT INTO users (name, email, password, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
-      RETURNING id, name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved, created_at
+      INSERT INTO users (name, email, password_hash, role, branch_id, year, semester, section, group_name, department_id, is_approved) 
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+      RETURNING id, name, email, role, branch_id, year, semester, section, group_name, department_id, is_approved, created_at
     `;
     const values = [
       name, email, passwordHash, role || 'VIEWER',
-      branch || null, branch_id || null,
+      branch_id || null,
       year || null, semester || null,
       section || null, group_name || null,
       department_id, is_approved !== undefined ? is_approved : true
@@ -94,24 +94,23 @@ export const userRepository = {
    * Update user data
    */
   update: async (id, userData, client = db) => {
-    const { name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved } = userData;
+    const { name, email, role, branch_id, year, semester, section, group_name, department_id, is_approved } = userData;
     const query = `
       UPDATE users 
       SET name = COALESCE($1, name), 
           email = COALESCE($2, email), 
           role = COALESCE($3, role), 
-          branch = COALESCE($4, branch), 
-          branch_id = COALESCE($5, branch_id),
-          year = COALESCE($6, year), 
-          semester = COALESCE($7, semester),
-          section = COALESCE($8, section),
-          group_name = COALESCE($9, group_name),
-          department_id = COALESCE($10, department_id), 
-          is_approved = COALESCE($11, is_approved) 
-      WHERE id = $12
-      RETURNING id, name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved
+          branch_id = COALESCE($4, branch_id),
+          year = COALESCE($5, year), 
+          semester = COALESCE($6, semester),
+          section = COALESCE($7, section),
+          group_name = COALESCE($8, group_name),
+          department_id = COALESCE($9, department_id), 
+          is_approved = COALESCE($10, is_approved) 
+      WHERE id = $11
+      RETURNING id, name, email, role, branch_id, year, semester, section, group_name, department_id, is_approved
     `;
-    const values = [name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved, id];
+    const values = [name, email, role, branch_id, year, semester, section, group_name, department_id, is_approved, id];
     const result = await client.query(query, values);
     return result.rows[0];
   },
@@ -192,7 +191,7 @@ export const userRepository = {
    * Update password hash for a user
    */
   updatePassword: async (userId, passwordHash) => {
-    const query = 'UPDATE users SET password = $1 WHERE id = $2 RETURNING id';
+    const query = 'UPDATE users SET password_hash = $1 WHERE id = $2 RETURNING id';
     const result = await db.query(query, [passwordHash, userId]);
     return result.rows[0];
   }

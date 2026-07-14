@@ -73,8 +73,6 @@ const checkTimetableClash = async (client, requester, reqData, userId) => {
   if (!start_time || !end_time) return null;
 
   const requesterRole = (requester?.role || '').toUpperCase();
-  // Admins may book outside a student section timetable, but a booking that
-  // names a faculty member must never overlap that faculty member's timetable.
   if (requesterRole === 'ADMIN' && !faculty_id) return null;
 
   const startParts = getIstParts(start_time);
@@ -86,19 +84,19 @@ const checkTimetableClash = async (client, requester, reqData, userId) => {
 
   const checkFacultySchedule = async (facultyName, label) => {
     const facultyRows = await client.query(`
-      SELECT slot_time, subject_name, faculty_name, room_name
-      FROM timetable_slots
-      WHERE UPPER(faculty_name) = $1 AND day_of_week = $2
-    `, [facultyName.toUpperCase(), dayName]);
+      SELECT 
+        TO_CHAR(ts.start_time, 'HH24:MI') || '-' || TO_CHAR(ts.end_time, 'HH24:MI') AS slot_time,
+        s.name AS subject_name,
+        u.name AS faculty_name,
+        r.name AS room_name
+      FROM timetable_slots ts
+      JOIN users u ON ts.faculty_id = u.id
+      LEFT JOIN subjects s ON ts.subject_id = s.id
+      LEFT JOIN rooms r ON ts.room_id = r.id
+      WHERE UPPER(u.name) = $1 AND ts.day_of_week = $2
+    `, [facultyName.toUpperCase(), dayName.toUpperCase()]);
 
-    const facultyFacultyRows = await client.query(`
-      SELECT slot_time, content AS subject_name, faculty_name
-      FROM faculty_timetable_slots
-      WHERE is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
-    `, [facultyName.toUpperCase(), dayName]);
-
-    const combinedRows = [...facultyRows.rows, ...facultyFacultyRows.rows];
-    const matched = combinedRows.filter((slot) => {
+    const matched = facultyRows.rows.filter((slot) => {
       return bookingHourCandidates.some((candidate) => {
         return hasTimetableOverlap(slot.slot_time, candidate.start, candidate.end);
       });
@@ -120,19 +118,27 @@ const checkTimetableClash = async (client, requester, reqData, userId) => {
   if (requesterRole === 'FACULTY' || requesterRole === 'FACULTY MEMBER') {
     await checkFacultySchedule(requester.name, 'your timetable');
   } else {
-    const department = getTimetableDepartment(requester.branch || requester.department_name);
+    const departmentId = requester.department_id;
+    const branchId = requester.branch_id;
     const semester = requester.semester || (requester.year ? requester.year * 2 : null);
     const section = requester.section;
 
-    if (department && semester && section !== undefined && section !== null) {
+    if (branchId && semester && section !== undefined && section !== null) {
       const sectionRows = await client.query(`
-        SELECT slot_time, subject_name, faculty_name, room_name, department, semester, section
-        FROM timetable_slots
-        WHERE (UPPER(department) = $1 OR UPPER(department) = $2)
-          AND semester::TEXT = $3::TEXT
-          AND section::TEXT = $4::TEXT
-          AND day_of_week = $5
-      `, [department.toUpperCase(), (department || '').toUpperCase(), String(semester), String(section), dayName]);
+        SELECT 
+          TO_CHAR(ts.start_time, 'HH24:MI') || '-' || TO_CHAR(ts.end_time, 'HH24:MI') AS slot_time,
+          s.name AS subject_name,
+          u.name AS faculty_name,
+          r.name AS room_name
+        FROM timetable_slots ts
+        LEFT JOIN users u ON ts.faculty_id = u.id
+        LEFT JOIN subjects s ON ts.subject_id = s.id
+        LEFT JOIN rooms r ON ts.room_id = r.id
+        WHERE ts.branch_id = $1
+          AND ts.semester = $2
+          AND ts.section::text = $3::text
+          AND ts.day_of_week = $4
+      `, [branchId, semester, String(section), dayName.toUpperCase()]);
 
       const matched = sectionRows.rows.filter((slot) => {
         return bookingHourCandidates.some((candidate) => {
@@ -178,7 +184,6 @@ export const createBooking = async (client, reqData, userId, requester = null) =
     return { error: 'Room not found', status: 404 };
   }
 
-  // Restrict student access
   const isStudent = requesterProfile?.role !== 'ADMIN' && requesterProfile?.role !== 'FACULTY';
   if (isStudent && room.student_access === false) {
     logger.info('Permission Denied: Student cannot book room', { room_id, user_id: userId });
@@ -200,14 +205,12 @@ export const createBooking = async (client, reqData, userId, requester = null) =
     };
   }
 
-  // Check Room conflict
   const roomConflicts = await bookingRepository.checkRoomConflict(room_id, start_time, end_time, client);
   if (roomConflicts.length > 0) {
     logger.info('Conflict: Room occupied', { room_id, start_time, user_id: userId });
     return { error: 'Room is already booked for this time period (or pending approval)', status: 409 };
   }
 
-  // Check User conflict
   const userConflicts = await bookingRepository.checkUserConflict(userId, start_time, end_time, client);
   if (userConflicts.length > 0) {
     logger.info('Conflict: User busy', { user_id: userId, start_time });
@@ -217,53 +220,55 @@ export const createBooking = async (client, reqData, userId, requester = null) =
     };
   }
 
-  // If faculty_id is provided, the booking starts as PENDING until approved.
-  const status = faculty_id ? 'PENDING' : 'ACTIVE';
+  let booking;
+  let activityAction;
 
-  const booking = await bookingRepository.create({
-    room_id, start_time, end_time, created_by: userId, purpose, faculty_id, status
-  }, client);
+  if (faculty_id) {
+    // Insert into requests table
+    const reqRes = await client.query(`
+      INSERT INTO requests (request_type, requested_by, status, reason, reviewed_by)
+      VALUES ('BOOKING', $1, 'PENDING', $2, $3)
+      RETURNING id
+    `, [userId, purpose, faculty_id]);
+    const requestId = reqRes.rows[0].id;
+
+    // Insert into booking_requests detail table
+    await client.query(`
+      INSERT INTO booking_requests (request_id, room_id, start_time, end_time, purpose)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [requestId, room_id, start_time, end_time, purpose]);
+
+    booking = {
+      id: requestId,
+      room_id,
+      start_time,
+      end_time,
+      created_by: userId,
+      purpose,
+      status: 'PENDING',
+      is_request: true
+    };
+    activityAction = 'REQUEST_BOOKING';
+  } else {
+    booking = await bookingRepository.create({
+      room_id, start_time, end_time, created_by: userId, purpose, status: 'ACTIVE'
+    }, client);
+    activityAction = 'CREATE_BOOKING';
+  }
   
   await logActivity({
     userId,
-    action: status === 'PENDING' ? 'REQUEST_BOOKING' : 'CREATE_BOOKING',
+    action: activityAction,
     entityType: 'booking',
     entityId: booking.id,
     details: { room_id, start_time, end_time, purpose }
   }, client);
-  
-  // Reschedule Logic
-  const { reschedule_room_name } = reqData;
-  if (reschedule_room_name) {
-    await handleRescheduleFreedUpRoom(client, reqData, start_time);
-  }
 
   return { data: booking, status: 201 };
 };
 
 const handleRescheduleFreedUpRoom = async (client, reqData, start_time) => {
-  const { reschedule_room_name, reschedule_day, reschedule_hour } = reqData;
-  
-  let resRoom = await roomRepository.findByName(reschedule_room_name, client);
-  let resRoomId;
-  
-  if (!resRoom) {
-    throw { error: `Room ${reschedule_room_name} not found`, status: 404 };
-  }
-  resRoomId = resRoom.id;
-
-  let dayName, hour;
-  if (reschedule_day && reschedule_hour !== undefined) {
-    dayName = reschedule_day;
-    hour = parseInt(reschedule_hour);
-  } else {
-    const parts = getIstParts(start_time);
-    dayName = parts.day;
-    hour = parts.hour;
-  }
-
-  await roomRepository.upsertAvailability(resRoomId, dayName, hour, true, client);
-  logger.info('Reschedule: Freed up room', { reschedule_room_name, dayName, hour });
+  // Room availability is resolved dynamically now
 };
 
 /**
@@ -274,7 +279,16 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin) => {
 
   if (!booking) return { error: 'Booking not found', status: 404 };
   const isCreator = String(booking.created_by) === String(userId);
-  const isAssignedFaculty = String(booking.faculty_id) === String(userId);
+
+  // Look up reviewer faculty from request detail table since bookings no longer carries faculty_id
+  const reviewerRes = await client.query(`
+    SELECT r.reviewed_by 
+    FROM requests r
+    JOIN booking_requests br ON r.id = br.request_id
+    WHERE br.resulting_booking_id = $1
+  `, [bookingId]);
+  const assignedFacultyId = reviewerRes.rows[0]?.reviewed_by;
+  const isAssignedFaculty = assignedFacultyId && String(assignedFacultyId) === String(userId);
   
   if (!isCreator && !isAssignedFaculty && !isAdmin) return { error: 'Not authorized', status: 403 };
 
@@ -367,39 +381,68 @@ export const getPendingFacultyRequests = async (facultyId) => {
 };
 
 export const approveBooking = async (client, id, facultyId, isAdmin) => {
-  const booking = await bookingRepository.findById(id, client);
+  const reqRes = await client.query(`
+    SELECT r.*, br.room_id, br.start_time, br.end_time, br.purpose
+    FROM requests r
+    JOIN booking_requests br ON r.id = br.request_id
+    WHERE r.id = $1
+  `, [id]);
+  const request = reqRes.rows[0];
   
-  if (!booking) return { error: 'Booking not found', status: 404 };
-  if (!isAdmin && booking.faculty_id !== facultyId) return { error: 'Not authorized', status: 403 };
-  if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
+  if (!request) return { error: 'Booking request not found', status: 404 };
+  if (!isAdmin && request.reviewed_by !== facultyId) return { error: 'Not authorized', status: 403 };
+  if (request.status !== 'PENDING') return { error: 'Request is not pending', status: 400 };
 
   // Conflict check
-  const conflicts = await bookingRepository.checkRoomConflict(booking.room_id, booking.start_time, booking.end_time, client);
+  const conflicts = await bookingRepository.checkRoomConflict(request.room_id, request.start_time, request.end_time, client);
   if (conflicts.length > 0) return { error: 'Room already booked', status: 409 };
 
-  const approvedBooking = await bookingRepository.updateStatus(id, 'ACTIVE', client);
-
-  await logActivity({
-    userId: isAdmin ? -1 : facultyId, // System/Admin or Faculty
-    action: 'APPROVE_BOOKING',
-    entityType: 'booking',
-    entityId: id,
-    details: { approved_by: isAdmin ? 'ADMIN' : 'FACULTY' }
+  // Create booking
+  const booking = await bookingRepository.create({
+    room_id: request.room_id,
+    start_time: request.start_time,
+    end_time: request.end_time,
+    created_by: request.requested_by,
+    purpose: request.purpose,
+    status: 'ACTIVE'
   }, client);
 
-  // Reject others
-  await bookingRepository.rejectConflicts(booking.room_id, id, booking.start_time, booking.end_time, client);
+  // Link booking to request
+  await client.query(`
+    UPDATE booking_requests 
+    SET resulting_booking_id = $1 
+    WHERE request_id = $2
+  `, [booking.id, id]);
 
-  return { data: approvedBooking, status: 200 };
+  // Update request status
+  await client.query(`
+    UPDATE requests 
+    SET status = 'APPROVED', updated_at = NOW() 
+    WHERE id = $1
+  `, [id]);
+
+  await logActivity({
+    userId: isAdmin ? -1 : facultyId,
+    action: 'APPROVE_BOOKING',
+    entityType: 'booking',
+    entityId: booking.id,
+    details: { approved_by: isAdmin ? 'ADMIN' : 'FACULTY', request_id: id }
+  }, client);
+
+  // Reject conflicts
+  await bookingRepository.rejectConflicts(request.room_id, id, request.start_time, request.end_time, client);
+
+  return { data: booking, status: 200 };
 };
 
 export const rejectBooking = async (id, facultyId, isAdmin) => {
-  const booking = await bookingRepository.findById(id);
-  if (!booking) return { error: 'Booking not found', status: 404 };
-  if (!isAdmin && booking.faculty_id !== facultyId) return { error: 'Not authorized', status: 403 };
-  if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
-
-  const rejectedBooking = await bookingRepository.updateStatus(id, 'REJECTED');
+  const result = await db.query(`
+    UPDATE requests 
+    SET status = 'REJECTED', updated_at = NOW()
+    WHERE id = $1 AND (reviewed_by = $2 OR $3) AND status = 'PENDING'
+    RETURNING id
+  `, [id, facultyId, isAdmin]);
+  if (result.rowCount === 0) return { error: 'Request not found or not authorized', status: 404 };
   return { status: 200 };
 };
 

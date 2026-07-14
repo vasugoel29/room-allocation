@@ -9,10 +9,27 @@ export const transferRepository = {
    */
   findById: async (id, client = db) => {
     const query = `
-      SELECT t.*, b.created_by as owner_id, b.status as booking_status, b.faculty_id as owner_faculty_id 
-      FROM booking_transfers t
-      JOIN bookings b ON t.booking_id = b.id
-      WHERE t.id = $1
+      SELECT 
+        r.id, 
+        tr.booking_id, 
+        r.requested_by, 
+        tr.target_faculty_id, 
+        tr.new_purpose, 
+        tr.owner_id, 
+        tr.status, 
+        r.created_at,
+        b.status as booking_status,
+        (
+          SELECT req.reviewed_by 
+          FROM booking_requests br
+          JOIN requests req ON br.request_id = req.id
+          WHERE br.resulting_booking_id = tr.booking_id
+          LIMIT 1
+        ) as owner_faculty_id
+      FROM requests r
+      JOIN transfer_requests tr ON r.id = tr.request_id
+      JOIN bookings b ON tr.booking_id = b.id
+      WHERE r.id = $1
     `;
     const result = await client.query(query, [id]);
     return result.rows[0];
@@ -22,7 +39,13 @@ export const transferRepository = {
    * Find a pending transfer request for a specific booking and user
    */
   findPending: async (bookingId, userId) => {
-    const query = "SELECT * FROM booking_transfers WHERE booking_id = $1 AND requested_by = $2 AND status NOT IN ('ACCEPTED', 'REJECTED')";
+    const query = `
+      SELECT r.id, tr.*, tr.status
+      FROM requests r
+      JOIN transfer_requests tr ON r.id = tr.request_id
+      WHERE tr.booking_id = $1 AND r.requested_by = $2 
+        AND tr.status NOT IN ('ACCEPTED', 'REJECTED')
+    `;
     const result = await db.query(query, [bookingId, userId]);
     return result.rows[0];
   },
@@ -32,12 +55,30 @@ export const transferRepository = {
    */
   create: async (data, client = db) => {
     const { booking_id, requested_by, target_faculty_id, new_purpose, owner_id } = data;
-    const query = `
-      INSERT INTO booking_transfers (booking_id, requested_by, target_faculty_id, new_purpose, owner_id) 
-      VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-    const values = [booking_id, requested_by, target_faculty_id || null, new_purpose, owner_id];
-    const result = await client.query(query, values);
-    return result.rows[0];
+    
+    // 1. Insert into requests table
+    const reqRes = await client.query(`
+      INSERT INTO requests (request_type, requested_by, status, reason)
+      VALUES ('TRANSFER', $1, 'PENDING', $2) RETURNING id, status, reason, created_at
+    `, [requested_by, new_purpose]);
+    const requestId = reqRes.rows[0].id;
+
+    // 2. Insert into transfer_requests table
+    await client.query(`
+      INSERT INTO transfer_requests (request_id, booking_id, owner_id, target_faculty_id, new_purpose, status)
+      VALUES ($1, $2, $3, $4, $5, 'PENDING')
+    `, [requestId, booking_id, owner_id, target_faculty_id || null, new_purpose]);
+
+    return {
+      id: requestId,
+      booking_id,
+      requested_by,
+      target_faculty_id,
+      new_purpose,
+      owner_id,
+      status: 'PENDING',
+      created_at: reqRes.rows[0].created_at
+    };
   },
 
   /**
@@ -45,16 +86,45 @@ export const transferRepository = {
    */
   findIncoming: async (userId) => {
     const query = `
-      SELECT t.*, r.name as room_name, u.name as requester_name, o.name as requestee_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
-      FROM booking_transfers t
-      JOIN bookings b ON t.booking_id = b.id
-      JOIN rooms r ON b.room_id = r.id
-      JOIN users u ON t.requested_by = u.id
-      JOIN users o ON b.created_by = o.id
-      WHERE (t.owner_id = $1 AND t.status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED'))
-         OR (b.faculty_id = $1 AND t.status = 'REP2_ACCEPTED')
-         OR (t.target_faculty_id = $1 AND t.status = 'FACULTY2_ACCEPTED')
-      ORDER BY t.created_at DESC
+      SELECT 
+        r.id, 
+        tr.booking_id, 
+        r.requested_by, 
+        tr.target_faculty_id, 
+        tr.new_purpose, 
+        tr.owner_id, 
+        tr.status, 
+        r.created_at,
+        ro.name as room_name, 
+        u.name as requester_name, 
+        o.name as requestee_name, 
+        b.start_time, 
+        b.end_time, 
+        b.status as booking_status,
+        (
+          SELECT req.reviewed_by 
+          FROM booking_requests br
+          JOIN requests req ON br.request_id = req.id
+          WHERE br.resulting_booking_id = tr.booking_id
+          LIMIT 1
+        ) as owner_faculty_id
+      FROM requests r
+      JOIN transfer_requests tr ON r.id = tr.request_id
+      JOIN bookings b ON tr.booking_id = b.id
+      JOIN rooms ro ON b.room_id = ro.id
+      JOIN users u ON r.requested_by = u.id
+      JOIN users o ON tr.owner_id = o.id
+      WHERE (tr.owner_id = $1 AND tr.status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED'))
+         OR (
+           EXISTS (
+             SELECT 1 FROM booking_requests br
+             JOIN requests req ON br.request_id = req.id
+             WHERE br.resulting_booking_id = tr.booking_id AND req.reviewed_by = $1
+           ) 
+           AND tr.status = 'REP2_ACCEPTED'
+         )
+         OR (tr.target_faculty_id = $1 AND tr.status = 'FACULTY2_ACCEPTED')
+      ORDER BY r.created_at DESC
     `;
     const result = await db.query(query, [userId]);
     return result.rows;
@@ -65,13 +135,34 @@ export const transferRepository = {
    */
   findOutgoing: async (userId) => {
     const query = `
-      SELECT t.*, r.name as room_name, u.name as owner_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
-      FROM booking_transfers t
-      JOIN bookings b ON t.booking_id = b.id
-      JOIN rooms r ON b.room_id = r.id
-      JOIN users u ON b.created_by = u.id
-      WHERE t.requested_by = $1
-      ORDER BY t.created_at DESC
+      SELECT 
+        r.id, 
+        tr.booking_id, 
+        r.requested_by, 
+        tr.target_faculty_id, 
+        tr.new_purpose, 
+        tr.owner_id, 
+        tr.status, 
+        r.created_at,
+        ro.name as room_name, 
+        u.name as owner_name, 
+        b.start_time, 
+        b.end_time, 
+        b.status as booking_status,
+        (
+          SELECT req.reviewed_by 
+          FROM booking_requests br
+          JOIN requests req ON br.request_id = req.id
+          WHERE br.resulting_booking_id = tr.booking_id
+          LIMIT 1
+        ) as owner_faculty_id
+      FROM requests r
+      JOIN transfer_requests tr ON r.id = tr.request_id
+      JOIN bookings b ON tr.booking_id = b.id
+      JOIN rooms ro ON b.room_id = ro.id
+      JOIN users u ON tr.owner_id = u.id
+      WHERE r.requested_by = $1
+      ORDER BY r.created_at DESC
     `;
     const result = await db.query(query, [userId]);
     return result.rows;
@@ -81,8 +172,14 @@ export const transferRepository = {
    * Update transfer status
    */
   updateStatus: async (id, status, client = db) => {
-    const query = "UPDATE booking_transfers SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *";
+    const query = "UPDATE transfer_requests SET status = $1 WHERE request_id = $2 RETURNING *";
     const result = await client.query(query, [status, id]);
+    
+    let parentStatus = 'PENDING';
+    if (status === 'ACCEPTED') parentStatus = 'APPROVED';
+    else if (status === 'REJECTED') parentStatus = 'REJECTED';
+    
+    await client.query("UPDATE requests SET status = $1, updated_at = NOW() WHERE id = $2", [parentStatus, id]);
     return result.rows[0];
   },
 
@@ -90,8 +187,18 @@ export const transferRepository = {
    * Update other pending transfers for the same booking
    */
   rejectOtherPending: async (bookingId, excludeId, client = db) => {
-    const query = "UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW() WHERE booking_id = $1 AND id != $2 AND status = 'PENDING'";
-    return client.query(query, [bookingId, excludeId]);
+    const query = `
+      UPDATE transfer_requests 
+      SET status = 'REJECTED' 
+      WHERE booking_id = $1 AND request_id != $2 AND status = 'PENDING'
+      RETURNING request_id
+    `;
+    const result = await client.query(query, [bookingId, excludeId]);
+    const requestIds = result.rows.map(row => row.request_id);
+    if (requestIds.length > 0) {
+      await client.query("UPDATE requests SET status = 'REJECTED', updated_at = NOW() WHERE id = ANY($1)", [requestIds]);
+    }
+    return result;
   },
 
   /**
@@ -99,15 +206,18 @@ export const transferRepository = {
    */
   rejectWithAuth: async (id, userId, userRole, client = db) => {
     const query = `
-      UPDATE booking_transfers t
-      SET status = 'REJECTED', updated_at = NOW()
+      UPDATE transfer_requests t
+      SET status = 'REJECTED'
       FROM bookings b
       WHERE t.booking_id = b.id
-      AND t.id = $1 AND t.status = 'PENDING'
-      AND (b.created_by = $2 OR $3 = 'ADMIN')
-      RETURNING t.id
+        AND t.request_id = $1 AND t.status = 'PENDING'
+        AND (b.created_by = $2 OR $3 = 'ADMIN')
+      RETURNING t.request_id
     `;
     const result = await client.query(query, [id, userId, userRole]);
+    if (result.rowCount > 0) {
+      await client.query("UPDATE requests SET status = 'REJECTED', updated_at = NOW() WHERE id = $1", [id]);
+    }
     return result.rows[0];
   }
 };

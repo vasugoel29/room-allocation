@@ -5,11 +5,8 @@ import logger from '../utils/logger.js';
 import { logActivity } from '../services/loggerService.js';
 import { randomUUID } from 'crypto';
 
-// In-memory job store for async CSV uploads
-// Map<jobId, { status: 'processing'|'completed'|'failed', message?: string, error?: string }>
 const jobStore = new Map();
 
-// Simple custom CSV parser
 const parseCSV = (csvText) => {
   const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
   if (lines.length === 0) return [];
@@ -41,6 +38,48 @@ const parseCSV = (csvText) => {
   }
   return rows;
 };
+
+function parseSlotTime(timeStr) {
+  if (!timeStr) return { start: '09:00:00', end: '10:00:00' };
+  const parts = timeStr.split('-');
+  if (parts.length < 2) return { start: '09:00:00', end: '10:00:00' };
+  
+  const parsePart = (p) => {
+    const match = p.trim().match(/(\d{1,2}):(\d{2})/);
+    if (!match) return '09:00:00';
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2]);
+    if (hours >= 1 && hours < 8) hours += 12;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`;
+  };
+  
+  return {
+    start: parsePart(parts[0]),
+    end: parsePart(parts[1])
+  };
+}
+
+function toTitleCase(str) {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, s => s.toUpperCase());
+}
+
+function getBuildingAndFloor(roomName) {
+  if (roomName.startsWith('APJ')) {
+    return { building: 'APJ Block', floor: parseInt(roomName.replace('APJ', '').charAt(0)) || 0 };
+  }
+  const firstDigit = roomName.charAt(0);
+  const floorDigit = roomName.charAt(1);
+  const floor = parseInt(floorDigit) || 0;
+  
+  let building = 'Other';
+  if (firstDigit === '4') building = '4th Block';
+  else if (firstDigit === '5') building = '5th Block';
+  else if (firstDigit === '6') building = '6th Block';
+  else if (firstDigit === '8') building = '8th Block';
+  
+  return { building, floor };
+}
 
 // -------------------------------------------------------------
 // TEMPLATES DOWNLOADS (CSV)
@@ -85,7 +124,7 @@ export const getTimetableTemplate = async (req, res) => {
   }
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=timetable_template.csv");
-  res.send("faculty_name,semester,day_of_week,slot_time,content,is_occupied,room_id\n");
+  res.send("faculty_name,semester,day_of_week,slot_time,content,room_id\n");
 };
 
 // -------------------------------------------------------------
@@ -103,7 +142,7 @@ const exportToXLSX = (data, filename, res) => {
 };
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const GRID_HOURS = Array.from({ length: 10 }, (_, index) => index + 8); // Matches the Admin Room Grid: 08:00–18:00
+const GRID_HOURS = Array.from({ length: 10 }, (_, index) => index + 8);
 
 const normaliseDay = (value = '') => {
   const day = String(value).trim().toLowerCase();
@@ -114,8 +153,6 @@ const getGridHour = (slotTime = '') => {
   const match = String(slotTime).match(/(\d{1,2}):(\d{2})/);
   if (!match) return null;
   const hour = Number(match[1]);
-  // Imported timetable values can use 12-hour times, e.g. T702:00-03:00.
-  // The Room Grid represents those as 14:00–15:00.
   return hour < 8 ? hour + 12 : hour;
 };
 
@@ -258,7 +295,13 @@ export const exportStudents = async (req, res) => {
         details: { format: 'xlsx' }
       });
     }
-    const result = await db.query("SELECT name, email, branch, year, section, degree, department_name, roll_no FROM users WHERE role = 'VIEWER'");
+    const result = await db.query(`
+      SELECT u.name, u.email, b.name as branch, u.year, u.section, u.degree, d.name as department_name, u.roll_no 
+      FROM users u
+      LEFT JOIN branches b ON u.branch_id = b.id
+      LEFT JOIN departments d ON u.department_id = d.id
+      WHERE u.role = 'VIEWER'
+    `);
     return exportToXLSX(result.rows, 'students_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export students XLSX', err);
@@ -276,7 +319,12 @@ export const exportFaculty = async (req, res) => {
         details: { format: 'xlsx' }
       });
     }
-    const result = await db.query("SELECT name, email, department_name FROM users WHERE role = 'FACULTY'");
+    const result = await db.query(`
+      SELECT u.name, u.email, d.name as department_name 
+      FROM users u
+      LEFT JOIN departments d ON u.department_id = d.id
+      WHERE u.role = 'FACULTY'
+    `);
     return exportToXLSX(result.rows, 'faculty_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export faculty XLSX', err);
@@ -296,11 +344,14 @@ export const exportTimetable = async (req, res) => {
       });
     }
     const result = await db.query(`
-      SELECT fts.id, fts.faculty_name, fts.semester, fts.day_of_week, fts.slot_time,
-             fts.content, fts.is_occupied, fts.room_id, r.name AS room_name
-      FROM faculty_timetable_slots fts
-      LEFT JOIN rooms r ON r.id = fts.room_id
-      ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
+      SELECT ts.id, u.name AS faculty_name, ts.semester, ts.day_of_week,
+             TO_CHAR(ts.start_time, 'HH24:MI') || '-' || TO_CHAR(ts.end_time, 'HH24:MI') AS slot_time,
+             s.name AS content, ts.room_id, r.name AS room_name
+      FROM timetable_slots ts
+      LEFT JOIN users u ON ts.faculty_id = u.id
+      LEFT JOIN subjects s ON ts.subject_id = s.id
+      LEFT JOIN rooms r ON ts.room_id = r.id
+      ORDER BY u.name, ts.day_of_week, ts.start_time
     `);
     return exportTimetableCalendar(result.rows, res, view);
   } catch (err) {
@@ -310,7 +361,7 @@ export const exportTimetable = async (req, res) => {
 };
 
 // -------------------------------------------------------------
-// IMPORTS (CSV) — async fire-and-forget with job polling
+// IMPORTS (CSV)
 // -------------------------------------------------------------
 
 const runStudentsImport = async (jobId, csvContent, userId) => {
@@ -325,21 +376,42 @@ const runStudentsImport = async (jobId, csvContent, userId) => {
         let year = parseInt(row.year);
         if (isNaN(year) || year < 1 || year > 5) year = 1;
         let section = parseInt(row.section);
-        if (isNaN(section) || section < 1 || section > 15) section = 1;
+        if (isNaN(section) || section < 1 || section > 20) section = 1;
         let password = row.password;
         if (!password) {
           const sanitizedName = (row.name || '').toLowerCase().replace(/\s+/g, '');
           const randomSuffix = Math.floor(1000 + Math.random() * 9000);
           password = `${sanitizedName}${randomSuffix}`;
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 4);
+
+        let departmentId = null;
+        let branchId = null;
+        if (row.department_name) {
+          const dName = row.department_name.trim();
+          let deptRes = await db.query('SELECT id FROM departments WHERE name = $1', [dName]);
+          if (deptRes.rowCount === 0) {
+            deptRes = await db.query('INSERT INTO departments (name) VALUES ($1) RETURNING id', [dName]);
+          }
+          departmentId = deptRes.rows[0].id;
+          
+          const bName = row.branch ? row.branch.trim() : dName;
+          const shortCode = bName.match(/\(([^)]+)\)/)?.[1] || bName.substring(0, 3).toUpperCase();
+          let branchRes = await db.query('SELECT id FROM branches WHERE name = $1 AND department_id = $2', [bName, departmentId]);
+          if (branchRes.rowCount === 0) {
+            branchRes = await db.query('INSERT INTO branches (name, short_code, department_id) VALUES ($1, $2, $3) RETURNING id', [bName, shortCode, departmentId]);
+          }
+          branchId = branchRes.rows[0].id;
+        }
+
         processedRows.push({
-          name: row.name || '', email: row.email.toLowerCase(), password: hashedPassword,
-          branch: row.branch || '', year, section, degree: row.degree || '',
-          department_name: row.department_name || '', roll_no: row.roll_no || ''
+          name: row.name || '', email: row.email.toLowerCase(), passwordHash: hashedPassword,
+          branch_id: branchId, year, semester: year * 2, section, degree: row.degree || '',
+          department_id: departmentId, roll_no: row.roll_no || ''
         });
       }));
     }
+
     await db.runInTransaction(async (client) => {
       const chunkSize = 500;
       for (let i = 0; i < processedRows.length; i += chunkSize) {
@@ -348,17 +420,23 @@ const runStudentsImport = async (jobId, csvContent, userId) => {
         const placeholders = [];
         let idx = 1;
         for (const row of chunk) {
-          placeholders.push(`($${idx},$${idx+1},$${idx+2},'VIEWER',$${idx+3},$${idx+4},$${idx+5},$${idx+6},$${idx+7},$${idx+8})`);
-          values.push(row.name, row.email, row.password, row.branch, row.year, row.section, row.degree, row.department_name, row.roll_no);
-          idx += 9;
+          placeholders.push(`($${idx},$${idx+1},$${idx+2},'VIEWER',$${idx+3},$${idx+4},$${idx+5},$${idx+6},$${idx+7},$${idx+8}, $${idx+9}, true)`);
+          values.push(row.name, row.email, row.passwordHash, row.department_id, row.branch_id, row.degree, row.roll_no, row.year, row.semester, row.section);
+          idx += 10;
         }
         await client.query(`
-          INSERT INTO users (name, email, password, role, branch, year, section, degree, department_name, roll_no)
+          INSERT INTO users (name, email, password_hash, role, department_id, branch_id, degree, roll_no, year, semester, section, is_approved)
           VALUES ${placeholders.join(',')}
           ON CONFLICT (email) DO UPDATE SET
-            name=EXCLUDED.name, branch=EXCLUDED.branch, year=EXCLUDED.year,
-            section=EXCLUDED.section, degree=EXCLUDED.degree,
-            department_name=EXCLUDED.department_name, roll_no=EXCLUDED.roll_no
+            name=EXCLUDED.name, 
+            password_hash=EXCLUDED.password_hash,
+            department_id=EXCLUDED.department_id, 
+            branch_id=EXCLUDED.branch_id, 
+            degree=EXCLUDED.degree,
+            roll_no=EXCLUDED.roll_no, 
+            year=EXCLUDED.year,
+            semester=EXCLUDED.semester,
+            section=EXCLUDED.section
         `, values);
       }
       if (userId) await logActivity({ userId, action: 'IMPORT_STUDENTS_CSV', entityType: 'upload', details: { recordCount: rows.length } }, client);
@@ -389,13 +467,25 @@ const runFacultyImport = async (jobId, csvContent, userId) => {
       await Promise.all(chunk.map(async (row) => {
         if (!row.email) return;
         let password = row.password || (row.name || '').toLowerCase().replace(/\s+/g, '');
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 4);
+
+        let departmentId = null;
+        if (row.department_name) {
+          const dName = row.department_name.trim();
+          let deptRes = await db.query('SELECT id FROM departments WHERE name = $1', [dName]);
+          if (deptRes.rowCount === 0) {
+            deptRes = await db.query('INSERT INTO departments (name) VALUES ($1) RETURNING id', [dName]);
+          }
+          departmentId = deptRes.rows[0].id;
+        }
+
         processedFaculty.push({
           name: row.name || '', email: row.email.toLowerCase(),
-          password: hashedPassword, department_name: row.department_name || ''
+          passwordHash: hashedPassword, department_id: departmentId
         });
       }));
     }
+
     await db.runInTransaction(async (client) => {
       const chunkSize = 500;
       for (let i = 0; i < processedFaculty.length; i += chunkSize) {
@@ -404,15 +494,17 @@ const runFacultyImport = async (jobId, csvContent, userId) => {
         const placeholders = [];
         let idx = 1;
         for (const row of chunk) {
-          placeholders.push(`($${idx},$${idx+1},$${idx+2},'FACULTY',$${idx+3})`);
-          values.push(row.name, row.email, row.password, row.department_name);
-          idx += 5;
+          placeholders.push(`($${idx},$${idx+1},$${idx+2},'FACULTY',$${idx+3},true)`);
+          values.push(row.name, row.email, row.passwordHash, row.department_id);
+          idx += 4;
         }
         await client.query(`
-          INSERT INTO users (name, email, password, role, department_name)
+          INSERT INTO users (name, email, password_hash, role, department_id, is_approved)
           VALUES ${placeholders.join(',')}
           ON CONFLICT (email) DO UPDATE SET
-            name=EXCLUDED.name, department_name=EXCLUDED.department_name
+            name=EXCLUDED.name, 
+            password_hash=EXCLUDED.password_hash,
+            department_id=EXCLUDED.department_id
         `, values);
       }
       if (userId) await logActivity({ userId, action: 'IMPORT_FACULTY_CSV', entityType: 'upload', details: { recordCount: rows.length } }, client);
@@ -437,43 +529,77 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
   try {
     const rows = parseCSV(csvContent);
     await db.runInTransaction(async (client) => {
-      await client.query('TRUNCATE faculty_timetable_slots');
+      await client.query('DELETE FROM timetable_slots');
       
-      const chunkSize = 500;
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize);
-        const values = [];
-        const placeholders = [];
-        let idx = 1;
-        
-        for (const row of chunk) {
-          if (!row.faculty_name) continue;
-          const isOccupied = row.is_occupied === 'true' || row.is_occupied === '1';
-          const roomId = row.room_id && !isNaN(parseInt(row.room_id)) ? parseInt(row.room_id) : null;
-          placeholders.push(`($${idx},$${idx+1},$${idx+2},$${idx+3},$${idx+4},$${idx+5},$${idx+6})`);
-          values.push(row.faculty_name, row.semester || '', row.day_of_week || '', row.slot_time || '', row.content || '', isOccupied, roomId);
-          idx += 7;
+      const dummyPasswordHash = await bcrypt.hash('facultypass123', 4);
 
-          // Sync with room_availability: if a room is assigned, mark it as unavailable for that day/hour
-          if (roomId && row.day_of_week && row.slot_time) {
-            const match = row.slot_time.match(/(\d{1,2}):(\d{2})/);
-            if (match) {
-              const startHour = parseInt(match[1]);
-              await client.query(`
-                INSERT INTO room_availability (room_id, day, hour, is_available)
-                VALUES ($1, $2, $3, FALSE)
-                ON CONFLICT (room_id, day, hour) DO UPDATE SET is_available = FALSE
-              `, [roomId, row.day_of_week, startHour]);
-            }
+      for (const row of rows) {
+        if (!row.faculty_name) continue;
+
+        const dayOfWeek = (row.day_of_week || 'MON').toUpperCase();
+        const parsedTime = parseSlotTime(row.slot_time);
+
+        // 1. Resolve room
+        let roomId = null;
+        if (row.room_id) {
+          const roomName = String(row.room_id).trim();
+          let roomRes = await client.query('SELECT id FROM rooms WHERE UPPER(name) = UPPER($1)', [roomName]);
+          if (roomRes.rowCount === 0) {
+            const bf = getBuildingAndFloor(roomName);
+            roomRes = await client.query(
+              `INSERT INTO rooms (name, building, floor, capacity, type, student_access)
+               VALUES ($1, $2, $3, 60, 'Lecture Room', true) RETURNING id`,
+              [roomName, bf.building, bf.floor]
+            );
           }
+          roomId = roomRes.rows[0].id;
         }
-        if (placeholders.length > 0) {
-          await client.query(`
-            INSERT INTO faculty_timetable_slots (faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id)
-            VALUES ${placeholders.join(',')}
-          `, values);
+
+        // 2. Resolve faculty user
+        let facultyId = null;
+        if (row.faculty_name) {
+          const fName = toTitleCase(row.faculty_name.trim());
+          let facRes = await client.query("SELECT id FROM users WHERE role = 'FACULTY' AND UPPER(name) = UPPER($1)", [fName]);
+          if (facRes.rowCount === 0) {
+            const fEmail = `${fName.toLowerCase().replace(/[^a-z]/g, '')}@nsut.ac.in`;
+            facRes = await client.query(
+              `INSERT INTO users (name, email, password_hash, role, is_approved)
+               VALUES ($1, $2, $3, 'FACULTY', true) RETURNING id`,
+              [fName, fEmail, dummyPasswordHash]
+            );
+          }
+          facultyId = facRes.rows[0].id;
         }
+
+        // 3. Resolve subject
+        let subjectId = null;
+        if (row.content) {
+          const sName = row.content.trim();
+          const sCode = sName.substring(0, 5).toUpperCase() + Math.floor(Math.random() * 100);
+          let subRes = await client.query('SELECT id FROM subjects WHERE name = $1', [sName]);
+          if (subRes.rowCount === 0) {
+            subRes = await client.query('INSERT INTO subjects (code, name) VALUES ($1, $2) RETURNING id', [sCode, sName]);
+          }
+          subjectId = subRes.rows[0].id;
+        }
+
+        const sem = row.semester ? parseInt(row.semester) : 1;
+
+        // Skip overlap conflicts
+        const overlap = await client.query(`
+          SELECT id FROM timetable_slots
+          WHERE room_id = $1 AND day_of_week = $2
+            AND timerange(start_time, end_time) && timerange($3::time, $4::time)
+        `, [roomId, dayOfWeek, parsedTime.start, parsedTime.end]);
+
+        if (overlap.rowCount > 0) continue;
+
+        await client.query(`
+          INSERT INTO timetable_slots (faculty_id, semester, day_of_week, start_time, end_time, subject_id, room_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `, [facultyId, sem, dayOfWeek, parsedTime.start, parsedTime.end, subjectId, roomId]);
       }
+
       if (userId) await logActivity({ userId, action: 'IMPORT_TIMETABLE_CSV', entityType: 'upload', details: { recordCount: rows.length } }, client);
     });
     jobStore.set(jobId, { status: 'completed', message: `Successfully imported ${rows.length} timetable records` });
@@ -492,12 +618,10 @@ export const importTimetable = async (req, res) => {
   runTimetableImport(jobId, csvContent, req.user?.id);
 };
 
-// Job status polling endpoint
 export const getJobStatus = (req, res) => {
   const { jobId } = req.params;
   const job = jobStore.get(jobId);
   if (!job) return res.status(404).json({ error: 'Job not found' });
-  // Clean up completed/failed jobs after retrieval to avoid memory growth
   if (job.status !== 'processing') jobStore.delete(jobId);
   return res.json(job);
 };

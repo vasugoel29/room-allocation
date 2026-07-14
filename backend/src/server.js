@@ -153,7 +153,7 @@ app.use(async (req, res, next) => {
     res.on('finish', async () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         await logActivity({
-          userId: userId || req.user?.id || 1,
+          userId: userId || req.user?.id || null,
           action: `${req.method}_${req.originalUrl.split('?')[0].toUpperCase().replace(/\//g, '_').substring(1)}`,
           entityType: req.originalUrl.split('/')[2] || 'system',
           details: {

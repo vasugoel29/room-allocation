@@ -9,12 +9,22 @@ import CustomSelect from '../ui/CustomSelect';
 function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments }) {
   const [userForm, setUserForm] = useState({ 
     name: '', email: '', role: 'VIEWER', password: '', 
-    branch: '', year: 1, semester: 1, section: 1, group_name: 1, departmentName: '' 
+    branch_id: '', year: 1, semester: 1, section: 1, group_name: 1, department_id: '' 
   });
   
+  const [branches, setBranches] = useState([]);
   const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [isYearOpen, setIsYearOpen] = useState(false);
   const [isSectionOpen, setIsSectionOpen] = useState(false);
+
+  // Fetch branches for student fields dropdown
+  useEffect(() => {
+    if (isOpen) {
+      adminService.getBranches()
+        .then(data => setBranches(Array.isArray(data) ? data : (data.branches || [])))
+        .catch(err => console.error('Failed to fetch branches', err));
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (editingUser) {
@@ -23,17 +33,17 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
         email: editingUser.email, 
         role: editingUser.role, 
         password: '',
-        branch: editingUser.branch || '',
+        branch_id: editingUser.branch_id || '',
         year: editingUser.year || 1,
         semester: editingUser.semester || Math.min((editingUser.year || 1) * 2, 8),
         section: editingUser.section || 1,
         group_name: editingUser.group_name || 1,
-        departmentName: editingUser.department_name || ''
+        department_id: editingUser.department_id || ''
       });
     } else {
       setUserForm({ 
         name: '', email: '', role: 'VIEWER', password: '', 
-        branch: '', year: 1, semester: 1, section: 1, group_name: 1, departmentName: '' 
+        branch_id: '', year: 1, semester: 1, section: 1, group_name: 1, department_id: '' 
       });
     }
   }, [editingUser, isOpen]);
@@ -41,10 +51,20 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
   const handleUserSubmit = async (e) => {
     e.preventDefault();
     try {
+      const payload = {
+        ...userForm,
+        branch_id: userForm.role === 'FACULTY' ? null : (userForm.branch_id ? Number(userForm.branch_id) : null),
+        department_id: userForm.department_id ? Number(userForm.department_id) : null,
+        year: userForm.role === 'FACULTY' ? null : Number(userForm.year),
+        semester: userForm.role === 'FACULTY' ? null : Number(userForm.semester),
+        section: userForm.role === 'FACULTY' ? null : Number(userForm.section),
+        group_name: userForm.role === 'FACULTY' ? null : Number(userForm.group_name)
+      };
+
       if (editingUser) {
-        await adminService.updateUser(editingUser.id, userForm);
+        await adminService.updateUser(editingUser.id, payload);
       } else {
-        await adminService.createUser(userForm);
+        await adminService.createUser(payload);
       }
       
       toast.success(editingUser ? 'User updated' : 'User created');
@@ -75,7 +95,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
              </button>
           </div>
 
-          <form onSubmit={handleUserSubmit} className="p-8 space-y-6">
+          <form onSubmit={handleUserSubmit} className="p-8 space-y-6 max-h-[70vh] overflow-y-auto no-scrollbar">
              <div className="space-y-2">
                 <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] px-1 opacity-40">Legal Identity / Name</label>
                 <input 
@@ -107,7 +127,7 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
                     { value: 'VIEWER', label: 'VIEWER (Student)' },
                     { value: 'STUDENT_REP', label: 'STUDENT_REP (Lead)' },
                     { value: 'FACULTY', label: 'FACULTY (Staff)' },
-                    { value: 'admin', label: 'ADMIN (Root Access)' }
+                    { value: 'ADMIN', label: 'ADMIN (Root Access)' }
                   ]}
                   buttonClassName="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-body flex items-center justify-between text-left"
                 />
@@ -115,8 +135,8 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
 
              <DepartmentSelect 
                departments={departments}
-               departmentName={userForm.departmentName || ''}
-               setDepartmentName={(val) => setUserForm({...userForm, departmentName: val})}
+               departmentId={userForm.department_id}
+               setDepartmentId={(val) => setUserForm({...userForm, department_id: val})}
                isDeptOpen={isDeptOpen}
                setIsDeptOpen={setIsDeptOpen}
              />
@@ -124,8 +144,9 @@ function AdminUserModal({ isOpen, onClose, editingUser, fetchUsers, departments 
              {(userForm.role === 'STUDENT_REP' || userForm.role === 'VIEWER') && (
                <div className="space-y-6 pt-4">
                  <StudentFields
-                    branch={userForm.branch || ''}
-                    setBranch={(val) => setUserForm({...userForm, branch: val})}
+                    branches={branches}
+                    branchId={userForm.branch_id}
+                    setBranchId={(val) => setUserForm({...userForm, branch_id: val})}
                     year={userForm.year}
                     setYear={(val) => setUserForm({...userForm, year: val})}
                     isYearOpen={isYearOpen}

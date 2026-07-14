@@ -6,22 +6,17 @@ import { JWT_SECRET } from "../middleware/auth.js";
 import * as departmentService from "../services/departmentService.js";
 import logger from "../utils/logger.js";
 import { userRepository } from "../repositories/userRepository.js";
+import * as db from "../db.js";
 import {
   notifyFacultyApproved,
   sendPasswordResetEmail,
 } from "../utils/emailService.js";
 
 export const signup = async (req, res) => {
-  const { name, email, password, branch, semester, section, group_name, role, departmentName } =
+  const { name, email, password, branch_id, semester, section, group_name, role, department_id } =
     req.body;
   try {
     const hash = await bcrypt.hash(password, 10);
-
-    // Resolve department_id if name provided
-    let department_id = null;
-    if (departmentName) {
-      department_id = await departmentService.ensureDepartment(departmentName);
-    }
 
     // Whitelist allowed roles for signup
     const allowedRoles = ["VIEWER", "STUDENT_REP", "FACULTY"];
@@ -37,12 +32,12 @@ export const signup = async (req, res) => {
       email,
       passwordHash: hash,
       role: finalRole,
-      branch: finalRole === 'FACULTY' ? null : branch,
+      branch_id: finalRole === 'FACULTY' ? null : (branch_id ? parseInt(branch_id) : null),
       year: finalRole === 'FACULTY' ? null : derivedYear,
       semester: finalRole === 'FACULTY' ? null : (semester ? parseInt(semester) : null),
       section: finalRole === 'FACULTY' ? null : (section ? parseInt(section) : null),
       group_name: finalRole === 'FACULTY' ? null : (group_name ? parseInt(group_name) : null),
-      department_id,
+      department_id: department_id ? parseInt(department_id) : null,
       is_approved,
     });
 
@@ -73,7 +68,7 @@ export const login = async (req, res) => {
         .json({ error: "Your account is awaiting administrator approval." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
 
     const token = jwt.sign(
@@ -154,7 +149,7 @@ export const approveUser = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-  const { name, email, password, role, branch, semester, section, group_name, departmentName } =
+  const { name, email, password, role, branch_id, semester, section, group_name, department_id } =
     req.body;
   if (!password) {
     return res
@@ -163,12 +158,6 @@ export const createUser = async (req, res) => {
   }
   try {
     const hash = await bcrypt.hash(password, 10);
-
-    let department_id = null;
-    if (departmentName) {
-      department_id = await departmentService.ensureDepartment(departmentName);
-    }
-
     const derivedYear = semester ? Math.ceil(parseInt(semester) / 2) : null;
 
     const user = await userService.createUser({
@@ -176,12 +165,12 @@ export const createUser = async (req, res) => {
       email,
       passwordHash: hash,
       role: role || "VIEWER",
-      branch: role === 'FACULTY' ? null : branch,
+      branch_id: role === 'FACULTY' ? null : (branch_id ? parseInt(branch_id) : null),
       year: role === 'FACULTY' ? null : derivedYear,
       semester: role === 'FACULTY' ? null : (semester ? parseInt(semester) : null),
       section: role === 'FACULTY' ? null : (section ? parseInt(section) : null),
       group_name: role === 'FACULTY' ? null : (group_name ? parseInt(group_name) : null),
-      department_id,
+      department_id: department_id ? parseInt(department_id) : null,
       is_approved: true,
     });
     res.status(201).json(user);
@@ -195,7 +184,7 @@ export const createUser = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { departmentName, ...otherData } = req.body;
+  const { department_id, branch_id, ...otherData } = req.body;
   try {
     if (req.user.role !== "ADMIN" && String(req.user.id) !== String(id)) {
       return res
@@ -209,14 +198,10 @@ export const updateUser = async (req, res) => {
       delete otherData.is_approved;
     }
 
-    let department_id = undefined;
-    if (departmentName) {
-      department_id = await departmentService.ensureDepartment(departmentName);
-    }
-
     const user = await userService.updateUser(id, {
       ...otherData,
-      department_id,
+      branch_id: branch_id ? parseInt(branch_id) : undefined,
+      department_id: department_id ? parseInt(department_id) : undefined,
     });
     if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);

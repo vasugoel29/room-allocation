@@ -8,8 +8,9 @@
     "start:staging": "NODE_ENV=staging node src/server.js",
     "dev": "NODE_ENV=development nodemon src/server.js",
     "dev:staging": "NODE_ENV=staging nodemon src/server.js",
-    "seed": "node scripts/seed.js",
-    "seed:students": "node scripts/seed_students.js",
+    "seed": "node src/db/seeders/seed_rooms.js && node src/db/seeders/seed_timetables.js",
+    "seed:students": "node src/db/seeders/seed_students.js",
+    "db:reset": "node scripts/db_reset.js",
     "unseed": "node scripts/unseed.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
   },

@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import { BookOpen, Calendar, Hash } from "lucide-react";
 
 function StudentFields({
-  branch,
-  setBranch,
+  branches = [],
+  branchId,
+  setBranchId,
   year,
   setYear,
   isYearOpen,
@@ -13,6 +14,12 @@ function StudentFields({
   isSectionOpen,
   setIsSectionOpen,
 }) {
+  const [isBranchOpen, setIsBranchOpen] = useState(false);
+  const [branchSearch, setBranchSearch] = useState('');
+
+  const selectedBranch = branches.find(b => b.id === branchId);
+  const branchDisplay = isBranchOpen ? branchSearch : (selectedBranch ? `${selectedBranch.name} (${selectedBranch.short_code})` : '');
+
   return (
     <>
       <div className="space-y-2">
@@ -20,18 +27,49 @@ function StudentFields({
           Branch
         </label>
         <div className="relative">
-          <BookOpen
-            size={16}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40"
-          />
-          <input
-            type="text"
-            className="w-full bg-bg-primary border border-border rounded-xl pl-11 pr-4 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30"
-            placeholder="e.g. CSE, IT, ECE"
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            required
-          />
+          <div className="relative font-body">
+            <BookOpen
+              size={16}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40"
+            />
+            <input
+              type="text"
+              className="w-full bg-bg-primary border border-border rounded-xl pl-11 pr-10 py-3 text-sm font-bold text-text-primary focus:outline-none focus:border-accent transition-all placeholder:text-text-secondary/30 shadow-sm hover:bg-bg-secondary/30"
+              placeholder="Select branch"
+              value={branchDisplay}
+              onFocus={() => {
+                setIsBranchOpen(true);
+                setBranchSearch('');
+              }}
+              onChange={(e) => setBranchSearch(e.target.value)}
+              required
+            />
+            <div 
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
+              onClick={() => setIsBranchOpen(!isBranchOpen)}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isBranchOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
+          </div>
+
+          {isBranchOpen && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-bg-secondary border border-border rounded-xl shadow-2xl z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-black/5">
+              {branches
+                .filter(b => !branchSearch || b.name.toLowerCase().includes(branchSearch.toLowerCase()) || b.short_code.toLowerCase().includes(branchSearch.toLowerCase()))
+                .map((b, i) => (
+                  <div
+                    key={b.id || i}
+                    onClick={() => {
+                      setBranchId(b.id);
+                      setIsBranchOpen(false);
+                    }}
+                    className={`p-3 cursor-pointer border-b border-border last:border-0 transition-colors flex items-center gap-2 hover:bg-accent/5 ${branchId === b.id ? 'bg-accent/10 font-bold border-l-4 border-l-accent' : 'font-medium'}`}
+                  >
+                    <span className="text-sm">{b.name} ({b.short_code})</span>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
 

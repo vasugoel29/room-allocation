@@ -31,7 +31,7 @@ export async function apiFetch(endpoint, options = {}) {
         continue;
       }
 
-      if (response.status === 401 && !endpoint.includes('/auth/login') && !window.location.pathname.includes('/signup')) {
+      if (response.status === 401 && !endpoint.includes('/auth/login')) {
         console.warn('Session expired or unauthorized. Logging out...');
         localStorage.removeItem('user');
         localStorage.removeItem('token');
