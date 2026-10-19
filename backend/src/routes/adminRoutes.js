@@ -7,12 +7,10 @@ import { PERMISSIONS as P } from '../auth/permissions.js';
 const router = express.Router();
 
 router.get('/export/bookings', authenticate, requirePermission(P.ADMIN_REPORTS), adminController.exportBookingsCSV);
-router.get('/export/promotions', authenticate, requirePermission(P.ADMIN_REPORTS), adminController.exportPromotionsCSV);
 router.get('/audit-logs', authenticate, requirePermission(P.ADMIN_REPORTS), adminController.getAuditLogs);
 router.get('/analytics', authenticate, requirePermission(P.ADMIN_REPORTS), adminController.getAnalytics);
 
 // Template downloads (CSV)
-router.get('/uploads/template/students', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.getStudentsTemplate);
 router.get('/uploads/template/faculty', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.getFacultyTemplate);
 router.get('/uploads/template/timetable', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.getTimetableTemplate);
 
@@ -22,7 +20,6 @@ router.get('/uploads/export/faculty', authenticate, requirePermission(P.ADMIN_IM
 router.get('/uploads/export/timetable', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.exportTimetable);
 
 // Imports (CSV)
-router.post('/uploads/import/students', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.importStudents);
 router.post('/uploads/import/faculty', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.importFaculty);
 router.post('/uploads/import/timetable', authenticate, requirePermission(P.ADMIN_IMPORTS), uploadController.importTimetable);
 

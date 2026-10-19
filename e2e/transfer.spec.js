@@ -12,7 +12,7 @@ test.describe('Booking transfer', () => {
     const facultyB = await seed.user({ role: 'FACULTY' });
     const room = await seed.room();
     const slot = nextWeekdaySlot(14);
-    const booking = await seed.booking({ room_id: room.id, created_by: repA.id, start_time: slot.start, faculty_id: facultyA.id, purpose: `Original ${tag()}` });
+    const booking = await seed.booking({ room_id: room.id, created_by: repA.id, start_time: slot.start, faculty_id: facultyA.faculty_id, purpose: `Original ${tag()}` });
     const newPurpose = `Transferred ${tag()}`;
     const transfer = () => seed.one('SELECT * FROM booking_transfers WHERE booking_id = $1', [booking.id]);
     const bookingRow = () => seed.one('SELECT * FROM bookings WHERE id = $1', [booking.id]);
@@ -25,7 +25,7 @@ test.describe('Booking transfer', () => {
     await dialog.getByPlaceholder(/special class/i).fill(newPurpose);
     await dialog.getByRole('button', { name: /request transfer/i }).click();
     await expect(toast(page, /transfer request sent successfully/i)).toBeVisible();
-    expect(await transfer()).toMatchObject({ status: 'PENDING', requested_by: repB.id, owner_id: repA.id, target_faculty_id: facultyB.id, new_purpose: newPurpose });
+    expect(await transfer()).toMatchObject({ status: 'PENDING', requested_by: repB.id, owner_id: repA.id, target_faculty_id: facultyB.faculty_id, new_purpose: newPurpose });
 
     // Rep B sees it as outgoing
     await page.goto('/bookings');
@@ -57,7 +57,7 @@ test.describe('Booking transfer', () => {
     await expect(toast(page, /transfer completed successfully/i)).toBeVisible();
 
     expect((await transfer()).status).toBe('ACCEPTED');
-    expect(await bookingRow()).toMatchObject({ status: 'ACTIVE', created_by: repB.id, faculty_id: facultyB.id, purpose: newPurpose });
+    expect(await bookingRow()).toMatchObject({ status: 'ACTIVE', created_by: repB.id, faculty_id: facultyB.faculty_id, purpose: newPurpose });
 
     // Rep B now sees it as their own booking
     await signIn(page, request, repB, '/calendar');

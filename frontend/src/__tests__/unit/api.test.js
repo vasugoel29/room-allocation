@@ -80,10 +80,10 @@ describe('utils/api apiFetch', () => {
     expect(localStorage.getItem('user')).toBeNull();
   });
 
-  it('401 from /auth/login does NOT log the user out (wrong password path)', async () => {
+  it.each(['/auth/google', '/auth/dev-login'])('401 from sign-in call %s does NOT log the user out', async (endpoint) => {
     localStorage.setItem('token', 'keep');
-    fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'Invalid credentials' }, 401));
-    const res = await apiFetch('/auth/login', { method: 'POST', body: '{}' });
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: 'Not allowed' }, 401));
+    const res = await apiFetch(endpoint, { method: 'POST', body: '{}' });
     expect(res.status).toBe(401);
     expect(localStorage.getItem('token')).toBe('keep');
   });

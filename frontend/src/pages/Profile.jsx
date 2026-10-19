@@ -1,14 +1,11 @@
-import React, { useState, useContext } from 'react';
+import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { User, Mail, Shield, Building, BookOpen, Edit2, Save, X, LogOut, Sun, Moon } from 'lucide-react';
-import { authService } from '../services/authService';
-import toast from 'react-hot-toast';
+import { User, Mail, Shield, Building, BookOpen, LogOut, Sun, Moon, Info } from 'lucide-react';
 import { getRoleLabel } from '../utils/roleUtils';
-import CustomSelect from '../components/ui/CustomSelect';
 
+/** Read-only: the profile is owned by the institutional directory (college ACL). */
 function Profile() {
-  const { user, setUser, logout, theme, setTheme, departments } = useContext(AppContext);
-  const [isEditing, setIsEditing] = useState(false);
+  const { user, logout, theme, setTheme } = useContext(AppContext);
   const deptName = user?.academic?.dept || user?.department_name || '';
   const branchName = user?.academic?.branch || user?.branch || '';
   const semNum = user?.academic?.semester ?? user?.semester ?? '';
@@ -17,81 +14,16 @@ function Profile() {
   const rollNo = user?.academic?.roll_no || user?.roll_no || '';
   const degree = user?.academic?.degree || user?.degree || '';
 
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    branch: branchName,
-    semester: semNum,
-    section: secNum,
-    group_name: grpNum,
-    departmentName: deptName,
-  });
-  const [loading, setLoading] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    try {
-      const updatedUser = await authService.updateUser(user.id, formData);
-      setUser(prev => ({ 
-        ...prev, 
-        ...updatedUser,
-        department_name: formData.departmentName,
-        branch: formData.branch,
-        semester: formData.semester,
-        section: formData.section,
-        group_name: formData.group_name
-      }));
-      setIsEditing(false);
-      toast.success('Profile updated successfully!');
-    } catch (err) {
-      toast.error(err.message || 'Failed to update profile');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const isAdmin = user?.role === 'ADMIN';
   const isStudent = user?.role === 'STUDENT_REP' || user?.role === 'VIEWER';
 
   if (!user) return null;
-
-  const departmentOptions = departments.map(d => ({ value: d.name, label: d.name }));
 
   return (
     <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-hidden flex flex-col no-scrollbar pb-2 lg:pb-8">
       {/* Header with Title */}
       <div className="flex justify-between items-center mb-6 sm:mb-10 shrink-0">
         <h1 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tighter capitalize font-display italic">My Profile</h1>
-        {!isEditing ? (
-          <button 
-            onClick={() => setIsEditing(true)}
-            className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-accent/20 active:scale-95 transition-all"
-          >
-            <Edit2 size={16} />
-            Edit Profile
-          </button>
-        ) : (
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setIsEditing(false)}
-              className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all"
-            >
-              <X size={20} />
-            </button>
-            <button 
-              onClick={handleSave}
-              disabled={loading}
-              className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl font-bold text-sm shadow-lg shadow-accent/20 active:scale-95 transition-all"
-            >
-              <Save size={16} />
-              {loading ? '...' : 'Save'}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Main Distributed Content Card */}
@@ -103,24 +35,14 @@ function Profile() {
             <User size={32} sm:size={48} strokeWidth={2.5} />
           </div>
           <div className="min-w-0 flex-1">
-            {isEditing ? (
-              <input 
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="Full Name"
-                className="text-2xl sm:text-3xl font-black text-text-primary bg-bg-primary border border-border rounded-xl px-3 py-2 focus:outline-none focus:border-accent w-full"
-              />
-            ) : (
-              <div className="space-y-1">
-                <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
-                {rollNo && (
-                  <p className="text-xs font-bold text-text-secondary tracking-wider">
-                    Roll No: <span className="text-text-primary font-mono">{rollNo}</span> {degree ? `(${degree})` : ''}
-                  </p>
-                )}
-              </div>
-            )}
+            <div className="space-y-1">
+              <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
+              {rollNo && (
+                <p className="text-xs font-bold text-text-secondary tracking-wider">
+                  Roll No: <span className="text-text-primary font-mono">{rollNo}</span> {degree ? `(${degree})` : ''}
+                </p>
+              )}
+            </div>
             <p className="text-accent font-black capitalize tracking-[0.2em] text-[10px] sm:text-xs bg-accent/10 px-3 py-1 rounded-full inline-block mt-2">
               {getRoleLabel(user.role)}
             </p>
@@ -145,16 +67,7 @@ function Profile() {
                   <Shield size={14} className="text-accent" />
                   Department
                 </label>
-                {isEditing ? (
-                  <CustomSelect 
-                    value={formData.departmentName}
-                    onChange={(val) => setFormData(prev => ({ ...prev, departmentName: val }))}
-                    options={departmentOptions}
-                    placeholder="Select Department"
-                  />
-                ) : (
-                  <p className="font-bold text-base sm:text-lg text-text-primary">{deptName || 'General'}</p>
-                )}
+                <p className="font-bold text-base sm:text-lg text-text-primary">{deptName || 'General'}</p>
               </div>
             )}
 
@@ -166,17 +79,7 @@ function Profile() {
                     <Building size={14} className="text-accent" />
                     Branch / Program
                   </label>
-                  {isEditing ? (
-                    <input 
-                      name="branch"
-                      value={formData.branch}
-                      onChange={handleChange}
-                      placeholder="Branch"
-                      className="w-full bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                    />
-                  ) : (
-                    <p className="font-bold text-base sm:text-lg text-text-primary">{branchName || 'Not set'}</p>
-                  )}
+                  <p className="font-bold text-base sm:text-lg text-text-primary">{branchName || 'Not set'}</p>
                 </div>
 
                 <div className="space-y-2">
@@ -184,52 +87,20 @@ function Profile() {
                     <BookOpen size={14} className="text-accent" />
                     Semester, Section & Group
                   </label>
-                  <div className="flex gap-3">
-                    {isEditing ? (
-                      <>
-                        <input 
-                          name="semester"
-                          type="number"
-                          min="1"
-                          max="8"
-                          value={formData.semester}
-                          onChange={handleChange}
-                          placeholder="Sem"
-                          className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                        />
-                        <input 
-                          name="section"
-                          type="number"
-                          min="1"
-                          max="15"
-                          value={formData.section}
-                          onChange={handleChange}
-                          placeholder="Sec"
-                          className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                        />
-                        <input 
-                          name="group_name"
-                          type="number"
-                          value={formData.group_name}
-                          onChange={handleChange}
-                          placeholder="Group"
-                          className="w-20 bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
-                        />
-                      </>
-                    ) : (
-                      <p className="font-bold text-base sm:text-lg text-text-primary">
-                        {semNum ? `Semester ${semNum}` : 'No Semester'} 
-                        {secNum ? ` · Section ${secNum}` : ''} 
-                        {grpNum ? ` · Group ${grpNum}` : ''}
-                      </p>
-                    )}
-                  </div>
+                  <p className="font-bold text-base sm:text-lg text-text-primary">
+                    {semNum ? `Semester ${semNum}` : 'No Semester'}
+                    {secNum ? ` · Section ${secNum}` : ''}
+                    {grpNum ? ` · Group ${grpNum}` : ''}
+                  </p>
                 </div>
               </>
             )}
           </div>
+          <p className="mt-8 flex items-start gap-2 text-[11px] sm:text-xs font-bold text-text-secondary">
+            <Info size={14} className="text-accent shrink-0 mt-0.5" />
+            These details come from the institutional directory. Contact the academic office to correct them.
+          </p>
         </div>
-
 
         {/* BOTTOM: Preferences and Account Actions */}
         <div className="pt-6 sm:pt-10 border-t border-border/50 space-y-6 sm:space-y-8 shrink-0">

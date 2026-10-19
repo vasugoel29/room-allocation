@@ -25,7 +25,7 @@ test.describe('Booking flow (desktop calendar)', () => {
     await expect(dialog).toBeHidden();
 
     const pending = await bookingFor(seed, room.id, rep.id);
-    expect(pending).toMatchObject({ status: 'PENDING', faculty_id: faculty.id, purpose });
+    expect(pending).toMatchObject({ status: 'PENDING', faculty_id: faculty.faculty_id, purpose });
     expect(new Date(pending.start_time).toISOString()).toBe(slot.start);
 
     // Faculty approves from the portal
@@ -52,7 +52,7 @@ test.describe('Booking flow (desktop calendar)', () => {
     const faculty = await seed.user({ role: 'FACULTY' });
     const room = await seed.room();
     const slot = nextWeekdaySlot(14);
-    const b = await seed.booking({ room_id: room.id, created_by: rep.id, start_time: slot.start, status: 'PENDING', faculty_id: faculty.id, purpose: `Reject me ${tag()}` });
+    const b = await seed.booking({ room_id: room.id, created_by: rep.id, start_time: slot.start, status: 'PENDING', faculty_id: faculty.faculty_id, purpose: `Reject me ${tag()}` });
 
     await signIn(page, request, faculty, '/faculty');
     await expect(page.getByRole('button', { name: /pending \(1\)/i })).toBeVisible();

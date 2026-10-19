@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Download, UserPlus, Home, Layers, GitBranch } from 'lucide-react';
+import { Search, Download, Home, Layers, GitBranch } from 'lucide-react';
 
 export const AdminFilterBar = ({
   activeTab,
@@ -8,24 +8,23 @@ export const AdminFilterBar = ({
   filterRange,
   setFilterRange,
   exportCSV,
-  openUserModal,
   openRoomModal,
   openDeptModal,
   openBranchModal
 }) => {
   if (activeTab === 'timetable') return null;
 
-  const headerTitle = activeTab === 'promotions' 
-    ? 'Promotion Requests' 
-    : activeTab === 'quick' 
-      ? 'Quick Allocation' 
-      : activeTab === 'uploads' 
-        ? 'CSV Data Uploads' 
-        : activeTab === 'audit' 
-          ? 'System Audit Log' 
+  const headerTitle = activeTab === 'quick'
+    ? 'Quick Allocation'
+    : activeTab === 'uploads'
+      ? 'CSV Data Uploads'
+      : activeTab === 'audit'
+        ? 'System Audit Log'
+        : activeTab === 'users'
+          ? 'Users Directory'
           : `${activeTab} Management`;
 
-  const showSearch = ['bookings', 'promotions', 'users', 'rooms', 'departments', 'branches'].includes(activeTab);
+  const showSearch = ['bookings', 'users', 'rooms', 'departments', 'branches'].includes(activeTab);
 
   return (
     <div className="p-4 sm:p-6 border-b border-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-low/60 backdrop-blur-sm shrink-0">
@@ -75,26 +74,6 @@ export const AdminFilterBar = ({
               Export
             </button>
           </>
-        )}
-
-        {activeTab === 'promotions' && (
-          <button 
-            onClick={exportCSV}
-            className="flex items-center gap-2 bg-text-primary text-surface-low px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-          >
-            <Download size={14} />
-            Export
-          </button>
-        )}
-
-        {activeTab === 'users' && (
-          <button 
-            onClick={() => openUserModal()}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-          >
-            <UserPlus size={14} />
-            Add User
-          </button>
         )}
 
         {activeTab === 'rooms' && (

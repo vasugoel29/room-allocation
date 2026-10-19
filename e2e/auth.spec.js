@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { test, expect, API_URL } from './fixtures.js';
 
 // The e2e stack runs the ACL in mock mode backed by the seeded users table (ACL_MOCK_SOURCE=db),
@@ -66,38 +65,5 @@ test.describe('Authentication', () => {
     await seed.db.query(`UPDATE user_access SET role = 'VIEWER' WHERE user_id = $1`, [user.id]);
     await page.reload();
     await expect.poll(async () => JSON.parse(await page.evaluate(() => localStorage.getItem('user'))).role).toBe('VIEWER');
-  });
-
-  // Password reset pages remain until password login is removed in Phase 2.
-  test('forgot password shows a neutral confirmation (no account enumeration in the UI)', async ({ page, seed }) => {
-    const user = await seed.user();
-    for (const email of [user.email, 'nobody.here@nsut.ac.in']) {
-      await page.goto('/forgot-password');
-      await page.getByPlaceholder('rollno@nsut.ac.in').fill(email);
-      await page.getByRole('button', { name: /send reset link/i }).click();
-      await expect(page.getByText(/if an account with/i)).toBeVisible();
-    }
-  });
-
-  test('reset password page without a token shows "Invalid Reset Link"', async ({ page }) => {
-    await page.goto('/reset-password');
-    await expect(page.getByText(/invalid reset link/i)).toBeVisible();
-  });
-
-  test('reset password with a valid token updates the stored password', async ({ page, seed }) => {
-    const user = await seed.user();
-    const token = crypto.randomBytes(32).toString('hex');
-    await seed.db.query(
-      `UPDATE users SET password_reset_token = $1, password_reset_expires = NOW() + interval '1 hour' WHERE id = $2`,
-      [crypto.createHash('sha256').update(token).digest('hex'), user.id],
-    );
-    await page.goto(`/reset-password?token=${token}`);
-    const inputs = page.locator('input[type=password]');
-    await inputs.nth(0).fill('NewPassword@456');
-    await inputs.nth(1).fill('NewPassword@456');
-    await page.getByRole('button', { name: /reset password/i }).click();
-    await expect(page.getByRole('button', { name: /go to login/i }).or(page.getByRole('link', { name: /go to login/i }))).toBeVisible();
-    const row = await seed.one('SELECT password_reset_token FROM users WHERE id = $1', [user.id]);
-    expect(row.password_reset_token).toBeNull();
   });
 });

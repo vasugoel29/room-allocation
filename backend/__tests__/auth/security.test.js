@@ -7,6 +7,7 @@ import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import { createAdmin, createFaculty, createRep, createViewer, tokenFor, closeDb } from '../../test/helpers/factories.js';
 
+// No route may call out to the network (the removed verify-student proxy used to).
 const realFetch = globalThis.fetch;
 const fetchMock = jest.fn(async () => ({ ok: false, json: async () => ({}) }));
 beforeAll(() => { globalThis.fetch = fetchMock; });
@@ -35,22 +36,13 @@ const ROUTES = [
   { m: 'get', path: '/api/health', min: 'PUBLIC' },
   { m: 'get', path: '/metrics', min: 'ADMIN', bug: 'SEC-13' },
   // authRoutes
-  { m: 'post', path: '/api/auth/signup', min: 'PUBLIC', body: {} },
-  { m: 'post', path: '/api/auth/login', min: 'PUBLIC', body: {} },
   { m: 'post', path: '/api/auth/logout', min: 'PUBLIC' },
   { m: 'post', path: '/api/auth/google', min: 'PUBLIC', body: {} },
   { m: 'post', path: '/api/auth/dev-login', min: 'PUBLIC', body: {} },
   { m: 'get', path: '/api/auth/me', min: 'VIEWER' },
-  { m: 'post', path: '/api/auth/forgot-password', min: 'PUBLIC', body: { email: 'nobody.matrix@nsut.ac.in' } },
-  { m: 'post', path: '/api/auth/reset-password', min: 'PUBLIC', body: {} },
-  // QUESTION: verify-student is public (used before an account exists); see SEC-07 for its input handling.
-  { m: 'get', path: '/api/auth/verify-student/abc', min: 'PUBLIC' },
   { m: 'get', path: '/api/auth/faculties', min: 'VIEWER' },
   { m: 'get', path: '/api/auth/users', min: 'ADMIN' },
-  { m: 'post', path: '/api/auth/users', min: 'ADMIN', body: {} },
-  { m: 'patch', path: (u) => `/api/auth/users/${u.id}`, min: 'VIEWER', body: {} },
   { m: 'delete', path: `/api/auth/users/${X}`, min: 'ADMIN' },
-  { m: 'patch', path: `/api/auth/approve-user/${X}`, min: 'ADMIN' },
   // roomRoutes (mounted at /api)
   { m: 'get', path: '/api/rooms', min: 'VIEWER' },
   { m: 'post', path: '/api/rooms', min: 'ADMIN', body: {} },
@@ -69,11 +61,6 @@ const ROUTES = [
   { m: 'patch', path: `/api/bookings/${X}`, min: 'STUDENT_REP', body: {} },
   { m: 'get', path: '/api/bookings/admin/all', min: 'ADMIN' },
   { m: 'post', path: '/api/bookings/admin/quick', min: 'ADMIN', body: {} },
-  // promotionRoutes
-  { m: 'post', path: '/api/promotions', min: 'VIEWER', body: {} },
-  { m: 'get', path: '/api/promotions/me', min: 'VIEWER' },
-  { m: 'get', path: '/api/promotions', min: 'ADMIN' },
-  { m: 'patch', path: `/api/promotions/${X}`, min: 'ADMIN', body: { status: 'REJECTED' } },
   // facultyRoutes
   { m: 'get', path: '/api/faculty/pending', min: 'FACULTY' },
   { m: 'patch', path: `/api/faculty/${X}/approve`, min: 'FACULTY' },
@@ -95,16 +82,13 @@ const ROUTES = [
   { m: 'delete', path: `/api/branches/${X}`, min: 'ADMIN' },
   // adminRoutes
   { m: 'get', path: '/api/admin/export/bookings', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/export/promotions', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/audit-logs', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/analytics', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/uploads/template/students', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/uploads/template/faculty', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/uploads/template/timetable', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/uploads/export/students', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/uploads/export/faculty', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/uploads/export/timetable', min: 'ADMIN' },
-  { m: 'post', path: '/api/admin/uploads/import/students', min: 'ADMIN', body: {} },
   { m: 'post', path: '/api/admin/uploads/import/faculty', min: 'ADMIN', body: {} },
   { m: 'post', path: '/api/admin/uploads/import/timetable', min: 'ADMIN', body: {} },
   { m: 'get', path: '/api/admin/uploads/status/no-such-job', min: 'ADMIN' },
@@ -144,6 +128,41 @@ describe('authorization matrix', () => {
     for (const f of fs.readdirSync(dir)) count += (fs.readFileSync(path.join(dir, f), 'utf8').match(/^router\.(get|post|patch|put|delete)\(/gm) || []).length;
     // + '/', '/api/health', '/metrics' from server.js
     expect(ROUTES.length).toBe(count + 3);
+  });
+
+  // Password-era and promotion endpoints were removed on purpose (identity, roles and profile are
+  // owned by Google SSO + the ACL). They must look like unknown routes to everyone: never served
+  // (200) and never gated (401/403), which would mean a handler or auth middleware is still mounted.
+  const REMOVED = [
+    ['post', '/api/auth/signup', { email: 'removed.signup@nsut.ac.in', password: 'Password@123', name: 'x' }],
+    ['post', '/api/auth/login', { email: 'removed.login@nsut.ac.in', password: 'Password@123' }],
+    ['post', '/api/auth/forgot-password', { email: 'removed.forgot@nsut.ac.in' }],
+    ['post', '/api/auth/reset-password', { token: 'abc', password: 'Password@123' }],
+    ['get', '/api/auth/verify-student/2021UCS1234'],
+    ['post', '/api/auth/users', { name: 'x', email: 'removed.create@nsut.ac.in', password: 'Password@123', role: 'ADMIN' }],
+    ['patch', (u) => `/api/auth/users/${u.id}`, { role: 'ADMIN', name: 'Removed Edit' }],
+    ['patch', (u) => `/api/auth/approve-user/${u.id}`],
+    ['post', '/api/promotions', { reason: 'x' }],
+    ['get', '/api/promotions/me'],
+    ['get', '/api/promotions'],
+    ['patch', `/api/promotions/${X}`, { status: 'APPROVED' }],
+    ['get', '/api/admin/export/promotions'],
+    ['get', '/api/admin/uploads/template/students'],
+    ['post', '/api/admin/uploads/import/students', { csvContent: 'name,email\nX,removed.import@nsut.ac.in\n' }],
+  ];
+  test.each(REMOVED.flatMap(([m, p, body]) => ['anonymous', 'ADMIN'].map((who) => [
+    `${m.toUpperCase()} ${typeof p === 'function' ? p({ id: ':self' }) : p}`, who, { m, path: p, body },
+  ])))('removed endpoint %s → 404 for %s caller', async (_l, who, r) => {
+    const caller = who === 'ADMIN' ? users.ADMIN : null;
+    const before = caller && (await db.query('SELECT role, name FROM users WHERE id = $1', [caller.user.id])).rows[0];
+    const res = await call(r, caller?.user, caller?.auth);
+    expect(res.status).toBe(404);
+    if (caller) expect((await db.query('SELECT role, name FROM users WHERE id = $1', [caller.user.id])).rows[0]).toEqual(before);
+  });
+
+  test('removed endpoints left no side effects', async () => {
+    const { rowCount } = await db.query("SELECT 1 FROM users WHERE email LIKE 'removed.%@nsut.ac.in'");
+    expect(rowCount).toBe(0);
   });
 
   const nonPublic = ROUTES.filter((r) => r.min !== 'PUBLIC' && !r.bug);
@@ -313,7 +332,6 @@ describe('SQL-injection probes', () => {
       ['VIEWER', `/api/timetable/autocomplete/faculty?query=${e}`],
       ['ADMIN', `/api/auth/users?page=${e}&limit=5`],
       ['ADMIN', `/api/timetable/slots?faculty_name=${e}&day_of_week=${e}&semester=${e}`],
-      ['ADMIN', `/api/promotions?page=1&limit=${e}`],
       ['ADMIN', `/api/admin/audit-logs?action=${e}`],
     );
   }
@@ -346,24 +364,22 @@ describe('SQL-injection probes', () => {
 
 describe('request hardening', () => {
   test('JSON body over 100kb → 413', async () => {
-    const res = await request(app).post('/api/auth/login')
+    const res = await request(app).post('/api/auth/dev-login')
       .set('Content-Type', 'application/json')
-      .send(JSON.stringify({ email: 'a@nsut.ac.in', password: 'x'.repeat(110 * 1024) }));
+      .send(JSON.stringify({ email: 'a@nsut.ac.in', pad: 'x'.repeat(110 * 1024) }));
     expect(res.status).toBe(413);
   });
 
   test('malformed JSON → 400', async () => {
-    const res = await request(app).post('/api/auth/login').set('Content-Type', 'application/json').send('{"email": ');
+    const res = await request(app).post('/api/auth/dev-login').set('Content-Type', 'application/json').send('{"email": ');
     expect(res.status).toBe(400);
   });
 
   test.failing('[SEC-12] 4xx/5xx bodies never include a stack trace or internal error text', async () => {
     const bodies = [];
-    bodies.push((await request(app).post('/api/auth/login').set('Content-Type', 'application/json').send('{"email": ')).body);
-    bodies.push((await request(app).post('/api/auth/login').set('Content-Type', 'application/json')
-      .send(JSON.stringify({ password: 'x'.repeat(110 * 1024) }))).body);
-    const promo = await request(app).post('/api/promotions').set('Authorization', users.VIEWER.auth).send({ reason: 'x' });
-    bodies.push(promo.body);
+    bodies.push((await request(app).post('/api/auth/dev-login').set('Content-Type', 'application/json').send('{"email": ')).body);
+    bodies.push((await request(app).post('/api/auth/dev-login').set('Content-Type', 'application/json')
+      .send(JSON.stringify({ pad: 'x'.repeat(110 * 1024) }))).body);
     for (const b of bodies) {
       expect(b).not.toHaveProperty('stack');
       expect(JSON.stringify(b)).not.toMatch(/at .*\.js:\d+|is not defined|node_modules/);
@@ -372,7 +388,8 @@ describe('request hardening', () => {
 
   test.failing('[SEC-14] anonymous mutations are not attributed to user id 1 in the audit log', async () => {
     const marker = `audit-marker-${Date.now()}`;
-    expect((await request(app).post('/api/auth/forgot-password').send({ email: `${marker}@nsut.ac.in` })).status).toBe(200);
+    // Logout without a token is an anonymous 2xx mutation, so the audit middleware records it.
+    expect((await request(app).post('/api/auth/logout').send({ marker })).status).toBe(200);
     await new Promise((r) => setTimeout(r, 300));
     const { rows } = await db.query("SELECT user_id FROM audit_logs WHERE details::text LIKE '%' || $1 || '%'", [marker]);
     expect(rows).toHaveLength(1);
@@ -403,7 +420,7 @@ describe('security headers & CORS', () => {
   test.each(['https://evil.example', 'null', `${allowed}.evil.example`])('disallowed origin %s is not reflected', async (origin) => {
     const res = await request(app).get('/api/health').set('Origin', origin);
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
-    const pre = await request(app).options('/api/auth/login').set('Origin', origin).set('Access-Control-Request-Method', 'POST');
+    const pre = await request(app).options('/api/auth/dev-login').set('Origin', origin).set('Access-Control-Request-Method', 'POST');
     expect(pre.headers['access-control-allow-origin']).toBeUndefined();
   });
 });

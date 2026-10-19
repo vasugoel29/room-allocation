@@ -22,11 +22,8 @@ import { getTodayRange, getWeekRange, formatRangeToISO } from '../utils/dateHelp
 
 // Modular Components
 import AdminBookings from '../features/admin/AdminBookings';
-import AdminRequests from '../features/admin/AdminRequests';
 import AdminUsers from '../features/admin/AdminUsers';
 import AdminQuickBook from '../features/admin/AdminQuickBook';
-import AdminUserModal from '../components/modals/AdminUserModal';
-import AdminPromotionActionModal from '../components/modals/AdminPromotionActionModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import AdminAuditLog from '../features/admin/AdminAuditLog';
 import AdminAnalytics from '../features/admin/AdminAnalytics';
@@ -65,12 +62,8 @@ function AdminDashboard() {
   const [filterRange, setFilterRange] = useState('day'); // 'day' | 'week'
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  const { bookings, promotions, bookingsMeta, loading, fetchData } = useAdminData(filterRange);
-  const { 
-    users, usersMeta, departments, isUserModalOpen, editingUser, 
-    fetchUsers, handleApproveUser, handleDeleteUser,
-    openUserModal, closeUserModal 
-  } = useAdminUsers(activeTab, searchTerm);
+  const { bookings, bookingsMeta, loading, fetchData } = useAdminData(filterRange);
+  const { users, usersMeta, departments, fetchUsers, handleDeactivateUser } = useAdminUsers(activeTab, searchTerm);
   
   const { 
     quickBookForm, roomStatuses, submitting, 
@@ -81,7 +74,6 @@ function AdminDashboard() {
   const [adminRooms, setAdminRooms] = useState([]);
   const [adminDepartments, setAdminDepartments] = useState([]);
   const [adminBranches, setAdminBranches] = useState([]);
-  const [paginatedPromotions, setPaginatedPromotions] = useState([]);
   const [roomBuildingFilter, setRoomBuildingFilter] = useState('all');
   const [roomTypeFilter, setRoomTypeFilter] = useState('all');
 
@@ -89,7 +81,6 @@ function AdminDashboard() {
   const [roomsMeta, setRoomsMeta] = useState({ page: 1, totalPages: 1 });
   const [deptsMeta, setDeptsMeta] = useState({ page: 1, totalPages: 1 });
   const [branchesMeta, setBranchesMeta] = useState({ page: 1, totalPages: 1 });
-  const [promotionsMeta, setPromotionsMeta] = useState({ page: 1, totalPages: 1 });
 
   // Room modal state
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
@@ -140,27 +131,11 @@ function AdminDashboard() {
     }
   };
 
-  const fetchPaginatedPromotions = async (page = 1) => {
-    try {
-      const data = await adminService.getPromotions(page, 10);
-      setPaginatedPromotions(data.data || data);
-      if (data.meta) setPromotionsMeta(data.meta);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to fetch requests');
-    }
-  };
-
-  const handlePromotionSuccess = () => {
-    fetchData(); // updates bookings & global promotions badge
-    fetchPaginatedPromotions(promotionsMeta.page);
-  };
-
   const deleteRoom = (id) => {
     setConfirmConfig({
       isOpen: true,
       title: 'Delete Room',
-      message: 'Are you sure you want to delete this room? This will also cascade delete all associated bookings.',
+      message: 'Are you sure you want to delete this room? It can no longer be booked and its upcoming bookings will be cancelled; past bookings and history are kept.',
       confirmText: 'Delete Room',
       confirmType: 'danger',
       action: async () => {
@@ -210,7 +185,7 @@ function AdminDashboard() {
     setConfirmConfig({
       isOpen: true,
       title: 'Delete Branch',
-      message: 'Are you sure you want to delete this branch? Existing users will keep their branch name, but their branch link will be removed.',
+      message: 'Are you sure you want to delete this branch? It will no longer be offered; existing users and history keep their branch.',
       confirmText: 'Delete Branch',
       confirmType: 'danger',
       action: async () => {
@@ -242,26 +217,13 @@ function AdminDashboard() {
       fetchAdminDepartments(1);
     } else if (activeTab === 'branches') {
       fetchAdminBranches(1);
-    } else if (activeTab === 'promotions') {
-      fetchPaginatedPromotions(1);
     }
   }, [activeTab]);
   
-  // Promotion comment state
-  const [isPromotionModalOpen, setIsPromotionModalOpen] = useState(false);
-  const [selectedPromotionId, setSelectedPromotionId] = useState(null);
-  const [promotionStatus, setPromotionStatus] = useState('');
-
   // Confirmation modal state
   const [confirmConfig, setConfirmConfig] = useState({ 
     isOpen: false, title: '', message: '', action: null 
   });
-
-  const handlePromotion = (id, status) => {
-    setSelectedPromotionId(id);
-    setPromotionStatus(status);
-    setIsPromotionModalOpen(true);
-  };
 
   const handleCancelBooking = (bookingId) => {
     setConfirmConfig({
@@ -285,16 +247,9 @@ function AdminDashboard() {
 
   const exportCSV = async () => {
     try {
-      const type = activeTab === 'bookings' ? 'bookings' : 'promotions';
-      let params = {};
-      
-      if (activeTab === 'bookings') {
-        const now = new Date();
-        const range = filterRange === 'day' ? getTodayRange(now) : getWeekRange(now);
-        params = formatRangeToISO(range);
-      }
-
-      const blob = await adminService.exportCSV(type, params);
+      const now = new Date();
+      const range = filterRange === 'day' ? getTodayRange(now) : getWeekRange(now);
+      const blob = await adminService.exportCSV('bookings', formatRangeToISO(range));
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -309,14 +264,14 @@ function AdminDashboard() {
     }
   };
   
-  const deleteUser = (id) => {
+  const deactivateUser = (target) => {
     setConfirmConfig({
       isOpen: true,
-      title: 'Delete User',
-      message: 'Are you sure you want to delete this user? This cannot be undone.',
-      confirmText: 'Delete User',
+      title: 'Deactivate User',
+      message: `${target.name} will no longer be able to sign in to CRAS, and their upcoming bookings will be cancelled. Their record and booking history are kept.`,
+      confirmText: 'Deactivate',
       confirmType: 'danger',
-      action: () => handleDeleteUser(id)
+      action: () => handleDeactivateUser(target.id)
     });
   };
 
@@ -340,7 +295,7 @@ function AdminDashboard() {
             </div>
             <h1 className="text-3xl font-extrabold text-text-primary tracking-tight font-display capitalize">Admin Console</h1>
           </div>
-          <p className="text-text-secondary font-bold capitalize text-[10px] tracking-widest opacity-60 font-display">Manage allocations and elevation requests.</p>
+          <p className="text-text-secondary font-bold capitalize text-[10px] tracking-widest opacity-60 font-display">Manage allocations, rooms and the campus directory.</p>
         </div>
       </div>
 
@@ -348,8 +303,6 @@ function AdminDashboard() {
         <AdminTabBar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
-          promotions={promotions} 
-          users={users} 
         />
 
         {/* Right workspace panel */}
@@ -361,7 +314,6 @@ function AdminDashboard() {
             filterRange={filterRange}
             setFilterRange={setFilterRange}
             exportCSV={exportCSV}
-            openUserModal={openUserModal}
             openRoomModal={openRoomModal}
             openDeptModal={openDeptModal}
             openBranchModal={openBranchModal}
@@ -452,38 +404,6 @@ function AdminDashboard() {
                     )}
                   </div>
                 )}
-                {activeTab === 'promotions' && (
-                  <div className="flex-1 flex flex-col min-h-0">
-                    <AdminRequests 
-                      promotions={paginatedPromotions} 
-                      searchTerm={searchTerm} 
-                      handlePromotionAction={handlePromotion} 
-                    />
-                    {promotionsMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
-                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
-                          Page {promotionsMeta.page} of {promotionsMeta.totalPages}
-                        </p>
-                        <div className="flex gap-2">
-                          <button 
-                            disabled={promotionsMeta.page <= 1}
-                            onClick={() => fetchPaginatedPromotions(promotionsMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            Prev
-                          </button>
-                          <button 
-                            disabled={promotionsMeta.page >= promotionsMeta.totalPages}
-                            onClick={() => fetchPaginatedPromotions(promotionsMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
                 {activeTab === 'quick' && (
                   <AdminQuickBook 
                     roomStatuses={roomStatuses}
@@ -499,9 +419,7 @@ function AdminDashboard() {
                     <AdminUsers 
                       users={users} 
                       searchTerm={searchTerm} 
-                      onEdit={openUserModal} 
-                      onDelete={deleteUser} 
-                      onApprove={handleApproveUser}
+                      onDeactivate={deactivateUser}
                     />
                     {usersMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
@@ -648,14 +566,6 @@ function AdminDashboard() {
         </div>
       </div>
 
-      <AdminUserModal 
-        isOpen={isUserModalOpen}
-        onClose={closeUserModal}
-        editingUser={editingUser}
-        fetchUsers={fetchUsers}
-        departments={departments}
-      />
-      
       <AdminRoomModal 
         isOpen={isRoomModalOpen}
         onClose={() => setIsRoomModalOpen(false)}
@@ -675,14 +585,6 @@ function AdminDashboard() {
         editingBranch={editingBranch}
         departments={departments}
         fetchBranches={fetchAdminBranches}
-      />
-      
-      <AdminPromotionActionModal 
-        isOpen={isPromotionModalOpen}
-        onClose={() => setIsPromotionModalOpen(false)}
-        selectedPromotionId={selectedPromotionId}
-        promotionStatus={promotionStatus}
-        fetchData={handlePromotionSuccess}
       />
       
       <ConfirmModal 

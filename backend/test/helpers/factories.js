@@ -3,13 +3,15 @@ import jwt from 'jsonwebtoken';
 import * as db from '../../src/db.js';
 import { istDateTimeToUtc, getIstParts } from '../../src/utils/timezone.js';
 
+// Sign-in is Google SSO + ACL only (migration v25 cleared stored passwords), but the column still
+// exists, so factory users keep a bcrypt hash: the "never leak a hash" checks stay meaningful.
 export const TEST_PASSWORD = 'Password@123';
 const PASSWORD_HASH = bcrypt.hashSync(TEST_PASSWORD, 4);
 
 let seq = 0;
 const uid = () => `${process.pid}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-/** Same payload shape authController.login signs. */
+/** Legacy-shaped JWT ({ id, role, ... }) signed with the app secret; authenticate() still accepts it in tests. */
 export function tokenFor(user, opts = {}) {
   const { id, email, role, name, branch, year, semester, section, group_name, department_id } = user;
   return jwt.sign(

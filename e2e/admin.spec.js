@@ -1,7 +1,7 @@
 import fs from 'fs';
 import {
   test, expect, signIn, toast, tag, firstSortingName, smartTodayKey, istToUtc, istDateKey, istDow, addDays,
-  DOW_LONG, API_URL, apiLogin, PASSWORD,
+  DOW_LONG, API_URL, apiLogin,
 } from './helpers.js';
 
 // Noise that is not an app error (dev-only / environment), everything else fails the tab smoke test.
@@ -10,10 +10,9 @@ const IGNORED_CONSOLE = [/Download the React DevTools/i, /\[vite\]/i, /favicon/i
 const TABS = [
   ['quick', /quick allocation/i],
   ['bookings', /bookings management/i],
-  ['promotions', /promotion requests/i],
   ['timetable', /^timetable$/i],
   ['room-grid', /room schedule grid/i],
-  ['users', /users management/i],
+  ['users', /users directory/i],
   ['rooms', /rooms management/i],
   ['departments', /departments management/i],
   ['branches', /branches management/i],
@@ -84,73 +83,48 @@ test.describe('Admin console', () => {
     await dialog(page, /delete room/i).getByRole('button', { name: /delete room/i }).click();
     await expect(toast(page, /room deleted successfully/i)).toBeVisible();
     await expect(row).toHaveCount(0);
-    expect(await seed.one('SELECT id FROM rooms WHERE id = $1', [created.id])).toBeUndefined();
+    // Soft delete: the row (and its booking history) stays, inactive.
+    expect(await seed.one('SELECT is_active FROM rooms WHERE id = $1', [created.id])).toEqual({ is_active: false });
   });
 
-  test('Users: add a FACULTY user', async ({ page, request, seed }) => {
+  test('Users: the directory is read-only, searchable, and Deactivate soft-deletes the account', async ({ page, request, seed }) => {
     const admin = await seed.user({ role: 'ADMIN' });
-    const email = `e2e.added.${tag()}@nsut.ac.in`;
-    await signIn(page, request, admin, '/admin?tab=users');
-    await page.getByRole('button', { name: /add user/i }).click();
-    const m = modal(page, 'New Observer');
-    await m.getByPlaceholder('e.g. John Doe').fill('E2E Added Faculty');
-    await m.getByPlaceholder('john@campus.edu').fill(email);
-    await m.getByRole('button', { name: /viewer \(student\)/i }).click();
-    await m.getByText('FACULTY (Staff)').click();
-    await m.getByPlaceholder('Select or type department').fill('Computer Science');
-    await m.getByText('Department Of Computer Science (CSE)').click();
-    await m.getByPlaceholder('••••••••').fill(PASSWORD);
-    await m.getByRole('button', { name: /establish access/i }).click();
-    await expect(toast(page, /user created/i)).toBeVisible();
-    expect(await seed.one('SELECT role, is_approved FROM users WHERE email = $1', [email])).toEqual({ role: 'FACULTY', is_approved: true });
-    await apiLogin(request, email); // the new account can sign in
-  });
-
-  test('Users: "Add User" with role ADMIN stores an ADMIN', async ({ page, request, seed }) => {
-    // [FE-03] AdminUserModal sends role:'admin' (lowercase) for ADMIN; the backend stores it verbatim,
-    // so the new "admin" has no rights at all.
-    test.fail();
-    const admin = await seed.user({ role: 'ADMIN' });
-    const email = `e2e.newadmin.${tag()}@nsut.ac.in`;
-    await signIn(page, request, admin, '/admin?tab=users');
-    await page.getByRole('button', { name: /add user/i }).click();
-    const m = modal(page, 'New Observer');
-    await m.getByPlaceholder('e.g. John Doe').fill('E2E New Admin');
-    await m.getByPlaceholder('john@campus.edu').fill(email);
-    await m.getByRole('button', { name: /viewer \(student\)/i }).click();
-    await m.getByText('ADMIN (Root Access)').click();
-    await m.getByPlaceholder('Select or type department').fill('Computer Science');
-    await m.getByText('Department Of Computer Science (CSE)').click();
-    await m.getByPlaceholder('••••••••').fill(PASSWORD);
-    await m.getByRole('button', { name: /establish access/i }).click();
-    await expect(toast(page, /user created/i)).toBeVisible();
-    expect((await seed.one('SELECT role FROM users WHERE email = $1', [email])).role).toBe('ADMIN');
-  });
-
-  test('Users: approve a pending faculty account, then delete a user', async ({ page, request, seed }) => {
-    const admin = await seed.user({ role: 'ADMIN' });
-    const pending = await seed.user({ role: 'FACULTY', is_approved: false });
-    const doomed = await seed.user({ role: 'VIEWER' });
+    const doomed = await seed.user({ role: 'STUDENT_REP', branch: 'IT', year: 3, section: 2 });
+    const room = await seed.room();
+    const upcoming = await seed.booking({ room_id: room.id, created_by: doomed.id, start_time: istToUtc(addDays(istDateKey(), 2), 15) });
+    await apiLogin(request, doomed.email); // has signed in before (linked to the ACL)
     await signIn(page, request, admin, '/admin?tab=users');
 
-    // The list is server-paginated (admins/faculty sort first), so find rows through search.
-    const search = page.getByPlaceholder('Search users...');
-    await search.fill(pending.email);
-    const pendingRow = page.locator('tr').filter({ hasText: pending.email });
-    await expect(pendingRow).toContainText(/pending approval/i);
-    await pendingRow.getByRole('button', { name: /approve/i }).click();
-    await expect(toast(page, /user approved/i)).toBeVisible();
-    await expect(pendingRow).not.toContainText(/pending approval/i);
-    expect((await seed.one('SELECT is_approved FROM users WHERE id = $1', [pending.id])).is_approved).toBe(true);
-    await apiLogin(request, pending.email);
+    // No local account management any more.
+    for (const gone of [/add user/i, /approve/i, /^edit$/i, /reset password/i]) {
+      await expect(page.getByRole('button', { name: gone })).toHaveCount(0);
+    }
+    await expect(page.getByText(/come from the institutional directory/i)).toBeVisible();
 
-    await search.fill(doomed.email);
-    const doomedRow = page.locator('tr').filter({ hasText: doomed.email });
-    await doomedRow.getByRole('button').last().click();
-    await dialog(page, /delete user/i).getByRole('button', { name: /delete user/i }).click();
-    await expect(toast(page, /user deleted/i)).toBeVisible();
-    await expect(doomedRow).toHaveCount(0);
-    expect(await seed.one('SELECT id FROM users WHERE id = $1', [doomed.id])).toBeUndefined();
+    // The list is server-paginated, so find rows through search.
+    await page.getByPlaceholder('Search users...').fill(doomed.email);
+    const row = page.locator('tr').filter({ hasText: doomed.email });
+    await expect(row).toContainText(doomed.name);
+    await expect(row).toContainText('IT • Year 3 • Sec 2');
+    await expect(row).toContainText('Active');
+    await expect(row.getByRole('button')).toHaveCount(1);
+
+    await row.getByRole('button', { name: `Deactivate ${doomed.name}` }).click();
+    const confirm = dialog(page, /deactivate user/i);
+    await expect(confirm).toContainText(/no longer be able to sign in to CRAS/i);
+    await expect(confirm).toContainText(/upcoming bookings will be cancelled/i);
+    await confirm.getByRole('button', { name: /^deactivate$/i }).click();
+    await expect(toast(page, /user deactivated/i)).toBeVisible();
+    await expect(row).toHaveCount(0); // the directory lists active accounts
+
+    // Soft delete: the row and its history stay; upcoming bookings are cancelled.
+    expect(await seed.one('SELECT is_active FROM users WHERE id = $1', [doomed.id])).toEqual({ is_active: false });
+    expect((await seed.one('SELECT status FROM bookings WHERE id = $1', [upcoming.id])).status).toBe('CANCELLED');
+
+    // ...and they can no longer sign in.
+    const res = await request.post(`${API_URL}/auth/dev-login`, { data: { email: doomed.email } });
+    expect(res.status()).toBe(403);
+    expect((await res.json()).token).toBeUndefined();
   });
 
   test('Departments: create, rename and delete', async ({ page, request, seed }) => {
@@ -179,7 +153,7 @@ test.describe('Admin console', () => {
     await dialog(page, /delete department/i).getByRole('button', { name: /delete department/i }).click();
     await expect(toast(page, /department deleted successfully/i)).toBeVisible();
     await expect(renamedRow).toHaveCount(0);
-    expect(await seed.one('SELECT id FROM departments WHERE id = $1', [dept.id])).toBeUndefined();
+    expect(await seed.one('SELECT is_active FROM departments WHERE id = $1', [dept.id])).toEqual({ is_active: false }); // soft delete
   });
 
   test('Branches: create, edit and delete', async ({ page, request, seed }) => {
@@ -209,7 +183,8 @@ test.describe('Admin console', () => {
     await page.getByRole('button', { name: `Delete ${name}` }).click();
     await dialog(page, /delete branch/i).getByRole('button', { name: /delete branch/i }).click();
     await expect(toast(page, /branch deleted successfully/i)).toBeVisible();
-    expect(await seed.one('SELECT id FROM branches WHERE id = $1', [branch.id])).toBeUndefined();
+    expect(await seed.one('SELECT is_active FROM branches WHERE id = $1', [branch.id])).toEqual({ is_active: false }); // soft delete
+    await seed.db.query('DELETE FROM branches WHERE id = $1', [branch.id]);
     await seed.db.query('DELETE FROM departments WHERE id = $1', [dept.id]);
   });
 
@@ -245,6 +220,8 @@ test.describe('Admin console', () => {
     // sort first), so most students and reps can never be chosen.
     test.fail();
     const admin = await seed.user({ role: 'ADMIN' });
+    // Make sure the rep is not among the first 20 users loaded (admins sort first), whatever ran before.
+    for (let i = 0; i < 20; i++) await seed.user({ role: 'ADMIN' });
     const rep = await seed.user({ role: 'STUDENT_REP' });
     const room = await seed.room({ name: firstSortingName() }); // sorts onto page 1 of the status table
     const dateKey = new Date().toISOString().slice(0, 10); // useAdminQuickBook default (UTC date, see FE-14)
@@ -355,25 +332,51 @@ test.describe('Admin console', () => {
     await expect(page.locator('.recharts-wrapper, svg.recharts-surface').first()).toBeVisible();
   });
 
-  test('CSV Uploads: download the students template and import a students CSV', async ({ page, request, seed }) => {
+  test('CSV Uploads: students are export-only', async ({ page, request, seed }) => {
     const admin = await seed.user({ role: 'ADMIN' });
-    const t = tag();
-    const email = `e2e.import.${t}@nsut.ac.in`;
     await signIn(page, request, admin, '/admin?tab=uploads');
     const card = page.locator('div.rounded-\\[2\\.5rem\\]').filter({ hasText: 'Students Data' }).last();
+    await expect(card.getByRole('button', { name: 'Export students' })).toBeVisible();
+    await expect(card.getByRole('button', { name: /template/i })).toHaveCount(0);
+    await expect(card.locator('input[type=file]')).toHaveCount(0);
+  });
+
+  test('CSV Uploads: the faculty CSV maintains the faculty directory (create + status=inactive soft delete)', async ({ page, request, seed }) => {
+    const admin = await seed.user({ role: 'ADMIN' });
+    const t = tag();
+    const fresh = `e2e.fac.new.${t}@nsut.ac.in`;
+    const leaving = await seed.one(
+      `INSERT INTO faculties (name, email, department_name, is_active) VALUES ($1, $2, 'IT', TRUE) RETURNING *`,
+      [`E2E Leaving ${t}`, `e2e.fac.leaving.${t}@nsut.ac.in`],
+    );
+    await signIn(page, request, admin, '/admin?tab=uploads');
+    const card = page.locator('div.rounded-\\[2\\.5rem\\]').filter({ hasText: 'Faculty Data' }).last();
 
     const downloadP = page.waitForEvent('download');
     await card.getByRole('button', { name: /template/i }).click();
     const download = await downloadP;
-    expect(download.suggestedFilename()).toBe('students_template.csv');
+    expect(download.suggestedFilename()).toBe('faculty_template.csv');
     const header = fs.readFileSync(await download.path(), 'utf8').trim();
-    expect(header).toBe('name,email,branch,year,section,degree,department_name,roll_no');
+    expect(header).toBe('name,email,department_name,status');
 
-    const csv = `${header}\nE2E Imported ${t},${email},CSE,2,1,B.Tech.,Department Of Computer Science (CSE),2K24/E2E/${t}\n`;
-    await card.locator('input[type=file]').setInputFiles({ name: 'students.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
-    await expect(card.getByRole('button', { name: /dismiss/i })).toBeVisible({ timeout: 20_000 });
-    await expect(card).toContainText(/upload students csv\s*done/i);
-    expect(await seed.one('SELECT role, name FROM users WHERE email = $1', [email])).toEqual({ role: 'VIEWER', name: `E2E Imported ${t}` });
+    const csv = [
+      header,
+      `E2E New Faculty ${t},${fresh},Computer Science,`,
+      `E2E Leaving ${t},${leaving.email},IT,inactive`,
+      `No Email ${t},,IT,`,
+    ].join('\n') + '\n';
+    await card.locator('input[type=file]').setInputFiles({ name: 'faculty.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+    const result = page.getByTestId('faculty-import-result');
+    await expect(result).toBeVisible({ timeout: 20_000 });
+    await expect(result).toContainText('1 added, 0 updated, 1 deactivated, 1 skipped');
+    await expect(result).toContainText('Line 4: invalid or missing email');
+
+    expect(await seed.one('SELECT name, department_name, is_active FROM faculties WHERE lower(email) = $1', [fresh]))
+      .toEqual({ name: `E2E New Faculty ${t}`, department_name: 'Computer Science', is_active: true });
+    // Soft delete: the entry stays (bookings/history keep pointing at it) but is inactive.
+    expect(await seed.one('SELECT is_active FROM faculties WHERE id = $1', [leaving.id])).toEqual({ is_active: false });
+    // No sign-in accounts are created by the import.
+    expect(await seed.one('SELECT id FROM users WHERE lower(email) = $1', [fresh])).toBeUndefined();
   });
 });
 

@@ -725,6 +725,18 @@ const migrations = [
         CREATE UNIQUE INDEX IF NOT EXISTS departments_name_active_key ON departments(name) WHERE is_active;
       `);
     }
+  },
+  {
+    version: 25,
+    name: 'Google SSO only: clear stored password hashes and reset tokens',
+    run: async (client) => {
+      // CRAS no longer has passwords (sign-in is Google SSO + ACL), and the old ones were leaked.
+      // Rows are kept; only the dead credentials are cleared.
+      await client.query(`
+        UPDATE users SET password = NULL, password_reset_token = NULL, password_reset_expires = NULL
+         WHERE password IS NOT NULL OR password_reset_token IS NOT NULL OR password_reset_expires IS NOT NULL;
+      `);
+    }
   }
 ];
 

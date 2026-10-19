@@ -47,7 +47,6 @@ Sentry.init({
 import authRoutes from './routes/authRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
-import promotionRoutes from './routes/promotionRoutes.js';
 import facultyRoutes from './routes/facultyRoutes.js';
 import transferRoutes from './routes/transferRoutes.js';
 import departmentRoutes from './routes/departmentRoutes.js';
@@ -171,7 +170,6 @@ app.use(async (req, res, next) => {
 app.use('/api/auth', authRoutes);
 app.use('/api', roomRoutes);
 app.use('/api/bookings', bookingRoutes);
-app.use('/api/promotions', promotionRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/departments', departmentRoutes);

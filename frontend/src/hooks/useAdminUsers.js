@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
 
+/**
+ * Users tab data. The directory is a read-only mirror of the college ACL; the only local action is
+ * deactivating someone in CRAS (soft delete).
+ */
 export function useAdminUsers(activeTab, searchTerm = '') {
   const [users, setUsers] = useState([]);
   const [usersMeta, setUsersMeta] = useState({ page: 1, totalPages: 1 });
   const [departments, setDepartments] = useState([]);
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
 
   const fetchUsers = async (page = usersMeta.page) => {
     try {
@@ -28,36 +30,15 @@ export function useAdminUsers(activeTab, searchTerm = '') {
     }
   };
 
-  const handleApproveUser = async (id) => {
+  const handleDeactivateUser = async (id) => {
     try {
-      await adminService.approveUser(id);
-      toast.success('User approved!');
+      await adminService.deactivateUser(id);
+      toast.success('User deactivated');
       fetchUsers();
     } catch (err) {
       console.error(err);
-      toast.error(err.message || 'Approval failed');
+      toast.error(err.message || 'Failed to deactivate user');
     }
-  };
-
-  const handleDeleteUser = async (id) => {
-    try {
-      await adminService.deleteUser(id);
-      toast.success('User deleted');
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || 'Failed to delete user');
-    }
-  };
-
-  const openUserModal = (u = null) => {
-    setEditingUser(u);
-    setIsUserModalOpen(true);
-  };
-
-  const closeUserModal = () => {
-    setEditingUser(null);
-    setIsUserModalOpen(false);
   };
 
   useEffect(() => {
@@ -70,9 +51,5 @@ export function useAdminUsers(activeTab, searchTerm = '') {
     fetchDepartments();
   }, []);
 
-  return { 
-    users, usersMeta, departments, isUserModalOpen, editingUser, 
-    fetchUsers, fetchDepartments, handleApproveUser, handleDeleteUser,
-    openUserModal, closeUserModal 
-  };
+  return { users, usersMeta, departments, fetchUsers, handleDeactivateUser };
 }

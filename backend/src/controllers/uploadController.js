@@ -1,7 +1,6 @@
 import * as db from '../db.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import XLSX from 'xlsx-js-style';
-import bcrypt from 'bcrypt';
 import logger from '../utils/logger.js';
 import { logActivity } from '../services/loggerService.js';
 import { randomUUID } from 'crypto';
@@ -46,20 +45,6 @@ const parseCSV = (csvText) => {
 // -------------------------------------------------------------
 // TEMPLATES DOWNLOADS (CSV)
 // -------------------------------------------------------------
-
-export const getStudentsTemplate = async (req, res) => {
-  if (req.user?.id) {
-    await logActivity({
-      userId: req.user.id,
-      action: 'DOWNLOAD_STUDENTS_TEMPLATE',
-      entityType: 'upload',
-      details: { format: 'csv' }
-    });
-  }
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=students_template.csv");
-  res.send("name,email,branch,year,section,degree,department_name,roll_no\n");
-};
 
 export const getFacultyTemplate = async (req, res) => {
   if (req.user?.id) {
@@ -317,71 +302,6 @@ export const exportTimetable = async (req, res) => {
 // IMPORTS (CSV) — async fire-and-forget with job polling
 // -------------------------------------------------------------
 
-const runStudentsImport = async (jobId, csvContent, userId) => {
-  try {
-    const rows = parseCSV(csvContent);
-    const processedRows = [];
-    const batchSize = 10;
-    for (let i = 0; i < rows.length; i += batchSize) {
-      const chunk = rows.slice(i, i + batchSize);
-      await Promise.all(chunk.map(async (row) => {
-        if (!row.email) return;
-        let year = parseInt(row.year);
-        if (isNaN(year) || year < 1 || year > 5) year = 1;
-        let section = parseInt(row.section);
-        if (isNaN(section) || section < 1 || section > 15) section = 1;
-        let password = row.password;
-        if (!password) {
-          const sanitizedName = (row.name || '').toLowerCase().replace(/\s+/g, '');
-          const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-          password = `${sanitizedName}${randomSuffix}`;
-        }
-        const hashedPassword = await bcrypt.hash(password, 10);
-        processedRows.push({
-          name: row.name || '', email: row.email.toLowerCase(), password: hashedPassword,
-          branch: row.branch || '', year, section, degree: row.degree || '',
-          department_name: row.department_name || '', roll_no: row.roll_no || ''
-        });
-      }));
-    }
-    await db.runInTransaction(async (client) => {
-      const chunkSize = 500;
-      for (let i = 0; i < processedRows.length; i += chunkSize) {
-        const chunk = processedRows.slice(i, i + chunkSize);
-        const values = [];
-        const placeholders = [];
-        let idx = 1;
-        for (const row of chunk) {
-          placeholders.push(`($${idx},$${idx+1},$${idx+2},'VIEWER',$${idx+3},$${idx+4},$${idx+5},$${idx+6},$${idx+7},$${idx+8})`);
-          values.push(row.name, row.email, row.password, row.branch, row.year, row.section, row.degree, row.department_name, row.roll_no);
-          idx += 9;
-        }
-        await client.query(`
-          INSERT INTO users (name, email, password, role, branch, year, section, degree, department_name, roll_no)
-          VALUES ${placeholders.join(',')}
-          ON CONFLICT (email) DO UPDATE SET
-            name=EXCLUDED.name, branch=EXCLUDED.branch, year=EXCLUDED.year,
-            section=EXCLUDED.section, degree=EXCLUDED.degree,
-            department_name=EXCLUDED.department_name, roll_no=EXCLUDED.roll_no
-        `, values);
-      }
-      if (userId) await logActivity({ userId, action: 'IMPORT_STUDENTS_CSV', entityType: 'upload', details: { recordCount: rows.length } }, client);
-    });
-    jobStore.set(jobId, { status: 'completed', message: `Successfully imported ${rows.length} student records` });
-  } catch (err) {
-    logger.error('Failed to import students CSV', err);
-    jobStore.set(jobId, { status: 'failed', error: err.message || 'Import failed' });
-  }
-};
-
-export const importStudents = async (req, res) => {
-  const csvContent = req.body.csvContent;
-  if (!csvContent) return res.status(400).json({ error: 'Missing csvContent field' });
-  const jobId = randomUUID();
-  jobStore.set(jobId, { status: 'processing' });
-  res.status(202).json({ jobId, status: 'processing' });
-  runStudentsImport(jobId, csvContent, req.user?.id);
-};
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

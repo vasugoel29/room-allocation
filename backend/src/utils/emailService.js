@@ -166,20 +166,6 @@ export function notifyBookingCancelled({ userEmail, userName, roomName, date, ti
   return sendEmail(userEmail, `Booking Cancelled — Room ${roomName}`, html);
 }
 
-/**
- * Admin approves a faculty account → email to faculty
- */
-export function notifyFacultyApproved({ facultyEmail, facultyName }) {
-  const html = wrap(`
-    <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#1e1b4b;">Account Activated</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#64748b;">Great news, Prof. ${facultyName}! Your CRAS account has been approved by an administrator.</p>
-    <div style="background:#f0fdf4;border-radius:16px;padding:20px;margin-bottom:24px;text-align:center;">
-      <p style="margin:0;font-size:18px;font-weight:800;color:#16a34a;">Your account is now active ✓</p>
-    </div>
-    <p style="margin:0;font-size:13px;color:#64748b;">You can now log in to the Faculty Portal to manage booking requests from students.</p>
-  `);
-  return sendEmail(facultyEmail, 'Your CRAS Account Has Been Approved', html);
-}
 
 /**
  * Promotion request result → email to student
@@ -207,25 +193,3 @@ export function notifyPromotionResult({ userEmail, userName, status, adminCommen
   return sendEmail(userEmail, `Promotion Request ${statusLabel}`, html);
 }
 
-/**
- * Password reset link → email to user
- */
-export function sendPasswordResetEmail({ userEmail, userName, resetLink }) {
-  const html = wrap(`
-    <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#1e1b4b;">Password Reset</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#64748b;">Hi ${userName}, we received a request to reset your password. Click the button below to set a new one.</p>
-    <div style="text-align:center;margin-bottom:24px;">
-      <a href="${resetLink}" style="display:inline-block;background:linear-gradient(135deg,#5D5FEF,#7071AF);color:#ffffff;padding:14px 40px;border-radius:14px;font-size:13px;font-weight:800;text-decoration:none;text-transform:uppercase;letter-spacing:1.5px;">
-        Reset Password
-      </a>
-    </div>
-    <p style="margin:0 0 8px;font-size:12px;color:#94a3b8;">Or paste this link in your browser:</p>
-    <p style="margin:0 0 20px;font-size:12px;color:#5D5FEF;word-break:break-all;">${resetLink}</p>
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#fef2f2;border-radius:12px;padding:16px;">
-      <tr><td>
-        <p style="margin:0;font-size:12px;color:#dc2626;font-weight:600;">⚠ This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-      </td></tr>
-    </table>
-  `);
-  return sendEmail(userEmail, 'Reset Your CRAS Password', html);
-}

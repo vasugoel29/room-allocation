@@ -10,7 +10,6 @@ const formatLabel = (value) => String(value || '')
 
 const AdminUploads = () => {
     const [polls, setPolls] = useState({
-        students: INITIAL_POLL,
         faculty: INITIAL_POLL,
         timetable: INITIAL_POLL,
     });
@@ -64,7 +63,7 @@ const AdminUploads = () => {
                 if (result.status === 'completed') {
                     clearInterval(intervals.current[type]);
                     delete intervals.current[type];
-                    setPolls(prev => ({ ...prev, [type]: { jobId, status: 'completed', message: result.message } }));
+                    setPolls(prev => ({ ...prev, [type]: { jobId, status: 'completed', message: result.message, skipped: result.skipped || [] } }));
                     toast.success(result.message || `${formatLabel(type)} Imported Successfully`);
                 } else if (result.status === 'failed' || result.status === 'not_found') {
                     clearInterval(intervals.current[type]);
@@ -128,11 +127,26 @@ const AdminUploads = () => {
         }
         if (poll.status === 'completed') {
             return (
-                <div className="mt-3 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-[10px] capitalize font-extrabold tracking-widest text-green-400">
-                        <CheckCircle size={12} /> Done
+                <div className="mt-3 space-y-2" data-testid={`${type}-import-result`}>
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 text-[10px] capitalize font-extrabold tracking-widest text-green-400">
+                            <CheckCircle size={12} /> Done
+                        </div>
+                        <button onClick={() => clearPoll(type)} className="text-[9px] capitalize tracking-widest text-text-secondary hover:text-text-primary font-bold">Dismiss</button>
                     </div>
-                    <button onClick={() => clearPoll(type)} className="text-[9px] capitalize tracking-widest text-text-secondary hover:text-text-primary font-bold">Dismiss</button>
+                    {poll.message && <p className="text-[11px] font-bold text-text-primary">{poll.message}</p>}
+                    {poll.skipped?.length > 0 && (
+                        <div className="rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+                            <p className="text-[10px] font-black capitalize tracking-widest text-amber-600 mb-1">Skipped rows</p>
+                            <ul className="space-y-0.5 max-h-40 overflow-y-auto">
+                                {poll.skipped.map(row => (
+                                    <li key={row.line} className="text-[11px] font-medium text-text-secondary">
+                                        Line {row.line}: {row.reason}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -166,33 +180,16 @@ const AdminUploads = () => {
                             <div className="bg-primary/20 p-4 rounded-2xl text-primary"><User size={28} /></div>
                             <div>
                                 <h3 className="text-lg font-extrabold text-text-primary capitalize tracking-tight font-display">Students Data</h3>
-                                <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40">Roles &amp; Profiles</p>
+                                <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40">Export Only</p>
                             </div>
                         </div>
                         <p className="text-sm text-text-secondary leading-relaxed opacity-75 mb-6 font-medium">
-                            Import or export bulk student viewer profiles with custom properties (departments, branches, roll no, degree).
+                            Export the students known to CRAS. Student accounts and academic details come from the institutional directory, so there is no student import.
                         </p>
                     </div>
-                    <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
-                            <button onClick={() => handleDownloadTemplate('students')} className="bg-tonal-secondary/15 text-text-primary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-tonal-secondary/25 active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/[0.02] shadow-ambient">
-                                <Download size={14} className="text-secondary" /> Template
-                            </button>
-                            <button onClick={() => handleExportXLSX('students')} className="bg-tonal-secondary/15 text-text-primary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-tonal-secondary/25 active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/[0.02] shadow-ambient">
-                                <FileSpreadsheet size={14} className="text-secondary" /> Export
-                            </button>
-                        </div>
-                        <label className={`relative flex flex-col items-center justify-center w-full py-5 bg-primary/5 hover:bg-primary/10 border border-dashed border-primary/25 rounded-2xl cursor-pointer transition-all group ${isProcessing('students') ? 'opacity-50 pointer-events-none' : ''}`}>
-                            <div className="flex flex-col items-center justify-center gap-2">
-                                <UploadCloud size={24} className={`text-primary transition-transform group-hover:-translate-y-0.5 duration-300 ${isProcessing('students') ? 'animate-bounce' : ''}`} />
-                                <span className="text-[10px] text-text-primary capitalize font-extrabold tracking-widest">
-                                    {isProcessing('students') ? 'Uploading...' : 'Upload Students CSV'}
-                                </span>
-                            </div>
-                            <input type="file" accept=".csv" className="hidden" onChange={(e) => handleUploadCSV('students', e)} disabled={isProcessing('students')} />
-                        </label>
-                        <UploadStatus type="students" />
-                    </div>
+                    <button onClick={() => handleExportXLSX('students')} aria-label="Export students" className="w-full bg-tonal-secondary/15 text-text-primary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-tonal-secondary/25 active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/[0.02] shadow-ambient">
+                        <FileSpreadsheet size={14} className="text-secondary" /> Export
+                    </button>
                 </div>
 
                 {/* Faculty */}
@@ -202,11 +199,11 @@ const AdminUploads = () => {
                             <div className="bg-tertiary/20 p-4 rounded-2xl text-tertiary"><Shield size={28} /></div>
                             <div>
                                 <h3 className="text-lg font-extrabold text-text-primary capitalize tracking-tight font-display">Faculty Data</h3>
-                                <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40">Instructors &amp; Leads</p>
+                                <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40">CRAS Faculty Directory</p>
                             </div>
                         </div>
                         <p className="text-sm text-text-secondary leading-relaxed opacity-75 mb-6 font-medium">
-                            Manage all faculty and instructors by uploading the complete department mapping.
+                            Maintain the faculty directory used for booking approvals and timetables. Columns: <code className="font-mono text-xs">name,email,department_name,status</code>. Rows are added or updated by email; <code className="font-mono text-xs">status=inactive</code> deactivates an entry. No sign-in accounts are created &mdash; faculty sign in with Google.
                         </p>
                     </div>
                     <div className="space-y-4">
@@ -214,7 +211,7 @@ const AdminUploads = () => {
                             <button onClick={() => handleDownloadTemplate('faculty')} className="bg-tonal-secondary/15 text-text-primary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-tonal-secondary/25 active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/[0.02] shadow-ambient">
                                 <Download size={14} className="text-secondary" /> Template
                             </button>
-                            <button onClick={() => handleExportXLSX('faculty')} className="bg-tonal-secondary/15 text-text-primary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-tonal-secondary/25 active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/[0.02] shadow-ambient">
+                            <button onClick={() => handleExportXLSX('faculty')} aria-label="Export faculty" className="bg-tonal-secondary/15 text-text-primary px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-tonal-secondary/25 active:scale-95 transition-all flex items-center justify-center gap-2 border border-white/[0.02] shadow-ambient">
                                 <FileSpreadsheet size={14} className="text-secondary" /> Export
                             </button>
                         </div>

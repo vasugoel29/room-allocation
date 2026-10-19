@@ -68,7 +68,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Refresh role/permissions/profile from the server once per load, so changes made in the ACL
-  // (promotion, revocation) reach the UI without signing out and in again.
+  // (a role change or revocation) reach the UI without signing out and in again.
   const userId = user?.id;
   useEffect(() => {
     if (!userId || !localStorage.getItem('token')) return;

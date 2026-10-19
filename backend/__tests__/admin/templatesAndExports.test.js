@@ -1,4 +1,4 @@
-// CSV templates (GET /api/admin/uploads/template/*) and XLSX user exports (GET /api/admin/uploads/export/{students,faculty}).
+// CSV templates (GET /api/admin/uploads/template/{faculty,timetable}; the students template was removed) and XLSX user exports (GET /api/admin/uploads/export/{students,faculty}).
 import request from 'supertest';
 import XLSX from 'xlsx-js-style';
 import app from '../../src/server.js';
@@ -14,7 +14,6 @@ afterAll(closeDb);
 
 describe('CSV templates', () => {
   test.each([
-    ['students', 'name,email,branch,year,section,degree,department_name,roll_no\n', 'DOWNLOAD_STUDENTS_TEMPLATE'],
     ['faculty', 'name,email,department_name,status\n', 'DOWNLOAD_FACULTY_TEMPLATE'],
     ['timetable', 'faculty_name,semester,day_of_week,slot_time,content,is_occupied,room_id\n', 'DOWNLOAD_TIMETABLE_TEMPLATE'],
   ])('%s template: exact header row, CSV attachment, audit entry', async (kind, body, action) => {

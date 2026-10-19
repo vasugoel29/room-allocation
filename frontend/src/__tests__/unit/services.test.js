@@ -4,7 +4,6 @@ import { bookingService } from '../../services/bookingService';
 import { roomService } from '../../services/roomService';
 import { adminService } from '../../services/adminService';
 import { facultyService } from '../../services/facultyService';
-import { promotionService } from '../../services/promotionService';
 import { jsonResponse } from '../utils/http';
 
 let fetchMock;
@@ -24,15 +23,10 @@ const failWith = (status, body) => fetchMock.mockResolvedValueOnce(jsonResponse(
 
 describe('authService', () => {
   it.each([
-    ['login', () => authService.login('a@nsut.ac.in', 'pw'), 'POST', '/api/auth/login', { email: 'a@nsut.ac.in', password: 'pw' }],
-    ['signup', () => authService.signup({ name: 'n' }), 'POST', '/api/auth/signup', { name: 'n' }],
+    ['googleLogin', () => authService.googleLogin('cred'), 'POST', '/api/auth/google', { credential: 'cred' }],
+    ['devLogin', () => authService.devLogin('a@nsut.ac.in'), 'POST', '/api/auth/dev-login', { email: 'a@nsut.ac.in' }],
     ['logout', () => authService.logout(), 'POST', '/api/auth/logout', undefined],
     ['getFaculties', () => authService.getFaculties(), 'GET', '/api/auth/faculties', undefined],
-    ['updateUser', () => authService.updateUser(4, { name: 'x' }), 'PATCH', '/api/auth/users/4', { name: 'x' }],
-    ['createUser', () => authService.createUser({ role: 'VIEWER' }), 'POST', '/api/auth/users', { role: 'VIEWER' }],
-    ['forgotPassword', () => authService.forgotPassword('a@nsut.ac.in'), 'POST', '/api/auth/forgot-password', { email: 'a@nsut.ac.in' }],
-    ['resetPassword', () => authService.resetPassword('tok', 'secret1'), 'POST', '/api/auth/reset-password', { token: 'tok', password: 'secret1' }],
-    ['verifyStudent', () => authService.verifyStudent('2021UIT1'), 'GET', '/api/auth/verify-student/2021UIT1', undefined],
   ])('%s -> %s %s', async (_n, call, method, url, body) => {
     await call();
     expect(last()).toEqual({ method, url, body });
@@ -46,18 +40,30 @@ describe('authService', () => {
     expect(last().url).toBe('/api/auth/users');
   });
 
-  it('login surfaces server error message, falls back to generic', async () => {
-    failWith(401, { error: 'Invalid credentials' });
-    await expect(authService.login('a', 'b')).rejects.toThrow('Invalid credentials');
+  it('googleLogin / devLogin surface the server error, fall back to generic', async () => {
+    failWith(403, { error: 'Not in the college directory' });
+    await expect(authService.googleLogin('c')).rejects.toThrow('Not in the college directory');
     failWith(400, {});
-    await expect(authService.login('a', 'b')).rejects.toThrow('Login failed');
+    await expect(authService.googleLogin('c')).rejects.toThrow('Google sign-in failed');
+    failWith(403, { error: 'Account deactivated' });
+    await expect(authService.devLogin('a')).rejects.toThrow('Account deactivated');
+    fetchMock.mockResolvedValueOnce(new Response('oops', { status: 500 }));
+    await expect(authService.devLogin('a')).rejects.toThrow('Dev sign-in failed');
   });
 
-  it('verifyStudent returns null on 404, throws otherwise', async () => {
-    failWith(404, {});
-    expect(await authService.verifyStudent('x')).toBeNull();
-    failWith(500, { error: 'boom' });
-    await expect(authService.verifyStudent('x')).rejects.toThrow('boom');
+  it('me unwraps {user}', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ user: { id: 3 } }));
+    expect(await authService.me()).toEqual({ id: 3 });
+    expect(last()).toEqual({ method: 'GET', url: '/api/auth/me', body: undefined });
+  });
+
+  it('no local-account functions remain (accounts live in the college ACL)', () => {
+    for (const fn of ['login', 'signup', 'forgotPassword', 'resetPassword', 'verifyStudent', 'createUser', 'updateUser']) {
+      expect(authService[fn]).toBeUndefined();
+    }
+    for (const fn of ['createUser', 'updateUser', 'approveUser', 'getPromotions']) {
+      expect(adminService[fn]).toBeUndefined();
+    }
   });
 });
 
@@ -136,33 +142,26 @@ describe('roomService', () => {
 });
 
 describe('adminService', () => {
-  it('getAdminData fetches bookings + promotions in parallel and unwraps', async () => {
-    fetchMock
-      .mockResolvedValueOnce(jsonResponse({ data: [{ id: 1 }], meta: { page: 1, totalPages: 3 } }))
-      .mockResolvedValueOnce(jsonResponse({ data: [{ id: 9 }] }));
+  it('getAdminData fetches only the bookings page (no promotions request) and unwraps', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 1 }], meta: { page: 1, totalPages: 3 } }));
     const out = await adminService.getAdminData('S', 'E', 2, 50);
     expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
       '/api/bookings/admin/all?start_date=S&end_date=E&page=2&limit=50',
-      '/api/promotions',
     ]);
-    expect(out).toEqual({ bookings: [{ id: 1 }], bookingsMeta: { page: 1, totalPages: 3 }, promotions: [{ id: 9 }] });
+    expect(out).toEqual({ bookings: [{ id: 1 }], bookingsMeta: { page: 1, totalPages: 3 } });
   });
 
-  it('getAdminData throws if either request fails', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse([])).mockResolvedValueOnce(jsonResponse({}, 500));
+  it('getAdminData throws if the request fails', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({}, 500));
     await expect(adminService.getAdminData('S', 'E')).rejects.toThrow('Failed to fetch admin data');
   });
 
   it.each([
-    ['getPromotions', () => adminService.getPromotions(), 'GET', '/api/promotions?page=1&limit=10', undefined],
     ['getUsers', () => adminService.getUsers(3), 'GET', '/api/auth/users?page=3&limit=20&search=&role=', undefined],
-    ['createUser', () => adminService.createUser({ role: 'ADMIN' }), 'POST', '/api/auth/users', { role: 'ADMIN' }],
-    ['updateUser', () => adminService.updateUser(5, { name: 'n' }), 'PATCH', '/api/auth/users/5', { name: 'n' }],
     ['getRoomStatuses', () => adminService.getRoomStatuses('2026-10-20', 9), 'GET', '/api/rooms/admin/status?date=2026-10-20&slot=9', undefined],
     ['getDepartments', () => adminService.getDepartments({ q: 'IT', x: null }), 'GET', '/api/departments?q=IT', undefined],
     ['getBranches', () => adminService.getBranches({ department_id: 2 }), 'GET', '/api/branches?department_id=2', undefined],
-    ['approveUser', () => adminService.approveUser(5), 'PATCH', '/api/auth/approve-user/5', undefined],
-    ['deleteUser', () => adminService.deleteUser(5), 'DELETE', '/api/auth/users/5', undefined],
+    ['deactivateUser', () => adminService.deactivateUser(5), 'DELETE', '/api/auth/users/5', undefined],
     ['quickBook', () => adminService.quickBook({ room_name: 'R', date: 'D', slot: 9 }), 'POST', '/api/bookings/admin/quick', { room_name: 'R', date: 'D', slot: 9 }],
     ['fetchAuditLogs', () => adminService.fetchAuditLogs(2, 'x'), 'GET', '/api/admin/audit-logs?page=2&search=x', undefined],
     ['fetchAnalytics', () => adminService.fetchAnalytics(7), 'GET', '/api/admin/analytics?days=7', undefined],
@@ -207,21 +206,20 @@ describe('adminService', () => {
     expect(await adminService.pollJobStatus('gone')).toEqual({ status: 'not_found' });
   });
 
-  it('createUser/quickBook propagate server error text', async () => {
-    failWith(400, { error: 'Email exists' });
-    await expect(adminService.createUser({})).rejects.toThrow('Email exists');
+  it('deactivateUser/quickBook propagate server error text', async () => {
+    failWith(400, { error: 'You cannot deactivate yourself' });
+    await expect(adminService.deactivateUser(1)).rejects.toThrow('You cannot deactivate yourself');
+    failWith(500, {});
+    await expect(adminService.deactivateUser(1)).rejects.toThrow('Deactivation failed');
     failWith(400, { error: 'room_name, date and slot are required' });
     await expect(adminService.quickBook({})).rejects.toThrow('room_name, date and slot are required');
   });
 });
 
-describe('facultyService / promotionService', () => {
+describe('facultyService', () => {
   it.each([
     ['getPendingRequests', () => facultyService.getPendingRequests(), 'GET', '/api/faculty/pending', undefined],
     ['handleRequest', () => facultyService.handleRequest(4, 'approve'), 'PATCH', '/api/faculty/4/approve', undefined],
-    ['requestPromotion', () => promotionService.requestPromotion('I am CR'), 'POST', '/api/promotions', { reason: 'I am CR' }],
-    ['handlePromotion', () => promotionService.handlePromotion(2, { status: 'APPROVED' }), 'PATCH', '/api/promotions/2', { status: 'APPROVED' }],
-    ['getMyRequest', () => promotionService.getMyRequest(), 'GET', '/api/promotions/me', undefined],
   ])('%s', async (_n, call, method, url, body) => {
     await call();
     expect(last()).toEqual({ method, url, body });

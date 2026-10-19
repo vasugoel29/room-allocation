@@ -1,4 +1,4 @@
-import { test, expect, signIn, toast, tag } from './helpers.js';
+import { test, expect, signIn } from './helpers.js';
 
 test.describe('Route guards & navigation', () => {
   for (const role of ['VIEWER', 'STUDENT_REP', 'FACULTY']) {
@@ -19,7 +19,8 @@ test.describe('Route guards & navigation', () => {
     await expect(page).toHaveURL(/\/calendar$/);
   });
 
-  for (const path of ['/calendar', '/admin', '/faculty', '/bookings', '/profile', '/timetable', '/promotion', '/nope']) {
+  // /promotion, /forgot-password and /reset-password were removed with local accounts: plain unknown routes now.
+  for (const path of ['/calendar', '/admin', '/faculty', '/bookings', '/profile', '/timetable', '/promotion', '/forgot-password', '/reset-password', '/nope']) {
     test(`logged-out visit to ${path} goes to /login`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(/\/login$/);
@@ -34,8 +35,10 @@ test.describe('Route guards & navigation', () => {
     await expect(page).toHaveURL(/\/faculty$/);
     await signIn(page, request, await seed.user({ role: 'STUDENT_REP' }), '/');
     await expect(page).toHaveURL(/\/calendar$/);
-    await page.goto('/does-not-exist');
-    await expect(page).toHaveURL(/\/calendar$/);
+    for (const removed of ['/does-not-exist', '/promotion', '/forgot-password', '/reset-password?token=x']) {
+      await page.goto(removed);
+      await expect(page).toHaveURL(/\/calendar$/);
+    }
   });
 
   test('sidebar shows role-appropriate links', async ({ page, request, seed }) => {
@@ -58,43 +61,24 @@ test.describe('Route guards & navigation', () => {
     await expect(nav('Admin Console')).toHaveCount(0);
   });
 
-  async function editProfileName(page, user, newName) {
-    await page.getByRole('button', { name: /edit profile/i }).click();
-    await page.getByPlaceholder('Full Name').fill(newName);
-    const [resp] = await Promise.all([
-      page.waitForResponse((r) => r.url().endsWith(`/api/auth/users/${user.id}`) && r.request().method() === 'PATCH'),
-      page.getByRole('button', { name: /^save$/i }).click(),
-    ]);
-    return resp;
-  }
-
-  test('[FE-18] profile edits are saved and survive a reload', async ({ page, request, seed }) => {
-    // Regression: the app now refreshes the profile from /auth/me on load.
-    const rep = await seed.user({ role: 'STUDENT_REP', branch: 'CSE', semester: 4, year: 2, section: 1, group_name: 1 });
-    const newName = `Renamed Rep ${tag()}`;
+  test('profile is read-only and shows the directory (ACL) details', async ({ page, request, seed }) => {
+    const rep = await seed.user({ role: 'STUDENT_REP', branch: 'CSE', semester: 4, year: 2, section: 3, group_name: 1 });
+    const writes = [];
+    page.on('request', (r) => { if (r.url().includes('/api/auth/users') && r.method() !== 'GET') writes.push(`${r.method()} ${r.url()}`); });
     await signIn(page, request, rep, '/profile');
-    const resp = await editProfileName(page, rep, newName);
-    expect(resp.status(), await resp.text()).toBe(200);
-    await expect(toast(page, /profile updated successfully/i)).toBeVisible();
-    await expect(page.getByRole('heading', { name: newName })).toBeVisible();
-    expect((await seed.one('SELECT name FROM users WHERE id = $1', [rep.id])).name).toBe(newName);
 
-    await page.reload();
-    await expect(page.getByRole('heading', { name: newName }), 'name after reload').toBeVisible({ timeout: 5000 });
-  });
+    await expect(page.getByRole('heading', { name: rep.name })).toBeVisible();
+    await expect(page.getByText(rep.email)).toBeVisible();
+    await expect(page.getByText('CSE', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Semester 4\s*· Section 3\s*· Group 1/)).toBeVisible();
+    await expect(page.getByText(/come from the institutional directory/i)).toBeVisible();
 
-  test('profile save works for a student with no semester/section/group on file', async ({ page, request, seed }) => {
-    // [NEW-E2E-2] Profile.jsx sends '' for empty semester/section/group_name; userRepository.update passes
-    // them straight into INTEGER columns -> 500 "Failed to update user". Any student without those fields
-    // (e.g. CSV-imported, see OPS-09) cannot edit their profile at all.
-    test.fail();
-    const rep = await seed.user({ role: 'STUDENT_REP' });
-    const newName = `Renamed Rep ${tag()}`;
-    await signIn(page, request, rep, '/profile');
-    const resp = await editProfileName(page, rep, newName);
-    expect(resp.status(), `${resp.request().postData()} -> ${await resp.text()}`).toBe(200);
-    await expect(toast(page, /profile updated successfully/i)).toBeVisible();
-    expect((await seed.one('SELECT name FROM users WHERE id = $1', [rep.id])).name).toBe(newName);
+    await expect(page.getByRole('button', { name: /edit profile/i })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^save$/i })).toHaveCount(0);
+    await expect(page.locator('main input, main select, main textarea')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /logout securely/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Toggle Theme' })).toBeVisible();
+    expect(writes).toEqual([]);
   });
 
   test('backend health failures show the Connection Error screen; Retry recovers', async ({ page, request, seed }) => {

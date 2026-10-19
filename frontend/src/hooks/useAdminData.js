@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 
 export function useAdminData(filterRange) {
   const [bookings, setBookings] = useState([]);
-  const [promotions, setPromotions] = useState([]);
   const [bookingsMeta, setBookingsMeta] = useState({ page: 1, totalPages: 1 });
   const [loading, setLoading] = useState(true);
 
@@ -16,14 +15,9 @@ export function useAdminData(filterRange) {
       const range = filterRange === 'day' ? getTodayRange(now) : getWeekRange(now);
       const { start: startDate, end: endDate } = formatRangeToISO(range);
 
-      const { 
-        bookings: bookingsData, 
-        promotions: promotionsData,
-        bookingsMeta: meta
-      } = await adminService.getAdminData(startDate, endDate, page);
-      
+      const { bookings: bookingsData, bookingsMeta: meta } = await adminService.getAdminData(startDate, endDate, page);
+
       setBookings(bookingsData);
-      setPromotions(promotionsData);
       if (meta) setBookingsMeta(meta);
     } catch (err) {
       console.error('Failed to fetch admin data', err);
@@ -38,5 +32,5 @@ export function useAdminData(filterRange) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterRange]);
 
-  return { bookings, promotions, bookingsMeta, loading, fetchData };
+  return { bookings, bookingsMeta, loading, fetchData };
 }

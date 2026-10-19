@@ -47,7 +47,7 @@ test.describe('Mobile booking & history', () => {
     await expect(page).toHaveURL(/\/calendar$/);
 
     const b = await seed.one('SELECT * FROM bookings WHERE room_id = $1 AND created_by = $2', [room.id, rep.id]);
-    expect(b).toMatchObject({ status: 'PENDING', faculty_id: faculty.id, purpose });
+    expect(b).toMatchObject({ status: 'PENDING', faculty_id: faculty.faculty_id, purpose });
     expect(new Date(b.start_time).toISOString()).toBe(slot.start);
   });
 

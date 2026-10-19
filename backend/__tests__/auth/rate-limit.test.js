@@ -163,35 +163,30 @@ describe('limiters mounted on the app', () => {
     nowSpy = jest.spyOn(Date, 'now').mockImplementation(() => clock);
   });
 
-  test('login is guarded by the per-account limiter (burst of 20, then 429 with Retry-After)', async () => {
+  // dev-login for an email that is not in the (mock) ACL answers 403, so no session is created.
+  test('dev-login is guarded by the per-account limiter (burst of 20, then 429 with Retry-After)', async () => {
     const email = `ratelimited.${Date.now()}@nsut.ac.in`;
     const statuses = [];
     for (let i = 0; i < 20; i++) {
-      statuses.push((await request(app).post('/api/auth/login').send({ email, password: 'wrong' })).status);
+      statuses.push((await request(app).post('/api/auth/dev-login').send({ email })).status);
     }
-    expect(statuses.every((s) => s === 401)).toBe(true);
-    const blocked = await request(app).post('/api/auth/login').send({ email: email.toUpperCase(), password: 'wrong' });
+    expect(statuses.every((s) => s === 403)).toBe(true);
+    const blocked = await request(app).post('/api/auth/dev-login').send({ email: email.toUpperCase() });
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers['retry-after'])).toBeGreaterThanOrEqual(1);
     expect(blocked.body.error).toMatch(/Too many requests/);
     // a different account from the same IP is unaffected
-    const other = await request(app).post('/api/auth/login').send({ email: `other.${Date.now()}@nsut.ac.in`, password: 'wrong' });
-    expect(other.status).toBe(401);
+    const other = await request(app).post('/api/auth/dev-login').send({ email: `other.${Date.now()}@nsut.ac.in` });
+    expect(other.status).toBe(403);
     // the IP and global API limiters also saw these requests
     expect(authIpLimiter.size()).toBeGreaterThanOrEqual(1);
     expect(apiLimiter.size()).toBeGreaterThanOrEqual(1);
   });
 
-  test('signup, forgot-password and reset-password pass through the auth limiters', async () => {
-    for (const [p, body] of [
-      ['/api/auth/forgot-password', { email: `rl.forgot.${Date.now()}@nsut.ac.in` }],
-      ['/api/auth/reset-password', { email: `rl.reset.${Date.now()}@nsut.ac.in` }],
-      ['/api/auth/signup', { email: `rl.signup.${Date.now()}@nsut.ac.in` }],
-    ]) {
-      authIpLimiter.reset(); authAccountLimiter.reset();
-      await request(app).post(p).send(body);
-      expect({ p, ip: authIpLimiter.size(), acct: authAccountLimiter.size() }).toEqual({ p, ip: 1, acct: 1 });
-    }
+  test('POST /api/auth/google passes through the IP auth limiter (no email in the body → no account key)', async () => {
+    await request(app).post('/api/auth/google').send({ credential: 'not-a-google-token' });
+    expect(authIpLimiter.size()).toBe(1);
+    expect(authAccountLimiter.size()).toBe(0);
   });
 
   test('logout is not behind the auth limiters', async () => {
@@ -202,7 +197,7 @@ describe('limiters mounted on the app', () => {
 
   test('with RATE_LIMIT_DISABLED=true the limiters record nothing', async () => {
     process.env.RATE_LIMIT_DISABLED = 'true';
-    await request(app).post('/api/auth/login').send({ email: 'x@nsut.ac.in', password: 'y' });
+    await request(app).post('/api/auth/dev-login').send({ email: 'x@nsut.ac.in' });
     expect(apiLimiter.size() + authIpLimiter.size() + authAccountLimiter.size()).toBe(0);
   });
 });

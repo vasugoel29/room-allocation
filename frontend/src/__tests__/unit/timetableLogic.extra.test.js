@@ -12,7 +12,7 @@ const at = (date, h) => new Date(Date.UTC(...date.split('-').map((n, i) => (i ==
 beforeAll(() => { vi.spyOn(console, 'log').mockImplementation(() => {}); });
 
 const student = { id: 7, role: 'STUDENT_REP', branch: 'IT', section: 2, semester: 5 };
-const faculty = { id: 21, role: 'FACULTY' };
+const faculty = { id: 21, faculty_id: 500021, role: 'FACULTY' };
 
 const slot = (over = {}) => ({
   day_of_week: 'Tuesday', slot_time: '09:00-10:00', subject_name: 'DBMS', room_name: 'R-101',
@@ -84,7 +84,9 @@ describe('getMergedSchedule', () => {
   it('faculty: uses facultyTimetableData, own/created bookings, and drops cancelled overrides', () => {
     const fData = { Tue: [{ slot_time: '10:00-11:00', subject_name: 'AI', room_name: 'R-1', department: 'IT', semester: 5, section: 1 }, { slot_time: '11:00-12:00', content: 'Lab' }] };
     const bookings = [
-      { id: 5, faculty_id: 21, start_time: at(TUE, 13), end_time: at(TUE, 14), status: 'ACTIVE', room_name: 'R-9' },
+      { id: 5, faculty_id: 500021, start_time: at(TUE, 13), end_time: at(TUE, 14), status: 'ACTIVE', room_name: 'R-9' },
+      // faculty_id equal to the user id (not the directory id) must not count as "mine"
+      { id: 7, faculty_id: 21, start_time: at(TUE, 16), end_time: at(TUE, 17), status: 'ACTIVE', room_name: 'R-8' },
       { id: 6, faculty_id: 99, created_by: 99, start_time: at(TUE, 15), end_time: at(TUE, 16), status: 'ACTIVE' },
     ];
     const overrides = [{ date: '2026-10-20T00:00:00.000Z', hour: 11, is_cancelled: true }];

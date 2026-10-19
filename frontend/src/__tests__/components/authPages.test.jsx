@@ -3,8 +3,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Login from '../../pages/Login';
-import ForgotPassword from '../../pages/ForgotPassword';
-import ResetPassword from '../../pages/ResetPassword';
 import { renderWithContext, USERS } from '../utils/renderWithContext';
 import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
 
@@ -63,6 +61,7 @@ describe('Login', () => {
   });
 
   it('hides developer sign-in unless VITE_DEV_LOGIN=true', () => {
+    vi.stubEnv('VITE_DEV_LOGIN', 'false');
     renderWithContext(<Login />, { ctx: { user: null } });
     expect(screen.queryByLabelText(/developer sign-in/i)).toBeNull();
   });
@@ -89,94 +88,5 @@ describe('Login', () => {
     await user.click(screen.getByRole('button', { name: /dev sign in/i }));
     await waitFor(() => expect(ctx.setUser).toHaveBeenCalled());
     expect(localStorage.getItem('token')).toBeNull();
-  });
-});
-
-describe('ForgotPassword', () => {
-  const emailInput = () => screen.getByPlaceholderText('rollno@nsut.ac.in');
-
-  it('requires an NSUT email', async () => {
-    const f = installFetch([]);
-    const user = userEvent.setup();
-    renderWithContext(<ForgotPassword />);
-    await user.type(emailInput(), 'x@yahoo.com');
-    await user.click(screen.getByRole('button', { name: /send reset link/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Only NSUT emails');
-    expect(f).not.toHaveBeenCalled();
-  });
-
-  it('posts the email and shows the neutral confirmation', async () => {
-    const f = installFetch([['POST', '/api/auth/forgot-password', { message: 'ok' }]]);
-    const user = userEvent.setup();
-    renderWithContext(<ForgotPassword />);
-    await user.type(emailInput(), 'a@nsut.ac.in');
-    await user.click(screen.getByRole('button', { name: /send reset link/i }));
-    expect(await screen.findByText(/we've sent a password reset link/i)).toBeInTheDocument();
-    expect(screen.getByText('a@nsut.ac.in')).toBeInTheDocument();
-    expect(fetchCalls(f)[0]).toEqual(['POST', '/api/auth/forgot-password', { email: 'a@nsut.ac.in' }]);
-    expect(screen.queryByRole('button', { name: /send reset link/i })).toBeNull();
-  });
-
-  it('shows server errors', async () => {
-    installFetch([['POST', '/api/auth/forgot-password', () => jsonResponse({ error: 'Too many requests' }, 429)]]);
-    const user = userEvent.setup();
-    renderWithContext(<ForgotPassword />);
-    await user.type(emailInput(), 'a@nsut.ac.in');
-    await user.click(screen.getByRole('button', { name: /send reset link/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Too many requests');
-  });
-});
-
-describe('ResetPassword', () => {
-  const pw = () => screen.getAllByPlaceholderText('••••••••');
-
-  it('without ?token shows the invalid-link screen', () => {
-    renderWithContext(<ResetPassword />, { route: '/reset-password' });
-    expect(screen.getByText('Invalid Reset Link')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /request new link/i })).toHaveAttribute('href', '/forgot-password');
-  });
-
-  it('enforces min length 6 before mismatch, without calling the API', async () => {
-    const f = installFetch([]);
-    const user = userEvent.setup();
-    const { container } = renderWithContext(<ResetPassword />, { route: '/reset-password?token=abc' });
-    container.querySelector('form').noValidate = true; // bypass native minLength to reach JS validation
-    await user.type(pw()[0], '12345');
-    await user.type(pw()[1], '99999');
-    await user.click(screen.getByRole('button', { name: /reset password/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Password must be at least 6 characters');
-    expect(f).not.toHaveBeenCalled();
-  });
-
-  it('rejects mismatched passwords', async () => {
-    const f = installFetch([]);
-    const user = userEvent.setup();
-    renderWithContext(<ResetPassword />, { route: '/reset-password?token=abc' });
-    await user.type(pw()[0], 'secret12');
-    await user.type(pw()[1], 'secret13');
-    await user.click(screen.getByRole('button', { name: /reset password/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match');
-    expect(f).not.toHaveBeenCalled();
-  });
-
-  it('posts token + password and shows success', async () => {
-    const f = installFetch([['POST', '/api/auth/reset-password', { message: 'ok' }]]);
-    const user = userEvent.setup();
-    renderWithContext(<ResetPassword />, { route: '/reset-password?token=t%2Bk' });
-    await user.type(pw()[0], 'secret12');
-    await user.type(pw()[1], 'secret12');
-    await user.click(screen.getByRole('button', { name: /reset password/i }));
-    expect(await screen.findByText(/your password has been reset/i)).toBeInTheDocument();
-    expect(fetchCalls(f)[0]).toEqual(['POST', '/api/auth/reset-password', { token: 't+k', password: 'secret12' }]);
-  });
-
-  it('shows expired-token error from server', async () => {
-    installFetch([['POST', '/api/auth/reset-password', () => jsonResponse({ error: 'Invalid or expired token' }, 400)]]);
-    const user = userEvent.setup();
-    renderWithContext(<ResetPassword />, { route: '/reset-password?token=old' });
-    await user.type(pw()[0], 'secret12');
-    await user.type(pw()[1], 'secret12');
-    await user.click(screen.getByRole('button', { name: /reset password/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid or expired token');
   });
 });

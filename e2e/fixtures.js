@@ -1,25 +1,30 @@
 import { test as base, expect } from '@playwright/test';
 import pg from 'pg';
-import bcrypt from 'bcrypt';
 import { E2E_DB_URL, API_URL } from './env.mjs';
-
-export const PASSWORD = 'Password@123';
-const HASH = bcrypt.hashSync(PASSWORD, 4);
 
 let seq = 0;
 const uid = () => `${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-/** Thin data-seeding helper bound to the e2e database. */
+/**
+ * Thin data-seeding helper bound to the e2e database. Seeded users have no password: the e2e
+ * backend runs the ACL in mock mode backed by this users table (ACL_MOCK_SOURCE=db), so a seeded
+ * user is found by email at sign-in. After sign-in the server trusts the ACL snapshot
+ * (user_access) for the role, so changing `users.role` mid-test does not change what they can do.
+ */
 export class Seed {
   constructor(client) {
     this.db = client;
   }
 
+  /**
+   * A FACULTY user also gets their faculty-directory entry (faculties row, linked by user_id), as
+   * the faculty CSV import / ACL sync would create it; its id is returned as `faculty_id` — that is
+   * what bookings.faculty_id, transfers and class-cancellation requests reference.
+   */
   async user({ role = 'VIEWER', ...overrides } = {}) {
     const fields = {
       name: `E2E ${role.replace('_', ' ')} ${uid()}`,
       email: `e2e.${role.toLowerCase()}.${uid()}@nsut.ac.in`,
-      password: HASH,
       role,
       is_approved: true,
       ...overrides,
@@ -29,7 +34,15 @@ export class Seed {
       `INSERT INTO users (${cols.join(',')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(',')}) RETURNING *`,
       cols.map((c) => fields[c]),
     );
-    return rows[0];
+    const user = rows[0];
+    if (role === 'FACULTY') {
+      const { rows: [entry] } = await this.db.query(
+        `INSERT INTO faculties (name, email, department_name, user_id, is_active) VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
+        [user.name, user.email, user.department_name || null, user.id],
+      );
+      user.faculty_id = entry.id;
+    }
+    return user;
   }
 
   /** Rooms default to "5th Block" — the calendar's default building filter. */
@@ -90,9 +103,10 @@ export function nextWeekdaySlot(hour = 15, leadHours = 2) {
   throw new Error('no weekday slot');
 }
 
-export async function apiLogin(request, email, password = PASSWORD) {
-  const res = await request.post(`${API_URL}/auth/login`, { data: { email, password } });
-  expect(res.ok(), `login ${email}: ${res.status()} ${await res.text()}`).toBeTruthy();
+/** Signs in through developer sign-in (AUTH_DEV_LOGIN=true on the e2e backend); returns { token, user }. */
+export async function apiLogin(request, email) {
+  const res = await request.post(`${API_URL}/auth/dev-login`, { data: { email } });
+  expect(res.ok(), `dev sign-in ${email}: ${res.status()} ${await res.text()}`).toBeTruthy();
   return res.json();
 }
 

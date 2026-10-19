@@ -5,50 +5,18 @@ import api from '../utils/api';
  */
 export const adminService = {
   getAdminData: async (startDate, endDate, page = 1, limit = 20) => {
-    const [bookingsRes, promotionsRes] = await Promise.all([
-      api.get(`/bookings/admin/all?start_date=${startDate}&end_date=${endDate}&page=${page}&limit=${limit}`),
-      api.get('/promotions')
-    ]);
-    
-    if (!bookingsRes.ok || !promotionsRes.ok) throw new Error('Failed to fetch admin data');
-    
-    const bookingsResult = await bookingsRes.json();
-    const promotionsResult = await promotionsRes.json();
-    
+    const res = await api.get(`/bookings/admin/all?start_date=${startDate}&end_date=${endDate}&page=${page}&limit=${limit}`);
+    if (!res.ok) throw new Error('Failed to fetch admin data');
+    const result = await res.json();
     return {
-      bookings: bookingsResult.data || bookingsResult,
-      bookingsMeta: bookingsResult.meta || null,
-      promotions: promotionsResult.data || promotionsResult
+      bookings: result.data || result,
+      bookingsMeta: result.meta || null,
     };
-  },
-
-  getPromotions: async (page = 1, limit = 10) => {
-    const res = await api.get(`/promotions?page=${page}&limit=${limit}`);
-    if (!res.ok) throw new Error('Failed to fetch promotion requests');
-    return res.json();
   },
 
   getUsers: async (page = 1, limit = 20, search = '', role = '') => {
     const res = await api.get(`/auth/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&role=${encodeURIComponent(role)}`);
     if (!res.ok) throw new Error('Failed to fetch users');
-    return res.json();
-  },
-
-  createUser: async (data) => {
-    const res = await api.post('/auth/users', data);
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'User creation failed');
-    }
-    return res.json();
-  },
-
-  updateUser: async (id, data) => {
-    const res = await api.patch(`/auth/users/${id}`, data);
-    if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'User update failed');
-    }
     return res.json();
   },
 
@@ -80,15 +48,13 @@ export const adminService = {
     return res.json();
   },
 
-  approveUser: async (id) => {
-    const res = await api.patch(`/auth/approve-user/${id}`);
-    if (!res.ok) throw new Error('Approval failed');
-    return res.json();
-  },
-
-  deleteUser: async (id) => {
+  /** Soft delete: the person can no longer sign in and their upcoming bookings are cancelled. */
+  deactivateUser: async (id) => {
     const res = await api.delete(`/auth/users/${id}`);
-    if (!res.ok) throw new Error('Deletion failed');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Deactivation failed');
+    }
     return res.json();
   },
 

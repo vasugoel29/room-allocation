@@ -1,4 +1,4 @@
-// GET /api/admin/export/bookings (CSV) and GET /api/admin/export/promotions.
+// GET /api/admin/export/bookings (CSV). (The promotions export was removed with the promotion feature.)
 // Each test works in its own far-future date window so the date filters isolate its rows.
 import request from 'supertest';
 import app from '../../src/server.js';
@@ -183,22 +183,5 @@ describe('GET /api/admin/export/bookings', () => {
     const rows = parseCsv((await exportCsv(windowFor(day))).text);
     expect(rows[1][2]).toBe(new Date(b.start_time).toISOString());
     expect(rows[1][3]).toBe(new Date(b.end_time).toISOString());
-  });
-});
-
-describe('GET /api/admin/export/promotions', () => {
-  test('currently fails: the query targets a nonexistent "promotions" table', async () => {
-    const res = await request(app).get('/api/admin/export/promotions').set('Authorization', admin.auth);
-    expect(res.status).toBe(500);
-    expect(res.body).toEqual({ error: 'Failed to export CSV' });
-  });
-
-  test.failing('[OPS-11] exports promotion requests as CSV', async () => {
-    const requester = await createUser({ name: `Promo Requester ${uniq()}` });
-    await db.query("INSERT INTO promotion_requests (user_id, status, reason) VALUES ($1, 'PENDING', 'I am the CR')", [requester.user.id]);
-    const res = await request(app).get('/api/admin/export/promotions').set('Authorization', admin.auth);
-    expect(res.status).toBe(200);
-    expect(res.headers['content-type']).toMatch(/^text\/csv/);
-    expect(res.text).toContain(requester.user.email);
   });
 });

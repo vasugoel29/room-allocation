@@ -116,7 +116,7 @@ describe('BottomNav per role (tabs as built by App.jsx)', () => {
   const TABS = {
     ADMIN: [{ id: 'admin', icon: Shield, label: 'Admin Console' }, { id: 'calendar', icon: CalIcon, label: 'Rooms' }, { id: 'admin/timetable', icon: Clock, label: 'Timetable' }, { id: 'profile', icon: User, label: 'Profile' }],
     FACULTY: [{ id: 'faculty', icon: GraduationCap, label: 'Faculty Portal' }, { id: 'calendar', icon: CalIcon, label: 'Rooms' }, { id: 'timetable', icon: Clock, label: 'Timetable' }, { id: 'profile', icon: User, label: 'Profile' }],
-    VIEWER: [{ id: 'calendar', icon: CalIcon, label: 'Rooms' }, { id: 'timetable', icon: Clock, label: 'Timetable' }, { id: 'promotion', icon: GraduationCap, label: 'Apply to Book Rooms' }, { id: 'profile', icon: User, label: 'Profile' }],
+    VIEWER: [{ id: 'calendar', icon: CalIcon, label: 'Rooms' }, { id: 'timetable', icon: Clock, label: 'Timetable' }, { id: 'profile', icon: User, label: 'Profile' }],
     STUDENT_REP: [{ id: 'calendar', icon: CalIcon, label: 'Rooms' }, { id: 'bookings', icon: History, label: 'Bookings' }, { id: 'timetable', icon: Clock, label: 'Timetable' }, { id: 'profile', icon: User, label: 'Profile' }],
   };
   const Loc = () => <div data-testid="loc">{useLocation().pathname}</div>;
@@ -128,9 +128,9 @@ describe('BottomNav per role (tabs as built by App.jsx)', () => {
   );
   const hrefs = () => screen.getAllByRole('link').map((a) => a.getAttribute('href'));
 
-  it('VIEWER: 4 links, no create button', () => {
+  it('VIEWER: 3 links, no create button', () => {
     setup('VIEWER');
-    expect(hrefs()).toEqual(['/calendar', '/timetable', '/promotion', '/profile']);
+    expect(hrefs()).toEqual(['/calendar', '/timetable', '/profile']);
     expect(screen.queryByRole('button')).toBeNull();
   });
 

@@ -3,7 +3,6 @@ import { Routes, Route, Navigate, useLocation, useNavigate, NavLink } from 'reac
 import Calendar from './components/ui/Calendar';
 import RoomFilter from './components/ui/RoomFilter';
 import BookingModal from './components/modals/BookingModal';
-import PromotionModal from './components/modals/PromotionModal';
 import PWAInstallOverlay from './components/ui/PWAInstallOverlay';
 import { getRoleLabel } from './utils/roleUtils';
 import { AppContext } from './context/AppContext';
@@ -19,12 +18,9 @@ const FacultyDashboard = React.lazy(() => import('./pages/FacultyDashboard'));
 const Timetable = React.lazy(() => import('./pages/Timetable'));
 const Bookings = React.lazy(() => import('./pages/Bookings'));
 const Login = React.lazy(() => import('./pages/Login'));
-const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword'));
-const ResetPassword = React.lazy(() => import('./pages/ResetPassword'));
 const Profile = React.lazy(() => import('./pages/Profile'));
 const MobileHistory = React.lazy(() => import('./pages/MobileHistory'));
 const MobileBooking = React.lazy(() => import('./pages/MobileBooking'));
-const PromotionRequest = React.lazy(() => import('./pages/PromotionRequest'));
 
 const FormLoadingFallback = () => (
   <div className="h-screen w-full flex items-center justify-center bg-surface-lowest p-6">
@@ -172,7 +168,6 @@ function App() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState(null);
-  const [isPromotionOpen, setIsPromotionOpen] = useState(false);
 
   if (backendError) {
     return (
@@ -242,8 +237,6 @@ function App() {
         <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Global Main Layout Wrap */}
         <Route path="/*" element={
@@ -345,7 +338,6 @@ function App() {
                       <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
                       <Route path="/timetable" element={<ProtectedRoute user={user}><Timetable /></ProtectedRoute>} />
                       <Route path="/bookings" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}><Bookings /></ProtectedRoute>} />
-                      <Route path="/promotion" element={<ProtectedRoute user={user}><PromotionRequest /></ProtectedRoute>} />
                       <Route path="/history" element={!isDesktop ? <MobileHistory onBack={() => navigate('/calendar')} /> : <Navigate to="/bookings" />} />
                       <Route path="/book-a-slot" element={!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />} />
                       <Route path="/" element={
@@ -379,7 +371,6 @@ function App() {
               )}
 
               {isModalOpen && <BookingModal slot={selectedSlot} onClose={() => setIsModalOpen(false)} onSuccess={() => setIsModalOpen(false)} />}
-              {isPromotionOpen && <PromotionModal onClose={() => setIsPromotionOpen(false)} />}
             </div>
           )
         } />

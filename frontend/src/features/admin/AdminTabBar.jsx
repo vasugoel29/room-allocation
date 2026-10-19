@@ -3,7 +3,6 @@ import {
   Zap, 
   Calendar as CalendarIcon, 
   Users, 
-  ShieldAlert, 
   Home, 
   Layers, 
   TrendingUp, 
@@ -15,40 +14,16 @@ import {
   GitBranch
 } from 'lucide-react';
 
-export const AdminTabBar = ({ activeTab, setActiveTab, promotions = [], users = [] }) => {
+export const AdminTabBar = ({ activeTab, setActiveTab }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const pendingPromotionsCount = promotions.filter(p => p.status === 'PENDING').length;
-  const unapprovedUsersCount = users.filter(u => !u.is_approved).length;
 
   const tabOptions = [
     { id: 'quick', label: 'Quick Book', icon: <Zap size={16} />, category: 'Operations' },
     { id: 'bookings', label: 'Bookings', icon: <CalendarIcon size={16} />, category: 'Operations' },
-    { 
-      id: 'promotions', 
-      label: 'Requests', 
-      icon: <Users size={16} />, 
-      category: 'Operations',
-      badge: pendingPromotionsCount > 0 ? (
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${activeTab === 'promotions' ? 'bg-white text-primary' : 'bg-primary text-white'}`}>
-          {pendingPromotionsCount}
-        </span>
-      ) : null
-    },
     { id: 'timetable', label: 'Timetable', icon: <Database size={16} />, category: 'Operations' },
     { id: 'room-grid', label: 'Room Grid', icon: <LayoutGrid size={16} />, category: 'Operations' },
     
-    { 
-      id: 'users', 
-      label: 'Users', 
-      icon: <ShieldAlert size={16} />, 
-      category: 'Registry',
-      badge: unapprovedUsersCount > 0 ? (
-        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse ${activeTab === 'users' ? 'bg-white text-tertiary shadow-tertiary' : 'bg-tertiary text-white shadow-tertiary'}`}>
-          {unapprovedUsersCount}
-        </span>
-      ) : null
-    },
+    { id: 'users', label: 'Users', icon: <Users size={16} />, category: 'Registry' },
     { id: 'rooms', label: 'Rooms', icon: <Home size={16} />, category: 'Registry' },
     { id: 'departments', label: 'Departments', icon: <Layers size={16} />, category: 'Registry' },
     { id: 'branches', label: 'Branches', icon: <GitBranch size={16} />, category: 'Registry' },

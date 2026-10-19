@@ -32,7 +32,7 @@ test.describe('Timetable & class cancellation', () => {
     await expect(toast(page, /cancellation request sent/i)).toBeVisible();
 
     const req = await seed.one('SELECT *, class_date::text AS class_day FROM class_cancellation_requests WHERE requested_by = $1', [rep.id]);
-    expect(req).toMatchObject({ status: 'PENDING', faculty_id: faculty.id, room_name: room.name, subject_name: subject, hour: 9, booking_id: null });
+    expect(req).toMatchObject({ status: 'PENDING', faculty_id: faculty.faculty_id, room_name: room.name, subject_name: subject, hour: 9, booking_id: null });
     expect(req.class_day).toBe(dateKey);
 
     // A duplicate request is refused
@@ -49,7 +49,7 @@ test.describe('Timetable & class cancellation', () => {
     const req = await seed.one(
       `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_name, subject_name, class_date, hour)
        VALUES ($1,$2,$3,$4,$5,9) RETURNING *`,
-      [rep.id, faculty.id, room.name, subject, dateKey],
+      [rep.id, faculty.faculty_id, room.name, subject, dateKey],
     );
 
     await signIn(page, request, faculty, '/faculty');
@@ -74,7 +74,7 @@ test.describe('Timetable & class cancellation', () => {
     const req = await seed.one(
       `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_name, subject_name, class_date, hour)
        VALUES ($1,$2,$3,$4,$5,9) RETURNING *`,
-      [rep.id, faculty.id, room.name, subject, dateKey],
+      [rep.id, faculty.faculty_id, room.name, subject, dateKey],
     );
 
     await signIn(page, request, faculty, '/faculty');

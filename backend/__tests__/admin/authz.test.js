@@ -1,5 +1,5 @@
 // Every /api/admin route: 401 without / with a bad token, 403 for every non-admin role, and no
-// side effects for rejected callers.
+// side effects for rejected callers. (Removed admin routes are asserted to 404 in security.test.js.)
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../src/server.js';
@@ -8,16 +8,13 @@ import { createAdmin, createViewer, createRep, createFaculty, tokenFor, closeDb 
 
 const ROUTES = [
   ['get', '/api/admin/export/bookings'],
-  ['get', '/api/admin/export/promotions'],
   ['get', '/api/admin/audit-logs'],
   ['get', '/api/admin/analytics'],
-  ['get', '/api/admin/uploads/template/students'],
   ['get', '/api/admin/uploads/template/faculty'],
   ['get', '/api/admin/uploads/template/timetable'],
   ['get', '/api/admin/uploads/export/students'],
   ['get', '/api/admin/uploads/export/faculty'],
   ['get', '/api/admin/uploads/export/timetable'],
-  ['post', '/api/admin/uploads/import/students'],
   ['post', '/api/admin/uploads/import/faculty'],
   ['post', '/api/admin/uploads/import/timetable'],
   ['get', '/api/admin/uploads/status/00000000-0000-0000-0000-000000000000'],
@@ -64,7 +61,7 @@ describe.each(ROUTES)('%s %s', (method, path) => {
   });
 });
 
-test('rejected import attempts create no users', async () => {
-  const { rowCount } = await db.query("SELECT 1 FROM users WHERE email = 'authz.never@nsut.ac.in'");
-  expect(rowCount).toBe(0);
+test('rejected import attempts create no users or faculty-directory entries', async () => {
+  expect((await db.query("SELECT 1 FROM users WHERE email = 'authz.never@nsut.ac.in'")).rowCount).toBe(0);
+  expect((await db.query("SELECT 1 FROM faculties WHERE lower(email) = 'authz.never@nsut.ac.in'")).rowCount).toBe(0);
 });

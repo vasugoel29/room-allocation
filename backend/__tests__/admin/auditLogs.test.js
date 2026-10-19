@@ -1,8 +1,9 @@
 // GET /api/admin/audit-logs and what the global audit middleware stores (SEC-14).
-import crypto from 'crypto';
 import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
+import { mockAcl } from '../../src/auth/aclClient.js';
+import { setGoogleVerifier } from '../../src/auth/google.js';
 import { createAdmin, createUser, closeDb } from '../../test/helpers/factories.js';
 import { uniq, maxAuditId, auditRowsSince, pollJob } from './helpers.js';
 
@@ -10,7 +11,21 @@ let admin;
 beforeAll(async () => {
   admin = await createAdmin();
 });
-afterAll(closeDb);
+afterEach(() => setGoogleVerifier(null));
+afterAll(async () => {
+  mockAcl.clear();
+  await closeDb();
+});
+
+/** Registers a fresh email in the mock ACL (see sso.test.js for the full response shape) and returns it. */
+function signInable(tag) {
+  const email = `audit.${tag}.${uniq()}@nsut.ac.in`;
+  mockAcl.set(email, {
+    user: { id: `usr_audit_${uniq()}`, name: 'AUDIT TEST USER', email, type: 'STUDENT', status: 'ACTIVE', academic: {} },
+    app: 'CRAS', role: 'VIEWER', roles: ['VIEWER'], permissions: ['rooms:view'], allowed_scope: {}, scopes_by_permission: {},
+  });
+  return email;
+}
 
 const getLogs = (query = {}) => request(app).get('/api/admin/audit-logs').query(query).set('Authorization', admin.auth);
 
@@ -108,53 +123,55 @@ describe('audit middleware contents (SEC-14)', () => {
   });
 
   test('top-level `password` fields are stripped from stored bodies', async () => {
-    const target = await createUser();
+    const email = signInable('pwd');
     const since = await maxAuditId();
-    const res = await request(app).post('/api/auth/login').send({ email: target.user.email, password: 'Password@123' });
+    // dev-login ignores the extra field; the audit middleware still sees it in the body.
+    const res = await request(app).post('/api/auth/dev-login').send({ email, password: 'Password@123' });
     expect(res.status).toBe(200);
-    const [row] = await auditRowsSince(since, 'POST_API_AUTH_LOGIN');
+    const [row] = await auditRowsSince(since, 'POST_API_AUTH_DEV-LOGIN');
     expect(row).toBeDefined();
+    expect(row.details).toMatchObject({ method: 'POST', path: '/api/auth/dev-login', status: 200, body: { email } });
     expect(JSON.stringify(row.details)).not.toContain('Password@123');
   });
 
-  test.failing('[SEC-14] a password-reset token is not stored in the audit log', async () => {
-    const target = await createUser();
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    await db.query("UPDATE users SET password_reset_token = $1, password_reset_expires = NOW() + interval '1 hour' WHERE id = $2", [hash, target.user.id]);
+  // Only `password` is stripped, so the whole Google ID token (a bearer credential for its
+  // lifetime, and full of personal data) is persisted in audit_logs.details.body.credential.
+  test.failing('[SEC-14] a Google ID token (credential) is not stored in the audit log', async () => {
+    const email = signInable('gcred');
+    setGoogleVerifier(async () => ({ email, email_verified: true, hd: 'nsut.ac.in', sub: `g-${email}` }));
+    const credential = `google-id-token-${uniq()}`;
     const since = await maxAuditId();
-    const res = await request(app).post('/api/auth/reset-password').send({ token: rawToken, password: 'NewPassw0rd!' });
+    const res = await request(app).post('/api/auth/google').send({ credential });
     expect(res.status).toBe(200);
-    const [row] = await auditRowsSince(since, 'POST_API_AUTH_RESET-PASSWORD');
+    const [row] = await auditRowsSince(since, 'POST_API_AUTH_GOOGLE');
     expect(row).toBeDefined();
-    expect(JSON.stringify(row.details)).not.toContain(rawToken);
+    expect(JSON.stringify(row.details)).not.toContain(credential);
   });
 
+  // The middleware falls back to `userId || req.user?.id || 1`, so every anonymous mutation
+  // (sign-in, logout without a token) is attributed to whoever owns users.id = 1.
   test.failing('[SEC-14] unauthenticated actions are not attributed to user id 1', async () => {
-    await createUser(); // make sure a user 1 exists (fresh DB) and it isn't the reset target
-    const target = await createUser();
-    expect(target.user.id).not.toBe(1);
-    const rawToken = crypto.randomBytes(32).toString('hex');
-    const hash = crypto.createHash('sha256').update(rawToken).digest('hex');
-    await db.query("UPDATE users SET password_reset_token = $1, password_reset_expires = NOW() + interval '1 hour' WHERE id = $2", [hash, target.user.id]);
+    await createUser(); // make sure a user 1 exists (fresh DB) and it isn't the sign-in target
+    const email = signInable('anon');
     const since = await maxAuditId();
-    const res = await request(app).post('/api/auth/reset-password').send({ token: rawToken, password: 'NewPassw0rd!' });
+    const res = await request(app).post('/api/auth/dev-login').send({ email });
     expect(res.status).toBe(200);
-    const [row] = await auditRowsSince(since, 'POST_API_AUTH_RESET-PASSWORD');
+    expect(res.body.user.id).not.toBe(1);
+    const [row] = await auditRowsSince(since, 'POST_API_AUTH_DEV-LOGIN');
     expect(row).toBeDefined();
     expect(row.user_id).not.toBe(1);
   });
 
-  test.failing('[SEC-14] CSV import content (incl. plaintext passwords in a password column) is not stored in the audit log', async () => {
+  test.failing('[SEC-14] CSV import content is not stored verbatim in the audit log', async () => {
     const email = `audit.csv.${uniq()}@nsut.ac.in`;
     const secret = `S3cret-${uniq()}`;
-    const csv = `name,email,password\nCsv Student,${email},${secret}\n`;
+    const csv = `name,email,password\nCsv Prof ${secret},${email},${secret}\n`;
     const since = await maxAuditId();
-    const post = await request(app).post('/api/admin/uploads/import/students').set('Authorization', admin.auth).send({ csvContent: csv });
+    const post = await request(app).post('/api/admin/uploads/import/faculty').set('Authorization', admin.auth).send({ csvContent: csv });
     expect(post.status).toBe(202);
     const job = await pollJob(app, admin.auth, post.body.jobId);
     expect(job.status).toBe('completed');
-    const [row] = await auditRowsSince(since, 'POST_API_ADMIN_UPLOADS_IMPORT_STUDENTS');
+    const [row] = await auditRowsSince(since, 'POST_API_ADMIN_UPLOADS_IMPORT_FACULTY');
     expect(row).toBeDefined();
     const stored = JSON.stringify(row.details);
     expect(stored).not.toContain(secret);

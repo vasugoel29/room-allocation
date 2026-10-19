@@ -129,7 +129,7 @@ describe('FacultyDashboard approved / my bookings', () => {
   const bk = (id, over) => ({ id, purpose: `P${id}`, room_name: `R-${id}`, start_time: iso(22, 9), end_time: iso(22, 10), status: 'ACTIVE', ...over });
 
   it('Approved tab: ACTIVE bookings where I am the faculty', async () => {
-    const { ue } = setup({ bookings: [bk(1, { faculty_id: 21 }), bk(2, { faculty_id: 22 }), bk(3, { faculty_id: 21, status: 'CANCELLED' })] });
+    const { ue } = setup({ bookings: [bk(1, { faculty_id: 500021 }), bk(2, { faculty_id: 21 }), bk(3, { faculty_id: 500021, status: 'CANCELLED' })] });
     await ue.click(screen.getByRole('button', { name: 'Approved' }));
     expect(screen.getByText('P1')).toBeInTheDocument();
     expect(screen.queryByText('P2')).toBeNull();

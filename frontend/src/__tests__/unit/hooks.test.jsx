@@ -74,12 +74,12 @@ describe('useDepartments', () => {
 });
 
 describe('useAdminUsers', () => {
-  it('fetches users only on users/quick tabs, approve/delete refetch + toast', async () => {
+  it('fetches users only on users/quick tabs; deactivate DELETEs, toasts and refetches', async () => {
     const f = installFetch([
       ['GET', /\/api\/auth\/users\?/, { data: [{ id: 5 }], meta: { page: 1, totalPages: 2 } }],
       ['GET', /\/api\/departments/, []],
-      ['PATCH', '/api/auth/approve-user/5', { ok: true }],
-      ['DELETE', '/api/auth/users/5', (u) => jsonResponse({ error: 'has bookings' }, 409)],
+      ['DELETE', '/api/auth/users/5', { id: 5 }],
+      ['DELETE', '/api/auth/users/6', () => jsonResponse({ error: 'You cannot deactivate yourself' }, 400)],
     ]);
     const { result, rerender } = renderHook(({ tab }) => useAdminUsers(tab), { initialProps: { tab: 'overview' } });
     await waitFor(() => expect(f).toHaveBeenCalled());
@@ -88,16 +88,14 @@ describe('useAdminUsers', () => {
     await waitFor(() => expect(result.current.users).toEqual([{ id: 5 }]));
     expect(result.current.usersMeta).toEqual({ page: 1, totalPages: 2 });
 
-    await act(() => result.current.handleApproveUser(5));
-    expect(toast.success).toHaveBeenCalledWith('User approved!');
-    await act(() => result.current.handleDeleteUser(5));
-    // adminService.deleteUser discards the server's error text
-    expect(toast.error).toHaveBeenCalledWith('Deletion failed');
+    const listCalls = () => fetchCalls(f).filter(([m, u]) => m === 'GET' && u.includes('/auth/users')).length;
+    const before = listCalls();
+    await act(() => result.current.handleDeactivateUser(5));
+    expect(toast.success).toHaveBeenCalledWith('User deactivated');
+    await waitFor(() => expect(listCalls()).toBe(before + 1));
 
-    act(() => result.current.openUserModal({ id: 5 }));
-    expect(result.current).toMatchObject({ isUserModalOpen: true, editingUser: { id: 5 } });
-    act(() => result.current.closeUserModal());
-    expect(result.current).toMatchObject({ isUserModalOpen: false, editingUser: null });
+    await act(() => result.current.handleDeactivateUser(6));
+    expect(toast.error).toHaveBeenCalledWith('You cannot deactivate yourself');
   });
 });
 
@@ -107,20 +105,19 @@ describe('useAdminData', () => {
     vi.setSystemTime(ist(2026, 10, 21, 10)); // Wed 10:00 IST
     const f = installFetch([
       ['GET', /\/api\/bookings\/admin\/all/, { data: [{ id: 1 }], meta: { page: 1, totalPages: 1 } }],
-      ['GET', '/api/promotions', [{ id: 2 }]],
     ]);
     const { result, rerender } = renderHook(({ r }) => useAdminData(r), { initialProps: { r: 'day' } });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(f.mock.calls[0][0]).toBe('/api/bookings/admin/all?start_date=2026-10-20T18:30:00.000Z&end_date=2026-10-21T18:29:59.999Z&page=1&limit=20');
     expect(result.current.bookings).toEqual([{ id: 1 }]);
-    expect(result.current.promotions).toEqual([{ id: 2 }]);
+    expect(fetchCalls(f).some(([, u]) => u.includes('/promotions'))).toBe(false);
     rerender({ r: 'week' });
-    await waitFor(() => expect(f.mock.calls.length).toBe(4));
-    expect(f.mock.calls[2][0]).toContain('start_date=2026-10-18T18:30:00.000Z&end_date=2026-10-25T18:29:59.999Z');
+    await waitFor(() => expect(f.mock.calls.length).toBe(2));
+    expect(f.mock.calls[1][0]).toContain('start_date=2026-10-18T18:30:00.000Z&end_date=2026-10-25T18:29:59.999Z');
   });
 
   it('toasts on failure', async () => {
-    installFetch([['GET', /\/api\/bookings\/admin\/all/, () => jsonResponse({}, 500)], ['GET', '/api/promotions', []]]);
+    installFetch([['GET', /\/api\/bookings\/admin\/all/, () => jsonResponse({}, 500)]]);
     const { result } = renderHook(() => useAdminData('day'));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(toast.error).toHaveBeenCalledWith('Failed to fetch data');

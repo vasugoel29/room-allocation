@@ -14,12 +14,9 @@ vi.mock('../../pages/FacultyDashboard', () => stub('FacultyDashboard'));
 vi.mock('../../pages/Timetable', () => stub('Timetable'));
 vi.mock('../../pages/Bookings', () => stub('Bookings'));
 vi.mock('../../pages/Login', () => stub('Login'));
-vi.mock('../../pages/ForgotPassword', () => stub('ForgotPassword'));
-vi.mock('../../pages/ResetPassword', () => stub('ResetPassword'));
 vi.mock('../../pages/Profile', () => stub('Profile'));
 vi.mock('../../pages/MobileHistory', () => stub('MobileHistory'));
 vi.mock('../../pages/MobileBooking', () => stub('MobileBooking'));
-vi.mock('../../pages/PromotionRequest', () => stub('PromotionRequest'));
 vi.mock('../../components/ui/Calendar', () => stub('Calendar'));
 
 const go = (route, user, ctx = {}) => renderWithContext(<App />, { route, ctx: { user, ...ctx } });
@@ -28,13 +25,10 @@ const page = async () => (await screen.findByTestId('page')).textContent;
 beforeEach(() => { window.innerWidth = 1280; localStorage.clear(); });
 
 describe('App routing — unauthenticated', () => {
-  it.each([['/'], ['/calendar'], ['/admin'], ['/bookings'], ['/nonsense']])('%s -> Login', async (route) => {
+  // Removed local-account pages (/forgot-password, /reset-password, /promotion, /signup) are unknown routes now.
+  it.each([['/'], ['/calendar'], ['/admin'], ['/bookings'], ['/nonsense'], ['/forgot-password'], ['/reset-password?token=x'], ['/promotion'], ['/signup']])('%s -> Login', async (route) => {
     go(route, null);
     expect(await page()).toBe('Login');
-  });
-  it.each([['/forgot-password', 'ForgotPassword'], ['/reset-password?token=x', 'ResetPassword']])('%s is public', async (route, name) => {
-    go(route, null);
-    expect(await page()).toBe(name);
   });
 });
 
@@ -63,7 +57,9 @@ describe('App routing — role landing and guards', () => {
     ['/bookings', 'ADMIN', 'Bookings'],
     ['/timetable', 'VIEWER', 'Timetable'],
     ['/profile', 'FACULTY', 'Profile'],
-    ['/promotion', 'VIEWER', 'PromotionRequest'],
+    ['/promotion', 'VIEWER', 'Calendar'],
+    ['/forgot-password', 'STUDENT_REP', 'Calendar'],
+    ['/reset-password?token=x', 'FACULTY', 'Calendar'],
     ['/admin/timetable', 'ADMIN', 'AdminDashboard'],
     ['/does-not-exist', 'VIEWER', 'Calendar'],
   ])('%s as %s -> %s', async (route, role, name) => {

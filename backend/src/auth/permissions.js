@@ -22,8 +22,6 @@ export const PERMISSIONS = Object.freeze({
   CANCELLATION_REVIEW: 'cancellations:review',
   USERS_MANAGE: 'users:manage',
   DIRECTORY_MANAGE: 'directory:manage',
-  PROMOTIONS_REQUEST: 'promotions:request',
-  PROMOTIONS_MANAGE: 'promotions:manage',
   ADMIN_REPORTS: 'admin:reports',
   ADMIN_IMPORTS: 'admin:imports',
 });
@@ -33,7 +31,7 @@ const P = PERMISSIONS;
 /** Wildcard granted to admins. */
 export const ALL = '*';
 
-const VIEWER = [P.ROOMS_VIEW, P.TIMETABLE_VIEW, P.PROMOTIONS_REQUEST];
+const VIEWER = [P.ROOMS_VIEW, P.TIMETABLE_VIEW];
 const STUDENT_REP = [...VIEWER, P.ROOMS_BOOK, P.BOOKINGS_TRANSFER, P.AVAILABILITY_OVERRIDE, P.CANCELLATION_REQUEST];
 const FACULTY = [...STUDENT_REP, P.BOOKINGS_APPROVE, P.TIMETABLE_FACULTY, P.CANCELLATION_REVIEW];
 

@@ -31,8 +31,8 @@ export async function apiFetch(endpoint, options = {}) {
         continue;
       }
 
-      const isSignInCall = ['/auth/login', '/auth/google', '/auth/dev-login'].some((p) => endpoint.startsWith(p));
-      if (response.status === 401 && !isSignInCall && !window.location.pathname.includes('/signup')) {
+      const isSignInCall = ['/auth/google', '/auth/dev-login'].some((p) => endpoint.startsWith(p));
+      if (response.status === 401 && !isSignInCall) {
         console.warn('Session expired or unauthorized. Logging out...');
         localStorage.removeItem('user');
         localStorage.removeItem('token');

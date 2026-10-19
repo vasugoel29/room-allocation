@@ -1,7 +1,6 @@
 import React, { useContext } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { AppProvider, AppContext } from '../../context/AppContext';
 import Profile from '../../pages/Profile';
@@ -212,40 +211,17 @@ describe('AppProvider logout / theme', () => {
   });
 });
 
-describe('Profile save through the real provider', () => {
-  const setup = () => {
+describe('Profile through the real provider (read-only)', () => {
+  it('shows the ACL profile refreshed from /auth/me and never writes it back', async () => {
     localStorage.setItem('user', JSON.stringify(USERS.STUDENT_REP));
     localStorage.setItem('token', 't');
     const routes = baseRoutes();
-    routes.push(['PATCH', '/api/auth/users/12', (_u, init) => ({ ...USERS.STUDENT_REP, ...JSON.parse(init.body) })]);
+    routes.push(['GET', '/api/auth/me', { user: { ...USERS.STUDENT_REP, semester: 6, section: 3, department_name: 'Information Technology' } }]);
     const f = installFetch(routes);
     mount(<><Probe /><Profile /></>);
-    return f;
-  };
-
-  it('PATCHes the form and updates the in-memory user', async () => {
-    const f = setup();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /edit profile/i }));
-    const name = screen.getByPlaceholderText('Full Name');
-    await user.clear(name);
-    await user.type(name, 'Rita Renamed');
-    await user.click(screen.getByRole('button', { name: /save/i }));
-    await waitFor(() => expect(ctx.user.name).toBe('Rita Renamed'));
-    const patch = fetchCalls(f).find(([m]) => m === 'PATCH');
-    expect(patch[2]).toMatchObject({ name: 'Rita Renamed', branch: 'IT', semester: 5, section: 1 });
-  });
-
-  // FE-18: setUser() is called but localStorage('user') is never rewritten, so a reload restores the old profile.
-  it.fails('[FE-18] persists the updated profile to localStorage', async () => {
-    setup();
-    const user = userEvent.setup();
-    await user.click(screen.getByRole('button', { name: /edit profile/i }));
-    const name = screen.getByPlaceholderText('Full Name');
-    await user.clear(name);
-    await user.type(name, 'Rita Renamed');
-    await user.click(screen.getByRole('button', { name: /save/i }));
-    await waitFor(() => expect(ctx.user.name).toBe('Rita Renamed'));
-    expect(JSON.parse(localStorage.getItem('user')).name).toBe('Rita Renamed');
+    expect(await screen.findByText(/Semester 6\s*· Section 3/)).toBeInTheDocument();
+    expect(screen.getByText('Information Technology')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit profile/i })).toBeNull();
+    expect(fetchCalls(f).some(([m]) => m === 'PATCH')).toBe(false);
   });
 });

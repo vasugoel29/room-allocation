@@ -69,42 +69,6 @@ export const exportBookingsCSV = async (req, res) => {
   }
 };
 
-export const exportPromotionsCSV = async (req, res) => {
-  try {
-    const query = `
-      SELECT p.id, u.name as user_name, u.email, p.requested_role, p.status, p.created_at
-      FROM promotions p
-      JOIN users u ON p.user_id = u.id
-      ORDER BY p.created_at DESC
-    `;
-    const result = await db.query(query);
-
-    res.setHeader("Content-Type", "text/csv");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=promotions_export_${new Date().toISOString()}.csv`,
-    );
-
-    res.write("ID,User,Email,Requested Role,Status,Created At\n");
-
-    result.rows.forEach((row) => {
-      const csvRow = [
-        row.id,
-        `"${sanitizeCSVField(row.user_name).replace(/"/g, '""')}"`,
-        sanitizeCSVField(row.email),
-        row.requested_role,
-        row.status,
-        row.created_at,
-      ].join(",");
-      res.write(csvRow + "\n");
-    });
-
-    res.end();
-  } catch (err) {
-    logger.error("Promotions CSV Export failed", err);
-    res.status(500).json({ error: "Failed to export CSV" });
-  }
-};
 export const getAuditLogs = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
