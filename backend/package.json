@@ -13,7 +13,8 @@
     "seed:faculties-snapshot": "node scripts/seed_faculties_snapshot.js",
     "db:create": "node scripts/create_db.js",
     "unseed": "node scripts/unseed.js",
-    "test": "TZ=UTC node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
+    "test": "TZ=UTC node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:acl": "ACL_LIVE_TEST=1 TZ=UTC node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand __tests__/live"
   },
   "dependencies": {
     "@sentry/node": "^10.42.0",

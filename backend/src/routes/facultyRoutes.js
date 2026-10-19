@@ -1,11 +1,12 @@
 import express from 'express';
 import { getPendingRequests, approveBooking, rejectBooking } from '../controllers/facultyController.js';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
+import { PERMISSIONS as P } from '../auth/permissions.js';
 
 const router = express.Router();
 
 router.use(authenticate);
-router.use(requireRole('FACULTY'));
+router.use(requirePermission(P.BOOKINGS_APPROVE));
 
 router.get('/pending', getPendingRequests);
 router.patch('/:id/approve', approveBooking);

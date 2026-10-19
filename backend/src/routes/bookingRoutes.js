@@ -1,6 +1,7 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { authenticate, requireRole, requireResource } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
+import { PERMISSIONS as P } from '../auth/permissions.js';
 import { validateRequest } from '../middleware/validate.js';
 import { 
   getBookings, 
@@ -30,13 +31,13 @@ const quickBookValidation = [
 ];
 
 router.get('/', authenticate, getBookings);
-router.post('/', authenticate, requireResource('rooms:book', 'STUDENT_REP'), bookingValidation, validateRequest, createBooking);
+router.post('/', authenticate, requirePermission(P.ROOMS_BOOK), bookingValidation, validateRequest, createBooking);
 router.patch('/:id/cancel', authenticate, idValidation, validateRequest, cancelBooking);
-router.patch('/:id', authenticate, requireResource('rooms:book', 'STUDENT_REP'), idValidation, validateRequest, rescheduleBooking);
+router.patch('/:id', authenticate, requirePermission(P.ROOMS_BOOK), idValidation, validateRequest, rescheduleBooking);
 
 
 // Admin-only all bookings (active & cancelled)
-router.get('/admin/all', authenticate, requireRole('ADMIN'), getBookings);
-router.post('/admin/quick', authenticate, requireRole('ADMIN'), quickBookValidation, validateRequest, quickBook);
+router.get('/admin/all', authenticate, requirePermission(P.BOOKINGS_MANAGE), getBookings);
+router.post('/admin/quick', authenticate, requirePermission(P.BOOKINGS_MANAGE), quickBookValidation, validateRequest, quickBook);
 
 export default router;

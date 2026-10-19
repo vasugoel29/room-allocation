@@ -1,7 +1,8 @@
 import express from 'express';
 import { body } from 'express-validator';
 import { signup, login, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser, forgotPassword, resetPassword, verifyStudent } from '../controllers/authController.js';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requirePermission } from '../middleware/auth.js';
+import { PERMISSIONS as P } from '../auth/permissions.js';
 import { validateRequest } from '../middleware/validate.js';
 import { googleLogin, devLogin, me, logout } from '../controllers/sessionController.js';
 import { authIpLimiter, authAccountLimiter } from '../middleware/leakyBucket.js';
@@ -29,10 +30,10 @@ router.get('/verify-student/:rollNo', authLimiter, verifyStudent);
 router.get('/faculties', authenticate, getFaculties);
 
 // Admin-only user management
-router.get('/users', authenticate, requireRole('ADMIN'), getUsers);
-router.post('/users', authenticate, requireRole('ADMIN'), createUser);
+router.get('/users', authenticate, requirePermission(P.USERS_MANAGE), getUsers);
+router.post('/users', authenticate, requirePermission(P.USERS_MANAGE), createUser);
 router.patch('/users/:id', authenticate, updateUser);
-router.delete('/users/:id', authenticate, requireRole('ADMIN'), deleteUser);
-router.patch('/approve-user/:id', authenticate, requireRole('ADMIN'), approveUser);
+router.delete('/users/:id', authenticate, requirePermission(P.USERS_MANAGE), deleteUser);
+router.patch('/approve-user/:id', authenticate, requirePermission(P.USERS_MANAGE), approveUser);
 
 export default router;
