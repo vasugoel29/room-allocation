@@ -132,7 +132,7 @@ describe('isRoomReallyFree', () => {
 
   // NEW-FE-1: static-schedule matching uses substring `includes`, so room "101" is reported busy
   // whenever *any* room whose name contains "101" (e.g. "1101") has a class.
-  it.fails('[NEW-FE-1] room "101" is not blocked by a class in room "1101"', () => {
+  it('[NEW-FE-1] room "101" is not blocked by a class in room "1101"', () => {
     const tt = [{ timetable: { Tue: [{ time: '09:00-10:00', room: '1101' }] } }];
     expect(isRoomReallyFree({ id: 8, name: '101' }, TUE, 'Tue', 9, [], [], tt)).toBe(true);
   });

@@ -1,21 +1,47 @@
 import express from 'express';
+import { body } from 'express-validator';
 import { getRooms, getAvailability, getAdminRoomStatus, overrideRoomAvailability, getMyOverrides, createRoom, updateRoom, deleteRoom, getRoomWeekSchedule, checkRoomConflict } from '../controllers/roomController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
+import { idParam, validate, dateKey, hour, positiveInt, text, bool, pagination, WEEKDAYS } from '../middleware/validators.js';
+import { isDateKey } from '../utils/timezone.js';
 
 const router = express.Router();
+router.param('id', idParam);
 
-router.get('/rooms', authenticate, getRooms);
-router.post('/rooms', authenticate, requirePermission(P.ROOMS_MANAGE), createRoom);
+// Presence of required fields is checked in the controllers (their messages are part of the API);
+// these check the shape of whatever was sent.
+const roomFields = [
+  text('name', { optional: true, max: 32 }),
+  positiveInt('capacity', { optional: true, max: 10_000 }),
+  body('floor').optional({ values: 'null' }).isInt({ min: -5, max: 200 }).withMessage('floor must be a whole number'),
+  text('building', { optional: true, max: 100 }),
+  text('type', { optional: true, max: 100 }),
+  body('description').optional({ values: 'null' }).isString().isLength({ max: 1000 }).withMessage('description must be at most 1000 characters'),
+];
+
+router.get('/rooms', authenticate, validate(pagination({ max: 500 })), getRooms);
+router.post('/rooms', authenticate, requirePermission(P.ROOMS_MANAGE), validate(roomFields), createRoom);
 router.patch('/rooms/:id', authenticate, requirePermission(P.ROOMS_MANAGE), updateRoom);
 router.delete('/rooms/:id', authenticate, requirePermission(P.ROOMS_MANAGE), deleteRoom);
 router.get('/availability', authenticate, getAvailability);
 router.get('/availability/my', authenticate, getMyOverrides);
-router.get('/rooms/admin/status', authenticate, requirePermission(P.ROOMS_MANAGE), getAdminRoomStatus);
-router.post('/availability/override', authenticate, requirePermission(P.AVAILABILITY_OVERRIDE), overrideRoomAvailability);
+router.get('/rooms/admin/status', authenticate, requirePermission(P.ROOMS_MANAGE),
+  validate(dateKey('date', { optional: true }), hour('slot', { optional: true })), getAdminRoomStatus);
+router.post('/availability/override', authenticate, requirePermission(P.AVAILABILITY_OVERRIDE),
+  validate(
+    text('room_name', { optional: true, max: 32 }),
+    body('day').optional({ values: 'falsy' }).custom((v) => WEEKDAYS.includes(v) || isDateKey(v))
+      .withMessage(`day must be ${WEEKDAYS.join('/')} or a date (YYYY-MM-DD)`),
+    hour('hour', { location: 'body', optional: true }),
+    bool('is_available', { optional: true }),
+  ), overrideRoomAvailability);
 
 // Room Schedule Grid Endpoints
-router.get('/rooms/:id/week-schedule', authenticate, requirePermission(P.ROOMS_MANAGE), getRoomWeekSchedule);
-router.get('/rooms/:id/conflict-check', authenticate, requirePermission(P.ROOMS_MANAGE), checkRoomConflict);
+router.get('/rooms/:id/week-schedule', authenticate, requirePermission(P.ROOMS_MANAGE),
+  validate(dateKey('weekStart', { optional: true })), getRoomWeekSchedule);
+router.get('/rooms/:id/conflict-check', authenticate, requirePermission(P.ROOMS_MANAGE),
+  validate(dateKey('date', { optional: true }), hour('startHour', { optional: true }), hour('endHour', { optional: true, min: 1, max: 24 })),
+  checkRoomConflict);
 
 export default router;

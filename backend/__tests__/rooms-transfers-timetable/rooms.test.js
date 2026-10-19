@@ -120,7 +120,7 @@ describe('GET /api/rooms', () => {
     expect(p3.body.data.map((r) => r.name)).toEqual(names.slice(4));
   });
 
-  test.failing('[NEW-RTT-1] paginated meta.total for students counts only rooms they can see', async () => {
+  test('[NEW-RTT-1] paginated meta.total for students counts only rooms they can see', async () => {
     const res = await get(rep.auth, { building, page: 1, limit: 10 });
     expect(res.body.data).toHaveLength(3);
     expect(res.body.meta.total).toBe(3); // currently 5: hidden committee/auditorium rooms are counted
@@ -189,7 +189,7 @@ describe('Room CRUD (admin)', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('[NEW-RTT-3] create rejects negative / zero capacity with 400', async () => {
+  test('[NEW-RTT-3] create rejects negative / zero capacity with 400', async () => {
     const name = `CR-${tag()}`;
     const res = await request(app).post('/api/rooms').set('Authorization', admin.auth).send({ name, capacity: -5 });
     expect(res.status).toBe(400);
@@ -472,14 +472,14 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(res.status).toBe(404);
   });
 
-  test.failing('[NEW-RTT-5] override rejects an invalid day name with 400 (currently stored as-is)', async () => {
+  test('[NEW-RTT-5] override rejects an invalid day name with 400 (currently stored as-is)', async () => {
     const room = await createRoom();
     const res = await override(admin.auth, { room_name: room.name, day: 'Funday', hour: 9, is_available: false });
     expect(res.status).toBe(400);
     expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [room.id])).rowCount).toBe(0);
   });
 
-  test.failing('[NEW-RTT-5] override rejects an out-of-range hour with 400 (currently stored as-is)', async () => {
+  test('[NEW-RTT-5] override rejects an out-of-range hour with 400 (currently stored as-is)', async () => {
     const room = await createRoom();
     const res = await override(admin.auth, { room_name: room.name, day: 'Mon', hour: 99, is_available: false });
     expect(res.status).toBe(400);
@@ -492,7 +492,7 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('[NEW-RTT-5] override requires is_available (omitting it currently stores NULL)', async () => {
+  test('[NEW-RTT-5] override requires is_available (omitting it currently stores NULL)', async () => {
     const room = await createRoom();
     const res = await override(admin.auth, { room_name: room.name, day: 'Mon', hour: 9 });
     expect(res.status).toBe(400);
@@ -579,12 +579,12 @@ describe('GET /api/rooms/admin/status', () => {
     expect(next.body.find((r) => r.room_id === room.id).booking_id).toBeNull();
   });
 
-  test.failing('[NEW-RTT-3] invalid date returns 400 (currently 500 RangeError)', async () => {
+  test('[NEW-RTT-3] invalid date returns 400 (currently 500 RangeError)', async () => {
     const res = await status(admin.auth, { date: 'not-a-date', slot: 9 });
     expect(res.status).toBe(400);
   });
 
-  test.failing('[BKG-16] a room created by an admin shows up in admin status immediately (cached for 30s)', async () => {
+  test('[BKG-16] a room created by an admin shows up in admin status immediately (cached for 30s)', async () => {
     const date = futureSlot({ hour: 9 }).dateKey;
     await status(admin.auth, { date, slot: 7 });
     const created = await request(app).post('/api/rooms').set('Authorization', admin.auth).send({ name: `ST-${tag()}`, capacity: 10 });
@@ -683,7 +683,7 @@ describe('GET /api/rooms/:id/week-schedule', () => {
     expect(other.body.bookings).toEqual([]);
   });
 
-  test.failing('[NEW-RTT-3] invalid weekStart returns 400 (currently 500 with raw error message)', async () => {
+  test('[NEW-RTT-3] invalid weekStart returns 400 (currently 500 with raw error message)', async () => {
     const room = await createRoom();
     const res = await sched(admin.auth, room.id, { weekStart: 'garbage' });
     expect(res.status).toBe(400);

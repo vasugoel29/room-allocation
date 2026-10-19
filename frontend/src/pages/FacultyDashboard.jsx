@@ -9,6 +9,9 @@ import { useFacultyRequests } from '../hooks/useFacultyRequests';
 import { api } from '../utils/api';
 import { getIstDateKey, getIstHour } from '../utils/timezone';
 
+// Mirrors the server rule: only open (ACTIVE/PENDING) bookings that haven't ended (FE-19).
+const isCancellable = (b) => ['ACTIVE', 'PENDING'].includes(b.status ?? 'ACTIVE') && new Date(b.end_time).getTime() > Date.now();
+
 function FacultyDashboard() {
   const { user, bookings, refreshAllData } = useContext(AppContext);
   const [activeTab, setActiveTab] = useState('PENDING'); // PENDING | ACCEPTED | MY
@@ -261,7 +264,7 @@ function FacultyDashboard() {
                 </div>
               )}
 
-              {(activeTab === 'ACCEPTED' || activeTab === 'MY') && (
+              {(activeTab === 'ACCEPTED' || activeTab === 'MY') && isCancellable(req) && (
                 <div className="pt-2">
                   <button
                     onClick={() => handleCancel(req.id)}

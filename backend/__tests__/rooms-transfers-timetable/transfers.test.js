@@ -434,11 +434,11 @@ describe('transfer authorization and invalid transitions', () => {
     expect((await request(app).patch('/api/transfers/1/reject')).status).toBe(401);
   });
 
-  test('[NEW-RTT-6] a non-numeric transfer id returns 404, not 500', async () => {
+  test('[NEW-RTT-6] a non-numeric transfer id is a 400 (shared path-id guard), not 500', async () => {
     for (const send of [accept, reject]) {
       const res = await send(admin.auth, 'abc');
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Transfer not found');
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid id');
     }
   });
 });

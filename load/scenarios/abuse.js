@@ -12,7 +12,7 @@ const bystanderLimited = new Counter('bystander_429');
 export const options = {
   scenarios: {
     flood: { executor: 'constant-arrival-rate', exec: 'flood', rate: 200, timeUnit: '1s', duration: '20s', preAllocatedVUs: 50 },
-    bruteforce: { executor: 'constant-arrival-rate', exec: 'bruteforce', rate: 20, timeUnit: '1s', duration: '20s', preAllocatedVUs: 10 },
+    bruteforce: { executor: 'constant-arrival-rate', exec: 'bruteforce', rate: 40, timeUnit: '1s', duration: '20s', preAllocatedVUs: 10 },
     bystander: { executor: 'constant-vus', exec: 'bystander', vus: 5, duration: '20s' },
   },
   thresholds: { flood_429: ['count>0'], bruteforce_429: ['count>0'], bystander_429: ['count==0'] },
@@ -24,7 +24,8 @@ export function flood() {
 }
 
 export function bruteforce() {
-  const r = http.post(`${BASE}/auth/login`, JSON.stringify({ email: students[1].email, password: `guess${Math.random()}` }), {
+  // Sign-in is Google SSO: hammer it with forged ID tokens from one IP (per-IP auth limiter).
+  const r = http.post(`${BASE}/auth/google`, JSON.stringify({ credential: `forged.${Math.random()}.token` }), {
     headers: { 'Content-Type': 'application/json' }, tags: { name: 'bruteforce' },
   });
   if (r.status === 429) bruteLimited.add(1);

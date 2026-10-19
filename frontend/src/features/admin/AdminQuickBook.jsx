@@ -1,10 +1,21 @@
 import { Zap, User as UserIcon, Search, ChevronDown, Clock, MapPin } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DatePickerDropdown from '../../components/ui/DatePickerDropdown';
+import MemberPicker from './MemberPicker';
 
 function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, submitting, onSubmit }) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(null); // room_id
-  const [userSearch, setUserSearch] = useState('');
+  // Users picked through the server-side search, so their names show even if they aren't in `users`.
+  const [picked, setPicked] = useState({});
+  const nameFor = (roomId) => {
+    const id = quickBookForm[`target_${roomId}`];
+    return picked[id]?.name || users.find((u) => u.id === id)?.name;
+  };
+  const pick = (roomId, u) => {
+    setPicked((prev) => ({ ...prev, [u.id]: u }));
+    setQuickBookForm({ ...quickBookForm, [`target_${roomId}`]: u.id });
+    setUserDropdownOpen(null);
+  };
   
   const [isSlotOpen, setIsSlotOpen] = useState(false);
   const [isRoomJumpOpen, setIsRoomJumpOpen] = useState(false);
@@ -16,13 +27,6 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
     setCurrentPage(1);
   }, [quickBookForm.date, quickBookForm.slot, quickBookForm.roomFilter]);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter(u => 
-      u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
-      u.email.toLowerCase().includes(userSearch.toLowerCase())
-    );
-  }, [users, userSearch]);
-
   const filteredRooms = roomStatuses.filter(r => 
     quickBookForm.roomFilter === 'all' || r.room_name === quickBookForm.roomFilter
   );
@@ -33,7 +37,9 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-bg-primary/50">
        {/* Discovery Header */}
-       <div className="p-4 sm:p-6 border-b border-border/20 bg-surface-low/60 backdrop-blur-sm">
+       {/* relative z-30: backdrop-blur makes this its own stacking context; without a z-index the
+           table's recipient pickers painted over the Slot / Room Jump menus (NEW-E2E-1). */}
+       <div className="relative z-30 p-4 sm:p-6 border-b border-border/20 bg-surface-low/60 backdrop-blur-sm">
          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
              <div className="space-y-1 relative z-50">
@@ -148,7 +154,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                        <div className="flex items-center gap-2 truncate">
                           <UserIcon size={14} className="text-text-secondary opacity-40" />
                           <span className="truncate">
-                            {users.find(u => u.id === quickBookForm[`target_${room.room_id}`])?.name || 'Select User...'}
+                            {nameFor(room.room_id) || 'Select User...'}
                           </span>
                        </div>
                        <ChevronDown size={14} className={`text-text-secondary opacity-30 transition-transform ${userDropdownOpen === room.room_id ? 'rotate-180' : ''}`} />
@@ -156,30 +162,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
 
                      {userDropdownOpen === room.room_id && (
                        <div className="absolute z-[100] mt-2 w-full bg-surface-low border border-border/20 rounded-2xl shadow-2xl overflow-hidden ring-1 ring-border/10">
-                          <div className="p-3 border-b border-border">
-                            <input 
-                              autoFocus
-                              type="text"
-                              placeholder="Search members..."
-                              value={userSearch}
-                              onChange={(e) => setUserSearch(e.target.value)}
-                              className="w-full bg-bg-secondary border border-border rounded-xl px-3 py-2 text-xs font-bold focus:outline-none"
-                            />
-                          </div>
-                          <div className="max-h-[160px] overflow-auto">
-                            {filteredUsers.map(u => (
-                              <button 
-                                key={u.id}
-                                onClick={() => {
-                                  setQuickBookForm({...quickBookForm, [`target_${room.room_id}`]: u.id});
-                                  setUserDropdownOpen(null);
-                                }}
-                                className="w-full text-left px-4 py-3 hover:bg-bg-secondary text-sm font-bold"
-                              >
-                                {u.name}
-                              </button>
-                            ))}
-                          </div>
+                          <MemberPicker compact initialUsers={users} onPick={(u) => pick(room.room_id, u)} />
                        </div>
                      )}
                   </div>
@@ -238,7 +221,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                            <div className="flex items-center gap-2 truncate">
                               <UserIcon size={14} className="text-text-secondary opacity-40" />
                               <span className="truncate">
-                                {users.find(u => u.id === quickBookForm[`target_${room.room_id}`])?.name || 'Select User...'}
+                                {nameFor(room.room_id) || 'Select User...'}
                               </span>
                            </div>
                            <ChevronDown size={14} className={`text-text-secondary opacity-30 transition-transform ${userDropdownOpen === room.room_id ? 'rotate-180' : ''}`} />
@@ -246,39 +229,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
 
                          {userDropdownOpen === room.room_id && (
                            <div className="fixed sm:absolute z-[100] mt-2 w-full max-w-[240px] bg-surface-low border border-border/20 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 ring-1 ring-border/10">
-                              <div className="p-3 border-b border-border bg-bg-secondary/30">
-                                <div className="relative">
-                                  <input 
-                                    autoFocus
-                                    type="text"
-                                    placeholder="Search members..."
-                                    value={userSearch}
-                                    onChange={(e) => setUserSearch(e.target.value)}
-                                    className="w-full bg-bg-primary border border-border rounded-xl px-3 py-1.5 text-xs font-bold focus:outline-none focus:border-accent pl-8"
-                                  />
-                                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary/40" size={12} />
-                                </div>
-                              </div>
-                              <div className="max-h-[200px] overflow-auto no-scrollbar">
-                                {filteredUsers.length === 0 ? (
-                                  <div className="p-4 text-center text-xs text-text-secondary font-bold capitalize tracking-widest">No users found</div>
-                                ) : (
-                                  filteredUsers.map(u => (
-                                    <button 
-                                      key={u.id}
-                                      onClick={() => {
-                                        setQuickBookForm({...quickBookForm, [`target_${room.room_id}`]: u.id});
-                                        setUserDropdownOpen(null);
-                                        setUserSearch('');
-                                      }}
-                                      className="w-full text-left px-4 py-3 hover:bg-bg-secondary transition-colors flex flex-col gap-0.5"
-                                    >
-                                      <span className="text-sm font-black text-text-primary">{u.name}</span>
-                                      <span className="text-[10px] text-text-secondary opacity-60">{u.email}</span>
-                                    </button>
-                                  ))
-                                )}
-                              </div>
+                              <MemberPicker initialUsers={users} onPick={(u) => pick(room.room_id, u)} />
                            </div>
                          )}
                       </div>

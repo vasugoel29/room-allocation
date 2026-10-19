@@ -337,8 +337,9 @@ function App() {
                       <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
                       <Route path="/timetable" element={<ProtectedRoute user={user}><Timetable /></ProtectedRoute>} />
                       <Route path="/bookings" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}><Bookings /></ProtectedRoute>} />
-                      <Route path="/history" element={!isDesktop ? <MobileHistory onBack={() => navigate('/calendar')} /> : <Navigate to="/bookings" />} />
-                      <Route path="/book-a-slot" element={!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />} />
+                      {/* Same roles as /bookings: viewers can't reach the booking flow by URL (FE-24). */}
+                      <Route path="/history" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}>{!isDesktop ? <MobileHistory onBack={() => navigate('/calendar')} /> : <Navigate to="/bookings" />}</ProtectedRoute>} />
+                      <Route path="/book-a-slot" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}>{!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />}</ProtectedRoute>} />
                       <Route path="/" element={
                         user?.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
                         user?.role === 'FACULTY' ? <Navigate to="/faculty" replace /> :

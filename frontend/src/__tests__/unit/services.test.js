@@ -22,15 +22,6 @@ afterEach(() => { vi.unstubAllGlobals(); });
 const failWith = (status, body) => fetchMock.mockResolvedValueOnce(jsonResponse(body, status));
 
 describe('authService', () => {
-  it('getCalendar / getMine hit the bounded endpoints and unwrap data', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 1 }], meta: {} }));
-    expect(await bookingService.getCalendar('2026-10-19', '2026-11-01')).toEqual([{ id: 1 }]);
-    expect(last().url).toBe('/api/bookings/calendar?from=2026-10-19&to=2026-11-01');
-    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 2 }] }));
-    expect(await bookingService.getMine()).toEqual([{ id: 2 }]);
-    expect(last().url).toBe('/api/bookings/mine');
-  });
-
   it.each([
     ['googleLogin', () => authService.googleLogin('cred'), 'POST', '/api/auth/google', { credential: 'cred' }],
     ['devLogin', () => authService.devLogin('a@nsut.ac.in'), 'POST', '/api/auth/dev-login', { email: 'a@nsut.ac.in' }],
@@ -77,18 +68,17 @@ describe('authService', () => {
 });
 
 describe('bookingService', () => {
-  it('getBookings builds query string and unwraps paginated data', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 1 }], meta: { total: 1 } }));
-    expect(await bookingService.getBookings({ limit: 1000 })).toEqual([{ id: 1 }]);
-    expect(last()).toEqual({ method: 'GET', url: '/api/bookings?limit=1000', body: undefined });
-    fetchMock.mockResolvedValueOnce(jsonResponse([{ id: 2 }]));
-    expect(await bookingService.getBookings()).toEqual([{ id: 2 }]);
-    expect(last().url).toBe('/api/bookings');
+  it('getCalendar / getMine hit the bounded endpoints and unwrap data', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 1 }], meta: {} }));
+    expect(await bookingService.getCalendar('2026-10-19', '2026-11-01')).toEqual([{ id: 1 }]);
+    expect(last().url).toBe('/api/bookings/calendar?from=2026-10-19&to=2026-11-01');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 2 }] }));
+    expect(await bookingService.getMine()).toEqual([{ id: 2 }]);
+    expect(last().url).toBe('/api/bookings/mine');
   });
 
   it.each([
     ['createBooking', () => bookingService.createBooking({ room_id: 1 }), 'POST', '/api/bookings', { room_id: 1 }],
-    ['rescheduleBooking', () => bookingService.rescheduleBooking(3, { a: 1 }), 'POST', '/api/bookings/3/reschedule', { a: 1 }],
     ['cancelBooking', () => bookingService.cancelBooking(3), 'PATCH', '/api/bookings/3/cancel', undefined],
     ['incoming', () => bookingService.getIncomingTransfers(), 'GET', '/api/transfers/incoming', undefined],
     ['outgoing', () => bookingService.getOutgoingTransfers(), 'GET', '/api/transfers/outgoing', undefined],
@@ -205,7 +195,7 @@ describe('adminService', () => {
   });
 
   // NEW-FE-2: search text is interpolated raw into the query string; "R&D" splits into search=R + a stray "D" param.
-  it.fails('[NEW-FE-2] fetchAuditLogs URL-encodes the search term', async () => {
+  it('[NEW-FE-2] fetchAuditLogs URL-encodes the search term', async () => {
     await adminService.fetchAuditLogs(1, 'R&D #2');
     expect(last().url).toBe('/api/admin/audit-logs?page=1&search=R%26D%20%232');
   });

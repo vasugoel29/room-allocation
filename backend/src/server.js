@@ -24,8 +24,10 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 // Sentry: errors always (when a DSN is set), traces sampled (default 10%) so it costs little at
 // peak; only warn/error console output is forwarded. No profiling in production.
 const sampleRate = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v != null ? Math.min(1, Math.max(0, Number(v))) : d);
-Sentry.init({
-  enabled: Boolean(process.env.SENTRY_DSN) && !['test', 'e2e'].includes(process.env.NODE_ENV),
+// Not initialised at all when disabled: a disabled init still writes the SDK's global carrier,
+// which Jest's globals cleanup re-wraps per test file until the stack overflows.
+const sentryEnabled = Boolean(process.env.SENTRY_DSN) && !['test', 'e2e'].includes(process.env.NODE_ENV);
+if (sentryEnabled) Sentry.init({
   dsn: process.env.SENTRY_DSN,
   environment: process.env.NODE_ENV,
   integrations: [Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] })],
@@ -192,7 +194,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/timetable', timetableRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
-Sentry.setupExpressErrorHandler(app);
+if (sentryEnabled) Sentry.setupExpressErrorHandler(app);
 
 // Global JSON error handler. Clients get a status-appropriate message; details stay in the logs (SEC-12).
 app.use((err, req, res, next) => {

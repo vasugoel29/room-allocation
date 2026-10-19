@@ -20,6 +20,7 @@ export const AppProvider = ({ children }) => {
   });
 
   const [rooms, setRooms] = useState([]);
+  const [roomsError, setRoomsError] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [availability, setAvailability] = useState([]);
   const [filters, setFilters] = useState({ smartRoom: false, searchTerm: '', floor: 'all', building: ['5th Block'], roomType: 'all' });
@@ -122,10 +123,12 @@ export const AppProvider = ({ children }) => {
         building: filters.building.flatMap(b => b === 'Others' ? ['Other', 'Others'] : [b])
       };
       const data = await roomService.getRooms(queryParams);
-      if (Array.isArray(data)) setRooms(data);
+      if (Array.isArray(data)) { setRooms(data); setRoomsError(null); }
       else console.error('Expected array of rooms, got:', data);
     } catch (err) {
+      // Surfaced to the calendar so a failure isn't shown as "no matching rooms" (FE-13).
       console.error('Fetch rooms failed', err);
+      setRoomsError(err.message || 'Could not load rooms');
     }
   }, [filters.building]);
 
@@ -292,6 +295,7 @@ export const AppProvider = ({ children }) => {
     setUser,
     hasResource,
     rooms,
+    roomsError,
 
     faculties,
     incomingTransfers,
@@ -328,6 +332,7 @@ export const AppProvider = ({ children }) => {
     user,
     hasResource,
     rooms,
+    roomsError,
     faculties,
     incomingTransfers,
     outgoingTransfers,

@@ -10,7 +10,7 @@ const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 08:00–18:00; fin
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, timetableData, user } = useContext(AppContext);
+  const { bookings, rooms, roomsError, fetchRooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, timetableData, user } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
@@ -240,7 +240,12 @@ function Calendar({ onSlotClick }) {
               </div>
             )}
 
-            {rooms.length === 0 ? (
+            {roomsError && rooms.length === 0 ? (
+              <div role="alert" className="flex flex-col items-center justify-center py-20 bg-tonal-secondary/5 flex-1 p-8 rounded-[2rem] m-4 gap-4">
+                <p className="text-text-secondary text-base sm:text-lg font-extrabold font-display text-center">Couldn&apos;t load rooms. Check your connection and try again.</p>
+                <button type="button" onClick={() => fetchRooms()} className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold">Retry</button>
+              </div>
+            ) : rooms.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 bg-tonal-secondary/5 flex-1 p-8 rounded-[2rem] m-4">
                 <div className="p-6 bg-tonal-secondary/10 rounded-full mb-6">
                   <Filter className="text-secondary/60" size={48} strokeWidth={1.5} />
@@ -269,9 +274,6 @@ function Calendar({ onSlotClick }) {
                         <div 
                           key={dateStr} 
                           className="relative p-2 h-full transition-all border-l border-text-secondary/10 hover:bg-tonal-secondary/5"
-                          onClick={() => {
-                            onSlotClick({ day: dayLabel, hour, date: dateObj });
-                          }}
                         >
                           <div className="absolute inset-0 z-0 transition-opacity duration-500 opacity-0" />
                           
@@ -308,47 +310,49 @@ function Calendar({ onSlotClick }) {
                                     const booking = bookingsIndex.get(`${room.id}-${dateStr}-${hour}`);
                                     if (booking) {
                                       return (
-                                        <div 
+                                        <button
+                                          type="button"
                                           key={room.id}
                                           onClick={(e) => {
                                             e.stopPropagation();
                                             onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id, booking });
                                           }}
-                                          className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all opacity-45 hover:opacity-100 text-left"
+                                          className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all opacity-45 hover:opacity-100 focus-visible:opacity-100 text-left"
                                           title={`${room.name} - Booked for ${booking.class_name || booking.purpose}`}
                                         >
-                                          <div className="flex flex-col text-left overflow-hidden py-1.5">
+                                          <span className="flex flex-col text-left overflow-hidden py-1.5">
                                             <span className="font-black truncate tracking-tight text-xs sm:text-sm">{room.name}</span>
                                             <span className="text-[9px] font-bold text-text-secondary opacity-65 truncate block max-w-[85px] sm:max-w-[120px] leading-tight mt-0.5">
                                               {booking.class_name || booking.purpose}
                                             </span>
-                                          </div>
-                                          <div className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0">
+                                          </span>
+                                          <span className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0" aria-hidden="true">
                                             <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
                                             <Monitor size={isMobile ? 10 : 12} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
-                                          </div>
-                                        </div>
+                                          </span>
+                                        </button>
                                       );
                                     }
 
                                     return (
-                                      <div 
+                                      <button
+                                        type="button"
                                         key={room.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
                                         }}
-                                        className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all text-xs sm:text-sm leading-tight truncate font-bold text-text-primary"
+                                        className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all text-xs sm:text-sm leading-tight truncate font-bold text-text-primary text-left"
                                         title={`${room.name} - Available`}
                                       >
-                                        <div className="flex flex-col overflow-hidden">
+                                        <span className="flex flex-col overflow-hidden">
                                           <span className="font-black truncate tracking-tight text-xs sm:text-sm">{room.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0">
+                                        </span>
+                                        <span className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0" aria-hidden="true">
                                           <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
                                           <Monitor size={isMobile ? 10 : 12} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
-                                        </div>
-                                      </div>
+                                        </span>
+                                      </button>
                                     );
                                   })}
                                   {hasMore && !isExpanded && (

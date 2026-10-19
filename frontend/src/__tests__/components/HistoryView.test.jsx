@@ -166,7 +166,7 @@ describe('HistoryView cancel', () => {
   });
 
   // FE-11: a failed cancel only sets an unused `error` state — the user gets no feedback at all.
-  it.fails('[FE-11] a failed cancellation is reported to the user', async () => {
+  it('[FE-11] a failed cancellation is reported to the user', async () => {
     const { ue } = setup({ routes: [['PATCH', /\/cancel$/, () => jsonResponse({ error: 'Cannot cancel a past booking' }, 400)]] });
     await ue.click(cancelButtonFor('R-1'));
     await ue.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel Booking' }));

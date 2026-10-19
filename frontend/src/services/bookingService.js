@@ -4,18 +4,6 @@ import api from '../utils/api';
  * Service for Booking specific API calls
  */
 export const bookingService = {
-  getBookings: async (filters = {}) => {
-    const queryParams = new URLSearchParams(filters).toString();
-    const endpoint = `/bookings${queryParams ? `?${queryParams}` : ''}`;
-    const res = await api.get(endpoint);
-    if (!res.ok) throw new Error('Failed to fetch bookings');
-    const result = await res.json();
-    
-    // For backward compatibility with other parts of the app that expect an array
-    // We return the data array if it's paginated, otherwise return the array directly
-    return result.data || result;
-  },
-
   /** ACTIVE + PENDING bookings overlapping the IST days from..to (inclusive, at most 31 days). */
   getCalendar: async (from, to) => {
     const res = await api.get(`/bookings/calendar?${new URLSearchParams({ from, to })}`);
@@ -37,15 +25,6 @@ export const bookingService = {
       const error = new Error(err.error || 'Booking creation failed');
       error.conflict = err.conflict;
       throw error;
-    }
-    return res.json();
-  },
-
-  rescheduleBooking: async (id, data) => {
-    const res = await api.post(`/bookings/${id}/reschedule`, data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Reschedule failed');
     }
     return res.json();
   },

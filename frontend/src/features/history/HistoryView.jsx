@@ -16,7 +16,6 @@ const HistoryView = ({ onClose }) => {
   const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST, TRANSFERS
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
-  const [, setError] = useState('');
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: null });
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
@@ -114,7 +113,6 @@ const HistoryView = ({ onClose }) => {
       confirmType: 'danger',
       action: async () => {
         setLoading(true);
-        setError('');
         try {
           await bookingService.cancelBooking(bookingId);
           fetchHistory();
@@ -123,7 +121,7 @@ const HistoryView = ({ onClose }) => {
           fetchAvailability();
           toast.success('Booking cancelled');
         } catch (err) {
-          setError(err.message);
+          toast.error(err.message || 'Could not cancel the booking'); // FE-11: tell the user
         } finally {
           setLoading(false);
         }

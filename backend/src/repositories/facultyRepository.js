@@ -35,11 +35,16 @@ export const facultyRepository = {
     return rows.map((r) => r.name);
   },
 
-  /** Insert or update an entry by email; reactivates a soft-deleted one. */
+  /**
+   * Insert or update an entry by email; reactivates a soft-deleted one. A department given only
+   * by name is linked to the matching active department (OPS-09).
+   */
   upsert: async ({ name, email, department_id = null, department_name = null }, client = db) => {
     const { rows } = await client.query(
       `INSERT INTO faculties (name, email, department_id, department_name, is_active, deactivated_at, updated_at)
-       VALUES ($1, lower($2), $3, $4, TRUE, NULL, NOW())
+       VALUES ($1, lower($2),
+               COALESCE($3::int, (SELECT id FROM departments WHERE is_active AND lower(name) = lower($4::text) ORDER BY id LIMIT 1)),
+               $4, TRUE, NULL, NOW())
        ON CONFLICT (lower(email)) DO UPDATE
          SET name = EXCLUDED.name,
              department_id = COALESCE(EXCLUDED.department_id, faculties.department_id),

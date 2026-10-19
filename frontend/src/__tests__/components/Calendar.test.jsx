@@ -148,7 +148,7 @@ describe('Calendar filters (applied from AppContext.filters)', () => {
 
 describe('Calendar known bugs', () => {
   // FE-09: the whole cell is clickable and opens the booking modal without a room → "Please select a room".
-  it.fails('[FE-09] clicking empty space in a cell does not open the modal without a room', () => {
+  it('[FE-09] clicking empty space in a cell does not open the modal without a room', () => {
     const { onSlotClick } = setup();
     const cell = cards('R-1 - Available')[0].parentElement.parentElement;
     fireEvent.click(cell);
@@ -156,13 +156,13 @@ describe('Calendar known bugs', () => {
   });
 
   // FE-07: room cards are <div onClick>, not focusable/operable by keyboard.
-  it.fails('[FE-07] room cards are exposed as buttons', () => {
+  it('[FE-07] room cards are exposed as buttons', () => {
     setup();
     expect(screen.getAllByRole('button', { name: /R-1/ }).length).toBeGreaterThan(0);
   });
 
   // FE-13: a failed /rooms fetch is only console-logged; the grid claims there are no matching rooms.
-  it.fails('[FE-13] a failed rooms fetch is not presented as "No structural matches found"', async () => {
+  it('[FE-13] a failed rooms fetch is not presented as "No structural matches found"', async () => {
     vi.useRealTimers();
     vi.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.setItem('user', JSON.stringify(USERS.VIEWER));

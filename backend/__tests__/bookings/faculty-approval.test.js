@@ -245,7 +245,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
     });
   });
 
-  test.failing('[NEW-bookings-5] non-numeric booking id → 400/404, not 500', async () => {
+  test('[NEW-bookings-5] non-numeric booking id → 400/404, not 500', async () => {
     const res = await approve((await createFaculty()).auth, 'abc');
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);

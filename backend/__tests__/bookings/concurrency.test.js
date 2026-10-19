@@ -28,7 +28,8 @@ function expectOneWinner(res, conflictType) {
   expect(statuses.filter((s) => s !== 201).every((s) => s === 409)).toBe(true);
   // A loser that shares its start time with the winner trips a legacy unique index instead and gets a
   // generic 409 without a conflict body (NEW-P4-8).
-  for (const r of res.filter((x) => x.status === 409 && x.body.conflict)) expect(r.body.conflict).toEqual({ type: conflictType });
+  // A loser whose transaction deadlocked past the retries gets the generic race 409 (NEW-P4-7).
+  for (const r of res.filter((x) => x.status === 409 && x.body.conflict)) expect([conflictType, 'race']).toContain(r.body.conflict.type);
 }
 
 const activeIn = async (roomId) =>

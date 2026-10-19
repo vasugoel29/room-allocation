@@ -82,7 +82,7 @@ describe('App routing — role landing and guards', () => {
   });
 
   // FE-24: /book-a-slot and /history are not role-gated — a VIEWER on a phone reaches the booking flow.
-  it.fails('[FE-24] VIEWER on mobile cannot open /book-a-slot', async () => {
+  it('[FE-24] VIEWER on mobile cannot open /book-a-slot', async () => {
     window.innerWidth = 400;
     go('/book-a-slot', USERS.VIEWER);
     expect(await page()).toBe('Calendar');

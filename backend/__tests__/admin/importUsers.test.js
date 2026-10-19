@@ -130,7 +130,7 @@ describe('faculty import (faculty directory)', () => {
     expect((await db.query("SELECT 1 FROM faculties WHERE name IN ('Bad Mail Prof', 'No Mail Prof')")).rowCount).toBe(0);
   });
 
-  test.failing('[OPS-09] department_id is populated for imported faculty', async () => {
+  test('[OPS-09] department_id is populated for imported faculty', async () => {
     const dept = (await db.query('SELECT id, name FROM departments WHERE is_active ORDER BY id LIMIT 1')).rows[0];
     const e = email('facdept');
     await runImport(app, admin.auth, 'faculty', `name,email,department_name\nDept Prof,${e},${dept.name}\n`);
@@ -149,7 +149,7 @@ describe('faculty import (faculty directory)', () => {
   });
 
   // parseCSV toggles quote state on every `"`, so RFC 4180 escaped quotes ("") vanish.
-  test.failing('[NEW-admin-5] escaped double quotes in a quoted field are preserved', async () => {
+  test('[NEW-admin-5] escaped double quotes in a quoted field are preserved', async () => {
     const e = email('quote');
     await runImport(app, admin.auth, 'faculty', `name,email\n"Tom ""TJ"" Jones",${e}\n`);
     expect((await facultyByEmail(e)).name).toBe('Tom "TJ" Jones');

@@ -153,13 +153,13 @@ describe('FacultyDashboard approved / my bookings', () => {
   });
 
   // FE-19: "My Bookings" lists every booking I created (any status, any date) and offers Cancel Session on all.
-  it.fails('[FE-19] no "Cancel Session" on a CANCELLED booking', async () => {
+  it('[FE-19] no "Cancel Session" on a CANCELLED booking', async () => {
     const { ue } = setup({ bookings: [bk(10, { created_by: 21, status: 'CANCELLED' })] });
     await ue.click(screen.getByRole('button', { name: 'My Bookings' }));
     expect(screen.queryByRole('button', { name: /cancel session/i })).toBeNull();
   });
 
-  it.fails('[FE-19] no "Cancel Session" on a booking that already ended', async () => {
+  it('[FE-19] no "Cancel Session" on a booking that already ended', async () => {
     const { ue } = setup({ bookings: [bk(11, { created_by: 21, start_time: iso(20, 9), end_time: iso(20, 10) })] });
     await ue.click(screen.getByRole('button', { name: 'My Bookings' }));
     expect(screen.queryByRole('button', { name: /cancel session/i })).toBeNull();

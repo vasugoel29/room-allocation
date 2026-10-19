@@ -2,9 +2,7 @@ import { test, expect, signIn, nextWeekdaySlot, openSlot, focusCalendarOn } from
 
 test.describe('Keyboard accessibility smoke', () => {
   test('a room slot can be reached and opened with the keyboard alone', async ({ page, request, seed }) => {
-    // [FE-07] Room cards (and the booking-type / faculty pickers) are clickable <div>s with no tabindex or
-    // key handlers, so Tab never reaches a slot and keyboard-only users cannot start a booking.
-    test.fail();
+    // [FE-07] regression: room cards and the booking-type / faculty pickers are buttons now.
     const rep = await seed.user({ role: 'STUDENT_REP' });
     const room = await seed.room();
     await signIn(page, request, rep, '/calendar');

@@ -1,3 +1,4 @@
+import { getHourFromTime } from '../utils/timetableLogic.js';
 import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
@@ -11,36 +12,37 @@ import { randomUUID } from 'crypto';
 const jobStore = new Map();
 
 // Simple custom CSV parser
+/**
+ * RFC 4180 CSV: quoted fields may contain commas, newlines and doubled quotes ("" -> ").
+ * Returns one object per non-blank record, keyed by the trimmed header names (NEW-admin-5).
+ */
 const parseCSV = (csvText) => {
-  const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
-  if (lines.length === 0) return [];
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-  const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    const row = {};
-    const values = [];
-    let curVal = '';
-    let insideQuote = false;
-    for (let j = 0; j < line.length; j++) {
-      const char = line[j];
-      if (char === '"') {
-        insideQuote = !insideQuote;
-      } else if (char === ',' && !insideQuote) {
-        values.push(curVal.trim());
-        curVal = '';
-      } else {
-        curVal += char;
-      }
-    }
-    values.push(curVal.trim());
-
-    headers.forEach((header, idx) => {
-      row[header] = values[idx] !== undefined ? values[idx].replace(/^"|"$/g, '') : '';
-    });
-    rows.push(row);
+  const records = [];
+  let record = [];
+  let field = '';
+  let quoted = false;
+  const text = String(csvText).replace(/^\uFEFF/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+      else if (c === '"') quoted = false;
+      else field += c;
+    } else if (c === '"') quoted = true;
+    else if (c === ',') { record.push(field); field = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      record.push(field); records.push(record); record = []; field = '';
+    } else field += c;
   }
-  return rows;
+  record.push(field);
+  records.push(record);
+
+  const nonBlank = records.filter((r) => r.some((v) => v.trim() !== ''));
+  if (nonBlank.length === 0) return [];
+  const headers = nonBlank[0].map((h) => h.trim());
+  return nonBlank.slice(1).map((values) =>
+    Object.fromEntries(headers.map((h, idx) => [h, (values[idx] ?? '').trim()])));
 };
 
 // -------------------------------------------------------------
@@ -372,6 +374,9 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
     await db.runInTransaction(async (client) => {
       // A timetable import replaces the active timetable; previous slots are soft-deleted, never removed.
       await client.query('UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE is_active');
+      // ...and so are the room blocks the previous import derived from them; manual overrides stay (OPS-05).
+      await client.query(`UPDATE room_availability SET is_active = FALSE, deactivated_at = NOW()
+                           WHERE source = 'timetable_import' AND is_active`);
       
       const chunkSize = 500;
       for (let i = 0; i < rows.length; i += chunkSize) {
@@ -390,13 +395,14 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
 
           // Sync with room_availability: if a room is assigned, mark it as unavailable for that day/hour
           if (roomId && row.day_of_week && row.slot_time) {
-            const match = row.slot_time.match(/(\d{1,2}):(\d{2})/);
-            if (match) {
-              const startHour = parseInt(match[1]);
+            if (/(\d{1,2}):(\d{2})/.test(row.slot_time)) {
+              // Same 12-hour convention as everywhere else: 01:00–07:59 are afternoon hours (OPS-05).
+              const startHour = getHourFromTime(row.slot_time);
               await client.query(`
-                INSERT INTO room_availability (room_id, day, hour, is_available)
-                VALUES ($1, $2, $3, FALSE)
-                ON CONFLICT (room_id, day, hour) DO UPDATE SET is_available = FALSE
+                INSERT INTO room_availability (room_id, day, hour, is_available, source)
+                VALUES ($1, $2, $3, FALSE, 'timetable_import')
+                ON CONFLICT (room_id, day, hour) DO UPDATE
+                  SET is_available = FALSE, source = 'timetable_import', is_active = TRUE, deactivated_at = NULL
               `, [roomId, row.day_of_week, startHour]);
             }
           }

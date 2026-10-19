@@ -153,7 +153,7 @@ export async function checkRoomTimetable(client, room, t) {
 
   const { rows: blocks } = await client.query(
     `SELECT hour FROM room_availability
-      WHERE room_id = $1 AND day = $2 AND is_available = FALSE AND hour >= $3 AND hour < $4`,
+      WHERE room_id = $1 AND day = $2 AND is_available = FALSE AND is_active AND hour >= $3 AND hour < $4`,
     [room.id, t.day, t.startHour, t.endHour],
   );
   let blocked = false;

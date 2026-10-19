@@ -24,20 +24,29 @@ function FacultySelector({
               setFacultySearchTerm(e.target.value);
               setIsFacultyOpen(true);
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setIsFacultyOpen(true); }
+              else if (e.key === 'Escape' && isFacultyOpen) { e.stopPropagation(); setIsFacultyOpen(false); }
+            }}
             autoComplete="off"
+            role="combobox"
+            aria-expanded={isFacultyOpen}
+            aria-controls="faculty-options"
             aria-label="Search for faculty"
             className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-2xl px-5 py-4 text-sm text-text-primary font-bold focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all pr-12 shadow-sm placeholder:text-text-secondary/30 font-body"
           />
-          <div 
+          <button
+            type="button"
+            aria-label={isFacultyOpen ? 'Hide faculty list' : 'Show faculty list'}
             className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary/50 cursor-pointer"
             onClick={() => setIsFacultyOpen(!isFacultyOpen)}
           >
             <svg width="14" height="14" viewBox="0 0 12 12" fill="none" className={`transition-transform duration-200 ${isFacultyOpen ? 'rotate-180' : ''}`}><path d="M2.5 4.5L6 8L9.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </div>
+          </button>
         </div>
 
         {isFacultyOpen && (
-          <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
+          <div id="faculty-options" role="listbox" aria-label="Faculty" className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
             {Array.isArray(faculties) && faculties
               ?.filter(f => !debouncedFacultyTerm || 
                             f.name.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()) || 
@@ -45,18 +54,21 @@ function FacultySelector({
               .map(f => {
                 const isSelected = String(selectedFaculty) === String(f.id);
                 return (
-                  <div
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
                     key={f.id}
                     onClick={() => {
                       setSelectedFaculty(f.id);
                       setIsFacultyOpen(false);
                       setFacultySearchTerm('');
                     }}
-                    className={`p-5 cursor-pointer transition-colors flex flex-col hover:bg-black/5 dark:hover:bg-white/5 ${isSelected ? 'bg-primary text-white shadow-ambient' : ''}`}
+                    className={`w-full text-left p-5 cursor-pointer transition-colors flex flex-col hover:bg-black/5 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${isSelected ? 'bg-primary text-white shadow-ambient' : ''}`}
                   >
                     <span className={`font-extrabold text-lg tracking-tight capitalize font-display ${isSelected ? 'text-white' : 'text-text-primary'}`}>{f.name}</span>
                     <span className={`text-[10px] capitalize tracking-widest font-extrabold truncate ${isSelected ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{f.department || 'Faculty'}</span>
-                  </div>
+                  </button>
                 );
               })}
             {(!Array.isArray(faculties) || faculties?.filter(f => !debouncedFacultyTerm || 

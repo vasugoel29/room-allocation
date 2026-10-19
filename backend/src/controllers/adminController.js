@@ -59,10 +59,11 @@ export const exportBookingsCSV = async (req, res) => {
 
 export const getAuditLogs = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+    // Clamped, never trusted: page >= 1, 1 <= limit <= 100 (NEW-admin-3).
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 20));
     const offset = (page - 1) * limit;
-    const search = req.query.search || '';
+    const search = typeof req.query.search === 'string' ? req.query.search : '';
 
     let queryText = `
       SELECT al.*, u.name as user_name, u.email as user_email

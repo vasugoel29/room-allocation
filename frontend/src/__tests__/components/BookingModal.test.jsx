@@ -241,7 +241,7 @@ describe('BookingModal', () => {
   });
 
   // FE-07: booking-type and faculty options are clickable <div>s — unreachable by keyboard / screen readers.
-  it.fails('[FE-07] booking type options are exposed as keyboard-operable controls', async () => {
+  it('[FE-07] booking type options are exposed as keyboard-operable controls', async () => {
     const { ue } = setup();
     await ue.click(screen.getByDisplayValue('Extra Class'));
     expect(screen.getByRole('option', { name: 'Reschedule' })).toBeInTheDocument();

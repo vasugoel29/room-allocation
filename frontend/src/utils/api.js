@@ -13,7 +13,11 @@ export async function apiFetch(endpoint, options = {}) {
     ...options.headers,
   };
 
-  const MAX_RETRIES = 4;
+  // Only idempotent requests are retried automatically. A POST/PATCH/DELETE whose response was
+  // lost may already have been applied (a booking created, a transfer accepted), so replaying it
+  // could do it twice (FE-10); the caller reports the failure instead.
+  const method = (options.method || 'GET').toUpperCase();
+  const MAX_RETRIES = method === 'GET' || method === 'HEAD' ? 4 : 0;
   const RETRY_DELAY_BASE = 2000;
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {

@@ -2,14 +2,16 @@ import express from 'express';
 import * as timetableController from '../controllers/timetableController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
+import { idParam, validate, dateKey, hour } from '../middleware/validators.js';
 
 const router = express.Router();
+router.param('id', idParam);
 
 router.get('/search', authenticate, requirePermission(P.TIMETABLE_MANAGE), timetableController.searchTimetable);
 router.get('/autocomplete/faculty', authenticate, timetableController.autocompleteFaculty);
 router.post('/upload', authenticate, requirePermission(P.TIMETABLE_MANAGE), timetableController.uploadTimetable);
 router.get('/faculty', authenticate, requirePermission(P.TIMETABLE_FACULTY), timetableController.getFacultyTimetable);
-router.get('/faculty/check/:id', authenticate, timetableController.checkFacultyAvailability);
+router.get('/faculty/check/:id', authenticate, validate(dateKey('date'), hour('hour')), timetableController.checkFacultyAvailability);
 router.post('/faculty/override', authenticate, requirePermission(P.TIMETABLE_FACULTY), timetableController.overrideFacultySlot);
 router.get('/faculty/overrides', authenticate, requirePermission(P.TIMETABLE_FACULTY), timetableController.getFacultyOverrides);
 router.get('/cancellation-requests/pending', authenticate, requirePermission(P.CANCELLATION_REVIEW), timetableController.getPendingCancellationRequests);

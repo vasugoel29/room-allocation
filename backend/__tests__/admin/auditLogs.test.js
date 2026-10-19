@@ -87,7 +87,7 @@ describe('GET /api/admin/audit-logs', () => {
     }
   });
 
-  test.failing.each([
+  test.each([
     ['negative page', { page: -1 }],
     ['negative limit', { limit: -5 }],
   ])('[NEW-admin-3] %s is rejected (400) or clamped, never a 500', async (_label, q) => {
@@ -96,7 +96,7 @@ describe('GET /api/admin/audit-logs', () => {
   });
 
   // QUESTION: the exact cap is a product decision; 100 is used here as a sane upper bound.
-  test.failing('[NEW-admin-3] limit is capped (limit=100000 must not dump the whole audit table)', async () => {
+  test('[NEW-admin-3] limit is capped (limit=100000 must not dump the whole audit table)', async () => {
     const prefix = `AUD_BIG_${uniq()}`.toUpperCase();
     await seedAudit(prefix, 120);
     const res = await getLogs({ search: prefix, limit: 100000 });

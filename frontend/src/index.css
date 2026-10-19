@@ -214,6 +214,18 @@ h1, h2, h3, .headline-lg {
   background: var(--color-surface-highest);
 }
 
+/* Room cards are buttons (FE-07): full width in their cell, a visible keyboard focus ring. */
+button.room-card {
+  width: 100%;
+  border: 0;
+  font: inherit;
+}
+
+.room-card:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 @media (max-width: 640px) {
   .pill-grid {
     grid-template-columns: repeat(2, 1fr);

@@ -18,6 +18,13 @@ export const getDayOfWeek = (dateInput) => {
   return days[d.getDay()];
 };
 
+/**
+ * Timetable room names may carry a prefix ("R-6113" for room "6113"). Match the whole name or one
+ * whole token of it — never a substring, or room "101" would be blocked by a class in "1101" (NEW-FE-1).
+ */
+const sameRoomName = (scheduleName, roomName) =>
+  scheduleName === roomName || scheduleName.split(/[^a-z0-9]+/).includes(roomName);
+
 export const getHourFromTime = (timeStr) => {
   if (!timeStr) return 0;
   const startPart = timeStr.split('-')[0].trim();
@@ -245,8 +252,7 @@ export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], av
         const scRoomName = sc.room.trim().toLowerCase();
         const targetRoomName = room.name.trim().toLowerCase();
         
-        // Match exact or contains (e.g. "R-6113" in JSON vs "6113" in DB)
-        if (scRoomName !== targetRoomName && !scRoomName.includes(targetRoomName)) return false;
+        if (!sameRoomName(scRoomName, targetRoomName)) return false;
         
         const slotHour = getHourFromTime(sc.time);
         return slotHour === hour;
@@ -255,7 +261,7 @@ export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], av
         if (!sc.time || !sc.room) return false;
         const scRoomName = sc.room.trim().toLowerCase();
         const targetRoomName = room.name.trim().toLowerCase();
-        if (scRoomName !== targetRoomName && !scRoomName.includes(targetRoomName)) return false;
+        if (!sameRoomName(scRoomName, targetRoomName)) return false;
         const slotHour = getHourFromTime(sc.time);
         return slotHour === hour;
     }) : false);

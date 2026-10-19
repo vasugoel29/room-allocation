@@ -5,6 +5,8 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import logger from '../utils/logger.js';
 import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 
+const STUDENT_HIDDEN_TYPES = ['Committee Room', 'Auditorium'];
+
 export const getRooms = async (req, res) => {
   const { capacity, ac, projector, building, floor, type, page, limit } = req.query;
   try {
@@ -15,14 +17,12 @@ export const getRooms = async (req, res) => {
       const limitNum = parseInt(limit) || 20;
       const offset = (pageNum - 1) * limitNum;
       
-      let { total, rooms } = await roomRepository.findFilteredPaginated({
-        capacity, ac, projector, building, floor, type, limit: limitNum, offset
+      // Hidden room types are excluded in SQL so the page and its total agree (NEW-RTT-1).
+      const { total, rooms } = await roomRepository.findFilteredPaginated({
+        capacity, ac, projector, building, floor, type, limit: limitNum, offset,
+        excludeTypes: isStudent ? STUDENT_HIDDEN_TYPES : [],
       });
-      
-      if (isStudent) {
-        rooms = rooms.filter(r => r.type !== 'Committee Room' && r.type !== 'Auditorium');
-      }
-      
+
       res.json({
         data: rooms,
         meta: {
@@ -35,7 +35,7 @@ export const getRooms = async (req, res) => {
     } else {
       let rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor, type);
       if (isStudent) {
-        rooms = rooms.filter(r => r.type !== 'Committee Room' && r.type !== 'Auditorium');
+        rooms = rooms.filter(r => !STUDENT_HIDDEN_TYPES.includes(r.type));
       }
       res.json(rooms);
     }
@@ -85,7 +85,7 @@ export const getAdminRoomStatus = async (req, res) => {
 };
 export const overrideRoomAvailability = async (req, res) => {
   const { room_name, day, hour, is_available } = req.body;
-  if (!room_name || !day || hour === undefined) {
+  if (!room_name || !day || hour === undefined || is_available === undefined) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
@@ -130,6 +130,7 @@ export const createRoom = async (req, res) => {
       student_access: student_access !== undefined ? student_access : true
     });
     cache.delete('room_availability_all');
+    cache.deletePattern('admin_status_.*'); // BKG-16: the new room must appear in the status grid at once
     res.status(201).json(room);
   } catch (err) {
     logger.error('createRoom error', err);
@@ -162,6 +163,7 @@ export const updateRoom = async (req, res) => {
       return res.status(404).json({ error: 'Room not found' });
     }
     cache.delete('room_availability_all');
+    cache.deletePattern('admin_status_.*');
     res.json(room);
   } catch (err) {
     logger.error('updateRoom error', err);
@@ -211,7 +213,7 @@ export const getRoomWeekSchedule = async (req, res) => {
       db.query(`
         SELECT ra.day, ra.hour, ra.is_available
         FROM room_availability ra
-        WHERE ra.room_id = $1 AND ra.is_available = FALSE
+        WHERE ra.room_id = $1 AND ra.is_available = FALSE AND ra.is_active
         ORDER BY ra.day, ra.hour
       `, [id]),
 
@@ -307,6 +309,7 @@ export const checkRoomConflict = async (req, res) => {
 
   const sh = parseInt(startHour);
   const eh = parseInt(endHour);
+  if (eh <= sh) return res.status(400).json({ error: 'endHour must be after startHour' });
 
     try {
       const d = new Date(date + 'T00:00:00Z');
@@ -323,7 +326,7 @@ export const checkRoomConflict = async (req, res) => {
         const availResult = await db.query(`
           SELECT ra.hour, ra.is_available
           FROM room_availability ra
-          WHERE ra.room_id = $1 AND ra.day = $2 AND ra.hour = ANY($3) AND ra.is_available = FALSE
+          WHERE ra.room_id = $1 AND ra.day = $2 AND ra.hour = ANY($3) AND ra.is_available = FALSE AND ra.is_active
         `, [id, dayShort, hours]);
 
         if (availResult.rows.length > 0) {

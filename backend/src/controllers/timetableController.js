@@ -48,42 +48,47 @@ export async function getTimetable(req, res) {
   }
 }
 
+const SLOT_COLUMNS = ['department', 'semester', 'section', 'day_of_week', 'slot_time', 'subject_name', 'room_name', 'subject_code', 'faculty_name'];
+
+/**
+ * Adds timetable slots. Re-posting rows that already exist (all columns equal) adds nothing, and
+ * duplicates within one upload are collapsed, so uploading the same file twice is harmless (OPS-14).
+ * All-or-nothing: any bad row rolls back the whole upload.
+ */
 export async function uploadTimetable(req, res) {
   try {
     const { slots } = req.body;
     if (!Array.isArray(slots)) return res.status(400).json({ error: 'Invalid data format' });
 
+    const seen = new Set();
+    const unique = [];
+    for (const slot of slots) {
+      const row = SLOT_COLUMNS.map((c) => (slot?.[c] === undefined || slot?.[c] === null ? null : String(slot[c])));
+      const key = JSON.stringify(row);
+      if (!seen.has(key)) { seen.add(key); unique.push(row); }
+    }
+
+    let inserted = 0;
     await db.runInTransaction(async (client) => {
       const chunkSize = 200;
-      for (let i = 0; i < slots.length; i += chunkSize) {
-        const chunk = slots.slice(i, i + chunkSize);
-        const values = [];
-        const placeholders = [];
-        let index = 1;
-        for (const slot of chunk) {
-          placeholders.push(`($${index}, $${index+1}, $${index+2}, $${index+3}, $${index+4}, $${index+5}, $${index+6}, $${index+7}, $${index+8})`);
-          values.push(
-            slot.department,
-            slot.semester,
-            slot.section,
-            slot.day_of_week,
-            slot.slot_time,
-            slot.subject_name,
-            slot.room_name,
-            slot.subject_code,
-            slot.faculty_name
-          );
-          index += 9;
-        }
-        const bulkQuery = `
-          INSERT INTO timetable_slots (department, semester, section, day_of_week, slot_time, subject_name, room_name, subject_code, faculty_name)
-          VALUES ${placeholders.join(', ')}
-        `;
-        await client.query(bulkQuery, values);
+      for (let i = 0; i < unique.length; i += chunkSize) {
+        const chunk = unique.slice(i, i + chunkSize);
+        const placeholders = chunk.map((_, r) =>
+          `(${SLOT_COLUMNS.map((__, c) => `$${r * SLOT_COLUMNS.length + c + 1}::text`).join(', ')})`);
+        const result = await client.query(`
+          INSERT INTO timetable_slots (${SLOT_COLUMNS.join(', ')})
+          SELECT ${SLOT_COLUMNS.map((c) => `v.${c}`).join(', ')}
+            FROM (VALUES ${placeholders.join(', ')}) AS v(${SLOT_COLUMNS.join(', ')})
+           WHERE NOT EXISTS (
+             SELECT 1 FROM timetable_slots t
+              WHERE ${SLOT_COLUMNS.map((c) => `t.${c}::text IS NOT DISTINCT FROM v.${c}`).join(' AND ')}
+           )
+        `, chunk.flat());
+        inserted += result.rowCount;
       }
     });
 
-    res.json({ message: 'Timetable uploaded successfully' });
+    res.json({ message: 'Timetable uploaded successfully', inserted, skipped: slots.length - inserted });
   } catch (err) {
     sendServerError(res, err);
   }
@@ -321,6 +326,12 @@ export async function reviewCancellationRequest(req, res) {
 export async function searchTimetable(req, res) {
     try {
       const { type, name, department, semester, section } = req.query;
+      const blank = (v) => typeof v !== 'string' || !v.trim();
+
+      if (type === 'FACULTY' && blank(name)) return res.status(400).json({ error: 'name is required for a faculty search' });
+      if (type === 'SECTION' && (blank(department) || blank(semester) || blank(section))) {
+        return res.status(400).json({ error: 'department, semester and section are required for a section search' });
+      }
 
       if (type === 'FACULTY') {
         const facultyName = name.toUpperCase();
@@ -433,7 +444,9 @@ export async function autocompleteFaculty(req, res) {
 
 export async function listSlots(req, res) {
   try {
-    const { faculty_name, day_of_week, semester, page = 1, limit = 50 } = req.query;
+    const { faculty_name, day_of_week, semester } = req.query;
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(200, Math.max(1, parseInt(req.query.limit) || 50));
     const conditions = [];
     const values = [];
     let idx = 1;
@@ -444,7 +457,7 @@ export async function listSlots(req, res) {
 
     conditions.unshift('fts.is_active');
     const where = `WHERE ${conditions.join(' AND ')}`;
-    const offset = (parseInt(page) - 1) * parseInt(limit);
+    const offset = (page - 1) * limit;
 
     const [dataResult, countResult] = await Promise.all([
       db.query(`
@@ -456,13 +469,13 @@ export async function listSlots(req, res) {
         ${where}
         ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
         LIMIT $${idx} OFFSET $${idx + 1}
-      `, [...values, parseInt(limit), offset]),
+      `, [...values, limit, offset]),
       db.query(`SELECT COUNT(*) FROM faculty_timetable_slots fts ${where}`, values)
     ]);
 
     res.json({
       data: dataResult.rows,
-      meta: { total: parseInt(countResult.rows[0].count), page: parseInt(page), limit: parseInt(limit) }
+      meta: { total: parseInt(countResult.rows[0].count), page, limit }
     });
   } catch (err) {
     sendServerError(res, err);
@@ -499,10 +512,11 @@ export async function updateSlot(req, res) {
           slot_time    = COALESCE($4, slot_time),
           content      = COALESCE($5, content),
           is_occupied  = COALESCE($6, is_occupied),
-          room_id      = $7
+          -- room_id changes only when sent; an explicit null unassigns the room (OPS-12)
+          room_id      = CASE WHEN $9::boolean THEN $7 ELSE room_id END
       WHERE id = $8 AND is_active
       RETURNING id, faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id
-    `, [faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id ?? null, id]);
+    `, [faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id ?? null, id, Object.hasOwn(req.body, 'room_id')]);
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
     res.json(result.rows[0]);

@@ -844,6 +844,20 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_bookings_created_by_start ON bookings (created_by, start_time DESC);
       `);
     }
+  },
+  {
+    version: 31,
+    name: 'room_availability: source + soft delete, so a timetable re-import retires only its own blocks (OPS-05)',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE room_availability ADD COLUMN IF NOT EXISTS source VARCHAR(30) NOT NULL DEFAULT 'manual';
+        ALTER TABLE room_availability ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+        ALTER TABLE room_availability ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ;
+        -- Blocks written by the timetable import carry no user; manual overrides always record theirs.
+        UPDATE room_availability SET source = 'timetable_import'
+         WHERE user_id IS NULL AND is_available = FALSE AND day IN ('Mon','Tue','Wed','Thu','Fri','Sat','Sun');
+      `);
+    }
   }
 ];
 

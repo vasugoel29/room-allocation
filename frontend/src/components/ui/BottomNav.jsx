@@ -52,7 +52,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                   <>
                     <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''} relative`}>
                       <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                      {id === 'history' && user?.role !== 'ADMIN' && pendingTransferCount > 0 && (
+                      {(id === 'history' || id === 'bookings') && user?.role !== 'ADMIN' && pendingTransferCount > 0 && ( /* NEW-FE-3 */
                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[7px] font-black border-2 border-surface-low animate-pulse">
                           {pendingTransferCount}
                         </span>

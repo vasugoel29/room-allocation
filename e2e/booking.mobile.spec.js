@@ -91,8 +91,7 @@ test.describe('Mobile booking & history', () => {
   });
 
   test('viewers cannot reach the mobile booking flow', async ({ page, request, seed }) => {
-    // [FE-24] /book-a-slot (and /history) are not role-gated: a VIEWER gets the full 3-step form.
-    test.fail();
+    // [FE-24] regression: /book-a-slot and /history are role-gated like /bookings.
     const viewer = await seed.user({ role: 'VIEWER' });
     await signIn(page, request, viewer, '/book-a-slot');
     await expect(page).toHaveURL(/\/calendar$/, { timeout: 5000 });

@@ -12,8 +12,10 @@ import {
   rescheduleBooking,
   quickBook
 } from '../controllers/bookingController.js';
+import { idParamWith } from '../middleware/validators.js';
 
 const router = express.Router();
+router.param('id', idParamWith('Valid booking ID required'));
 
 const bookingValidation = [
   body('room_id').isInt().withMessage('Valid room ID required'),

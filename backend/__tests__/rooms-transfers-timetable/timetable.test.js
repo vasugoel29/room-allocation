@@ -112,12 +112,12 @@ describe('GET /api/timetable/search (admin)', () => {
     expect(res.body.dynamicBookings.map((d) => d.id)).toContain(b.id);
   });
 
-  test.failing('[NEW-RTT-8] FACULTY search without name returns 400 (currently 500 TypeError)', async () => {
+  test('[NEW-RTT-8] FACULTY search without name returns 400 (currently 500 TypeError)', async () => {
     const res = await search(admin.auth, { type: 'FACULTY' });
     expect(res.status).toBe(400);
   });
 
-  test.failing('[NEW-RTT-8] SECTION search without department returns 400 (currently 500 TypeError)', async () => {
+  test('[NEW-RTT-8] SECTION search without department returns 400 (currently 500 TypeError)', async () => {
     const res = await search(admin.auth, { type: 'SECTION', semester: 1, section: 1 });
     expect(res.status).toBe(400);
   });
@@ -245,7 +245,7 @@ describe('GET /api/timetable/faculty/check/:id', () => {
     expect(res.body).toEqual({ isOccupied: false, reason: null, details: null });
   });
 
-  test.failing('[NEW-RTT-8] missing date/hour returns 400 (currently 500 TypeError)', async () => {
+  test('[NEW-RTT-8] missing date/hour returns 400 (currently 500 TypeError)', async () => {
     const res = await check(viewer.auth, fac.faculty.id, {});
     expect(res.status).toBe(400);
   });
@@ -330,7 +330,7 @@ describe('/api/timetable/slots (admin CRUD on faculty_timetable_slots)', () => {
     expect(nf.body.error).toBe('Slot not found');
   });
 
-  test.failing('[OPS-12] updating a slot without room_id keeps its room (currently nulled)', async () => {
+  test('[OPS-12] updating a slot without room_id keeps its room (currently nulled)', async () => {
     const room = await createRoom();
     const created = (await slotsApi('post', '', admin.auth).send({ faculty_name: `RTT O12 ${tag()}`, day_of_week: 'Mon', slot_time: '09:00-10:00', room_id: room.id })).body;
     expect(created.room_id).toBe(room.id);
@@ -379,7 +379,7 @@ describe('POST /api/timetable/upload', () => {
     const dept = `RTT-UP-${tag()}`;
     const res = await upload(admin.auth, { slots: mkSlots(dept) });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ message: 'Timetable uploaded successfully' });
+    expect(res.body).toEqual({ message: 'Timetable uploaded successfully', inserted: 2, skipped: 0 });
     const { rows } = await db.query('SELECT day_of_week, subject_name, faculty_name FROM timetable_slots WHERE department = $1 ORDER BY day_of_week', [dept]);
     expect(rows).toEqual([
       { day_of_week: 'Mon', subject_name: 'A', faculty_name: 'F1' },
@@ -396,7 +396,7 @@ describe('POST /api/timetable/upload', () => {
     expect(await countDept(dept)).toBe(0);
   });
 
-  test.failing('[OPS-14] re-posting the same timetable does not duplicate rows', async () => {
+  test('[OPS-14] re-posting the same timetable does not duplicate rows', async () => {
     const dept = `RTT-UP-${tag()}`;
     await upload(admin.auth, { slots: mkSlots(dept) }).expect(200);
     await upload(admin.auth, { slots: mkSlots(dept) }).expect(200);

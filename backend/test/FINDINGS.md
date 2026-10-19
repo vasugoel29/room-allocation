@@ -198,3 +198,16 @@ Severity: C critical · H high · M medium · L low. Status: open unless noted.
 | NEW-P5-4 | H | fixed | Dated releases (approved class cancellations, reschedules) were enforced server-side but missing from `/availability`, so the calendar still showed the room taken and the rep's timetable still listed the cancelled class |
 | NEW-P5-5 | M | fixed | Node's 5 s keep-alive + 511 backlog: users pausing between screens reconnected in bursts that overflowed the accept queue (`dial: i/o timeout` at peak); keep-alive now 65 s, backlog 2048 |
 | NEW-P5-3 | L | fixed | Load-test kit still used pre-Phase-4 flows (student bookings without a faculty; contention via PENDING requests that never hold a room) |
+
+## Phase 6 (robustness and UX) — status of earlier findings
+Fixed (their `test.failing` / `it.fails` / `test.fail()` markers are now ordinary regression tests):
+NEW-RTT-1, NEW-RTT-3, NEW-RTT-5, NEW-RTT-6, NEW-RTT-8, NEW-bookings-5, NEW-admin-3, NEW-admin-5, OPS-05, OPS-09,
+OPS-12, OPS-14, BKG-16, FE-07, FE-09, FE-10, FE-11, FE-13, FE-15, FE-19, FE-21, FE-24, NEW-FE-1, NEW-FE-2,
+NEW-FE-3, NEW-E2E-1, NEW-P5-1. BKG-11 closed by product decision (no per-student cap; approval + one
+commitment per slot). Open, needs a decision: FE-04 (session token in localStorage vs an httpOnly cookie).
+
+| ID | Sev | Status | Finding |
+|---|---|---|---|
+| NEW-P6-1 | M | fixed | Shared validators: malformed ids, dates, hours, booleans and pagination are 400s with a message, never 500s; every `/:id` route has one guard |
+| NEW-P6-2 | L | fixed | Jest run-in-band flake ("Maximum call stack size exceeded" in jest-util): a disabled `Sentry.init` still wrote the SDK's global carrier, which Jest re-wrapped per test file. Sentry is no longer initialised when disabled |
+| NEW-P6-3 | info | — | Stress (2,000 req/s offered): one Node process serves ~500–620 req/s, then sheds load with client timeouts (3.6%); no server errors, no integrity violations. Docker Desktop's proxy wedged under the 2,000-connection stress and needed a restart (local harness only) |

@@ -160,7 +160,7 @@ describe('BottomNav per role (tabs as built by App.jsx)', () => {
 
   // NEW-FE-3: the pending-transfer badge is only rendered for a tab with id 'history', but App.jsx gives reps
   // a 'bookings' tab — on mobile reps never see incoming transfer requests.
-  it.fails('[NEW-FE-3] rep sees the pending transfer badge on the Bookings tab', () => {
+  it('[NEW-FE-3] rep sees the pending transfer badge on the Bookings tab', () => {
     setup('STUDENT_REP', { pendingTransferCount: 2 });
     expect(screen.getByRole('link', { name: /bookings/i })).toHaveTextContent('2');
   });

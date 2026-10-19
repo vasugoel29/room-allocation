@@ -216,15 +216,13 @@ test.describe('Admin console', () => {
   });
 
   test('Quick Book: books a room for a chosen user', async ({ page, request, seed }) => {
-    // [FE-15] The member picker only filters the first 20 users the page loaded (admins and faculty
-    // sort first), so most students and reps can never be chosen.
-    test.fail();
+    // [FE-15] regression: the member picker searches the server, so users beyond the first page can be chosen.
     const admin = await seed.user({ role: 'ADMIN' });
     // Make sure the rep is not among the first 20 users loaded (admins sort first), whatever ran before.
     for (let i = 0; i < 20; i++) await seed.user({ role: 'ADMIN' });
     const rep = await seed.user({ role: 'STUDENT_REP' });
     const room = await seed.room({ name: firstSortingName() }); // sorts onto page 1 of the status table
-    const dateKey = new Date().toISOString().slice(0, 10); // useAdminQuickBook default (UTC date, see FE-14)
+    const dateKey = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10); // useAdminQuickBook default: today in IST
 
     await signIn(page, request, admin, '/admin?tab=quick');
     await page.getByRole('button', { name: /^08:00 - 09:00$/ }).click();
@@ -245,10 +243,7 @@ test.describe('Admin console', () => {
   });
 
   test('Quick Book: "Room Jump" filters the table to the chosen room', async ({ page, request, seed }) => {
-    // [NEW-E2E-1] The Room Jump (and Slot) dropdowns live in a header with backdrop-blur (its own stacking
-    // context, no z-index), so the table's `relative` recipient pickers paint above them: items that overlap
-    // the "Member (Recipient)" column are unclickable — the click lands on a row's "Select User..." button.
-    test.fail();
+    // [NEW-E2E-1] regression: the Slot / Room Jump menus used to sit under the table's recipient pickers.
     const admin = await seed.user({ role: 'ADMIN' });
     const room = await seed.room({ name: `ZZ-${tag()}` }); // sorts last -> deep in the Room Jump list
     await signIn(page, request, admin, '/admin?tab=quick');

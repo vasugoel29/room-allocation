@@ -36,25 +36,13 @@ export const roomRepository = {
    */
   upsertAvailability: async (roomId, day, hour, isAvailable, userId = null, client = db) => {
     const query = `
-      INSERT INTO room_availability (room_id, day, hour, is_available, user_id) 
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (room_id, day, hour) DO UPDATE SET is_available = $4, user_id = $5`;
+      INSERT INTO room_availability (room_id, day, hour, is_available, user_id, source)
+      VALUES ($1, $2, $3, $4, $5, 'manual')
+      ON CONFLICT (room_id, day, hour) DO UPDATE
+        SET is_available = $4, user_id = $5, source = 'manual', is_active = TRUE, deactivated_at = NULL`;
     return client.query(query, [roomId, day, hour, isAvailable, userId]);
   },
 
-  /**
-   * Bulk insert default availability
-   */
-  insertDefaultAvailability: async (roomId, days, hours, client = db) => {
-    for (const d of days) {
-      for (const h of hours) {
-        await client.query(
-          'INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, $3, FALSE) ON CONFLICT DO NOTHING', 
-          [roomId, d, h]
-        );
-      }
-    }
-  },
   /**
    * Get all rooms with their booking status for a specific time slot (Admin)
    */
@@ -125,9 +113,10 @@ export const roomRepository = {
    * Find available rooms with filters and pagination
    */
   findFilteredPaginated: async (filters) => {
-    const { capacity, ac, projector, building, floor, type, limit, offset } = filters;
+    const { capacity, ac, projector, building, floor, type, limit, offset, excludeTypes = [] } = filters;
     let baseQuery = 'FROM rooms WHERE is_active';
     const params = [];
+    if (excludeTypes.length) { params.push(excludeTypes); baseQuery += ` AND (type IS NULL OR type <> ALL($${params.length}))`; }
 
     if (capacity) { params.push(capacity); baseQuery += ` AND capacity >= $${params.length}`; }
     if (ac === 'true' || ac === true) baseQuery += ' AND has_ac = TRUE';
@@ -185,7 +174,7 @@ export const roomRepository = {
              r.name AS room_name, 'override' AS source
         FROM room_availability ra
         JOIN rooms r ON ra.room_id = r.id
-       WHERE r.is_active
+       WHERE r.is_active AND ra.is_active
       UNION ALL
       SELECT NULL, rel.room_id, rel.release_date::text, h, TRUE, rel.created_by, rel.created_at,
              r.name, 'release'
@@ -217,7 +206,7 @@ export const roomRepository = {
       SELECT ra.*, r.name as room_name 
       FROM room_availability ra
       JOIN rooms r ON ra.room_id = r.id
-      WHERE ra.user_id = $1
+      WHERE ra.user_id = $1 AND ra.is_active
       ORDER BY ra.created_at DESC
     `;
     const result = await db.query(query, [userId]);

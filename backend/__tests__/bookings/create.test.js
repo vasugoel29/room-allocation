@@ -738,7 +738,9 @@ describe('POST /api/bookings — soft-deleted room', () => {
 });
 
 describe('POST /api/bookings — per-user cap (BKG-11)', () => {
-  test.failing('[BKG-11] a single student cannot hold an unbounded number of future bookings', async () => {
+  // BKG-11 — closed by product decision (2026-10-19): no numeric cap. Each student request needs a
+  // named faculty's approval, and a person can hold only one commitment per slot (DB-enforced).
+  test('[BKG-11] no per-student cap: non-overlapping requests are all accepted as PENDING for approval', async () => {
     const rep = await createRep();
     const room = await createRoom();
     const facultyId = await approverId();
@@ -749,8 +751,9 @@ describe('POST /api/bookings — per-user cap (BKG-11)', () => {
         statuses.push(res.status);
       }
     }
-    // 24 one-hour requests in a single week by one student: at least one should be refused.
-    // (Every request names a faculty member, so a 400 here can only come from a cap.)
-    expect(statuses.some((s) => s >= 400 && s < 500)).toBe(true);
+    expect(statuses.every((s) => s === 201)).toBe(true);
+    // ...but the same slot twice is refused: one commitment per person per slot.
+    const again = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 9 }), { faculty_id: facultyId }));
+    expect(again.status).toBe(409);
   });
 });

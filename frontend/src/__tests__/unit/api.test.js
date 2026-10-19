@@ -127,7 +127,7 @@ describe('utils/api apiFetch', () => {
 
   // FE-10: a POST that reached the server but whose response was lost (network error) is replayed
   // up to 4 more times → duplicate bookings/imports. Correct: never auto-retry non-idempotent methods.
-  it.fails('[FE-10] does not retry a non-idempotent POST after a network error', async () => {
+  it('[FE-10] does not retry a non-idempotent POST after a network error', async () => {
     vi.useFakeTimers();
     fetchMock.mockImplementation(async () => { throw new TypeError('Failed to fetch'); });
     const p = api.post('/bookings', { room_id: 1 }).catch((e) => e);
@@ -137,7 +137,7 @@ describe('utils/api apiFetch', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it.fails('[FE-10] does not retry a non-idempotent PATCH after a network error', async () => {
+  it('[FE-10] does not retry a non-idempotent PATCH after a network error', async () => {
     vi.useFakeTimers();
     fetchMock.mockImplementation(async () => { throw new TypeError('Failed to fetch'); });
     const p = api.patch('/transfers/5/accept').catch((e) => e);

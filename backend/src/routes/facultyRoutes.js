@@ -2,8 +2,10 @@ import express from 'express';
 import { getPendingRequests, approveBooking, rejectBooking } from '../controllers/facultyController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
+import { idParam } from '../middleware/validators.js';
 
 const router = express.Router();
+router.param('id', idParam);
 
 router.use(authenticate);
 router.use(requirePermission(P.BOOKINGS_APPROVE));

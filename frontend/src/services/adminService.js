@@ -78,7 +78,7 @@ export const adminService = {
   },
 
   fetchAuditLogs: async (page = 1, search = '') => {
-    const res = await api.get(`/admin/audit-logs?page=${page}&search=${search}`);
+    const res = await api.get(`/admin/audit-logs?page=${encodeURIComponent(page)}&search=${encodeURIComponent(search)}`); // NEW-FE-2
     if (!res.ok) throw new Error('Failed to fetch audit logs');
     return res.json();
   },
