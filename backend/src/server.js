@@ -9,7 +9,7 @@ import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
 import { logActivity } from './services/loggerService.js';
 
-import rateLimit from 'express-rate-limit';
+import { apiLimiter } from './middleware/leakyBucket.js';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
@@ -21,6 +21,7 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 
 // Initialize Sentry before any other imports if possible
 Sentry.init({
+  enabled: process.env.NODE_ENV !== 'test',
   dsn: "https://fffcdd6cd5e09e0fcaeea616debb0bd3@o4511015599341568.ingest.us.sentry.io/4511015602618368",
   integrations: [
     nodeProfilingIntegration(),
@@ -106,13 +107,6 @@ app.use(cors({
 app.use(express.json({ limit: '100kb' }));
 
 
-const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 100 : 5000, // Relaxed for dev/testing
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many requests from this IP, please try again later.' }
-});
 
 app.use('/api', apiLimiter);
 
