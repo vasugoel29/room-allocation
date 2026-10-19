@@ -8,3 +8,7 @@ build/
 **/*.env
 *.env
 .env
+e2e-report/
+e2e-results/
+load/.data/
+load/results/
