@@ -53,7 +53,7 @@ export const createBooking = async (req, res) => {
     res.status(201).json(result.data);
   } catch (err) {
     logger.error("Booking creation failed", err);
-    sendServerError(res, err, "Database error");
+    sendServerError(res, err, "Could not create the booking");
   }
 };
 
@@ -81,7 +81,7 @@ export const rescheduleBooking = async (req, res) => {
       req.user,
     );
     if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+      return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
     }
     res.json(result.data);
   } catch (err) {
@@ -94,7 +94,7 @@ export const quickBook = async (req, res) => {
   try {
     const result = await bookingService.quickBookHandler(req.body, req.user);
     if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+      return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
     }
     res.status(201).json(result.data);
   } catch (err) {

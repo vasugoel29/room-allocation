@@ -4,7 +4,7 @@ import * as db from '../../src/db.js';
 import {
   createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
-import { pastWeekdaySlot, getBooking, auditRows } from '../../test/helpers/bookings.js';
+import { pastWeekdaySlot, plusHours, getBooking, auditRows } from '../../test/helpers/bookings.js';
 
 afterAll(closeDb);
 
@@ -42,11 +42,20 @@ describe('PATCH /api/bookings/:id/cancel', () => {
 
   test('cancelling frees the slot for someone else', async () => {
     const { owner, room, booking, slot } = await seeded({ slot: futureSlot({ hour: 11 }) });
+    const other = await createFaculty(); // staff bookings are ACTIVE, so they really need the room free
+    const body = { room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Rebook' };
+    expect((await request(app).post('/api/bookings').set('Authorization', other.auth).send(body)).status).toBe(409);
     expect((await cancel(owner.auth, booking.id)).status).toBe(200);
-    const other = await createRep();
-    const res = await request(app).post('/api/bookings').set('Authorization', other.auth)
-      .send({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Rebook' });
+    const res = await request(app).post('/api/bookings').set('Authorization', other.auth).send(body);
     expect(res.status).toBe(201);
+    expect(res.body.status).toBe('ACTIVE');
+  });
+
+  test('a booking in progress (started, not ended) can still be cancelled', async () => {
+    const start = new Date(Date.now() - 15 * 60_000).toISOString();
+    const { owner, booking } = await seeded({ slot: { start, end: plusHours(start) } });
+    expect((await cancel(owner.auth, booking.id)).status).toBe(200);
+    expect((await getBooking(booking.id)).status).toBe('CANCELLED');
   });
 
   test("another student cannot cancel someone else's booking (403, unchanged)", async () => {
@@ -122,40 +131,54 @@ describe('PATCH /api/bookings/:id/cancel', () => {
     expect((await getBooking(booking.id)).status).toBe('ACTIVE');
   });
 
-  test.failing('[NEW-bookings-1] cancelling an already-CANCELLED booking is refused and keeps the original cancelled_at', async () => {
+  test('[NEW-bookings-1] cancelling an already-CANCELLED booking is refused (409) and keeps the original cancelled_at', async () => {
     const { owner, booking } = await seeded();
     expect((await cancel(owner.auth, booking.id)).status).toBe(200);
     const first = (await getBooking(booking.id)).cancelled_at;
     await new Promise((r) => setTimeout(r, 20));
     const res = await cancel(owner.auth, booking.id);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ error: 'This booking is already cancelled' });
     expect((await getBooking(booking.id)).cancelled_at).toEqual(first);
     expect(await auditRows(booking.id, 'CANCEL_BOOKING')).toHaveLength(1);
   });
 
-  test.failing('[BKG-17] cancelling a REJECTED booking is refused and status stays REJECTED', async () => {
+  test('[BKG-17] cancelling a REJECTED booking is refused (409) and status stays REJECTED, even for an admin', async () => {
     const fac = await createFaculty();
     const { owner, booking } = await seeded({ status: 'REJECTED', faculty_id: fac.faculty.id });
-    const res = await cancel(owner.auth, booking.id);
-    expect(res.status).toBe(400);
+    for (const who of [owner, fac, await createAdmin()]) {
+      const res = await cancel(who.auth, booking.id);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ error: 'This booking is already rejected' });
+    }
     expect((await getBooking(booking.id)).status).toBe('REJECTED');
+    expect(await auditRows(booking.id, 'CANCEL_BOOKING')).toHaveLength(0);
   });
 
-  test.failing('[BKG-17] cancelling a booking that already took place is refused', async () => {
+  test('[BKG-17] cancelling a booking that already took place is refused (400)', async () => {
     const { owner, booking } = await seeded({ slot: pastWeekdaySlot(10, 2) });
     const res = await cancel(owner.auth, booking.id);
     expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Past bookings cannot be cancelled' });
     expect((await getBooking(booking.id)).status).toBe('ACTIVE');
   });
 
-  test.failing('[BKG-17] cancelling a booking closes its open transfer requests', async () => {
+  test('[BKG-17] cancelling a booking closes its open transfer requests (REJECTED); finished ones are kept', async () => {
     const { owner, booking } = await seeded({ slot: futureSlot({ hour: 15 }) });
     const requester = await createRep();
     const { rows: [tr] } = await db.query(
       `INSERT INTO booking_transfers (booking_id, requested_by, owner_id, new_purpose, status)
        VALUES ($1, $2, $3, 'take over', 'PENDING') RETURNING *`, [booking.id, requester.user.id, owner.user.id]);
+    const { rows: [mid] } = await db.query(
+      `INSERT INTO booking_transfers (booking_id, requested_by, owner_id, new_purpose, status)
+       VALUES ($1, $2, $3, 'mid-flow', 'REP2_ACCEPTED') RETURNING *`, [booking.id, (await createRep()).user.id, owner.user.id]);
+    const { rows: [done] } = await db.query(
+      `INSERT INTO booking_transfers (booking_id, requested_by, owner_id, new_purpose, status)
+       VALUES ($1, $2, $3, 'old', 'ACCEPTED') RETURNING *`, [booking.id, (await createRep()).user.id, owner.user.id]);
     expect((await cancel(owner.auth, booking.id)).status).toBe(200);
-    const { rows: [after] } = await db.query('SELECT status FROM booking_transfers WHERE id = $1', [tr.id]);
-    expect(after.status).not.toBe('PENDING');
+    const statusOf = async (id) => (await db.query('SELECT status FROM booking_transfers WHERE id = $1', [id])).rows[0].status;
+    expect(await statusOf(tr.id)).toBe('REJECTED');
+    expect(await statusOf(mid.id)).toBe('REJECTED');
+    expect(await statusOf(done.id)).toBe('ACCEPTED');
   });
 });

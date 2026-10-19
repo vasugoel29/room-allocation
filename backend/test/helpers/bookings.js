@@ -55,6 +55,19 @@ export async function insertTimetableSlot(fields) {
   return rows[0];
 }
 
+/** Inserts a room_slot_releases row (a timetabled class in `room_id` that does not happen on `release_date`). */
+export async function insertRelease({ room_id, release_date, start_hour, end_hour = start_hour + 1, is_active = true, source_type = 'test', source_id = null }) {
+  const { rows } = await db.query(
+    `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, is_active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [room_id, release_date, start_hour, end_hour, source_type, source_id, is_active],
+  );
+  return rows[0];
+}
+
+export const releasesFor = async (sourceType, sourceId) =>
+  (await db.query('SELECT * FROM room_slot_releases WHERE source_type = $1 AND source_id = $2 ORDER BY id', [sourceType, sourceId])).rows;
+
 /** Polls `fn` until it returns a truthy value (for async side effects such as the audit middleware). */
 export async function waitFor(fn, { timeout = 3000, interval = 50 } = {}) {
   const until = Date.now() + timeout;

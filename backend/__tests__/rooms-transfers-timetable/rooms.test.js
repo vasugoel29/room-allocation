@@ -4,7 +4,7 @@ import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import {
-  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking,
+  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, approverId,
   futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
@@ -356,7 +356,8 @@ describe('rooms.student_access (legacy)', () => {
     const room = await createRoom({ student_access: false });
     const booker = await createRep();
     const slot = futureSlot({ hour: 15 });
-    const body = { room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Group Study Session' };
+    // Students name the approving faculty member (mandatory); the request is then PENDING.
+    const body = { room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Group Study Session', faculty_id: await approverId() };
     const denied = await request(app).post('/api/bookings').set('Authorization', booker.auth).send(body);
     expect(denied.status).toBe(403);
     expect(denied.body.error).toBe('Students do not have permission to book this room');
@@ -365,6 +366,7 @@ describe('rooms.student_access (legacy)', () => {
     await db.query('UPDATE rooms SET student_access = true WHERE id = $1', [room.id]);
     const ok = await request(app).post('/api/bookings').set('Authorization', booker.auth).send(body);
     expect(ok.status).toBe(201);
+    expect(ok.body.status).toBe('PENDING');
   });
 });
 
@@ -597,7 +599,7 @@ describe('GET /api/rooms/admin/status', () => {
 
   test('a booking created through the API is reflected in admin status immediately', async () => {
     const room = await createRoom();
-    const booker = await createRep();
+    const booker = await createFaculty(); // ACTIVE straight away (a student's request would be PENDING)
     const slot = futureSlot({ hour: 16 });
     await status(admin.auth, { date: slot.dateKey, slot: 16 });
     const b = await request(app).post('/api/bookings').set('Authorization', booker.auth)

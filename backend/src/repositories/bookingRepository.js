@@ -117,12 +117,15 @@ export const bookingRepository = {
    * Insert a new booking
    */
   create: async (data, client = db) => {
-    const { room_id, start_time, end_time, created_by, purpose, faculty_id, status } = data;
+    const { room_id, start_time, end_time, created_by, purpose, faculty_id, status,
+      reschedule_room_id = null, reschedule_date = null, reschedule_hour = null } = data;
     const query = `
-      INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose, faculty_id, status) 
-      VALUES ($1, $2, $3, $4, $5, $6, $7) 
+      INSERT INTO bookings (room_id, start_time, end_time, created_by, purpose, faculty_id, status,
+                            reschedule_room_id, reschedule_date, reschedule_hour)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *`;
-    const values = [room_id, start_time, end_time, created_by, purpose, faculty_id || null, status];
+    const values = [room_id, start_time, end_time, created_by, purpose, faculty_id || null, status,
+      reschedule_room_id, reschedule_date, reschedule_hour];
     const result = await client.query(query, values);
     return result.rows[0];
   },

@@ -7,14 +7,17 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { notifyFacultyNewRequest, notifyBookingCancelled } from '../utils/emailService.js';
 import { logActivity } from './loggerService.js';
-import { getHourFromTime } from '../utils/timetableLogic.js';
-import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
+import { formatIstRange } from '../utils/timezone.js';
+import {
+  checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts,
+  constraintConflict, dateInSameWeek, istDateTimeToUtc, isStaff, DAYS,
+} from './bookingRules.js';
+
+export const MAX_BOOKINGS_PAGE = 1000;
 
 /**
  * Fetch bookings with optional filters
  */
-export const MAX_BOOKINGS_PAGE = 1000;
-
 export const getBookings = async (filters) => {
   const page = Math.max(1, parseInt(filters.page) || 1);
   const limit = Math.min(MAX_BOOKINGS_PAGE, Math.max(1, parseInt(filters.limit) || 20));
@@ -36,336 +39,258 @@ export const getBookings = async (filters) => {
   };
 };
 
-const getTimetableDepartment = (dept) => {
-  const normalized = String(dept || '').trim().toUpperCase();
-  const mapping = {
-    IT: 'INFORMATION TECHNOLOGY',
-    CS: 'COMPUTER SCIENCE AND ENGINEERING',
-    ICE: 'INSTRUMENTATION AND CONTROL ENGINEERING',
-    ECE: 'ELECTRONICS AND COMMUNICATION ENGINEERING',
-    ME: 'MECHANICAL ENGINEERING',
-    MPAE: 'MANUFACTURING PROCESS AND AUTOMATION ENGINEERING',
-    EE: 'ELECTRICAL ENGINEERING',
-    BT: 'BIOTECHNOLOGY'
-  };
-
-  return mapping[normalized] || dept || null;
-};
-
-const normalizeHour = (hour) => {
-  const parsedHour = Number(hour);
-  if (Number.isNaN(parsedHour)) return 0;
-  return parsedHour >= 1 && parsedHour < 8 ? parsedHour + 12 : parsedHour;
-};
-
-const hasTimetableOverlap = (slotTime, bookingStartHour, bookingEndHour) => {
-  if (!slotTime) return false;
-  
-  const parts = slotTime.split('-').map(p => p.trim());
-  if (parts.length < 2) return false;
-  
-  const [startStr, endStr] = parts;
-  const slotStartHour = getHourFromTime(startStr);
-  const slotEndHour = getHourFromTime(endStr);
-  
-  return bookingStartHour < slotEndHour && slotStartHour < bookingEndHour;
-};
-
-const checkTimetableClash = async (client, requester, reqData, userId) => {
-  const { start_time, end_time, faculty_id } = reqData;
-  if (!start_time || !end_time) return null;
-
-  const requesterRole = (requester?.role || '').toUpperCase();
-  // Admins may book outside a student section timetable, but a booking that
-  // names a faculty member must never overlap that faculty member's timetable.
-  if (requesterRole === 'ADMIN' && !faculty_id) return null;
-
-  const startParts = getIstParts(start_time);
-  const endParts = getIstParts(end_time);
-  const dayName = startParts.day;
-  const bookingHourCandidates = [{ start: normalizeHour(startParts.hour), end: normalizeHour(endParts.hour) }];
-
-  const clashes = [];
-
-  const checkFacultySchedule = async (facultyName, label) => {
-    const facultyRows = await client.query(`
-      SELECT slot_time, subject_name, faculty_name, room_name
-      FROM timetable_slots
-      WHERE UPPER(faculty_name) = $1 AND day_of_week = $2
-    `, [facultyName.toUpperCase(), dayName]);
-
-    const facultyFacultyRows = await client.query(`
-      SELECT slot_time, content AS subject_name, faculty_name
-      FROM faculty_timetable_slots
-      WHERE is_active AND is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
-    `, [facultyName.toUpperCase(), dayName]);
-
-    const combinedRows = [...facultyRows.rows, ...facultyFacultyRows.rows];
-    const matched = combinedRows.filter((slot) => {
-      return bookingHourCandidates.some((candidate) => {
-        return hasTimetableOverlap(slot.slot_time, candidate.start, candidate.end);
-      });
+/** Runs `fn` in a transaction; returned/thrown `{ error }` objects and lost races come back as results. */
+async function inTransaction(fn) {
+  try {
+    return await db.runInTransaction(async (client) => {
+      const res = await fn(client);
+      if (res?.error) throw res;
+      return res;
     });
-
-    if (matched.length > 0) {
-      clashes.push({
-        type: 'timetable',
-        label,
-        subject: matched[0].subject_name || 'Scheduled class',
-        faculty: matched[0].faculty_name || 'Unknown',
-        room: matched[0].room_name || null,
-        day: dayName,
-        time: matched[0].slot_time || 'Unknown time'
-      });
-    }
-  };
-
-  if (requesterRole === 'FACULTY' || requesterRole === 'FACULTY MEMBER') {
-    await checkFacultySchedule(requester.name, 'your timetable');
-  } else {
-    const department = getTimetableDepartment(requester.branch || requester.department_name);
-    const semester = requester.semester || (requester.year ? requester.year * 2 : null);
-    const section = requester.section;
-
-    if (department && semester && section !== undefined && section !== null) {
-      const sectionRows = await client.query(`
-        SELECT slot_time, subject_name, faculty_name, room_name, department, semester, section
-        FROM timetable_slots
-        WHERE (UPPER(department) = $1 OR UPPER(department) = $2)
-          AND semester::TEXT = $3::TEXT
-          AND section::TEXT = $4::TEXT
-          AND day_of_week = $5
-      `, [department.toUpperCase(), (department || '').toUpperCase(), String(semester), String(section), dayName]);
-
-      const matched = sectionRows.rows.filter((slot) => {
-        return bookingHourCandidates.some((candidate) => {
-          return hasTimetableOverlap(slot.slot_time, candidate.start, candidate.end);
-        });
-      });
-      if (matched.length > 0) {
-        clashes.push({
-          type: 'timetable',
-          label: 'your section timetable',
-          subject: matched[0].subject_name || 'Scheduled class',
-          faculty: matched[0].faculty_name || 'Unknown',
-          room: matched[0].room_name || null,
-          day: dayName,
-          time: matched[0].slot_time || 'Unknown time'
-        });
-      }
-    }
+  } catch (err) {
+    if (err?.error) return err;
+    const raced = constraintConflict(err);
+    if (raced) return raced;
+    throw err;
   }
+}
 
-  if (faculty_id) {
-    const targetFaculty = await facultyRepository.findById(faculty_id, client);
-    if (targetFaculty?.name) {
-      await checkFacultySchedule(targetFaculty.name, 'the selected faculty timetable');
-    }
-  }
-
-  return clashes.length > 0 ? clashes[0] : null;
+const invalidateRoomCaches = () => {
+  cache.deletePattern('admin_status_.*');
+  cache.delete('room_availability_all');
 };
+
+/** When a reschedule booking becomes ACTIVE, the class it replaces is released for that date. */
+async function activateRescheduleRelease(client, booking, actorId) {
+  if (!booking.reschedule_room_id || !booking.reschedule_date || booking.reschedule_hour == null) return;
+  await client.query(
+    `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, created_by)
+     VALUES ($1, $2, $3, $4, 'reschedule', $5, $6)`,
+    [booking.reschedule_room_id, booking.reschedule_date, booking.reschedule_hour, booking.reschedule_hour + 1, booking.id, actorId],
+  );
+}
+
+async function deactivateReleasesFor(client, sourceType, sourceId) {
+  await client.query(
+    `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
+      WHERE source_type = $1 AND source_id = $2 AND is_active`,
+    [sourceType, sourceId],
+  );
+}
+
+/** RESCHEDULE-type request: which timetabled class (room, date, hour) this booking replaces. */
+async function resolveRescheduleSource(client, reqData, dateKey, startHour) {
+  if (!reqData.reschedule_room_name) return { source: null };
+  const room = await roomRepository.findByName(reqData.reschedule_room_name, client);
+  if (!room) return { error: `Room ${reqData.reschedule_room_name} not found`, status: 404 };
+  const day = reqData.reschedule_day || null;
+  if (day && !DAYS.includes(day)) return { error: 'reschedule_day must be a weekday name (Mon–Sat)', status: 400 };
+  const hour = reqData.reschedule_hour !== undefined && reqData.reschedule_hour !== null ? Number(reqData.reschedule_hour) : startHour;
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return { error: 'reschedule_hour must be an hour between 0 and 23', status: 400 };
+  return { source: { reschedule_room_id: room.id, reschedule_date: day ? dateInSameWeek(dateKey, day) : dateKey, reschedule_hour: hour } };
+}
 
 /**
- * Handles the logic for creating a single booking
+ * Creates a booking for `owner` (the requester, or the target user of an admin quick-book).
+ * `actor` is who performed the action (for rules and the audit trail).
  */
-export const createBooking = async (client, reqData, userId, requester = null) => {
-  const { room_id, start_time, end_time, purpose, faculty_id } = reqData;
+export const createBooking = async (client, reqData, owner, actor = owner, { requireFaculty = true } = {}) => {
+  const role = actor.role;
+  const times = checkTimes(reqData.start_time, reqData.end_time, { role });
+  if (times.error) return times;
+  const t = times.ok;
 
-  const requesterProfile = requester?.id
-    ? await userRepository.findById(requester.id, client)
-    : await userRepository.findById(userId, client);
+  const room = await roomRepository.findById(reqData.room_id, client);
+  const roomErr = checkRoom(room, role);
+  if (roomErr) return roomErr;
 
-  const room = await roomRepository.findById(room_id, client);
-  if (!room || !room.is_active) {
-    return { error: 'Room not found', status: 404 };
-  }
+  const fac = await checkFaculty(reqData.faculty_id, owner.role, client, { required: requireFaculty });
+  if (fac.error) return fac;
 
-  // The supervising faculty must be an active entry in the faculty directory.
-  if (faculty_id !== undefined && faculty_id !== null && faculty_id !== '') {
-    const faculty = await facultyRepository.findActiveById(faculty_id, client);
-    if (!faculty) return { error: 'Selected faculty member was not found', status: 400 };
-  }
+  const reschedule = await resolveRescheduleSource(client, reqData, t.dateKey, t.startHour);
+  if (reschedule.error) return reschedule;
 
-  // Restrict student access
-  const isStudent = requesterProfile?.role !== 'ADMIN' && requesterProfile?.role !== 'FACULTY';
-  if (isStudent && room.student_access === false) {
-    logger.info('Permission Denied: Student cannot book room', { room_id, user_id: userId });
-    return { error: 'Students do not have permission to book this room', status: 403 };
-  }
+  const ownerProfile = await userRepository.findById(owner.id, client);
+  const profile = { ...ownerProfile, role: owner.role, faculty_id: owner.faculty_id ?? null };
 
-  const timetableClash = await checkTimetableClash(client, requesterProfile, reqData, userId);
-  if (timetableClash) {
-    logger.info('Conflict: Timetable clash', { room_id, start_time, user_id: userId, clash: timetableClash });
-    const isSelectedFacultyBusy = timetableClash.label === 'the selected faculty timetable';
-    return {
-      error: isSelectedFacultyBusy
-        ? 'The selected faculty member is busy during this slot.'
-        : `This booking clashes with an existing timetable slot in ${timetableClash.label}`,
-      status: 409,
-      conflict: isSelectedFacultyBusy
-        ? { type: 'faculty_busy' }
-        : timetableClash
-    };
-  }
+  const roomTimetable = await checkRoomTimetable(client, room, t);
+  if (roomTimetable) return roomTimetable;
+  // Admins booking for themselves aren't held to a section timetable; the people involved are.
+  const people = await checkPeopleTimetables(client, role === 'ADMIN' && owner.id === actor.id ? null : profile, fac.faculty, t);
+  if (people) return people;
+  const conflict = await checkBookingConflicts(client, {
+    roomId: room.id, personId: owner.id, personFacultyId: profile.faculty_id, faculty: fac.faculty, t,
+  });
+  if (conflict) return conflict;
 
-  // Check Room conflict
-  const roomConflicts = await bookingRepository.checkRoomConflict(room_id, start_time, end_time, client);
-  if (roomConflicts.length > 0) {
-    logger.info('Conflict: Room occupied', { room_id, start_time, user_id: userId });
-    return { error: 'Room is already booked for this time period (or pending approval)', status: 409 };
-  }
-
-  // Check User conflict
-  const userConflicts = await bookingRepository.checkUserConflict(userId, start_time, end_time, client);
-  if (userConflicts.length > 0) {
-    logger.info('Conflict: User busy', { user_id: userId, start_time });
-    return { 
-      error: `You already have another booking during this time in Room ${userConflicts[0].room_name}`, 
-      status: 409 
-    };
-  }
-
-  // If faculty_id is provided, the booking starts as PENDING until approved.
-  const status = faculty_id ? 'PENDING' : 'ACTIVE';
-
+  // Students' requests wait for the named faculty member; staff and admin bookings are immediate.
+  const status = fac.faculty && !isStaff(owner.role) ? 'PENDING' : 'ACTIVE';
   const booking = await bookingRepository.create({
-    room_id, start_time, end_time, created_by: userId, purpose, faculty_id, status
+    room_id: room.id, start_time: t.start, end_time: t.end, created_by: owner.id, purpose: reqData.purpose,
+    faculty_id: fac.faculty?.id ?? null, status, ...(reschedule.source || {}),
   }, client);
-  
+  if (status === 'ACTIVE') await activateRescheduleRelease(client, booking, actor.id);
+
   await logActivity({
-    userId,
+    userId: actor.id,
     action: status === 'PENDING' ? 'REQUEST_BOOKING' : 'CREATE_BOOKING',
     entityType: 'booking',
     entityId: booking.id,
-    details: { room_id, start_time, end_time, purpose }
+    details: { room_id: room.id, start_time: t.start, end_time: t.end, on_behalf_of: owner.id !== actor.id ? owner.id : undefined },
   }, client);
-  
-  // Reschedule Logic
-  const { reschedule_room_name } = reqData;
-  if (reschedule_room_name) {
-    await handleRescheduleFreedUpRoom(client, reqData, start_time);
-  }
 
-  return { data: booking, status: 201 };
+  return { data: booking, status: 201, faculty: fac.faculty, room };
 };
 
-const handleRescheduleFreedUpRoom = async (client, reqData, start_time) => {
-  const { reschedule_room_name, reschedule_day, reschedule_hour } = reqData;
-  
-  let resRoom = await roomRepository.findByName(reschedule_room_name, client);
-  let resRoomId;
-  
-  if (!resRoom) {
-    throw { error: `Room ${reschedule_room_name} not found`, status: 404 };
-  }
-  resRoomId = resRoom.id;
+export const createBookingHandler = async (reqData, user) => {
+  const result = await inTransaction((client) => createBooking(client, reqData, user, user));
+  if (result.error) return result;
 
-  let dayName, hour;
-  if (reschedule_day && reschedule_hour !== undefined) {
-    dayName = reschedule_day;
-    hour = parseInt(reschedule_hour);
-  } else {
-    const parts = getIstParts(start_time);
-    dayName = parts.day;
-    hour = parts.hour;
-  }
+  invalidateRoomCaches();
+  logger.info('Booking created', { booking_id: result.data.id, user_id: user.id, room_id: result.data.room_id });
 
-  await roomRepository.upsertAvailability(resRoomId, dayName, hour, true, client);
-  logger.info('Reschedule: Freed up room', { reschedule_room_name, dayName, hour });
+  if (result.faculty?.email && result.data.status === 'PENDING') {
+    const { date, time } = formatIstRange(result.data.start_time, result.data.end_time);
+    notifyFacultyNewRequest({
+      facultyName: result.faculty.name,
+      facultyEmail: result.faculty.email,
+      studentName: user.name || 'A student',
+      roomName: result.room?.name || result.data.room_id,
+      date,
+      time,
+    }).catch((err) => logger.error('Faculty notification failed', err));
+  }
+  return { data: result.data, status: 201 };
 };
 
 /**
- * Cancel a booking
+ * Cancel a booking (creator, its supervising faculty, or an admin). Only upcoming ACTIVE/PENDING
+ * bookings can be cancelled; open transfer requests on it are closed and any class release it
+ * created is withdrawn.
  */
 export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFacultyId = null) => {
-  const booking = await bookingRepository.findById(bookingId, client);
-
+  const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [bookingId]);
   if (!booking) return { error: 'Booking not found', status: 404 };
   const isCreator = String(booking.created_by) === String(userId);
   const isAssignedFaculty = actorFacultyId != null && String(booking.faculty_id) === String(actorFacultyId);
-  
   if (!isCreator && !isAssignedFaculty && !isAdmin) return { error: 'Not authorized', status: 403 };
+  if (!['ACTIVE', 'PENDING'].includes(booking.status)) {
+    return { error: `This booking is already ${String(booking.status).toLowerCase()}`, status: 409 };
+  }
+  if (new Date(booking.end_time).getTime() <= Date.now()) return { error: 'Past bookings cannot be cancelled', status: 400 };
 
   await bookingRepository.updateStatus(bookingId, 'CANCELLED', client);
+  await client.query(
+    `UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW()
+      WHERE booking_id = $1 AND status NOT IN ('ACCEPTED', 'REJECTED')`,
+    [bookingId],
+  );
+  await deactivateReleasesFor(client, 'reschedule', booking.id);
 
   await logActivity({
     userId,
     action: 'CANCEL_BOOKING',
     entityType: 'booking',
     entityId: bookingId,
-    details: { reason: 'User/Admin initiated cancellation', previous_status: booking.status }
+    details: { previous_status: booking.status, by: isCreator ? 'creator' : isAssignedFaculty ? 'faculty' : 'admin' },
   }, client);
 
+  return { status: 200, booking };
+};
+
+export const cancelBookingHandler = async (bookingId, user) => {
+  const result = await inTransaction((client) =>
+    cancelBooking(client, bookingId, user.id, user.role === 'ADMIN', user.faculty_id ?? null));
+  if (result.error) return result;
+
+  invalidateRoomCaches();
+  logger.info('Booking cancelled', { booking_id: bookingId, user_id: user.id });
+
+  const booking = result.booking;
+  if (booking && String(booking.created_by) !== String(user.id)) {
+    try {
+      const creator = await userRepository.findById(booking.created_by);
+      const room = await roomRepository.findById(booking.room_id);
+      if (creator?.email) {
+        const { date, time } = formatIstRange(booking.start_time, booking.end_time);
+        notifyBookingCancelled({
+          userEmail: creator.email,
+          userName: creator.name,
+          roomName: room?.name || booking.room_id,
+          date,
+          time,
+          cancelledBy: user.name || undefined,
+        }).catch((err) => logger.error('Cancellation notification failed', err));
+      }
+    } catch (notifErr) {
+      logger.error('Failed to send cancellation notification (non-blocking)', notifErr);
+    }
+  }
   return { status: 200 };
 };
 
 /**
- * Reschedule a booking (Legacy/Manual)
+ * Reschedule (move) the caller's own upcoming ACTIVE or PENDING booking. The new time and room go
+ * through exactly the same rules as a new booking.
  */
-export const rescheduleBooking = async (client, bookingId, data, userId) => {
-  const { start_time, end_time, room_id } = data;
-  const booking = await bookingRepository.findById(bookingId, client);
-
+export const rescheduleBooking = async (client, bookingId, data, user) => {
+  const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [bookingId]);
   if (!booking) return { error: 'Booking not found', status: 404 };
-  if (booking.created_by !== userId) return { error: 'Not authorized', status: 403 };
+  if (booking.created_by !== user.id) return { error: 'Not authorized', status: 403 };
+  if (!['ACTIVE', 'PENDING'].includes(booking.status)) return { error: `A ${String(booking.status).toLowerCase()} booking can't be moved`, status: 409 };
+  if (new Date(booking.start_time).getTime() <= Date.now()) return { error: 'Bookings that have started cannot be moved', status: 400 };
 
-  const newStartTime = start_time || booking.start_time;
-  const newEndTime = end_time || booking.end_time;
-
-  // Weekend check for students (rescheduling is only allowed for STUDENT_REP, so user is always student)
-  const startTimeObj = new Date(newStartTime);
-  const dayOfWeek = startTimeObj.getDay(); // 0 is Sunday, 6 is Saturday
-  if (dayOfWeek === 0 || dayOfWeek === 6) {
-    return { error: 'Students are not allowed to book rooms on weekends', status: 400 };
+  const startTime = data.start_time || booking.start_time;
+  let endTime = data.end_time || booking.end_time;
+  if (data.start_time && !data.end_time) {
+    const length = new Date(booking.end_time) - new Date(booking.start_time);
+    const moved = new Date(data.start_time);
+    endTime = Number.isNaN(moved.getTime()) ? data.start_time : new Date(moved.getTime() + length).toISOString();
   }
+  const times = checkTimes(startTime, endTime, { role: user.role });
+  if (times.error) return times;
+  const t = times.ok;
 
-  const newRoomId = room_id || booking.room_id;
+  const room = await roomRepository.findById(data.room_id || booking.room_id, client);
+  const roomErr = checkRoom(room, user.role);
+  if (roomErr) return roomErr;
+  const faculty = booking.faculty_id ? await facultyRepository.findActiveById(booking.faculty_id, client) : null;
 
-  // Check Room conflict (excluding the current booking itself)
-  const roomConflicts = await bookingRepository.checkRoomConflict(newRoomId, newStartTime, newEndTime, client);
-  const otherRoomConflicts = roomConflicts.filter(c => String(c.id) !== String(bookingId));
-  if (otherRoomConflicts.length > 0) {
-    return { error: 'Room is already booked for this time period', status: 409 };
-  }
-
-  // Check User conflict (excluding the current booking itself)
-  const userConflicts = await bookingRepository.checkUserConflict(userId, newStartTime, newEndTime, client);
-  const otherUserConflicts = userConflicts.filter(c => String(c.id) !== String(bookingId));
-  if (otherUserConflicts.length > 0) {
-    return { 
-      error: `You already have another booking during this time in Room ${otherUserConflicts[0].room_name}`, 
-      status: 409 
-    };
-  }
+  const profile = { ...(await userRepository.findById(user.id, client)), role: user.role };
+  const roomTimetable = await checkRoomTimetable(client, room, t);
+  if (roomTimetable) return roomTimetable;
+  const people = await checkPeopleTimetables(client, profile, faculty, t);
+  if (people) return people;
+  const conflict = await checkBookingConflicts(client, {
+    roomId: room.id, personId: user.id, personFacultyId: user.faculty_id ?? null, faculty, t, excludeId: booking.id,
+  });
+  if (conflict) return conflict;
 
   await bookingRepository.createHistory({
     booking_id: bookingId,
     previous_start_time: booking.start_time,
     previous_end_time: booking.end_time,
     previous_room_id: booking.room_id,
-    modified_by: userId,
-    change_type: 'RESCHEDULE'
+    modified_by: user.id,
+    change_type: 'RESCHEDULE',
   }, client);
-
-  const updatedBooking = await bookingRepository.updateBooking(bookingId, {
-    start_time: newStartTime,
-    end_time: newEndTime,
-    room_id: newRoomId
-  }, client);
+  const updated = await bookingRepository.updateBooking(bookingId, { start_time: t.start, end_time: t.end, room_id: room.id }, client);
 
   await logActivity({
-    userId,
+    userId: user.id,
     action: 'RESCHEDULE_BOOKING',
     entityType: 'booking',
     entityId: bookingId,
-    details: { 
-        old: { start_time: booking.start_time, room_id: booking.room_id },
-        new: { start_time: newStartTime, room_id: newRoomId }
-    }
+    details: { old: { start_time: booking.start_time, room_id: booking.room_id }, new: { start_time: t.start, room_id: room.id } },
   }, client);
+  return { data: updated, status: 200 };
+};
 
-  return { data: updatedBooking, status: 200 };
+export const rescheduleBookingHandler = async (bookingId, reqData, user) => {
+  const result = await inTransaction((client) => rescheduleBooking(client, bookingId, reqData, user));
+  if (result.error) return result;
+  invalidateRoomCaches();
+  return result;
 };
 
 /**
@@ -375,239 +300,103 @@ export const getPendingFacultyRequests = async (facultyId) => {
   return bookingRepository.findPendingByFaculty(facultyId);
 };
 
-/** `actor` is the principal: approvals compare its faculty-directory id with booking.faculty_id. */
+/**
+ * Approve a PENDING request. The slot is re-validated as of now (still in the future, room still
+ * free and not in a class, requester and faculty still available); overlapping PENDING requests
+ * for the same room are rejected.
+ */
 export const approveBooking = async (client, id, actor, isAdmin) => {
-  const booking = await bookingRepository.findById(id, client);
-  
+  const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [id]);
   if (!booking) return { error: 'Booking not found', status: 404 };
   if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
   if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
 
-  // Conflict check
-  const conflicts = await bookingRepository.checkRoomConflict(booking.room_id, booking.start_time, booking.end_time, client);
-  if (conflicts.length > 0) return { error: 'Room already booked', status: 409 };
+  const times = checkTimes(booking.start_time, booking.end_time, { role: 'ADMIN', mode: 'approve' });
+  if (times.error) return times;
+  const t = times.ok;
+  const room = await roomRepository.findById(booking.room_id, client);
+  if (!room || !room.is_active) return { error: 'Room is no longer available', status: 409 };
+  const faculty = booking.faculty_id ? await facultyRepository.findById(booking.faculty_id, client) : null;
 
-  const approvedBooking = await bookingRepository.updateStatus(id, 'ACTIVE', client);
+  const roomTimetable = await checkRoomTimetable(client, room, t);
+  if (roomTimetable) return roomTimetable;
+  const conflict = await checkBookingConflicts(client, {
+    roomId: room.id, personId: booking.created_by, faculty, t, excludeId: booking.id,
+  });
+  if (conflict) return conflict;
 
+  const approved = await bookingRepository.updateStatus(id, 'ACTIVE', client);
+  await activateRescheduleRelease(client, approved, actor.id);
   await logActivity({
-    userId: isAdmin ? -1 : actor.id, // System/Admin or Faculty
+    userId: actor.id,
     action: 'APPROVE_BOOKING',
     entityType: 'booking',
     entityId: id,
-    details: { approved_by: isAdmin ? 'ADMIN' : 'FACULTY' }
+    details: { approved_by: isAdmin ? 'ADMIN' : 'FACULTY' },
   }, client);
-
-  // Reject others
   await bookingRepository.rejectConflicts(booking.room_id, id, booking.start_time, booking.end_time, client);
 
-  return { data: approvedBooking, status: 200 };
+  return { data: approved, status: 200 };
 };
 
 export const rejectBooking = async (id, actor, isAdmin) => {
-  const booking = await bookingRepository.findById(id);
-  if (!booking) return { error: 'Booking not found', status: 404 };
-  if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
-  if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
-
-  const rejectedBooking = await bookingRepository.updateStatus(id, 'REJECTED');
-  return { status: 200 };
-};
-
-export const createBookingHandler = async (reqData, user) => {
-  const { start_time } = reqData;
-  const userId = user.id;
-  const startTimeObj = new Date(start_time);
-  const startParts = getIstParts(start_time);
-  const now = new Date();
-
-  // Weekend check for students (roles other than ADMIN and FACULTY)
-  if ((startParts.day === 'Sun' || startParts.day === 'Sat') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
-    return { error: 'Students are not allowed to book rooms on weekends', status: 400 };
-  }
-
-  if (startTimeObj.getTime() + 3600000 < now.getTime()) {
-    return { error: 'Cannot book in the past', status: 400 };
-  }
-  
-  const daysDiff = Math.abs(startTimeObj - new Date()) / (1000 * 60 * 60 * 24);
-  if (daysDiff > 7 && user.role !== 'ADMIN') {
-    return { error: 'Regular bookings allowed only for the current week', status: 400 };
-  }
-
-  // Enforce room type restriction
-  const room = await roomRepository.findById(reqData.room_id);
-  if (!room || !room.is_active) {
-    return { error: 'Room not found', status: 404 };
-  }
-  if ((room.type === 'Committee Room' || room.type === 'Auditorium') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
-    return { error: 'Committee Rooms and Auditoriums can only be booked by Faculty or Admin', status: 403 };
-  }
-
-  const result = await db.runInTransaction(async (client) => {
-    const res = await createBooking(client, reqData, userId, user);
-    if (res.error) throw res;
-    return res;
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
+  return inTransaction(async (client) => {
+    const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [id]);
+    if (!booking) return { error: 'Booking not found', status: 404 };
+    if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
+    if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
+    await bookingRepository.updateStatus(id, 'REJECTED', client);
+    await logActivity({
+      userId: actor.id,
+      action: 'REJECT_BOOKING',
+      entityType: 'booking',
+      entityId: id,
+      details: { rejected_by: isAdmin ? 'ADMIN' : 'FACULTY' },
+    }, client);
+    return { status: 200 };
   });
-
-  if (result.error) return result;
-
-  cache.deletePattern('admin_status_.*');
-  cache.delete('room_availability_all');
-  logger.info('Booking created', { booking_id: result.data.id, user_id: userId, room_id: reqData.room_id, start_time });
-
-  // PROD-02: Notify faculty of new pending request
-  if (reqData.faculty_id && result.data) {
-    try {
-      const faculty = await facultyRepository.findById(reqData.faculty_id);
-      const student = await userRepository.findById(userId);
-      const room = await roomRepository.findById(reqData.room_id);
-      if (faculty?.email) {
-        const dateStr = new Date(start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-        const hour = new Date(start_time).getHours();
-        notifyFacultyNewRequest({
-          facultyName: faculty.name,
-          facultyEmail: faculty.email,
-          studentName: student?.name || 'A student',
-          roomName: room?.name || reqData.room_id,
-          date: dateStr,
-          time: `${hour}:00 – ${hour + 1}:00`
-        }).catch(err => logger.error('Faculty notification failed', err));
-      }
-    } catch (notifErr) {
-      logger.error('Failed to send faculty notification (non-blocking)', notifErr);
-    }
-  }
-
-  return result;
 };
 
-export const cancelBookingHandler = async (bookingId, user) => {
-  const userId = user.id;
-  const isAdmin = user.role === 'ADMIN';
-  
-  const result = await db.runInTransaction(async (client) => {
-    const res = await cancelBooking(client, bookingId, userId, isAdmin, user.faculty_id ?? null);
-    if (res.error) throw res;
-    return res;
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
-  });
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-  if (result.error) return result;
-
-  cache.deletePattern('admin_status_.*');
-  cache.delete('room_availability_all');
-  logger.info('Booking cancelled', { booking_id: bookingId, user_id: userId });
-
-  // PROD-02: Notify booking creator about cancellation
-  try {
-    const booking = await bookingRepository.findById(bookingId);
-    if (booking) {
-      const creator = await userRepository.findById(booking.created_by);
-      const room = await roomRepository.findById(booking.room_id);
-      if (creator?.email) {
-        const dateStr = new Date(booking.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        const hour = new Date(booking.start_time).getHours();
-        const canceller = userId !== booking.created_by ? (await userRepository.findById(userId))?.name : null;
-        notifyBookingCancelled({
-          userEmail: creator.email,
-          userName: creator.name,
-          roomName: room?.name || booking.room_id,
-          date: dateStr,
-          time: `${hour}:00 – ${hour + 1}:00`,
-          cancelledBy: canceller || undefined
-        }).catch(err => logger.error('Cancellation notification failed', err));
-      }
-    }
-  } catch (notifErr) {
-    logger.error('Failed to send cancellation notification (non-blocking)', notifErr);
-  }
-
-  return result;
-};
-
-export const rescheduleBookingHandler = async (bookingId, reqData, user) => {
-  const userId = user.id;
-  
-  const booking = await bookingRepository.findById(bookingId);
-  if (!booking) return { error: 'Booking not found', status: 404 };
-
-  const targetRoomId = reqData.room_id || booking.room_id;
-  const targetRoom = await roomRepository.findById(targetRoomId);
-  if (!targetRoom || !targetRoom.is_active) return { error: 'Target room not found', status: 404 };
-
-  if ((targetRoom.type === 'Committee Room' || targetRoom.type === 'Auditorium') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
-    return { error: 'Committee Rooms and Auditoriums can only be booked by Faculty or Admin', status: 403 };
-  }
-
-  const result = await db.runInTransaction(async (client) => {
-    const res = await rescheduleBooking(client, bookingId, reqData, userId);
-    if (res.error) throw res;
-    return res;
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
-  });
-
-  if (result.error) return result;
-
-  cache.deletePattern('admin_status_.*');
-  cache.delete('room_availability_all');
-  return result;
-};
-
+/**
+ * Admin quick-book: book an existing room for a user on a date and hour. The room must exist
+ * (no rooms are created from typos) and the target user must be an active account.
+ */
 export const quickBookHandler = async (reqData, user) => {
   const { room_name, target_user_id, date, slot, purpose } = reqData;
-  const adminId = user.id;
-
   if (!room_name || !date || slot === undefined) {
     return { error: 'Missing required fields: room_name, date, slot', status: 400 };
   }
+  if (!DATE_ONLY.test(String(date))) return { error: 'date must be YYYY-MM-DD', status: 400 };
+  const hour = Number(slot);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return { error: 'slot must be an hour between 0 and 23', status: 400 };
 
-  const userId = target_user_id || adminId;
-  
-  const result = await db.runInTransaction(async (client) => {
-    let room = await roomRepository.findByName(room_name, client);
-    let roomId;
-    if (!room) {
-      const safeName = String(room_name).trim();
-      const firstDigit = safeName.charAt(0);
-      const building = /^\d$/.test(firstDigit) ? `${firstDigit}th Block` : 'Unknown';
-      const floor = safeName.length >= 2 ? parseInt(safeName.charAt(1)) || 0 : 0;
+  const result = await inTransaction(async (client) => {
+    const room = await roomRepository.findByName(room_name, client);
+    if (!room) return { error: `Room ${room_name} not found`, status: 404 };
 
-      room = await roomRepository.create({
-        name: safeName, building, floor, capacity: 40
-      }, client);
-      roomId = room.id;
-    } else {
-      roomId = room.id;
+    let owner = user;
+    if (target_user_id && String(target_user_id) !== String(user.id)) {
+      const { rows: [target] } = await client.query(
+        `SELECT u.id, u.role, u.name, f.id AS faculty_id FROM users u
+           LEFT JOIN faculties f ON f.user_id = u.id AND f.is_active
+          WHERE u.id = $1 AND u.is_active`,
+        [target_user_id],
+      );
+      if (!target) return { error: 'Target user not found', status: 400 };
+      owner = target;
     }
 
-    const startTime = new Date(istDateTimeToUtc(date, parseInt(slot)));
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-
-    const res = await createBooking(client, { 
-      room_id: roomId, 
-      start_time: startTime.toISOString(), 
-      end_time: endTime.toISOString(), 
-      purpose: purpose || 'Admin Quick Booking' 
-    }, userId, user);
-
-    if (res.error) throw res;
-    return { res, startTime };
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
+    const start = istDateTimeToUtc(String(date), hour);
+    const end = new Date(new Date(start).getTime() + 3600000).toISOString();
+    return createBooking(client, {
+      room_id: room.id, start_time: start, end_time: end, purpose: purpose || 'Admin Quick Booking',
+    }, owner, user, { requireFaculty: false });
   });
-
   if (result.error) return result;
 
-  cache.deletePattern('admin_status_.*');
-  cache.delete('room_availability_all');
-  logger.info('Admin Quick Booking created', { booking_id: result.res.data.id, room_name, start_time: result.startTime });
-  return result.res;
+  invalidateRoomCaches();
+  logger.info('Admin Quick Booking created', { booking_id: result.data.id, room_name, start_time: result.data.start_time });
+  return { data: result.data, status: 201 };
 };

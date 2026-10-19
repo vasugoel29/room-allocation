@@ -115,15 +115,60 @@ describe('migration v25 (Google SSO only: clear stored password hashes and reset
       await c.query(
         `INSERT INTO users (name, email, password, role, password_reset_token, password_reset_expires)
          VALUES ('Pending Reset', $1, '$2b$04$somehash', 'FACULTY', 'deadbeef', NOW() + interval '1 hour')`, [email]);
-      // runMigrations applies everything above MAX(version), so dropping the v25 row re-runs it.
-      await c.query('DELETE FROM schema_migrations WHERE version = 25');
+      // runMigrations applies everything above MAX(version), so dropping v25 and every later row
+      // re-runs v25 (and the idempotent v26/v27 after it).
+      await c.query('DELETE FROM schema_migrations WHERE version >= 25');
     });
     const run = await migrateInChild(refUrl);
     expect(run).toMatchObject({ ok: true, error: null });
     await withClient(refUrl, async (c) => {
       expect(await credentials(c, email)).toEqual({ name: 'Pending Reset', role: 'FACULTY', password: null, password_reset_token: null, password_reset_expires: null });
       expect((await c.query('SELECT count(*)::int AS n FROM users WHERE password IS NOT NULL OR password_reset_token IS NOT NULL')).rows[0].n).toBe(0);
-      expect((await c.query('SELECT max(version)::int AS v FROM schema_migrations')).rows[0].v).toBeGreaterThanOrEqual(25);
+      expect((await c.query('SELECT max(version)::int AS v FROM schema_migrations')).rows[0].v).toBeGreaterThanOrEqual(27);
+      expect(Number((await c.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(expectedVersions);
+    });
+  }, 60000);
+});
+
+describe('migration v26 (booking integrity: exclusion constraints)', () => {
+  test('re-applying v26 to legacy overlapping rows cancels the newer ones (audited) and restores the constraints', async () => {
+    const ids = await withClient(refUrl, async (c) => {
+      // Simulate a pre-v26 database: no constraints, overlapping rows.
+      for (const k of ['bookings_no_room_overlap', 'bookings_no_person_overlap', 'bookings_no_faculty_overlap', 'bookings_time_order']) {
+        await c.query(`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS ${k}`);
+      }
+      const { rows: [u1] } = await c.query("INSERT INTO users (name, email, role) VALUES ('V26 A', 'v26.a@nsut.ac.in', 'STUDENT_REP') RETURNING id");
+      const { rows: [u2] } = await c.query("INSERT INTO users (name, email, role) VALUES ('V26 B', 'v26.b@nsut.ac.in', 'STUDENT_REP') RETURNING id");
+      const { rows: [r1] } = await c.query("INSERT INTO rooms (name, building, floor, capacity, type) VALUES ('V26-R1', 'B', 1, 10, 'Lecture Room') RETURNING id");
+      const { rows: [r2] } = await c.query("INSERT INTO rooms (name, building, floor, capacity, type) VALUES ('V26-R2', 'B', 1, 10, 'Lecture Room') RETURNING id");
+      const ins = async (room, user, start, end, status = 'ACTIVE', ago = 10) => (await c.query(
+        `INSERT INTO bookings (room_id, created_by, start_time, end_time, purpose, status, created_at)
+         VALUES ($1, $2, $3, $4, 'legacy', $5, NOW() - ($6 || ' minutes')::interval) RETURNING id`, [room, user, start, end, status, ago])).rows[0].id;
+      return {
+        roomKeep: await ins(r1.id, u1.id, '2031-01-06T04:30:00Z', '2031-01-06T06:30:00Z', 'ACTIVE', 30),
+        roomLose: await ins(r1.id, u2.id, '2031-01-06T05:30:00Z', '2031-01-06T06:30:00Z', 'ACTIVE', 20),
+        personLose: await ins(r2.id, u1.id, '2031-01-06T05:00:00Z', '2031-01-06T06:00:00Z', 'PENDING', 10),
+        cancelledOk: await ins(r1.id, u2.id, '2031-01-06T04:30:00Z', '2031-01-06T05:30:00Z', 'CANCELLED', 1),
+      };
+    });
+    await withClient(refUrl, (c) => c.query('DELETE FROM schema_migrations WHERE version >= 26'));
+    const run = await migrateInChild(refUrl);
+    expect(run).toMatchObject({ ok: true, error: null });
+
+    await withClient(refUrl, async (c) => {
+      const status = async (id) => (await c.query('SELECT status FROM bookings WHERE id = $1', [id])).rows[0].status;
+      expect(await status(ids.roomKeep)).toBe('ACTIVE');
+      expect(await status(ids.roomLose)).toBe('CANCELLED');
+      expect(await status(ids.personLose)).toBe('CANCELLED');
+      expect(await status(ids.cancelledOk)).toBe('CANCELLED');
+      const { rows: audit } = await c.query(
+        `SELECT entity_id, details FROM audit_logs WHERE action = 'MIGRATION_CANCEL_OVERLAP' AND entity_id = ANY($1) ORDER BY entity_id`,
+        [[ids.roomLose, ids.personLose]]);
+      expect(audit.map((a) => [a.entity_id, a.details.rule])).toEqual([[ids.roomLose, 'room'], [ids.personLose, 'person']]);
+      const { rows: cons } = await c.query(
+        `SELECT conname FROM pg_constraint WHERE conrelid = 'bookings'::regclass AND conname LIKE 'bookings_%' ORDER BY conname`);
+      expect(cons.map((r) => r.conname)).toEqual(expect.arrayContaining(
+        ['bookings_no_faculty_overlap', 'bookings_no_person_overlap', 'bookings_no_room_overlap', 'bookings_time_order']));
     });
   }, 60000);
 });

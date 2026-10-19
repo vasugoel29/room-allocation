@@ -123,12 +123,16 @@ export function futureSlot({ hour = 10, day, weekend = false, minLeadHours = 2, 
   throw new Error(`No future slot found for ${JSON.stringify({ hour, day, weekend })}`);
 }
 
-/** A slot `hoursAgo` in the past. */
+/** A one-hour slot starting `hoursAgo` (or a bit more) in the past, aligned to the IST hour grid (:30 UTC). */
 export function pastSlot(hoursAgo = 3) {
-  const start = new Date(Date.now() - hoursAgo * 3600_000);
-  start.setUTCMinutes(0, 0, 0);
+  const IST = 5.5 * 3600_000;
+  const t = Date.now() - hoursAgo * 3600_000 + IST;
+  const start = new Date(t - (t % 3600_000) - IST);
   return { start: start.toISOString(), end: new Date(start.getTime() + 3600_000).toISOString() };
 }
+
+/** An ACTIVE faculty-directory entry to name as `faculty_id` on a student's booking request. */
+export const approverId = async () => (await createFacultyEntry()).id;
 
 /** A slot more than a week out (outside the regular booking window). */
 export function farFutureSlot(days = 10, hour = 10) {

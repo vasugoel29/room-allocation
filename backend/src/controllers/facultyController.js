@@ -1,3 +1,4 @@
+import { formatIstRange } from '../utils/timezone.js';
 import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
@@ -46,14 +47,13 @@ export const approveBooking = async (req, res) => {
       const student = await userRepository.findById(fullBooking.created_by);
       const room = await roomRepository.findById(fullBooking.room_id);
       if (student?.email) {
-        const dateStr = new Date(fullBooking.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-        const hour = new Date(fullBooking.start_time).getHours();
+        const { date: dateStr, time } = formatIstRange(fullBooking.start_time, fullBooking.end_time);
         notifyStudentBookingStatus({
           studentEmail: student.email,
           studentName: student.name,
           roomName: room?.name || fullBooking.room_id,
           date: dateStr,
-          time: `${hour}:00 – ${hour + 1}:00`,
+          time,
           status: 'APPROVED'
         }).catch(err => logger.error('Approval notification failed', err));
       }
@@ -80,14 +80,13 @@ export const rejectBooking = async (req, res) => {
         const student = await userRepository.findById(fullBooking.created_by);
         const room = await roomRepository.findById(fullBooking.room_id);
         if (student?.email) {
-          const dateStr = new Date(fullBooking.start_time).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-          const hour = new Date(fullBooking.start_time).getHours();
+          const { date: dateStr, time } = formatIstRange(fullBooking.start_time, fullBooking.end_time);
           notifyStudentBookingStatus({
             studentEmail: student.email,
             studentName: student.name,
             roomName: room?.name || fullBooking.room_id,
             date: dateStr,
-            time: `${hour}:00 – ${hour + 1}:00`,
+            time,
             status: 'REJECTED'
           }).catch(err => logger.error('Rejection notification failed', err));
         }

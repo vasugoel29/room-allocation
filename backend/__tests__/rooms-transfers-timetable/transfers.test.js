@@ -16,6 +16,7 @@ import {
   createAdmin, createRep, createFaculty, createFacultyEntry, createViewer, createRoom, insertBooking,
   futureSlot, pastSlot, closeDb,
 } from '../../test/helpers/factories.js';
+import { plusHours } from '../../test/helpers/bookings.js';
 
 afterAll(closeDb);
 
@@ -438,7 +439,7 @@ describe('BKG-06 transfer state machine', () => {
     const s = await scenario({ targetFaculty: true });
     const t = await requestFor(s);
     await accept(s.owner.auth, t.id); // original booking now CANCELLED
-    const intruder = await createRep();
+    const intruder = await createFaculty(); // staff booking: ACTIVE immediately, so it really takes the slot
     const nb = await request(app).post('/api/bookings').set('Authorization', intruder.auth)
       .send({ room_id: s.room.id, start_time: s.slot.start, end_time: s.slot.end, purpose: 'Grabbed the freed slot' });
     expect(nb.status).toBe(201);
@@ -464,16 +465,49 @@ describe('BKG-06 transfer state machine', () => {
     expect(rows).toHaveLength(1);
   });
 
-  test.failing('[BKG-06] accepting a transfer does not resurrect a booking the owner has since cancelled', async () => {
+  // Fixed via BKG-17: cancelling a booking closes its open transfers, so they can't be accepted later.
+  test('[BKG-06] accepting a transfer does not resurrect a booking the owner has since cancelled', async () => {
     const s = await scenario();
     const t = await requestFor(s);
     const cancel = await request(app).patch(`/api/bookings/${s.booking.id}/cancel`).set('Authorization', s.owner.auth);
     expect(cancel.status).toBe(200);
     expect((await bookingRow(s.booking.id)).status).toBe('CANCELLED');
+    expect((await transferRow(t.id)).status).toBe('REJECTED');
 
+    for (const who of [s.owner, admin]) {
+      const res = await accept(who.auth, t.id);
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Invalid transfer status');
+    }
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'CANCELLED', created_by: s.owner.user.id });
+  });
+
+  test.failing('[NEW-P4-9] slot re-booked with a different start while CANCELLED mid-flow: final approval → 409, not 500', async () => {
+    // Same start is caught by the legacy unique index (23505 → 409, test above); a different-start
+    // overlap trips bookings_no_room_overlap (23P01), which httpErrors does not map → 500.
+    const slot = futureSlot({ hour: 12 });
+    const s = await scenario({ targetFaculty: true, booking: { start_time: slot.start, end_time: slot.end } });
+    const t = await requestFor(s);
+    await accept(s.owner.auth, t.id); // original booking now CANCELLED
+    const nb = await request(app).post('/api/bookings').set('Authorization', (await createFaculty()).auth)
+      .send({ room_id: s.room.id, start_time: plusHours(slot.start, -1), end_time: slot.end, purpose: 'Earlier, longer grab' });
+    expect(nb.status).toBe(201);
+    const res = await accept(s.targetFac.auth, t.id);
+    expect(res.status).toBe(409);
+    expect((await bookingRow(nb.body.id)).status).toBe('ACTIVE');
+  });
+
+  test.failing('[NEW-P4-9] completing a transfer to a requester who is busy at that time → 409, not 500', async () => {
+    // transferService sets created_by = requester without any conflict check; the person-overlap
+    // constraint (23P01) is not in httpErrors' PG_CLIENT_ERRORS map, so the client gets a 500.
+    const slot = futureSlot({ hour: 12 });
+    const s = await scenario({ booking: { start_time: slot.start, end_time: slot.end } });
+    // The requester already has 11:00-13:00 elsewhere (a different start, so no legacy unique index hit).
+    await insertBooking({ room_id: (await createRoom()).id, created_by: s.requester.user.id, start_time: plusHours(slot.start, -1), end_time: slot.end });
+    const t = await requestFor(s);
     const res = await accept(s.owner.auth, t.id);
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect((await bookingRow(s.booking.id)).status).toBe('CANCELLED');
+    expect(res.status).toBe(409);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id });
   });
 
   test.failing('[BKG-06] a booking that has already ended cannot be transferred (accept refused)', async () => {

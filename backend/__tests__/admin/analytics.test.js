@@ -37,15 +37,18 @@ test('numbers reflect seeded ACTIVE bookings only, within the day window', async
   const before = await analytics();
   const room = await createRoom();
 
-  // 40 ACTIVE bookings at 03:00 IST spread over the last 2..21 days (2 per day).
+  // 40 ACTIVE bookings in the 03:00 IST hour spread over the last 2..21 days (2 per day: 03:00-03:30
+  // and 03:30-04:00, so they don't overlap — the room/person exclusion constraints forbid that).
   const N = 40;
   for (let i = 0; i < N; i++) {
     const start = istDateTimeToUtc(istDateDaysAgo(2 + Math.floor(i / 2)), 3, (i % 2) * 30);
-    await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: start });
+    await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: start, end_time: new Date(new Date(start).getTime() + 30 * 60_000).toISOString() });
   }
-  // Excluded: not ACTIVE, and outside the 30-day window.
+  // Excluded: not ACTIVE, and outside the 30-day window. (The PENDING one is someone else's: a person
+  // can't hold a PENDING request overlapping their own ACTIVE booking.)
+  const other = await createUser({ role: 'STUDENT_REP' });
   await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: istDateTimeToUtc(istDateDaysAgo(3), 3), status: 'CANCELLED' });
-  await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: istDateTimeToUtc(istDateDaysAgo(3), 3), status: 'PENDING' });
+  await insertBooking({ room_id: room.id, created_by: other.user.id, start_time: istDateTimeToUtc(istDateDaysAgo(3), 3), status: 'PENDING' });
   await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: istDateTimeToUtc(istDateDaysAgo(45), 3) });
 
   const after = await analytics();

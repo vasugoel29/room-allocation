@@ -2,9 +2,10 @@ import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import {
-  createUser, createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, closeDb,
+  createUser, createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, pastSlot, closeDb,
 } from '../../test/helpers/factories.js';
-import { plusHours, getBooking, auditRows } from '../../test/helpers/bookings.js';
+import { getIstParts } from '../../src/utils/timezone.js';
+import { uniq, plusHours, getBooking, auditRows, insertTimetableSlot } from '../../test/helpers/bookings.js';
 
 afterAll(closeDb);
 
@@ -149,8 +150,99 @@ describe('PATCH /api/faculty/:id/approve', () => {
     await insertBooking({ room_id: room.id, created_by: (await createRep()).user.id, start_time: slot.start, end_time: slot.end });
     const res = await approve(fac.auth, booking.id);
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: 'Room already booked' });
+    expect(res.body).toEqual({ error: 'Room is already booked for this time period' });
     expect((await getBooking(booking.id)).status).toBe('PENDING');
+  });
+
+  describe('approval re-validates the slot', () => {
+    test('a class added to the room after the request → 409, stays PENDING', async () => {
+      const room = await createRoom();
+      const slot = futureSlot({ hour: 11, day: 'Wed', minLeadHours: 0 });
+      const { fac, booking } = await pending({ room, slot });
+      await insertTimetableSlot({ department: uniq('D '), semester: 7, section: 1, day_of_week: 'Wed', slot_time: '11:00-12:00', room_name: room.name, subject_name: 'New class' });
+      const res = await approve(fac.auth, booking.id);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ error: `Room ${room.name} has a scheduled class at this time` });
+      expect((await getBooking(booking.id)).status).toBe('PENDING');
+    });
+
+    test('a weekly room block added after the request → 409', async () => {
+      const room = await createRoom();
+      const slot = futureSlot({ hour: 13, day: 'Thu', minLeadHours: 0 });
+      const { fac, booking } = await pending({ room, slot });
+      await db.query(`INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, 'Thu', 13, false)`, [room.id]);
+      expect((await approve(fac.auth, booking.id)).status).toBe(409);
+      expect((await getBooking(booking.id)).status).toBe('PENDING');
+    });
+
+    test('the room was deactivated after the request → 409', async () => {
+      const { fac, room, booking } = await pending({ slot: futureSlot({ hour: 12 }) });
+      await db.query('UPDATE rooms SET is_active = FALSE WHERE id = $1', [room.id]);
+      const res = await approve(fac.auth, booking.id);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ error: 'Room is no longer available' });
+      expect((await getBooking(booking.id)).status).toBe('PENDING');
+    });
+
+    test('a request whose start time has passed → 400', async () => {
+      const slot = pastSlot(0); // the current IST hour: started up to 59 minutes ago
+      const { fac, booking } = await pending({ slot });
+      const res = await approve(fac.auth, booking.id);
+      expect(res.status).toBe(400);
+      const h = getIstParts(slot.start).hour; // outside opening hours that rule is reported first
+      expect(res.body.error).toBe(h === 23 ? 'A booking must start and end on the same day'
+      : h >= 8 && h < 20 ? 'This request is for a time that has already started' : 'Rooms can be booked between 08:00 and 20:00');
+      expect((await getBooking(booking.id)).status).toBe('PENDING');
+    });
+
+    test('the faculty member has since booked that slot themselves → 409 faculty_busy', async () => {
+      const slot = futureSlot({ hour: 15 });
+      const { fac, booking } = await pending({ slot });
+      const own = await request(app).post('/api/bookings').set('Authorization', fac.auth)
+        .send({ room_id: (await createRoom()).id, start_time: slot.start, end_time: slot.end, purpose: 'Own meeting' });
+      expect(own.status).toBe(201);
+      const res = await approve(fac.auth, booking.id);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual({ error: 'The selected faculty member is busy during this slot.' });
+      expect((await getBooking(booking.id)).status).toBe('PENDING');
+    });
+
+    test('the faculty member already approved another overlapping request → second approval 409', async () => {
+      const fac = await createFaculty();
+      const slot = futureSlot({ hour: 16 });
+      const a = await pending({ fac, slot });
+      const b = await pending({ fac, slot: { start: slot.start, end: plusHours(slot.start, 2) } });
+      expect((await approve(fac.auth, a.booking.id)).status).toBe(200);
+      expect((await approve(fac.auth, b.booking.id)).status).toBe(409);
+      expect((await getBooking(b.booking.id)).status).toBe('PENDING');
+    });
+
+    test.failing('[NEW-P4-4] a 409 from approval carries the conflict body like create/reschedule do', async () => {
+      // facultyController.approveBooking returns only { error }; the create, reschedule and quick-book
+      // controllers forward result.conflict, so the faculty UI cannot show what clashed.
+      const { fac, room, slot, booking } = await pending({ slot: futureSlot({ hour: 17 }) });
+      await insertBooking({ room_id: room.id, created_by: (await createRep()).user.id, start_time: slot.start, end_time: slot.end });
+      const res = await approve(fac.auth, booking.id);
+      expect(res.status).toBe(409);
+      expect(res.body.conflict).toEqual({ type: 'room_booked' });
+    });
+
+    test.failing('[NEW-P4-5] concurrent approval of two overlapping requests for one room: one 200, the other 409 (never 500)', async () => {
+      // approveBooking runs in a plain runInTransaction: a lost race surfaces as the exclusion-constraint
+      // error (23P01) or a deadlock with rejectConflicts (40P01), and the controller turns both into 500.
+      const statuses = [];
+      for (let round = 0; round < 4; round++) {
+        const room = await createRoom();
+        const slot = futureSlot({ hour: 8 + round * 3, skip: 1 });
+        const a = await pending({ room, slot });
+        const b = await pending({ room, slot: { start: slot.start, end: plusHours(slot.start, 2) } });
+        const res = await Promise.all([approve(a.fac.auth, a.booking.id), approve(b.fac.auth, b.booking.id)]);
+        statuses.push(...res.map((r) => r.status));
+        const { rows } = await db.query(`SELECT 1 FROM bookings WHERE room_id = $1 AND status = 'ACTIVE'`, [room.id]);
+        expect(rows).toHaveLength(1);
+      }
+      expect(statuses.filter((s) => s >= 500)).toEqual([]);
+    });
   });
 
   test.failing('[NEW-bookings-5] non-numeric booking id → 400/404, not 500', async () => {
@@ -159,53 +251,44 @@ describe('PATCH /api/faculty/:id/approve', () => {
     expect(res.status).toBeLessThan(500);
   });
 
-  test.failing('[BKG-03] ADMIN approving a PENDING booking → 200 and ACTIVE', async () => {
+  test('[BKG-03] ADMIN approving a PENDING booking → 200 and ACTIVE; audit attributes the admin', async () => {
+    const admin = await createAdmin();
     const { booking } = await pending({ slot: futureSlot({ hour: 15 }) });
-    const res = await approve((await createAdmin()).auth, booking.id);
+    const res = await approve(admin.auth, booking.id);
     expect(res.status).toBe(200);
+    expect(res.body.booking).toMatchObject({ id: booking.id, status: 'ACTIVE' });
     expect((await getBooking(booking.id)).status).toBe('ACTIVE');
-  });
-
-  test('ADMIN approval currently → 500 and the booking stays PENDING (documents BKG-03)', async () => {
-    const { booking } = await pending({ slot: futureSlot({ hour: 16 }) });
-    const res = await approve((await createAdmin()).auth, booking.id);
-    expect(res.status).toBe(500);
-    expect((await getBooking(booking.id)).status).toBe('PENDING');
+    const audit = await auditRows(booking.id, 'APPROVE_BOOKING');
+    expect(audit).toHaveLength(1);
+    expect(audit[0].user_id).toBe(admin.user.id);
+    expect(audit[0].details).toEqual({ approved_by: 'ADMIN' });
   });
 
   describe('BKG-09: PENDING requests of the same user', () => {
-    test.failing('[BKG-09] approving two overlapping requests (different starts) of one student → second is refused 409', async () => {
-      const student = await createRep();
-      const fac = await createFaculty();
-      const slot = futureSlot({ hour: 10, skip: 1 });
-      const a = await pending({ fac, student, slot: { start: slot.start, end: plusHours(slot.start, 2) } });
-      const b = await pending({ fac, student, slot: { start: plusHours(slot.start, 1), end: plusHours(slot.start, 2) } });
-      expect((await approve(fac.auth, a.booking.id)).status).toBe(200);
-      const res = await approve(fac.auth, b.booking.id);
-      expect(res.status).toBe(409);
-      expect((await getBooking(b.booking.id)).status).not.toBe('ACTIVE');
-    });
-
-    test.failing('[BKG-09] approving two same-start requests of one student → second is 409, not 500', async () => {
-      const student = await createRep();
-      const fac = await createFaculty();
-      const slot = futureSlot({ hour: 13, skip: 1 });
-      const a = await pending({ fac, student, slot });
-      const b = await pending({ fac, student, slot });
-      expect((await approve(fac.auth, a.booking.id)).status).toBe(200);
-      const res = await approve(fac.auth, b.booking.id);
-      expect(res.status).toBe(409);
-    });
-
-    test('student can currently file overlapping PENDING requests in different rooms (documents BKG-09)', async () => {
+    // A student can no longer hold two overlapping requests at all (bookings_no_person_overlap), so two
+    // overlapping requests of one student can never both be approved.
+    test('[BKG-09] a student cannot file overlapping PENDING requests in different rooms (second → 409)', async () => {
       const student = await createRep();
       const fac = await createFaculty();
       const slot = futureSlot({ hour: 15, skip: 1 });
-      const body = (room) => ({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'p', faculty_id: fac.faculty.id });
-      const r1 = await request(app).post('/api/bookings').set('Authorization', student.auth).send(body(await createRoom()));
+      const body = (room, s = slot) => ({ room_id: room.id, start_time: s.start, end_time: s.end, purpose: 'p', faculty_id: fac.faculty.id });
+      const roomA = await createRoom();
+      const r1 = await request(app).post('/api/bookings').set('Authorization', student.auth).send(body(roomA));
       const r2 = await request(app).post('/api/bookings').set('Authorization', student.auth).send(body(await createRoom()));
-      expect([r1.status, r2.status]).toEqual([201, 201]);
-      expect([r1.body.status, r2.body.status]).toEqual(['PENDING', 'PENDING']);
+      const r3 = await request(app).post('/api/bookings').set('Authorization', student.auth)
+        .send(body(await createRoom(), { start: plusHours(slot.start, -1), end: slot.end }));
+      expect([r1.status, r2.status, r3.status]).toEqual([201, 409, 409]);
+      expect(r2.body).toEqual({ error: `You already have a pending request during this time in Room ${roomA.name}`, conflict: { type: 'person_busy' } });
+    });
+
+    test('[BKG-09] the database refuses a second overlapping PENDING row for the same student (same start or not)', async () => {
+      const student = await createRep();
+      const fac = await createFaculty();
+      const slot = futureSlot({ hour: 10, skip: 1 });
+      await pending({ fac, student, slot: { start: slot.start, end: plusHours(slot.start, 2) } });
+      for (const s of [slot, { start: plusHours(slot.start, 1), end: plusHours(slot.start, 2) }]) {
+        await expect(pending({ fac, student, slot: s })).rejects.toMatchObject({ code: '23P01', constraint: 'bookings_no_person_overlap' });
+      }
     });
   });
 });
@@ -246,9 +329,11 @@ describe('PATCH /api/faculty/:id/reject', () => {
     expect((await approve(fac.auth, booking.id)).status).toBe(400);
   });
 
-  test.failing('[NEW-bookings-6] rejection writes a REJECT_BOOKING audit row (approval writes APPROVE_BOOKING)', async () => {
+  test('[NEW-bookings-6] rejection writes a REJECT_BOOKING audit row (approval writes APPROVE_BOOKING)', async () => {
     const { fac, booking } = await pending();
     expect((await reject(fac.auth, booking.id)).status).toBe(200);
-    expect(await auditRows(booking.id, 'REJECT_BOOKING')).toHaveLength(1);
+    const audit = await auditRows(booking.id, 'REJECT_BOOKING');
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({ user_id: fac.user.id, details: { rejected_by: 'FACULTY' } });
   });
 });

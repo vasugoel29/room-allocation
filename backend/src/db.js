@@ -737,6 +737,82 @@ const migrations = [
          WHERE password IS NOT NULL OR password_reset_token IS NOT NULL OR password_reset_expires IS NOT NULL;
       `);
     }
+  },
+  {
+    version: 26,
+    name: 'Booking integrity: exclusion constraints and dated room releases',
+    run: async (client) => {
+      await client.query('CREATE EXTENSION IF NOT EXISTS btree_gist');
+
+      // Existing rows that would violate the new rules are cancelled (kept), newest first, so the
+      // constraints can be added. Each cancelled row is recorded in audit_logs.
+      const cancelOverlaps = async (label, partitionCol, statuses, extraWhere = '') => {
+        const { rows } = await client.query(`
+          WITH candidates AS (
+            SELECT id, ${partitionCol} AS k, start_time, end_time, created_at FROM bookings
+             WHERE status = ANY($1) ${extraWhere}
+          ), losers AS (
+            SELECT DISTINCT b.id FROM candidates a JOIN candidates b
+              ON a.k = b.k AND a.id <> b.id
+             AND tstzrange(a.start_time, a.end_time) && tstzrange(b.start_time, b.end_time)
+             AND (b.created_at, b.id) > (a.created_at, a.id)
+          )
+          UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
+           WHERE id IN (SELECT id FROM losers) RETURNING id`, [statuses]);
+        for (const r of rows) {
+          await client.query(
+            `INSERT INTO audit_logs (user_id, action, entity_type, entity_id, details) VALUES (NULL, 'MIGRATION_CANCEL_OVERLAP', 'booking', $1, $2)`,
+            [r.id, JSON.stringify({ rule: label })],
+          );
+        }
+      };
+      await client.query(`UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW() WHERE end_time <= start_time AND status IN ('ACTIVE','PENDING')`);
+      await cancelOverlaps('room', 'room_id', ['ACTIVE']);
+      await cancelOverlaps('person', 'created_by', ['ACTIVE', 'PENDING']);
+      await cancelOverlaps('faculty', 'faculty_id', ['ACTIVE'], 'AND faculty_id IS NOT NULL');
+
+      await client.query(`
+        ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_time_order;
+        ALTER TABLE bookings ADD CONSTRAINT bookings_time_order CHECK (end_time > start_time);
+        ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_no_room_overlap;
+        ALTER TABLE bookings ADD CONSTRAINT bookings_no_room_overlap
+          EXCLUDE USING gist (room_id WITH =, tstzrange(start_time, end_time) WITH &&) WHERE (status = 'ACTIVE');
+        ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_no_person_overlap;
+        ALTER TABLE bookings ADD CONSTRAINT bookings_no_person_overlap
+          EXCLUDE USING gist (created_by WITH =, tstzrange(start_time, end_time) WITH &&) WHERE (status IN ('ACTIVE', 'PENDING'));
+        ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_no_faculty_overlap;
+        ALTER TABLE bookings ADD CONSTRAINT bookings_no_faculty_overlap
+          EXCLUDE USING gist (faculty_id WITH =, tstzrange(start_time, end_time) WITH &&) WHERE (status = 'ACTIVE' AND faculty_id IS NOT NULL);
+
+        -- A timetabled class that does not happen on one specific date (approved class cancellation,
+        -- or a class moved by a reschedule booking). Replaces weekly room_availability edits.
+        CREATE TABLE IF NOT EXISTS room_slot_releases (
+          id SERIAL PRIMARY KEY,
+          room_id INTEGER NOT NULL REFERENCES rooms(id),
+          release_date DATE NOT NULL,
+          start_hour INTEGER NOT NULL CHECK (start_hour BETWEEN 0 AND 23),
+          end_hour INTEGER NOT NULL CHECK (end_hour BETWEEN 1 AND 24 AND end_hour > start_hour),
+          source_type VARCHAR(32) NOT NULL,
+          source_id INTEGER,
+          created_by INTEGER REFERENCES users(id),
+          is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          deactivated_at TIMESTAMPTZ,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+        CREATE INDEX IF NOT EXISTS idx_room_slot_releases_lookup ON room_slot_releases(room_id, release_date) WHERE is_active;
+      `);
+    }
+  },
+  {
+    version: 27,
+    name: 'Reschedule bookings remember which timetabled class they replace',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_room_id INTEGER REFERENCES rooms(id);
+        ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_date DATE;
+        ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_hour INTEGER CHECK (reschedule_hour BETWEEN 0 AND 23);
+      `);
+    }
   }
 ];
 

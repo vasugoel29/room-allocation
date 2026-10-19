@@ -4,7 +4,7 @@ import * as db from '../../src/db.js';
 import {
   createAdmin, createRep, createFaculty, createRoom, insertBooking, futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
-import { uniq, ist, getBooking, auditRows } from '../../test/helpers/bookings.js';
+import { uniq, ist, getBooking, auditRows, insertTimetableSlot } from '../../test/helpers/bookings.js';
 
 afterAll(closeDb);
 
@@ -45,8 +45,42 @@ describe('POST /api/bookings/admin/quick', () => {
     const { dateKey } = futureSlot({ hour: 12 });
     const res = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 12, target_user_id: rep.user.id });
     expect(res.status).toBe(201);
-    expect(res.body.created_by).toBe(rep.user.id);
+    // Admin quick-book: ACTIVE for the target student straight away, no faculty needed.
+    expect(res.body).toMatchObject({ created_by: rep.user.id, status: 'ACTIVE', faculty_id: null });
     expect((await getBooking(res.body.id)).created_by).toBe(rep.user.id);
+    const [audit] = await auditRows(res.body.id, 'CREATE_BOOKING');
+    expect(audit.user_id).toBe(admin.user.id);
+    expect(audit.details.on_behalf_of).toBe(rep.user.id);
+  });
+
+  test("the target student's section timetable still applies → 409", async () => {
+    const dept = uniq('DEPT ');
+    await insertTimetableSlot({ department: dept, semester: 3, section: 1, day_of_week: 'Tue', slot_time: '10:00-11:00', subject_name: 'Lecture' });
+    const rep = await createRep({ branch: dept, semester: 3, section: 1 });
+    const slot = futureSlot({ hour: 10, day: 'Tue', minLeadHours: 0 });
+    const res = await quick(admin.auth, { room_name: (await createRoom()).name, date: slot.dateKey, slot: 10, target_user_id: rep.user.id });
+    expect(res.status).toBe(409);
+    expect(res.body.conflict).toMatchObject({ type: 'timetable', label: 'your section timetable' });
+  });
+
+  test("the room's own timetable applies → 409 with conflict body", async () => {
+    const room = await createRoom();
+    await insertTimetableSlot({ department: uniq('D '), semester: 1, section: 1, day_of_week: 'Wed', slot_time: '12:00-01:00', room_name: room.name, subject_name: 'Noon' });
+    const slot = futureSlot({ hour: 12, day: 'Wed', minLeadHours: 0 });
+    const res = await quick(admin.auth, { room_name: room.name, date: slot.dateKey, slot: 12 });
+    expect(res.status).toBe(409);
+    expect(res.body.conflict).toMatchObject({ type: 'room_timetable', subject: 'Noon', room: room.name });
+  });
+
+  test('time rules still apply: slot 7 (before opening) and a past date → 400', async () => {
+    const room = await createRoom();
+    const { dateKey } = futureSlot({ hour: 10 });
+    const early = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 7 });
+    expect(early.status).toBe(400);
+    expect(early.body).toEqual({ error: 'Rooms can be booked between 08:00 and 20:00' });
+    const past = await quick(admin.auth, { room_name: room.name, date: '2024-01-08', slot: 10 });
+    expect(past.status).toBe(400);
+    expect(past.body).toEqual({ error: 'Cannot book in the past' });
   });
 
   test('admin may quick-book weekends and beyond 7 days', async () => {
@@ -61,7 +95,7 @@ describe('POST /api/bookings/admin/quick', () => {
     await insertBooking({ room_id: room.id, created_by: (await createRep()).user.id, start_time: slot.start });
     const res = await quick(admin.auth, { room_name: room.name, date: slot.dateKey, slot: 13 });
     expect(res.status).toBe(409);
-    expect(res.body.error).toBe('Room is already booked for this time period (or pending approval)');
+    expect(res.body).toEqual({ error: 'Room is already booked for this time period', conflict: { type: 'room_booked' } });
   });
 
   test('target user already busy → 409', async () => {
@@ -97,34 +131,46 @@ describe('POST /api/bookings/admin/quick', () => {
     expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
   });
 
-  test('unknown room name currently auto-creates a room (documents BKG-18)', async () => {
-    const name = `9${uniq('').slice(-8)}`;
-    const { dateKey } = futureSlot({ hour: 16 });
-    const res = await quick(admin.auth, { room_name: name, date: dateKey, slot: 16 });
-    expect(res.status).toBe(201);
-    const { rows: [room] } = await db.query('SELECT * FROM rooms WHERE name = $1', [name]);
-    expect(room).toMatchObject({ building: '9th Block', capacity: 40 });
-  });
-
-  test.failing('[BKG-18] unknown / typo room name → 404 and no room is created', async () => {
-    const name = uniq('typo').slice(0, 30);
+  test.each([
+    ['unknown', () => uniq('typo').slice(0, 30)],
+    ['typo of a real "9"-block name (used to auto-create a 9th Block room)', () => `9${uniq('').slice(-8)}`],
+  ])('[BKG-18] %s room name → 404 and no room is created', async (_n, makeName) => {
+    const name = makeName();
     const { dateKey } = futureSlot({ hour: 9 });
     const res = await quick(admin.auth, { room_name: name, date: dateKey, slot: 9 });
     expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: `Room ${name} not found` });
     expect((await db.query('SELECT 1 FROM rooms WHERE name = $1', [name])).rows).toHaveLength(0);
   });
 
-  test.failing('[BKG-18] full ISO datetime in `date` (passes validator) → 400, not 500', async () => {
+  test('[BKG-18] full ISO datetime in `date` (passes validator) → 400, not 500', async () => {
     const room = await createRoom();
     const res = await quick(admin.auth, { room_name: room.name, date: '2030-01-07T10:00:00Z', slot: 10 });
     expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'date must be YYYY-MM-DD' });
+    expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
   });
 
-  test('[NEW-bookings-4] non-existent target_user_id → 400/404, not 500', async () => {
+  test.failing('[NEW-P4-6] an impossible calendar date (Feb 30) → 400, not a booking on another day', async () => {
+    // isISO8601() (non-strict) and the YYYY-MM-DD regex both accept "YYYY-02-30"; istDateTimeToUtc then
+    // rolls it over to 2 March and an admin (no 7-day window) gets a 201 booking on a date nobody asked for.
+    const room = await createRoom();
+    const year = new Date().getUTCFullYear() + 1;
+    const res = await quick(admin.auth, { room_name: room.name, date: `${year}-02-30`, slot: 10 });
+    expect(res.status).toBe(400);
+    expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
+  });
+
+  test('[NEW-bookings-4] non-existent or deactivated target_user_id → 400, nothing inserted', async () => {
     const room = await createRoom();
     const { dateKey } = futureSlot({ hour: 17 });
-    const res = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 17, target_user_id: 2147483000 });
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).toBeLessThan(500);
+    const gone = await createRep();
+    await db.query('UPDATE users SET is_active = FALSE WHERE id = $1', [gone.user.id]);
+    for (const target_user_id of [2147483000, gone.user.id]) {
+      const res = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 17, target_user_id });
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ error: 'Target user not found' });
+    }
+    expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
   });
 });
