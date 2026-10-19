@@ -21,7 +21,9 @@
     "seed-faculties:staging": "NODE_ENV=staging node backend/scripts/seed_faculties.js",
     "unseed": "npm run unseed --prefix backend",
     "unseed:staging": "NODE_ENV=staging npm run unseed --prefix backend",
-    "reset:staging": "npm run unseed:staging && npm run seed:staging && npm run seed-faculties:staging"
+    "reset:staging": "npm run unseed:staging && npm run seed:staging && npm run seed-faculties:staging",
+    "test:e2e": "node e2e/setup-db.mjs && playwright test",
+    "test:e2e:ui": "node e2e/setup-db.mjs && playwright test --ui"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.1",

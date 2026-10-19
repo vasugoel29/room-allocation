@@ -149,3 +149,13 @@ Severity: C critical · H high · M medium · L low. Status: open unless noted.
 | PERF-03 | M | `/api/health` shares the saturated event loop and the API limiter → platform health probes can fail under load and trigger restarts |
 | PERF-04 | info | Leaky-bucket abuse guard verified: flood → 3,002× 429, password guessing → 380× 429, bystander users 0× 429 |
 | PERF-05 | info | Node 20.14 is below Vite's minimum (20.19+); pin an engine version for deploys |
+
+## Found by e2e / frontend tests (NEW-E2E, NEW-FE)
+| ID | Sev | Where | Finding |
+|---|---|---|---|
+| NEW-E2E-1 | M | features/admin/AdminQuickBook.jsx | Room Jump / Slot dropdown items overlapping the recipient column are unclickable (header backdrop-blur stacking context, no z-index) |
+| NEW-E2E-2 | H | Profile.jsx + userRepository.update | Empty semester/section/group sent as '' into INTEGER columns → 500; students without those fields (all CSV imports) cannot edit their profile |
+| NEW-FE-1 | L | utils/timetableLogic.js:233 | `isRoomReallyFree` matches room names by substring ("101" busy when "1101" has a class) — only reached from dead RoomSelector |
+| NEW-FE-2 | L | services/adminService.js:120 | Audit-log search not URL-encoded ("R&D" breaks the query) |
+| NEW-FE-3 | L | components/ui/BottomNav.jsx:55 | Pending-transfer badge only on a `history` tab; reps get `bookings`, so never see it on mobile |
+| NEW-FE-4 | L | pages/RoomScheduleGrid.jsx:222 | Week header reads `weekDates[5]` (only 0–4 exist) → "Oct 19 – " |
