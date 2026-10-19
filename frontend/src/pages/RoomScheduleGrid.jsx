@@ -32,8 +32,11 @@ const getMonday = (d) => {
   return mon;
 };
 
+// Calendar date (YYYY-MM-DD) of a local-midnight Date. toISOString() would convert to UTC and, in
+// IST, give the previous day (FE-01).
 const formatDateISO = (d) => {
-  return d.toISOString().split('T')[0];
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
 const RoomScheduleGrid = () => {
@@ -201,14 +204,12 @@ const RoomScheduleGrid = () => {
     }
     setSubmittingBooking(true);
     try {
-      const [year, month, day] = drawer.date.split('-').map(Number);
-      const startTime = new Date(year, month - 1, day, drawer.startHour, 0, 0, 0);
-      const endTime = new Date(year, month - 1, day, drawer.endHour, 0, 0, 0);
-
+      // The quick-book API takes the room name, IST date and start hour (+ length) — FE-02.
       await adminService.quickBook({
-        room_id: parseInt(selectedRoomId),
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
+        room_name: selectedRoom?.name,
+        date: drawer.date,
+        slot: drawer.startHour,
+        hours: Math.max(1, drawer.endHour - drawer.startHour),
         purpose: bookingPurpose
       });
 
@@ -257,7 +258,7 @@ const RoomScheduleGrid = () => {
             <Calendar size={14} className="text-secondary" />
             {weekDates[0] && weekDates[0].toLocaleDateString('en-US', { day: 'numeric', month: 'short' })} 
             {' – '} 
-            {weekDates[5] && weekDates[5].toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
+            {weekDates.at(-1)?.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
           </span>
           <button 
             onClick={handleNextWeek}

@@ -141,13 +141,13 @@ describe('RoomScheduleGrid', () => {
 
   // ---- Known bugs -------------------------------------------------------------------------------
   // FE-01: getMonday() returns Mon 00:00 IST, formatDateISO() = toISOString() → "2026-10-18" (Sunday).
-  it.fails('[FE-01] requests weekStart = Monday 2026-10-19 in IST', async () => {
+  it('[FE-01] requests weekStart = Monday 2026-10-19 in IST', async () => {
     const { f } = setup();
     await waitFor(() => expect(weekStarts(f)).toHaveLength(1));
     expect(weekStarts(f)[0]).toBe('2026-10-19');
   });
 
-  it.fails('[FE-01] the Monday row maps to date 2026-10-19 (drawer + conflict check)', async () => {
+  it('[FE-01] the Monday row maps to date 2026-10-19 (drawer + conflict check)', async () => {
     const { f, ue } = setup();
     await screen.findByTitle('Dr X: DBMS');
     await ue.click(freeCells('Monday')[0]); // 08:00
@@ -156,7 +156,7 @@ describe('RoomScheduleGrid', () => {
     expect(fetchCalls(f).some(([, u]) => u.includes('date=2026-10-19&startHour=8'))).toBe(true);
   });
 
-  it.fails('[FE-01] a Monday 14:00 IST booking is drawn in the Monday row', async () => {
+  it('[FE-01] a Monday 14:00 IST booking is drawn in the Monday row', async () => {
     setup();
     await screen.findByTitle('Dr X: DBMS');
     expect(within(row('Monday')).queryAllByTitle('Booked by Ann: Seminar')).toHaveLength(2);
@@ -164,7 +164,7 @@ describe('RoomScheduleGrid', () => {
 
   // FE-02: Confirm Booking posts {room_id,start_time,end_time,purpose}; /bookings/admin/quick requires
   // {room_name,date,slot} (see adminService.quickBook / useAdminQuickBook) → always 400.
-  it.fails('[FE-02] Confirm Booking sends the quick-book contract {room_name, date, slot, purpose}', async () => {
+  it('[FE-02] Confirm Booking sends the quick-book contract {room_name, date, slot, purpose}', async () => {
     const { f, ue } = setup();
     await screen.findByTitle('Dr X: DBMS');
     await ue.click(freeCells('Thursday')[2]); // 10:00
@@ -178,7 +178,7 @@ describe('RoomScheduleGrid', () => {
   });
 
   // NEW-FE-4: header range reads weekDates[5] but only 5 dates (Mon–Fri, indices 0–4) exist → end date missing.
-  it.fails('[NEW-FE-4] week header shows the end date of the range', async () => {
+  it('[NEW-FE-4] week header shows the end date of the range', async () => {
     setup();
     await screen.findByTitle('Dr X: DBMS');
     expect(screen.getByText(/–/).textContent).toMatch(/Oct 19\s*–\s*Oct 23, 2026/);

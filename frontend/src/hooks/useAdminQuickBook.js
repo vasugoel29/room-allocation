@@ -1,10 +1,12 @@
+import { getIstDateKey } from '../utils/timezone';
 import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
 
 export function useAdminQuickBook(activeTab, fetchData) {
   const [quickBookForm, setQuickBookForm] = useState({
-    date: new Date().toISOString().split('T')[0],
+    // Today's IST date; toISOString() gave yesterday between 00:00 and 05:30 IST (FE-14).
+    date: getIstDateKey(new Date()),
     slot: '8',
     purpose: 'Admin Override',
     target_user_id: null,

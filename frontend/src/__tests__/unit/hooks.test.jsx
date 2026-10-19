@@ -155,7 +155,7 @@ describe('useAdminQuickBook', () => {
   });
 
   // FE-14: default date is `new Date().toISOString()` (UTC) — between 00:00 and 05:30 IST it is yesterday.
-  it.fails('[FE-14] default quick-book date is the IST calendar day at 03:00 IST', () => {
+  it('[FE-14] default quick-book date is the IST calendar day at 03:00 IST', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(ist(2026, 10, 20, 3)); // 03:00 IST Tue == 21:30Z Mon
     installFetch([]);
