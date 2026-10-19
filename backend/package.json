@@ -11,7 +11,7 @@
     "seed": "node scripts/seed.js",
     "seed:students": "node scripts/seed_students.js",
     "unseed": "node scripts/unseed.js",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
+    "test": "TZ=UTC node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand"
   },
   "dependencies": {
     "@sentry/node": "^10.42.0",
