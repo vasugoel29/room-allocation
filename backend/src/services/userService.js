@@ -4,10 +4,12 @@ export const getUsers = async (filters = {}) => {
   const page = parseInt(filters.page) || 1;
   const limit = parseInt(filters.limit) || 20;
   const offset = (page - 1) * limit;
+  const search = filters.search || '';
+  const role = filters.role || '';
 
   const [users, total] = await Promise.all([
-    userRepository.findAll(limit, offset),
-    userRepository.countUsers()
+    userRepository.findAll(limit, offset, search, role),
+    userRepository.countUsers(search, role)
   ]);
 
   return {

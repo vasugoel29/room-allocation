@@ -6,10 +6,108 @@ import { JWT_SECRET } from "../middleware/auth.js";
 import * as departmentService from "../services/departmentService.js";
 import logger from "../utils/logger.js";
 import { userRepository } from "../repositories/userRepository.js";
+import { pool } from "../db.js";
+import { fetchUserAccess } from "../services/aclService.js";
 import {
   notifyFacultyApproved,
   sendPasswordResetEmail,
 } from "../utils/emailService.js";
+
+export const googleLogin = async (req, res) => {
+  const { email, credential } = req.body;
+  let targetEmail = email;
+
+  // Extract email from Google ID token credential if supplied
+  if (credential && !targetEmail) {
+    try {
+      const decodedPayload = jwt.decode(credential);
+      if (decodedPayload?.email) {
+        targetEmail = decodedPayload.email;
+      }
+    } catch (e) {
+      logger.warn("Failed to decode Google credential token", e);
+    }
+  }
+
+  if (!targetEmail) {
+    return res.status(400).json({ error: "Valid Google email or credential is required" });
+  }
+
+  targetEmail = targetEmail.trim().toLowerCase();
+
+  if (!targetEmail.endsWith("@nsut.ac.in")) {
+    return res.status(403).json({ error: "Only institutional NSUT emails (@nsut.ac.in) are permitted." });
+  }
+
+  try {
+    // 1. Verify user against ACL service
+    const aclData = await fetchUserAccess(targetEmail);
+
+    const aclUser = aclData.user;
+    const aclRole = aclData.role || "VIEWER";
+    const aclRoles = aclData.roles || [aclRole];
+    const aclPermissions = aclData.permissions || [];
+    const aclAllowedScope = aclData.allowed_scope || {};
+    const aclScopesByPermission = aclData.scopes_by_permission || {};
+    const academic = aclUser.academic || {};
+
+    // 2. Ensure minimal user identity exists in CRAS database for relational FK integrity
+    const upsertQuery = `
+      INSERT INTO users (name, email, password, role, is_approved)
+      VALUES ($1, $2, 'google_managed_account', $3, true)
+      ON CONFLICT (email) DO UPDATE
+      SET name = EXCLUDED.name, role = EXCLUDED.role, is_approved = true, updated_at = NOW()
+      RETURNING id, name, email, role;
+    `;
+    const dbResult = await pool.query(upsertQuery, [
+      aclUser.name || "NSUT User",
+      targetEmail,
+      aclRole,
+    ]);
+
+    const dbUser = dbResult.rows[0];
+
+    const userPayload = {
+      id: dbUser.id,
+      acl_id: aclUser.id,
+      email: targetEmail,
+      name: dbUser.name,
+      type: aclUser.type,
+      role: aclRole,
+      roles: aclRoles,
+      permissions: aclPermissions,
+      allowed_scope: aclAllowedScope,
+      scopes_by_permission: aclScopesByPermission,
+      academic,
+      department_name: academic.dept || null,
+      branch: academic.branch || null,
+      degree: academic.degree || null,
+      year: academic.year || null,
+      semester: academic.semester || null,
+      section: academic.section || null,
+      group_name: academic.group_no || academic.group || null,
+      roll_no: academic.roll_no || null,
+      twelve_digit_roll_no: academic.twelve_digit_roll_no || null,
+      employee_id: academic.employee_id || null,
+      designation: academic.designation || null,
+      mobile_no: academic.mobile_no || null,
+    };
+
+    // 3. Issue CRAS JWT signed with ACL payload
+    const token = jwt.sign(userPayload, JWT_SECRET, { expiresIn: "30d" });
+
+    res.json({
+      message: "Authenticated successfully with Google & ACL",
+      token,
+      user: userPayload,
+    });
+
+  } catch (err) {
+    logger.error("Google/ACL login failed", err);
+    return res.status(403).json({ error: err.message || "Institutional authentication failed." });
+  }
+};
+
 
 export const signup = async (req, res) => {
   const { name, email, password, branch, semester, section, group_name, role, departmentName } =

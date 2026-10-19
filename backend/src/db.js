@@ -67,8 +67,21 @@ const migrations = [
     version: 1,
     name: 'Initial Schema',
     run: async (client) => {
-      // (Actually the baseline tables like users, bookings, etc are assumed existing or created IF NOT EXISTS)
-      // This is a placeholder for the first versioned sync
+      await client.query(`
+        DROP TABLE IF EXISTS 
+          promotion_requests, booking_history, bookings, room_availability, rooms, users,
+          booking_transfers, class_cancellation_requests, faculty_timetable_slots,
+          faculty_slot_overrides, timetable_slots, audit_logs, branches, departments
+        CASCADE;
+      `);
+      const fs = await import('fs');
+      const path = await import('path');
+      const { fileURLToPath } = await import('url');
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = path.dirname(__filename);
+      const sqlPath = path.resolve(__dirname, '../sql/schema_v2.sql');
+      const sql = fs.readFileSync(sqlPath, 'utf8');
+      await client.query(sql);
     }
   },
   {
@@ -594,8 +607,39 @@ const migrations = [
         WHERE role = 'FACULTY'
       `);
     }
+  },
+  {
+    version: 21,
+    name: 'Create faculties catalog table',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS faculties (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(255) NOT NULL,
+          email VARCHAR(255) UNIQUE NOT NULL,
+          department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+          department_name VARCHAR(255),
+          is_active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+
+        -- Seed initial faculties from existing users where role = 'FACULTY'
+        INSERT INTO faculties (name, email, department_id, department_name, is_active)
+        SELECT u.name, u.email, u.department_id, d.name, true
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        WHERE u.role = 'FACULTY'
+        ON CONFLICT (email) DO UPDATE
+        SET name = EXCLUDED.name, 
+            department_id = EXCLUDED.department_id, 
+            department_name = EXCLUDED.department_name, 
+            is_active = true;
+      `);
+    }
   }
 ];
+
 
 export async function testDbConnection() {
   let client;
@@ -612,8 +656,42 @@ export async function testDbConnection() {
       )
     `);
 
+    // Check baseline tables and column structure to detect mismatched branch schemas
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+          AND table_name = 'users'
+      )
+    `);
+    const hasUsersTable = tableCheck.rows[0].exists;
+
+    const columnCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+          AND table_name = 'users' 
+          AND column_name = 'branch_id'
+      )
+    `);
+    const hasBranchId = columnCheck.rows[0].exists;
+
     const { rows } = await client.query('SELECT MAX(version) as current_version FROM schema_migrations');
-    const currentVersion = rows[0].current_version || 0;
+    let currentVersion = rows[0].current_version || 0;
+
+    // If users table is missing, OR we have branch_id but version < 20 (mismatched branch schema), reset!
+    if (!hasUsersTable || (hasBranchId && currentVersion < 20)) {
+      logger.info('Detected mismatched or missing database schema. Wiping tables to re-initialize...');
+      currentVersion = 0;
+      await client.query('TRUNCATE schema_migrations CASCADE');
+      await client.query(`
+        DROP TABLE IF EXISTS 
+          promotion_requests, booking_history, bookings, room_availability, rooms, users,
+          booking_transfers, class_cancellation_requests, faculty_timetable_slots,
+          faculty_slot_overrides, timetable_slots, audit_logs, branches, departments
+        CASCADE;
+      `);
+    }
 
     for (const migration of migrations) {
       if (migration.version > currentVersion) {
@@ -621,6 +699,17 @@ export async function testDbConnection() {
         await migration.run(client);
         await client.query('INSERT INTO schema_migrations (version, name) VALUES ($1, $2)', [migration.version, migration.name]);
       }
+    }
+
+    // Ensure at least one ADMIN user exists on trial branch (using 'password' column)
+    const adminCheck = await client.query("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1");
+    if (adminCheck.rowCount === 0) {
+      logger.info('No admin user found. Seeding default admin account (admin@nsut.ac.in)...');
+      await client.query(`
+        INSERT INTO users (name, email, password, role, is_approved)
+        VALUES ('System Admin', 'admin@nsut.ac.in', '$2b$10$qw1.tfluRGLBfzWMD/w2wunb9HA/kqmOoV7UG9VtWaa5TW4qkeGTu', 'ADMIN', true)
+        ON CONFLICT (email) DO NOTHING
+      `);
     }
 
     logger.info('Database connected and migrations synchronized');

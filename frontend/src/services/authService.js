@@ -1,6 +1,15 @@
 import api from '../utils/api';
 
 export const authService = {
+  googleLogin: async ({ email, credential }) => {
+    const res = await api.post('/auth/google', { email, credential });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Google institutional login failed');
+    }
+    return res.json();
+  },
+
   login: async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     if (!res.ok) {
@@ -9,6 +18,7 @@ export const authService = {
     }
     return res.json();
   },
+
 
   signup: async (data) => {
     const res = await api.post('/auth/signup', data);

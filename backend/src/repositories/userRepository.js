@@ -34,10 +34,7 @@ export const userRepository = {
     return result.rows[0];
   },
 
-  /**
-   * Find all users with department names
-   */
-  findAll: async (limit, offset) => {
+  findAll: async (limit, offset, search = '', role = '') => {
     let query = `
       SELECT u.id, u.name, u.email, u.role, u.branch, u.branch_id, u.year, u.semester, u.section,
              u.group_name, u.is_approved, u.created_at,
@@ -45,9 +42,20 @@ export const userRepository = {
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN branches b ON u.branch_id = b.id
-      ORDER BY u.created_at DESC
+      WHERE 1=1
     `;
     const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      query += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;
+    }
+    if (role) {
+      params.push(role);
+      query += ` AND u.role = $${params.length}`;
+    }
+
+    query += ` ORDER BY u.role = 'ADMIN' DESC, u.role = 'FACULTY' DESC, u.role = 'STUDENT_REP' DESC, u.created_at DESC`;
+
     if (limit) {
       params.push(limit);
       query += ` LIMIT $${params.length}`;
@@ -64,8 +72,18 @@ export const userRepository = {
   /**
    * Count total users (for pagination)
    */
-  countUsers: async () => {
-    const result = await db.query('SELECT COUNT(*) FROM users');
+  countUsers: async (search = '', role = '') => {
+    let query = 'SELECT COUNT(*) FROM users u WHERE 1=1';
+    const params = [];
+    if (search) {
+      params.push(`%${search}%`);
+      query += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;
+    }
+    if (role) {
+      params.push(role);
+      query += ` AND u.role = $${params.length}`;
+    }
+    const result = await db.query(query, params);
     return parseInt(result.rows[0].count);
   },
 
@@ -138,16 +156,33 @@ export const userRepository = {
    * Find approved faculties
    */
   findFaculties: async () => {
-    const query = `
+    try {
+      const query = `
+        SELECT f.id, f.name, f.email, COALESCE(f.department_name, d.name, 'General') as department
+        FROM faculties f
+        LEFT JOIN departments d ON f.department_id = d.id
+        WHERE f.is_active = true
+        ORDER BY f.name ASC
+      `;
+      const result = await db.query(query);
+      if (result.rowCount > 0) {
+        return result.rows;
+      }
+    } catch {
+      // Fallback to legacy table if faculties table is not yet migrated
+    }
+
+    const fallbackQuery = `
       SELECT u.id, u.name, u.email, d.name as department 
       FROM users u 
       LEFT JOIN departments d ON u.department_id = d.id 
       WHERE u.role = 'FACULTY' AND u.is_approved = true
       ORDER BY u.name ASC
     `;
-    const result = await db.query(query);
-    return result.rows;
+    const fallbackResult = await db.query(fallbackQuery);
+    return fallbackResult.rows;
   },
+
 
   /**
    * Store a hashed password-reset token and expiry

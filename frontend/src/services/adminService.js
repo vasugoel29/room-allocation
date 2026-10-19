@@ -28,8 +28,8 @@ export const adminService = {
     return res.json();
   },
 
-  getUsers: async (page = 1, limit = 20) => {
-    const res = await api.get(`/auth/users?page=${page}&limit=${limit}`);
+  getUsers: async (page = 1, limit = 20, search = '', role = '') => {
+    const res = await api.get(`/auth/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&role=${encodeURIComponent(role)}`);
     if (!res.ok) throw new Error('Failed to fetch users');
     return res.json();
   },

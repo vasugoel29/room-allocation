@@ -244,10 +244,20 @@ export const AppProvider = ({ children }) => {
     return incomingTransfers.filter(t => t.status === 'PENDING').length;
   }, [incomingTransfers]);
 
+  const hasResource = useCallback((resource) => {
+    if (!user) return false;
+    if (user.role === 'ADMIN' || (Array.isArray(user.roles) && user.roles.includes('ADMIN'))) {
+      return true;
+    }
+    return Array.isArray(user.permissions) && user.permissions.includes(resource);
+  }, [user]);
+
   const contextValue = useMemo(() => ({
     user,
     setUser,
+    hasResource,
     rooms,
+
     faculties,
     incomingTransfers,
     outgoingTransfers,
@@ -281,6 +291,7 @@ export const AppProvider = ({ children }) => {
     logout
   }), [
     user,
+    hasResource,
     rooms,
     faculties,
     incomingTransfers,

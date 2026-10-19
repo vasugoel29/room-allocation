@@ -34,7 +34,6 @@ import AdminUploads from '../features/admin/AdminUploads';
 import AdminTimetable from './AdminTimetable';
 import { AdminTabBar } from '../features/admin/AdminTabBar';
 import { AdminFilterBar } from '../features/admin/AdminFilterBar';
-import AdminTimetableSlots from '../features/admin/AdminTimetableSlots';
 import RoomScheduleGrid from './RoomScheduleGrid';
 
 // Services & Hooks
@@ -71,7 +70,7 @@ function AdminDashboard() {
     users, usersMeta, departments, isUserModalOpen, editingUser, 
     fetchUsers, handleApproveUser, handleDeleteUser,
     openUserModal, closeUserModal 
-  } = useAdminUsers(activeTab);
+  } = useAdminUsers(activeTab, searchTerm);
   
   const { 
     quickBookForm, roomStatuses, submitting, 
@@ -634,11 +633,8 @@ function AdminDashboard() {
                   </div>
                 )}
                 {activeTab === 'timetable' && (
-                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar space-y-8 p-2">
+                  <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-2">
                     <AdminTimetable />
-                    <div className="border-t border-border/20 pt-6">
-                      <AdminTimetableSlots />
-                    </div>
                   </div>
                 )}
                 {activeTab === 'room-grid' && (

@@ -1,6 +1,6 @@
 import express from 'express';
 import { body, param } from 'express-validator';
-import { authenticate, requireRole } from '../middleware/auth.js';
+import { authenticate, requireRole, requireResource } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 import { 
   getBookings, 
@@ -30,9 +30,10 @@ const quickBookValidation = [
 ];
 
 router.get('/', authenticate, getBookings);
-router.post('/', authenticate, requireRole('STUDENT_REP'), bookingValidation, validateRequest, createBooking);
+router.post('/', authenticate, requireResource('rooms:book', 'STUDENT_REP'), bookingValidation, validateRequest, createBooking);
 router.patch('/:id/cancel', authenticate, idValidation, validateRequest, cancelBooking);
-router.patch('/:id', authenticate, requireRole('STUDENT_REP'), idValidation, validateRequest, rescheduleBooking);
+router.patch('/:id', authenticate, requireResource('rooms:book', 'STUDENT_REP'), idValidation, validateRequest, rescheduleBooking);
+
 
 // Admin-only all bookings (active & cancelled)
 router.get('/admin/all', authenticate, requireRole('ADMIN'), getBookings);

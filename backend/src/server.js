@@ -14,6 +14,8 @@ import { JWT_SECRET } from './middleware/auth.js';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
+import { initFacultySyncCron } from './services/facultySyncService.js';
+
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is not defined in production environment.');
@@ -203,10 +205,12 @@ console.warn('Attempting to start server...', { NODE_ENV: process.env.NODE_ENV, 
 if (process.env.NODE_ENV !== 'test') { 
   app.listen(PORT, () => {
     console.warn(`Server successfully listening on port ${PORT}`);
+    initFacultySyncCron();
   }).on('error', (err) => {
     console.error('Server failed to start (L108):', err);
   });
 } else {
+
   console.warn('Server NOT started - NODE_ENV is "test"');
 }
 
