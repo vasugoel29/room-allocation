@@ -79,7 +79,7 @@ describe('departments', () => {
     expect(res.body).toEqual({ error: 'Department not found' });
   });
 
-  test.failing('[SEC-12] PATCH to a duplicate name → 409 without leaking the DB constraint text', async () => {
+  test('[SEC-12] PATCH to a duplicate name → 409 without leaking the DB constraint text', async () => {
     const a = await newDept();
     const b = await newDept();
     const res = await request(app).patch(`/api/departments/${b.id}`).set('Authorization', admin.auth).send({ name: a.name });
@@ -122,7 +122,7 @@ describe('departments', () => {
     expect(res.status).toBe(404);
   });
 
-  test.failing('[SEC-12] non-numeric id → 4xx without leaking Postgres error text', async () => {
+  test('[SEC-12] non-numeric id → 4xx without leaking Postgres error text', async () => {
     const res = await request(app).delete('/api/departments/abc').set('Authorization', admin.auth);
     expect(JSON.stringify(res.body)).not.toMatch(SQL_LEAK);
     expect(res.status).toBeLessThan(500);
@@ -187,7 +187,7 @@ describe('branches', () => {
     expect(res.body).toEqual({ error: 'Branch name is required' });
   });
 
-  test.failing('[SEC-12] POST duplicate (name, department) → 409 without leaking constraint text', async () => {
+  test('[SEC-12] POST duplicate (name, department) → 409 without leaking constraint text', async () => {
     const d = await newDept();
     const b = await newBranch({ department_id: d.id });
     const res = await request(app).post('/api/branches').set('Authorization', admin.auth).send({ name: b.name, department_id: d.id });
@@ -195,7 +195,7 @@ describe('branches', () => {
     expect(res.status).toBe(409);
   });
 
-  test.failing('[SEC-12] POST with a non-existent department_id → 400 without leaking FK text', async () => {
+  test('[SEC-12] POST with a non-existent department_id → 400 without leaking FK text', async () => {
     const res = await request(app).post('/api/branches').set('Authorization', admin.auth).send({ name: uniq('Orphan'), department_id: 999999 });
     expect(JSON.stringify(res.body)).not.toMatch(SQL_LEAK);
     expect(res.status).toBe(400);

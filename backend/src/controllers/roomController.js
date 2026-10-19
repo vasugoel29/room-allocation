@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import cache from '../utils/cache.js';
 import { roomRepository } from '../repositories/roomRepository.js';
@@ -40,7 +41,7 @@ export const getRooms = async (req, res) => {
     }
   } catch (err) {
     logger.error('getRooms error', err);
-    res.status(500).json({ error: 'Failed to fetch rooms' });
+    sendServerError(res, err, 'Failed to fetch rooms');
   }
 };
 
@@ -55,7 +56,7 @@ export const getAvailability = async (req, res) => {
     res.json(result);
   } catch (err) {
     logger.error('getAvailability error', err);
-    res.status(500).json({ error: 'Failed to fetch availability' });
+    sendServerError(res, err, 'Failed to fetch availability');
   }
 };
 
@@ -79,7 +80,7 @@ export const getAdminRoomStatus = async (req, res) => {
     res.json(statuses);
   } catch (err) {
     logger.error('getAdminRoomStatus error', err);
-    res.status(500).json({ error: 'Failed to fetch room statuses' });
+    sendServerError(res, err, 'Failed to fetch room statuses');
   }
 };
 export const overrideRoomAvailability = async (req, res) => {
@@ -95,8 +96,8 @@ export const overrideRoomAvailability = async (req, res) => {
     cache.delete('room_availability_all');
     res.json({ status: 'Success', message: `Room ${room_name} availability updated` });
   } catch (err) {
-    logger.error('overrideRoomAvailability error', err);
-    res.status(500).json({ error: err.message || 'Failed to update availability' });
+    if (err.message === 'Room not found') return res.status(404).json({ error: 'Room not found' });
+    sendServerError(res, err, 'Failed to update availability');
   }
 };
 
@@ -106,7 +107,7 @@ export const getMyOverrides = async (req, res) => {
     res.json(overrides);
   } catch (err) {
     logger.error('getMyOverrides error', err);
-    res.status(500).json({ error: 'Failed to fetch your overrides' });
+    sendServerError(res, err, 'Failed to fetch your overrides');
   }
 };
 
@@ -132,7 +133,7 @@ export const createRoom = async (req, res) => {
     res.status(201).json(room);
   } catch (err) {
     logger.error('createRoom error', err);
-    res.status(500).json({ error: 'Failed to create room' });
+    sendServerError(res, err, 'Failed to create room');
   }
 };
 
@@ -159,7 +160,7 @@ export const updateRoom = async (req, res) => {
     res.json(room);
   } catch (err) {
     logger.error('updateRoom error', err);
-    res.status(500).json({ error: 'Failed to update room' });
+    sendServerError(res, err, 'Failed to update room');
   }
 };
 
@@ -175,7 +176,7 @@ export const deleteRoom = async (req, res) => {
     res.json({ status: 'Success', message: `Room ${room.name} deleted successfully` });
   } catch (err) {
     logger.error('deleteRoom error', err);
-    res.status(500).json({ error: 'Failed to delete room' });
+    sendServerError(res, err, 'Failed to delete room');
   }
 };
 
@@ -282,7 +283,7 @@ export const getRoomWeekSchedule = async (req, res) => {
     });
   } catch (err) {
     logger.error('getRoomWeekSchedule error', err);
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 };
 
@@ -380,6 +381,6 @@ export const checkRoomConflict = async (req, res) => {
       res.json({ hasConflict: conflicts.length > 0, conflicts });
   } catch (err) {
     logger.error('checkRoomConflict error', err);
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 };

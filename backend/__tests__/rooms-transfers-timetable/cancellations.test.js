@@ -89,13 +89,13 @@ describe('POST /api/timetable/cancellation-requests', () => {
     expect((await create(s.rep.auth, s.body)).status).toBe(201);
   });
 
-  test.failing('[NEW-RTT-8] an out-of-range hour returns 400 (currently 500 from the CHECK constraint)', async () => {
+  test('[NEW-RTT-8] an out-of-range hour returns 400 (currently 500 from the CHECK constraint)', async () => {
     const s = await setup();
     const res = await create(s.rep.auth, { ...s.body, hour: 25 });
     expect(res.status).toBe(400);
   });
 
-  test.failing('[NEW-RTT-8] an invalid date returns 400 (currently 500)', async () => {
+  test('[NEW-RTT-8] an invalid date returns 400 (currently 500)', async () => {
     const s = await setup();
     const res = await create(s.rep.auth, { ...s.body, date: 'someday' });
     expect(res.status).toBe(400);
@@ -110,7 +110,7 @@ describe('POST /api/timetable/cancellation-requests', () => {
     expect([400, 403]).toContain(res.status);
   });
 
-  test.failing('[BKG-12] a non-existent booking_id returns 400/404 (currently 500 FK violation)', async () => {
+  test('[BKG-12] a non-existent booking_id returns 400/404 (currently 500 FK violation)', async () => {
     const s = await setup();
     const res = await create(s.rep.auth, { ...s.body, booking_id: 987654321 });
     expect([400, 404]).toContain(res.status);
@@ -219,7 +219,8 @@ describe('PATCH /api/timetable/cancellation-requests/:id/:action', () => {
     const c = (await create(s.rep.auth, s.body)).body.request;
     const res = await review(s.fac.auth, c.id, 'approve');
     if (res.status === 200) return; // fixed – covered by the failing test above
-    expect(res.status).toBe(500);
+    // The underlying DB error (value too long for VARCHAR(20)) is now mapped to a 400, not leaked.
+    expect(res.status).toBe(400);
     expect((await reqRow(c.id)).status).toBe('PENDING');
     expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [s.room.id])).rowCount).toBe(0);
   });

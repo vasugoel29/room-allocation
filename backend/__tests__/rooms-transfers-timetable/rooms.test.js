@@ -171,20 +171,20 @@ describe('Room CRUD (admin)', () => {
     expect(rowCount).toBe(0);
   });
 
-  test.failing('[NEW-RTT-2] creating a room with a duplicate name returns 409 (not 500)', async () => {
+  test('[NEW-RTT-2] creating a room with a duplicate name returns 409 (not 500)', async () => {
     const existing = await createRoom();
     const res = await request(app).post('/api/rooms').set('Authorization', admin.auth).send({ name: existing.name, capacity: 10 });
     expect(res.status).toBe(409);
   });
 
-  test.failing('[NEW-RTT-2] renaming a room onto an existing name returns 409 (not 500)', async () => {
+  test('[NEW-RTT-2] renaming a room onto an existing name returns 409 (not 500)', async () => {
     const a = await createRoom();
     const b = await createRoom();
     const res = await request(app).patch(`/api/rooms/${b.id}`).set('Authorization', admin.auth).send({ ...full(a.name) });
     expect(res.status).toBe(409);
   });
 
-  test.failing('[NEW-RTT-3] create rejects non-numeric capacity with 400 (not 500)', async () => {
+  test('[NEW-RTT-3] create rejects non-numeric capacity with 400 (not 500)', async () => {
     const res = await request(app).post('/api/rooms').set('Authorization', admin.auth).send({ name: `CR-${tag()}`, capacity: 'lots' });
     expect(res.status).toBe(400);
   });
@@ -195,7 +195,7 @@ describe('Room CRUD (admin)', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('[NEW-RTT-3] create rejects a name longer than the 32-char column with 400 (not 500)', async () => {
+  test('[NEW-RTT-3] create rejects a name longer than the 32-char column with 400 (not 500)', async () => {
     const res = await request(app).post('/api/rooms').set('Authorization', admin.auth).send({ name: 'N'.repeat(40), capacity: 10 });
     expect(res.status).toBe(400);
   });
@@ -443,7 +443,7 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(rows[0].is_available).toBe(false);
   });
 
-  test.failing('[NEW-RTT-5] override for an unknown room returns 404 (currently 500 "Room not found")', async () => {
+  test('[NEW-RTT-5] override for an unknown room returns 404', async () => {
     const res = await override(admin.auth, { room_name: `NOPE-${tag()}`, day: 'Mon', hour: 9, is_available: false });
     expect(res.status).toBe(404);
   });
@@ -462,7 +462,7 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [room.id])).rowCount).toBe(0);
   });
 
-  test.failing('[NEW-RTT-5] override rejects a non-numeric hour with 400 (currently 500 with raw pg error)', async () => {
+  test('[NEW-RTT-5] override rejects a non-numeric hour with 400 (currently 500 with raw pg error)', async () => {
     const room = await createRoom();
     const res = await override(admin.auth, { room_name: room.name, day: 'Mon', hour: 'nine', is_available: false });
     expect(res.status).toBe(400);

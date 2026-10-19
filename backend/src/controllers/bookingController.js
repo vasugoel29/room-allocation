@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import logger from "../utils/logger.js";
 import * as bookingService from "../services/bookingService.js";
 import { hasPermission, PERMISSIONS as P } from "../auth/permissions.js";
@@ -33,7 +34,7 @@ export const getBookings = async (req, res) => {
     res.json(bookings);
   } catch (err) {
     logger.error("Failed to fetch bookings", err);
-    res.status(500).json({ error: "Failed to fetch bookings" });
+    sendServerError(res, err, "Failed to fetch bookings");
   }
 };
 
@@ -52,7 +53,7 @@ export const createBooking = async (req, res) => {
     res.status(201).json(result.data);
   } catch (err) {
     logger.error("Booking creation failed", err);
-    res.status(500).json({ error: "Database error" });
+    sendServerError(res, err, "Database error");
   }
 };
 
@@ -68,7 +69,7 @@ export const cancelBooking = async (req, res) => {
     res.json({ status: "Success", message: "Booking cancelled" });
   } catch (err) {
     logger.error("Cancellation failed", err);
-    res.status(500).json({ error: "Cancellation failed" });
+    sendServerError(res, err, "Cancellation failed");
   }
 };
 
@@ -85,7 +86,7 @@ export const rescheduleBooking = async (req, res) => {
     res.json(result.data);
   } catch (err) {
     logger.error("Rescheduling failed", err);
-    res.status(500).json({ error: "Rescheduling failed" });
+    sendServerError(res, err, "Rescheduling failed");
   }
 };
 
@@ -98,6 +99,6 @@ export const quickBook = async (req, res) => {
     res.status(201).json(result.data);
   } catch (err) {
     logger.error("Quick book error:", err);
-    res.status(500).json({ error: "Quick booking failed" });
+    sendServerError(res, err, "Quick booking failed");
   }
 };

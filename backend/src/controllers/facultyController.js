@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
 import cache from '../utils/cache.js';
@@ -15,7 +16,7 @@ export const getPendingRequests = async (req, res) => {
     res.json(requests);
   } catch (err) {
     logger.error('Failed to fetch pending requests', err);
-    res.status(500).json({ error: 'Failed to fetch pending requests' });
+    sendServerError(res, err, 'Failed to fetch pending requests');
   }
 };
 
@@ -98,6 +99,6 @@ export const rejectBooking = async (req, res) => {
     res.json({ message: 'Booking rejected' });
   } catch (err) {
     logger.error('Failed to reject booking', err);
-    res.status(500).json({ error: 'Failed to reject booking' });
+    sendServerError(res, err, 'Failed to reject booking');
   }
 };

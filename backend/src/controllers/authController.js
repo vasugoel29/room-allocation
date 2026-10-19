@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import * as userService from "../services/userService.js";
 import logger from "../utils/logger.js";
 
@@ -7,7 +8,7 @@ export const getUsers = async (req, res) => {
     res.json(result);
   } catch (err) {
     logger.error("Failed to fetch users", err);
-    res.status(500).json({ error: "Failed to fetch users" });
+    sendServerError(res, err, "Failed to fetch users");
   }
 };
 
@@ -19,7 +20,7 @@ export const deleteUser = async (req, res) => {
     res.json({ message: "User deactivated" });
   } catch (err) {
     logger.error("Failed to delete user", err);
-    res.status(500).json({ error: "Failed to delete user" });
+    sendServerError(res, err, "Failed to delete user");
   }
 };
 
@@ -28,7 +29,7 @@ export const getFaculties = async (req, res) => {
     const faculties = await userService.getFaculties();
     res.json(faculties);
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch faculties" });
+    sendServerError(res, err, "Failed to fetch faculties");
   }
 };
 

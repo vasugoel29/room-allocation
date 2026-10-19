@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
 import { roomRepository } from '../repositories/roomRepository.js';
@@ -43,7 +44,7 @@ export async function getTimetable(req, res) {
 
     res.json(results.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 
@@ -84,7 +85,7 @@ export async function uploadTimetable(req, res) {
 
     res.json({ message: 'Timetable uploaded successfully' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 
@@ -118,7 +119,7 @@ export async function getFacultyTimetable(req, res) {
   
       res.json(grouped);
     } catch (err) {
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err);
     }
 }
 
@@ -176,7 +177,7 @@ export async function checkFacultyAvailability(req, res) {
         });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        sendServerError(res, err);
     }
 }
 
@@ -184,7 +185,7 @@ export async function overrideFacultySlot(req, res) {
     try {
         res.json({ message: 'Slot updated successfully' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        sendServerError(res, err);
     }
 }
 
@@ -192,7 +193,7 @@ export async function getFacultyOverrides(req, res) {
     try {
         res.json([]);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        sendServerError(res, err);
     }
 }
 
@@ -223,7 +224,7 @@ export async function createCancellationRequest(req, res) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'A cancellation request for this class is already awaiting faculty approval.' });
     }
-    res.status(500).json({ error: err.message || 'Failed to create cancellation request.' });
+    sendServerError(res, err, 'Failed to create cancellation request.');
   }
 }
 
@@ -238,7 +239,7 @@ export async function getPendingCancellationRequests(req, res) {
     `, [req.user.faculty_id ?? -1]);
     res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Failed to load cancellation requests.' });
+    sendServerError(res, err, 'Failed to load cancellation requests.');
   }
 }
 
@@ -278,7 +279,7 @@ export async function reviewCancellationRequest(req, res) {
     cache.delete('room_availability_all');
     res.json({ message: approved ? 'Cancellation approved; the room is now available.' : 'Cancellation request rejected.' });
   } catch (err) {
-    res.status(500).json({ error: err.message || 'Failed to review cancellation request.' });
+    sendServerError(res, err, 'Failed to review cancellation request.');
   }
 }
 
@@ -366,7 +367,7 @@ export async function searchTimetable(req, res) {
       res.status(400).json({ error: 'Invalid search type' });
     } catch (err) {
       console.error('Search error:', err);
-      res.status(500).json({ error: err.message });
+      sendServerError(res, err);
     }
 }
 
@@ -392,7 +393,7 @@ export async function autocompleteFaculty(req, res) {
 
     res.json(result.rows.map(r => toTitleCase(r.name)));
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 
@@ -432,7 +433,7 @@ export async function listSlots(req, res) {
       meta: { total: parseInt(countResult.rows[0].count), page: parseInt(page), limit: parseInt(limit) }
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 
@@ -449,7 +450,7 @@ export async function createSlot(req, res) {
     `, [faculty_name, semester || '', day_of_week, slot_time, content || '', is_occupied ?? false, room_id ?? null]);
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 
@@ -474,7 +475,7 @@ export async function updateSlot(req, res) {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 
@@ -489,7 +490,7 @@ export async function deleteSlot(req, res) {
     if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
     res.json({ success: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    sendServerError(res, err);
   }
 }
 

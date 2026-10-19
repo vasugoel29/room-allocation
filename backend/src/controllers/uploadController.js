@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import XLSX from 'xlsx-js-style';
@@ -248,7 +249,7 @@ export const exportStudents = async (req, res) => {
     return exportToXLSX(result.rows, 'students_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export students XLSX', err);
-    res.status(500).json({ error: 'Failed to export students XLSX' });
+    sendServerError(res, err, 'Failed to export students XLSX');
   }
 };
 
@@ -268,7 +269,7 @@ export const exportFaculty = async (req, res) => {
     return exportToXLSX(result.rows, 'faculty_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export faculty XLSX', err);
-    res.status(500).json({ error: 'Failed to export faculty XLSX' });
+    sendServerError(res, err, 'Failed to export faculty XLSX');
   }
 };
 
@@ -294,7 +295,7 @@ export const exportTimetable = async (req, res) => {
     return exportTimetableCalendar(result.rows, res, view);
   } catch (err) {
     logger.error('Failed to export timetable XLSX', err);
-    res.status(500).json({ error: 'Failed to export timetable XLSX' });
+    sendServerError(res, err, 'Failed to export timetable XLSX');
   }
 };
 

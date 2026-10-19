@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import crypto from 'crypto';
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
@@ -71,7 +72,7 @@ export async function syncFaculties(req, res) {
     });
   } catch (err) {
     logger.error('Internal faculty sync failed', err);
-    return res.status(500).json({ error: 'Faculty sync failed; no changes were applied.' });
+    return sendServerError(res, err, 'Faculty sync failed; no changes were applied.');
   }
 
   await logActivity({

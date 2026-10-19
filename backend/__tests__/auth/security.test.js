@@ -351,7 +351,7 @@ describe('SQL-injection probes', () => {
     expect(rows[0].c).toBe(4);
   });
 
-  test.failing('[SEC-12] injection in a numeric path param → 4xx without Postgres error text', async () => {
+  test('[SEC-12] injection in a numeric path param → 4xx without Postgres error text', async () => {
     const res = await request(app).get(`/api/timetable/faculty/check/${encodeURIComponent('1 OR 1=1')}`).set('Authorization', users.VIEWER.auth);
     expect(JSON.stringify(res.body)).not.toMatch(SQL_TEXT);
     expect(res.status).toBeLessThan(500);
@@ -371,7 +371,7 @@ describe('request hardening', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('[SEC-12] 4xx/5xx bodies never include a stack trace or internal error text', async () => {
+  test('[SEC-12] 4xx/5xx bodies never include a stack trace or internal error text', async () => {
     const bodies = [];
     bodies.push((await request(app).post('/api/auth/dev-login').set('Content-Type', 'application/json').send('{"email": ')).body);
     bodies.push((await request(app).post('/api/auth/dev-login').set('Content-Type', 'application/json')

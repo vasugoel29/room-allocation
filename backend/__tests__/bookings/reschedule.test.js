@@ -201,7 +201,7 @@ describe('PATCH /api/bookings/:id (reschedule)', () => {
       expect(res.status).toBe(400);
     });
 
-    test.failing('[BKG-07] invalid start_time string → 400 (currently 500)', async () => {
+    test('[BKG-07] invalid start_time string → 400 (currently 500)', async () => {
       const { owner, booking } = await seeded();
       const res = await patch(owner.auth, booking.id, { start_time: 'not-a-date' });
       expect(res.status).toBe(400);
@@ -248,13 +248,13 @@ describe('POST /api/bookings with RESCHEDULE booking type (BKG-04)', () => {
     expect(ra.is_available).toBe(true);
   });
 
-  test('RESCHEDULE request currently fails with 500 and is fully rolled back (documents BKG-04)', async () => {
+  test('RESCHEDULE request currently fails (400 from the mis-typed user_id) and is fully rolled back (documents BKG-04)', async () => {
     const fac = await createFaculty();
     const room = await createRoom();
     const freed = await createRoom();
     const res = await request(app).post('/api/bookings').set('Authorization', fac.auth)
       .send(payload(room, futureSlot({ hour: 13 }), freed));
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(400);
     expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
   });
 

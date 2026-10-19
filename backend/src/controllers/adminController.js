@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import * as db from "../db.js";
 import logger from "../utils/logger.js";
 
@@ -65,7 +66,7 @@ export const exportBookingsCSV = async (req, res) => {
     client.release();
   } catch (err) {
     logger.error("CSV Export failed", err);
-    res.status(500).json({ error: "Failed to export CSV" });
+    sendServerError(res, err, "Failed to export CSV");
   }
 };
 
@@ -110,7 +111,7 @@ export const getAuditLogs = async (req, res) => {
     });
   } catch (err) {
     logger.error('Failed to fetch audit logs', err);
-    res.status(500).json({ error: 'Failed to fetch audit logs' });
+    sendServerError(res, err, 'Failed to fetch audit logs');
   }
 };
 export const getAnalytics = async (req, res) => {
@@ -179,6 +180,6 @@ export const getAnalytics = async (req, res) => {
     });
   } catch (err) {
     logger.error('Failed to fetch analytics', err);
-    res.status(500).json({ error: 'Failed to fetch analytics' });
+    sendServerError(res, err, 'Failed to fetch analytics');
   }
 };

@@ -188,14 +188,14 @@ app.use('/api/timetable', timetableRoutes);
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 Sentry.setupExpressErrorHandler(app);
 
-// Global custom JSON error-handling middleware
+// Global JSON error handler. Clients get a status-appropriate message; details stay in the logs (SEC-12).
 app.use((err, req, res, next) => {
+  if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'Malformed JSON body' });
+  if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'Request body is too large' });
+  const status = Number(err?.statusCode || err?.status) || 500;
+  if (status < 500 && err?.expose) return res.status(status).json({ error: err.message });
   console.error('Global Error Handler:', err);
-  const statusCode = err.statusCode || err.status || 500;
-  res.status(statusCode).json({
-    error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV !== 'production' ? { stack: err.stack } : {})
-  });
+  res.status(status >= 400 && status < 600 ? status : 500).json({ error: 'Something went wrong on our side. Please try again.' });
 });
 
 process.on('unhandledRejection', (reason, promise) => {

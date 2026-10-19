@@ -164,12 +164,11 @@ describe('httpErrors', () => {
     expect(res.statusCode).toBe(500);
     expect(res.body).toEqual({ error: 'Failed to fetch branches' });
     sendServerError(res, undefined);
-    expect(res.body).toEqual({ error: 'Internal server error' });
+    expect(res.body).toEqual({ error: 'Something went wrong on our side. Please try again.' });
   });
 
-  // sendServerError returns err.message verbatim, so DB internals (constraint/table names, SQL
-  // fragments) reach the client.
-  test.failing('[SEC-12] sendServerError does not leak the raw error message to the client', () => {
+  // Regression: sendServerError used to return err.message verbatim (DB internals reached clients).
+  test('[SEC-12] sendServerError does not leak the raw error message to the client', () => {
     const res = mockRes();
     sendServerError(res, new Error('duplicate key value violates unique constraint "branches_name_department_id_key"'), 'Failed to create branch');
     expect(res.statusCode).toBe(500);

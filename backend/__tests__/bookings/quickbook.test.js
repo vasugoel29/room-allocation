@@ -120,7 +120,7 @@ describe('POST /api/bookings/admin/quick', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('[NEW-bookings-4] non-existent target_user_id → 400/404, not 500', async () => {
+  test('[NEW-bookings-4] non-existent target_user_id → 400/404, not 500', async () => {
     const room = await createRoom();
     const { dateKey } = futureSlot({ hour: 17 });
     const res = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 17, target_user_id: 2147483000 });

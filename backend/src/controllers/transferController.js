@@ -1,3 +1,4 @@
+import { sendServerError } from '../utils/httpErrors.js';
 import logger from '../utils/logger.js';
 import * as transferService from '../services/transferService.js';
 
@@ -10,7 +11,7 @@ export const requestTransfer = async (req, res) => {
     res.status(201).json({ message: 'Transfer request sent', transfer: result.data });
   } catch (err) {
     logger.error('Failed to request transfer', err);
-    res.status(500).json({ error: 'Failed to request transfer' });
+    sendServerError(res, err, 'Failed to request transfer');
   }
 };
 
@@ -20,7 +21,7 @@ export const getIncomingRequests = async (req, res) => {
     res.json(requests);
   } catch (err) {
     logger.error('Failed to fetch incoming transfers', err);
-    res.status(500).json({ error: 'Failed to fetch incoming transfers' });
+    sendServerError(res, err, 'Failed to fetch incoming transfers');
   }
 };
 
@@ -30,7 +31,7 @@ export const getOutgoingRequests = async (req, res) => {
     res.json(requests);
   } catch (err) {
     logger.error('Failed to fetch outgoing transfers', err);
-    res.status(500).json({ error: 'Failed to fetch outgoing transfers' });
+    sendServerError(res, err, 'Failed to fetch outgoing transfers');
   }
 };
 
@@ -43,7 +44,7 @@ export const acceptTransfer = async (req, res) => {
     res.json({ message: result.message });
   } catch (err) {
     logger.error('Failed to accept transfer', err);
-    res.status(500).json({ error: 'Failed to accept transfer' });
+    sendServerError(res, err, 'Failed to accept transfer');
   }
 };
 
@@ -56,6 +57,6 @@ export const rejectTransfer = async (req, res) => {
     res.json({ message: result.message });
   } catch (err) {
     logger.error('Failed to reject transfer', err);
-    res.status(500).json({ error: 'Failed to reject transfer' });
+    sendServerError(res, err, 'Failed to reject transfer');
   }
 };

@@ -358,7 +358,7 @@ describe('transfer authorization and invalid transitions', () => {
     expect((await request(app).patch('/api/transfers/1/reject')).status).toBe(401);
   });
 
-  test.failing('[NEW-RTT-6] a non-numeric transfer id returns 400/404, not 500', async () => {
+  test('[NEW-RTT-6] a non-numeric transfer id returns 400/404, not 500', async () => {
     const res = await accept(admin.auth, 'abc');
     expect([400, 404]).toContain(res.status);
   });
@@ -434,7 +434,7 @@ describe('transfer rejection', () => {
 
 // ─── BKG-06 state machine bugs ───────────────────────────────────────────────
 describe('BKG-06 transfer state machine', () => {
-  test.failing('[BKG-06] slot re-booked while CANCELLED mid-flow: final approval returns 409 and leaves the new booking intact (currently 500, transfer stuck)', async () => {
+  test('[BKG-06] slot re-booked while CANCELLED mid-flow: final approval returns 409 and leaves the new booking intact (currently 500, transfer stuck)', async () => {
     const s = await scenario({ targetFaculty: true });
     const t = await requestFor(s);
     await accept(s.owner.auth, t.id); // original booking now CANCELLED

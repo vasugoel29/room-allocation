@@ -57,7 +57,7 @@ describe('BKG-02 concurrency', () => {
     }
   });
 
-  test.failing('[BKG-02] same room + same start in parallel: every loser gets 409 (not 500)', async () => {
+  test('[BKG-02] same room + same start in parallel: every loser gets 409 (not 500)', async () => {
     for (let i = 0; i < ROUNDS; i++) {
       const { statuses } = await sameStartRound(13 + i);
       expect(statuses.filter((s) => s === 201)).toHaveLength(1);
