@@ -389,17 +389,17 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     ]);
   });
 
-  test('legacy: a STUDENT_REP override returns Success, is stored with user_id and is visible immediately (no stale cache)', async () => {
+  test('an ADMIN override returns Success, is stored with user_id and is visible immediately (no stale cache)', async () => {
     const room = await createRoom();
     const before = await request(app).get('/api/availability').set('Authorization', rep.auth);
     expect(availRows(before.body, room.id)).toEqual([]);
 
-    const res = await override(rep.auth, { room_name: room.name, day: 'Mon', hour: 9, is_available: false });
+    const res = await override(admin.auth, { room_name: room.name, day: 'Mon', hour: 9, is_available: false });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'Success', message: `Room ${room.name} availability updated` });
 
     const { rows } = await db.query('SELECT day, hour, is_available, user_id FROM room_availability WHERE room_id = $1', [room.id]);
-    expect(rows).toEqual([{ day: 'Mon', hour: 9, is_available: false, user_id: rep.user.id }]);
+    expect(rows).toEqual([{ day: 'Mon', hour: 9, is_available: false, user_id: admin.user.id }]);
 
     const after = await request(app).get('/api/availability').set('Authorization', rep.auth);
     expect(availRows(after.body, room.id)).toEqual([expect.objectContaining({ day: 'Mon', hour: 9, is_available: false })]);
@@ -433,11 +433,12 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [room.id])).rowCount).toBe(0);
   });
 
-  test.failing('[SEC-05] a STUDENT_REP cannot flip the weekly availability of an arbitrary room', async () => {
+  test('[SEC-05] a STUDENT_REP (or FACULTY) cannot flip the weekly availability of a room', async () => {
     const room = await createRoom();
     await db.query("INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, 'Thu', 10, false)", [room.id]);
     const res = await override(rep.auth, { room_name: room.name, day: 'Thu', hour: 10, is_available: true });
     expect(res.status).toBe(403);
+    expect((await override(faculty.auth, { room_name: room.name, day: 'Thu', hour: 10, is_available: true })).status).toBe(403);
     const { rows } = await db.query('SELECT is_available FROM room_availability WHERE room_id = $1', [room.id]);
     expect(rows[0].is_available).toBe(false);
   });
@@ -506,8 +507,8 @@ describe('GET /api/availability and POST /api/availability/override', () => {
   });
 
   test('GET /api/availability/my returns only overrides made by the caller', async () => {
-    const me = await createRep();
-    const other = await createRep();
+    const me = await createAdmin();
+    const other = await createAdmin();
     const r1 = await createRoom();
     const r2 = await createRoom();
     await override(me.auth, { room_name: r1.name, day: 'Mon', hour: 10, is_available: false });

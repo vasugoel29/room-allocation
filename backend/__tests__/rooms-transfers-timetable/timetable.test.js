@@ -23,18 +23,10 @@ const sectionCount = async (dept, sem, sec) => Number((await db.query(
   'SELECT COUNT(*) FROM timetable_slots WHERE UPPER(department) = $1 AND semester = $2 AND section = $3', [dept, String(sem), String(sec)],
 )).rows[0].count);
 
-// ─── SEC-11 ──────────────────────────────────────────────────────────────────
+// ─── SEC-11 (fixed) ──────────────────────────────────────────────────────────
 describe('GET /api/timetable/inspect-database', () => {
-  test.failing('[SEC-11] debug endpoint requires authentication (or is removed)', async () => {
-    const res = await request(app).get('/api/timetable/inspect-database');
-    expect([401, 404]).toContain(res.status);
-  });
-
-  test('currently answers anonymous callers with faculty timetable rows (documents SEC-11 exposure)', async () => {
-    await db.query("INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content) VALUES ('RTT Leak', 'Mon', '09:00-10:00', 'Deepika RTT')");
-    const res = await request(app).get('/api/timetable/inspect-database');
-    expect(res.status).toBe(200);
-    expect(res.body.slots.map((s) => s.faculty_name)).toContain('RTT Leak');
+  test('[SEC-11] the debug endpoint is removed (404 for anyone)', async () => {
+    expect((await request(app).get('/api/timetable/inspect-database')).status).toBe(404);
   });
 });
 

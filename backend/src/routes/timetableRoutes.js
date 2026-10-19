@@ -5,7 +5,6 @@ import { PERMISSIONS as P } from '../auth/permissions.js';
 
 const router = express.Router();
 
-router.get('/inspect-database', timetableController.inspectDatabase);
 router.get('/search', authenticate, requirePermission(P.TIMETABLE_MANAGE), timetableController.searchTimetable);
 router.get('/autocomplete/faculty', authenticate, timetableController.autocompleteFaculty);
 router.post('/upload', authenticate, requirePermission(P.TIMETABLE_MANAGE), timetableController.uploadTimetable);

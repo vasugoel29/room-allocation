@@ -34,7 +34,6 @@ const ROUTES = [
   // server.js
   { m: 'get', path: '/', min: 'PUBLIC' },
   { m: 'get', path: '/api/health', min: 'PUBLIC' },
-  { m: 'get', path: '/metrics', min: 'ADMIN', bug: 'SEC-13' },
   // authRoutes
   { m: 'post', path: '/api/auth/logout', min: 'PUBLIC' },
   { m: 'post', path: '/api/auth/google', min: 'PUBLIC', body: {} },
@@ -51,7 +50,7 @@ const ROUTES = [
   { m: 'get', path: '/api/availability', min: 'VIEWER' },
   { m: 'get', path: '/api/availability/my', min: 'VIEWER' },
   { m: 'get', path: '/api/rooms/admin/status', min: 'ADMIN' },
-  { m: 'post', path: '/api/availability/override', min: 'STUDENT_REP', body: {} },
+  { m: 'post', path: '/api/availability/override', min: 'ADMIN', body: {} },
   { m: 'get', path: `/api/rooms/${X}/week-schedule`, min: 'ADMIN' },
   { m: 'get', path: `/api/rooms/${X}/conflict-check`, min: 'ADMIN' },
   // bookingRoutes
@@ -93,7 +92,6 @@ const ROUTES = [
   { m: 'post', path: '/api/admin/uploads/import/timetable', min: 'ADMIN', body: {} },
   { m: 'get', path: '/api/admin/uploads/status/no-such-job', min: 'ADMIN' },
   // timetableRoutes
-  { m: 'get', path: '/api/timetable/inspect-database', min: 'ADMIN', bug: 'SEC-11' },
   { m: 'get', path: '/api/timetable/search', min: 'ADMIN' },
   { m: 'get', path: '/api/timetable/autocomplete/faculty', min: 'VIEWER' },
   { m: 'post', path: '/api/timetable/upload', min: 'ADMIN', body: {} },
@@ -127,14 +125,15 @@ describe('authorization matrix', () => {
     let count = 0;
     // internalRoutes.js is service-to-service (shared token, no user roles): covered by admin/internalSync.test.js.
     for (const f of fs.readdirSync(dir).filter((n) => n !== 'internalRoutes.js')) count += (fs.readFileSync(path.join(dir, f), 'utf8').match(/^router\.(get|post|patch|put|delete)\(/gm) || []).length;
-    // + '/', '/api/health', '/metrics' from server.js
-    expect(ROUTES.length).toBe(count + 3);
+    // + '/', '/api/health' from server.js (/metrics uses a scraper token, tested separately)
+    expect(ROUTES.length).toBe(count + 2);
   });
 
   // Password-era and promotion endpoints were removed on purpose (identity, roles and profile are
   // owned by Google SSO + the ACL). They must look like unknown routes to everyone: never served
   // (200) and never gated (401/403), which would mean a handler or auth middleware is still mounted.
   const REMOVED = [
+    ['get', '/api/timetable/inspect-database'],
     ['post', '/api/auth/signup', { email: 'removed.signup@nsut.ac.in', password: 'Password@123', name: 'x' }],
     ['post', '/api/auth/login', { email: 'removed.login@nsut.ac.in', password: 'Password@123' }],
     ['post', '/api/auth/forgot-password', { email: 'removed.forgot@nsut.ac.in' }],
@@ -200,31 +199,27 @@ describe('authorization matrix', () => {
     expect(res.body).toEqual({ status: 'ok', db: 'connected' });
   });
 
-  test.failing('[SEC-13] GET /metrics requires authentication', async () => {
-    const res = await request(app).get('/metrics');
-    expect(res.status).toBe(401);
+  // SEC-13 (fixed): /metrics needs the scraper's METRICS_TOKEN; it is disabled when unset.
+  test('[SEC-13] GET /metrics is disabled (404) when METRICS_TOKEN is unset, even for an admin', async () => {
+    delete process.env.METRICS_TOKEN;
+    expect((await request(app).get('/metrics')).status).toBe(404);
+    expect((await request(app).get('/metrics').set('Authorization', users.ADMIN.auth)).status).toBe(404);
   });
 
-  test.failing('[SEC-13] GET /metrics is admin-only (FACULTY → 403)', async () => {
-    const res = await request(app).get('/metrics').set('Authorization', users.FACULTY.auth);
-    expect(res.status).toBe(403);
+  test('[SEC-13] GET /metrics with METRICS_TOKEN set: no/wrong/user token → 401, scraper token → 200', async () => {
+    process.env.METRICS_TOKEN = 'metrics-token-for-tests-0123456789';
+    try {
+      expect((await request(app).get('/metrics')).status).toBe(401);
+      expect((await request(app).get('/metrics').set('Authorization', users.ADMIN.auth)).status).toBe(401);
+      const ok = await request(app).get('/metrics').set('Authorization', 'Bearer metrics-token-for-tests-0123456789');
+      expect(ok.status).toBe(200);
+      expect(ok.text).toMatch(/http_request_duration_seconds/);
+    } finally {
+      delete process.env.METRICS_TOKEN;
+    }
   });
 
-  test.failing('[SEC-11] GET /api/timetable/inspect-database requires authentication', async () => {
-    const res = await request(app).get('/api/timetable/inspect-database');
-    expect(res.status).toBe(401);
-  });
-
-  test.failing('[SEC-11] GET /api/timetable/inspect-database is admin-only (FACULTY → 403)', async () => {
-    const res = await request(app).get('/api/timetable/inspect-database').set('Authorization', users.FACULTY.auth);
-    expect(res.status).toBe(403);
-  });
-
-  test('POST /api/transfers/request requires authentication', async () => {
-    expect((await request(app).post('/api/transfers/request').send({ booking_id: X })).status).toBe(401);
-  });
-
-  test.failing('[SEC-06] VIEWER cannot request a booking transfer (→ 403)', async () => {
+  test('[SEC-06] VIEWER cannot request a booking transfer (→ 403)', async () => {
     const res = await request(app).post('/api/transfers/request').set('Authorization', users.VIEWER.auth).send({ booking_id: X });
     expect(res.status).toBe(403);
   });

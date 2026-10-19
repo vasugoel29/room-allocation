@@ -493,14 +493,3 @@ export async function deleteSlot(req, res) {
   }
 }
 
-export async function inspectDatabase(req, res) {
-  try {
-    const slots = await db.query(`
-      SELECT * FROM faculty_timetable_slots 
-      WHERE slot_time = 'T1005:00-06:00' OR content ILIKE '%Deepika%'
-    `);
-    res.json({ slots: slots.rows });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}

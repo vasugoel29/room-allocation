@@ -32,7 +32,8 @@ const P = PERMISSIONS;
 export const ALL = '*';
 
 const VIEWER = [P.ROOMS_VIEW, P.TIMETABLE_VIEW];
-const STUDENT_REP = [...VIEWER, P.ROOMS_BOOK, P.BOOKINGS_TRANSFER, P.AVAILABILITY_OVERRIDE, P.CANCELLATION_REQUEST];
+// availability:override changes a room's recurring weekly availability, so it is admin-only (SEC-05).
+const STUDENT_REP = [...VIEWER, P.ROOMS_BOOK, P.BOOKINGS_TRANSFER, P.CANCELLATION_REQUEST];
 const FACULTY = [...STUDENT_REP, P.BOOKINGS_APPROVE, P.TIMETABLE_FACULTY, P.CANCELLATION_REVIEW];
 
 export const ROLE_DEFAULT_PERMISSIONS = Object.freeze({

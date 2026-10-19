@@ -131,7 +131,7 @@ describe('POST /api/transfers/request', () => {
     expect(ok.status).toBe(201);
   });
 
-  test.failing('[SEC-06] a VIEWER cannot request a transfer', async () => {
+  test('[SEC-06] a VIEWER cannot request a transfer', async () => {
     const s = await scenario();
     const v = await createViewer();
     const res = await post(v.auth, { booking_id: s.booking.id, new_purpose: 'viewer' });

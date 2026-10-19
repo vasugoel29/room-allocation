@@ -1,5 +1,6 @@
 import './config/env.js';
 import express from 'express';
+import crypto from 'crypto';
 import client from 'prom-client';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -89,8 +90,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// Prometheus Metrics endpoint
+// Prometheus metrics: only for a scraper presenting METRICS_TOKEN; disabled (404) when unset (SEC-13).
 app.get('/metrics', async (req, res) => {
+  const expected = process.env.METRICS_TOKEN;
+  const given = (req.headers.authorization || '').replace(/^Bearer /, '');
+  if (!expected) return res.status(404).json({ error: 'Not found' });
+  const a = crypto.createHash('sha256').update(given).digest();
+  const b = crypto.createHash('sha256').update(expected).digest();
+  if (!given || !crypto.timingSafeEqual(a, b)) return res.status(401).json({ error: 'Unauthorized' });
   try {
     res.set('Content-Type', client.register.contentType);
     res.send(await client.register.metrics());
