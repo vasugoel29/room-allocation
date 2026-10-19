@@ -6,18 +6,25 @@ import logger from "../utils/logger.js";
  * Controller for Admin specific operations
  */
 
-const sanitizeCSVField = (val) => {
-  const str = String(val || "");
-  if (["=", "+", "-", "@"].includes(str.charAt(0))) {
-    return `'${str}`;
-  }
-  return str;
+/**
+ * One CSV cell: always quoted, embedded quotes doubled, and cells that a spreadsheet would treat as
+ * a formula (=, +, -, @, tab, CR) prefixed with an apostrophe (SEC-22).
+ */
+export const csvCell = (val) => {
+  let str = val instanceof Date ? val.toISOString() : String(val ?? "");
+  if (/^[=+\-@\t\r]/.test(str)) str = `'${str}`;
+  return `"${str.replace(/"/g, '""')}"`;
 };
 
-export const exportBookingsCSV = async (req, res) => {
-  try {
-    const { start_date, end_date } = req.query;
+const isValidDate = (v) => !Number.isNaN(new Date(v).getTime());
 
+export const exportBookingsCSV = async (req, res) => {
+  const { start_date, end_date } = req.query;
+  // Validate before anything is written: a bad date used to fail after the 200 was sent (NEW-admin-1).
+  if ((start_date && !isValidDate(start_date)) || (end_date && !isValidDate(end_date))) {
+    return res.status(400).json({ error: "start_date and end_date must be valid dates" });
+  }
+  try {
     let query = `
       SELECT b.id, r.name as room_name, b.start_time, b.end_time, u.name as user_name, b.purpose, b.status
       FROM bookings b
@@ -36,36 +43,16 @@ export const exportBookingsCSV = async (req, res) => {
     }
     query += " ORDER BY b.start_time DESC";
 
-    const client = await db.pool.connect();
-
+    // Pool query: no checked-out client that could leak on error (OPS-07).
+    const { rows } = await db.query(query, params);
+    const lines = ["ID,Room,Start Time,End Time,User,Purpose,Status"];
+    for (const row of rows) {
+      lines.push([row.id, row.room_name, row.start_time, row.end_time, row.user_name, row.purpose, row.status].map(csvCell).join(","));
+    }
     res.setHeader("Content-Type", "text/csv");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=bookings_export_${new Date().toISOString()}.csv`,
-    );
-
-    // CSV Header
-    res.write("ID,Room,Start Time,End Time,User,Purpose,Status\n");
-
-    const cursor = await client.query(query, params);
-
-    cursor.rows.forEach((row) => {
-      const csvRow = [
-        row.id,
-        sanitizeCSVField(row.room_name),
-        row.start_time,
-        row.end_time,
-        `"${sanitizeCSVField(row.user_name).replace(/"/g, '""')}"`,
-        `"${sanitizeCSVField(row.purpose || "").replace(/"/g, '""')}"`,
-        row.status,
-      ].join(",");
-      res.write(csvRow + "\n");
-    });
-
-    res.end();
-    client.release();
+    res.setHeader("Content-Disposition", `attachment; filename=bookings_export_${new Date().toISOString()}.csv`);
+    res.send(lines.join("\n") + "\n");
   } catch (err) {
-    logger.error("CSV Export failed", err);
     sendServerError(res, err, "Failed to export CSV");
   }
 };

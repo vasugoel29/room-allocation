@@ -32,7 +32,21 @@ if (SMTP_USER && SMTP_PASS) {
 // ────────────────────────────────────────────────────────────────
 // Core send helper
 // ────────────────────────────────────────────────────────────────
+
+/** Escape a value for interpolation into the HTML templates (names, room labels, comments). */
+export function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+/** Subjects are headers: no CR/LF (header injection) and a sane length. */
+const safeSubject = (subject) => String(subject).replace(/[\r\n]+/g, ' ').slice(0, 200);
+
+const escapeAll = (obj) => Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, k.endsWith('Email') ? v : escapeHtml(v)]));
+
 export async function sendEmail(to, subject, html) {
+  subject = safeSubject(subject);
   if (!transporter) {
     console.warn(`[Email][DEV] Would send to ${to}: "${subject}"`);
     return;
@@ -103,7 +117,8 @@ function wrap(body) {
 /**
  * Student submitted a booking request → email to faculty
  */
-export function notifyFacultyNewRequest({ facultyName, facultyEmail, studentName, roomName, date, time }) {
+export function notifyFacultyNewRequest(params) {
+  const { facultyName, facultyEmail, studentName, roomName, date, time } = escapeAll(params);
   const html = wrap(`
     <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#1e1b4b;">New Booking Request</h2>
     <p style="margin:0 0 20px;font-size:13px;color:#64748b;">A student has submitted a room allocation request that requires your approval.</p>
@@ -124,7 +139,8 @@ export function notifyFacultyNewRequest({ facultyName, facultyEmail, studentName
 /**
  * Faculty approves/rejects a booking → email to student
  */
-export function notifyStudentBookingStatus({ studentEmail, studentName, roomName, date, time, status }) {
+export function notifyStudentBookingStatus(params) {
+  const { studentEmail, studentName, roomName, date, time, status } = escapeAll(params);
   const isApproved = status === 'ACTIVE' || status === 'APPROVED';
   const statusLabel = isApproved ? 'Approved ✓' : 'Rejected ✗';
   const statusColor = isApproved ? '#16a34a' : '#dc2626';
@@ -150,7 +166,8 @@ export function notifyStudentBookingStatus({ studentEmail, studentName, roomName
 /**
  * Booking cancelled → email to creator
  */
-export function notifyBookingCancelled({ userEmail, userName, roomName, date, time, cancelledBy }) {
+export function notifyBookingCancelled(params) {
+  const { userEmail, userName, roomName, date, time, cancelledBy } = escapeAll(params);
   const html = wrap(`
     <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#1e1b4b;">Booking Cancelled</h2>
     <p style="margin:0 0 20px;font-size:13px;color:#64748b;">A room booking has been cancelled.</p>
@@ -167,29 +184,4 @@ export function notifyBookingCancelled({ userEmail, userName, roomName, date, ti
 }
 
 
-/**
- * Promotion request result → email to student
- */
-export function notifyPromotionResult({ userEmail, userName, status, adminComment }) {
-  const isApproved = status === 'APPROVED';
-  const statusLabel = isApproved ? 'Approved ✓' : 'Rejected';
-  const statusColor = isApproved ? '#16a34a' : '#dc2626';
-  
-  const html = wrap(`
-    <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:#1e1b4b;">Promotion Request ${statusLabel}</h2>
-    <p style="margin:0 0 20px;font-size:13px;color:#64748b;">Your request to become a Student Representative has been reviewed.</p>
-    <div style="background:${isApproved ? '#f0fdf4' : '#fef2f2'};border-radius:16px;padding:20px;margin-bottom:24px;text-align:center;">
-      <p style="margin:0;font-size:20px;font-weight:800;color:${statusColor};">${statusLabel}</p>
-    </div>
-    ${adminComment ? `
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-radius:16px;padding:20px;margin-bottom:24px;">
-      <tr><td>
-        <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:2px;">Admin Comment</p>
-        <p style="margin:0;font-size:14px;color:#1e1b4b;">${adminComment}</p>
-      </td></tr>
-    </table>` : ''}
-    <p style="margin:0;font-size:13px;color:#64748b;">${isApproved ? 'You now have Student Rep access. You can create and manage room bookings directly.' : 'If you believe this was a mistake, please contact your administrator.'}</p>
-  `);
-  return sendEmail(userEmail, `Promotion Request ${statusLabel}`, html);
-}
 

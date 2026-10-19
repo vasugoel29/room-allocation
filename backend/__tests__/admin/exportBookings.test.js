@@ -154,7 +154,7 @@ describe('GET /api/admin/export/bookings', () => {
     expect(rows[1][1]).toBe(`'${evilRoom.name}`);
   });
 
-  test.failing.each([
+  test.each([
     ['tab', '\t=cmd|calc'],
     ['carriage return', '\r=cmd|calc'],
   ])('[SEC-22] a leading %s before a formula is also neutralised', async (_label, purpose) => {
@@ -166,7 +166,7 @@ describe('GET /api/admin/export/bookings', () => {
     expect(line).toContain(`"'${purpose.replace(/"/g, '""')}"`);
   });
 
-  test.failing('[SEC-22] a room name containing a comma is quoted, so the row keeps 7 columns', async () => {
+  test('[SEC-22] a room name containing a comma is quoted, so the row keeps 7 columns', async () => {
     const day = '2031-02-23';
     const commaRoom = await createRoom({ name: `Lab A, Wing ${uniq()}`.slice(0, 32) });
     await insertBooking({ room_id: commaRoom.id, created_by: booker.user.id, start_time: `${day}T04:00:00Z`, end_time: `${day}T05:00:00Z` });
@@ -177,7 +177,7 @@ describe('GET /api/admin/export/bookings', () => {
 
   // Start/End are written via Date#toString ("Mon Feb 24 2031 09:30:00 GMT+0530 (India Standard
   // Time)"): depends on the server's TZ, verbose, and not reliably parsed by spreadsheets.
-  test.failing('[NEW-admin-2] start/end times are exported as ISO-8601 timestamps', async () => {
+  test('[NEW-admin-2] start/end times are exported as ISO-8601 timestamps', async () => {
     const day = '2031-02-24';
     const b = await bookingOn(day, 4);
     const rows = parseCsv((await exportCsv(windowFor(day))).text);

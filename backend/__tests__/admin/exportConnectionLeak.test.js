@@ -44,7 +44,7 @@ afterAll(async () => {
 // The export flushes `200 text/csv` + the CSV header line before running the query; when the
 // query fails, the catch block's res.status(500) throws ERR_HTTP_HEADERS_SENT, the global error
 // handler hits the same, and Express aborts the socket -> the client sees a truncated 200 / "aborted".
-test.failing('[NEW-admin-1] an invalid start_date is rejected with a completed 400 JSON response (not an aborted 200 stream)', async () => {
+test('[NEW-admin-1] an invalid start_date is rejected with a completed 400 JSON response (not an aborted 200 stream)', async () => {
   const out = await badExport(admin.auth, 'not-a-date');
   expect(out.timedOut).toBeUndefined();
   expect(out.err).toBeUndefined();
@@ -52,7 +52,7 @@ test.failing('[NEW-admin-1] an invalid start_date is rejected with a completed 4
   expect(out.res.body.error).toEqual(expect.any(String));
 });
 
-test.failing('[OPS-07] failed exports release their pool client: after > pool.max failing exports the pool still serves queries', async () => {
+test('[OPS-07] failed exports release their pool client: after > pool.max failing exports the pool still serves queries', async () => {
   const max = db.pool.options.max || 10;
   await Promise.all(Array.from({ length: max + 1 }, (_, i) => badExport(admin.auth, `bad-${i}`)));
 
