@@ -30,12 +30,35 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const googleBtnRef = useRef(null);
 
-  const handleGoogleSuccess = async ({ credential, email }) => {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const devLoginEnabled = import.meta.env.VITE_DEV_LOGIN === 'true';
+  const [devEmail, setDevEmail] = useState('');
+
+  const completeSignIn = (data) => {
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setUser(data.user);
+  };
+
+  const handleDevLogin = async (e) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      completeSignIn(await authService.devLogin(devEmail.trim()));
+    } catch (err) {
+      setError(err.message || 'Dev sign-in failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credential) => {
     setError('');
     setLoading(true);
 
     try {
-      const data = await authService.googleLogin({ credential, email });
+      const data = await authService.googleLogin(credential);
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
@@ -47,18 +70,21 @@ const Login = () => {
   };
 
   useEffect(() => {
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
-    if (window.google?.accounts?.id && googleClientId) {
+    if (!googleClientId) return undefined;
+    let timer;
+    let tries = 0;
+    // The GIS script loads async (index.html); wait for it before rendering the button.
+    const init = () => {
+      if (!window.google?.accounts?.id) {
+        if (tries++ < 50) timer = setTimeout(init, 200);
+        return;
+      }
       window.google.accounts.id.initialize({
         client_id: googleClientId,
         callback: (response) => {
-          if (response.credential) {
-            handleGoogleSuccess({ credential: response.credential });
-          }
+          if (response.credential) handleGoogleSuccess(response.credential);
         },
       });
-
       if (googleBtnRef.current) {
         window.google.accounts.id.renderButton(googleBtnRef.current, {
           theme: 'outline',
@@ -68,17 +94,17 @@ const Login = () => {
           shape: 'pill',
         });
       }
-    }
-  }, []);
+    };
+    init();
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleClientId]);
 
   const handleDirectGoogleSSO = () => {
-    // When clicked, trigger Google SSO
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (window.google?.accounts?.id && googleClientId) {
       window.google.accounts.id.prompt();
     } else {
-      // In dev or until OAuth client ID is set, authenticate with the verified institutional Google account
-      handleGoogleSuccess({ email: 'vasu.goel.ug22@nsut.ac.in' });
+      setError('Google sign-in is not configured for this deployment (VITE_GOOGLE_CLIENT_ID is missing).');
     }
   };
 
@@ -133,6 +159,30 @@ const Login = () => {
             )}
           </button>
         </div>
+
+        {devLoginEnabled && (
+          <form onSubmit={handleDevLogin} className="space-y-3 text-left" aria-label="Developer sign-in">
+            <label htmlFor="dev-email" className="block text-[11px] font-bold tracking-wider text-text-secondary">
+              Developer sign-in (local only)
+            </label>
+            <input
+              id="dev-email"
+              type="email"
+              required
+              value={devEmail}
+              onChange={(e) => setDevEmail(e.target.value)}
+              placeholder="rollno@nsut.ac.in"
+              className="w-full rounded-2xl border border-border/40 bg-surface-lowest px-4 py-3 text-sm text-text-primary"
+            />
+            <button
+              type="submit"
+              disabled={loading || !devEmail}
+              className="w-full rounded-2xl bg-primary-accent px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+            >
+              Dev sign in
+            </button>
+          </form>
+        )}
 
         {/* Institutional notice */}
         <div className="pt-2 text-center text-[10px] text-text-secondary/70 font-medium flex items-center justify-center gap-1.5">

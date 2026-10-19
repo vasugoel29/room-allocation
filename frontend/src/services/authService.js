@@ -1,13 +1,30 @@
 import api from '../utils/api';
 
 export const authService = {
-  googleLogin: async ({ email, credential }) => {
-    const res = await api.post('/auth/google', { email, credential });
+  googleLogin: async (credential) => {
+    const res = await api.post('/auth/google', { credential });
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Google institutional login failed');
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Google sign-in failed');
     }
     return res.json();
+  },
+
+  /** Development only: the server enables this route only with AUTH_DEV_LOGIN=true. */
+  devLogin: async (email) => {
+    const res = await api.post('/auth/dev-login', { email });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Dev sign-in failed');
+    }
+    return res.json();
+  },
+
+  /** The current user's fresh role, permissions and profile. */
+  me: async () => {
+    const res = await api.get('/auth/me');
+    if (!res.ok) throw new Error('Failed to load your profile');
+    return (await res.json()).user;
   },
 
   login: async (email, password) => {

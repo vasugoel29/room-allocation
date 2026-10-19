@@ -155,7 +155,7 @@ describe('adminService', () => {
 
   it.each([
     ['getPromotions', () => adminService.getPromotions(), 'GET', '/api/promotions?page=1&limit=10', undefined],
-    ['getUsers', () => adminService.getUsers(3), 'GET', '/api/auth/users?page=3&limit=20', undefined],
+    ['getUsers', () => adminService.getUsers(3), 'GET', '/api/auth/users?page=3&limit=20&search=&role=', undefined],
     ['createUser', () => adminService.createUser({ role: 'ADMIN' }), 'POST', '/api/auth/users', { role: 'ADMIN' }],
     ['updateUser', () => adminService.updateUser(5, { name: 'n' }), 'PATCH', '/api/auth/users/5', { name: 'n' }],
     ['getRoomStatuses', () => adminService.getRoomStatuses('2026-10-20', 9), 'GET', '/api/rooms/admin/status?date=2026-10-20&slot=9', undefined],

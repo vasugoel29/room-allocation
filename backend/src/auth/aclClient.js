@@ -1,10 +1,13 @@
 import logger from '../utils/logger.js';
+import * as db from '../db.js';
 
 /**
  * Client for the central Access Control Layer (ACL).
  *
  *   ACL_MODE=live (default)  → POST {ACL_API_URL}/v1/user-access with client credentials from env
  *   ACL_MODE=mock            → in-process directory (test suites only; refused in production)
+ *     + ACL_MOCK_SOURCE=db     → directory answered from the local users table (e2e/load stacks,
+ *                                where tests seed users in the database of a separate server process)
  *
  * Every error thrown here is an AclError with a `code` the auth layer maps to an HTTP status.
  */
@@ -111,9 +114,31 @@ export const mockAcl = {
   },
 };
 
+/** e2e/load: treat each seeded local user as an ACL directory entry with its stored role. */
+async function dbDirectoryEntry(email) {
+  const { rows } = await db.query(
+    'SELECT id, name, email, role, branch, year, semester, section, group_name FROM users WHERE lower(email) = $1',
+    [email],
+  );
+  const u = rows[0];
+  if (!u) return null;
+  return {
+    user: {
+      id: `mockdb_${u.id}`,
+      name: u.name,
+      email: u.email,
+      status: 'ACTIVE',
+      academic: { branch: u.branch, year: u.year, semester: u.semester, section: u.section, group_no: u.group_name },
+    },
+    role: u.role,
+    roles: [u.role],
+    permissions: [],
+  };
+}
+
 async function mockFetchUserAccess(email) {
   mockCalls++;
-  const entry = mockDirectory.get(email);
+  const entry = mockDirectory.get(email) ?? (process.env.ACL_MOCK_SOURCE === 'db' ? await dbDirectoryEntry(email) : undefined);
   if (entry instanceof Error) throw entry;
   if (!entry) throw new AclError('not_found', 'You are not registered in the institutional access directory.', { status: 404 });
   return checkActive(normalize(entry));

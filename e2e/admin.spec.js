@@ -133,6 +133,9 @@ test.describe('Admin console', () => {
     const doomed = await seed.user({ role: 'VIEWER' });
     await signIn(page, request, admin, '/admin?tab=users');
 
+    // The list is server-paginated (admins/faculty sort first), so find rows through search.
+    const search = page.getByPlaceholder('Search users...');
+    await search.fill(pending.email);
     const pendingRow = page.locator('tr').filter({ hasText: pending.email });
     await expect(pendingRow).toContainText(/pending approval/i);
     await pendingRow.getByRole('button', { name: /approve/i }).click();
@@ -141,6 +144,7 @@ test.describe('Admin console', () => {
     expect((await seed.one('SELECT is_approved FROM users WHERE id = $1', [pending.id])).is_approved).toBe(true);
     await apiLogin(request, pending.email);
 
+    await search.fill(doomed.email);
     const doomedRow = page.locator('tr').filter({ hasText: doomed.email });
     await doomedRow.getByRole('button').last().click();
     await dialog(page, /delete user/i).getByRole('button', { name: /delete user/i }).click();
@@ -237,6 +241,9 @@ test.describe('Admin console', () => {
   });
 
   test('Quick Book: books a room for a chosen user', async ({ page, request, seed }) => {
+    // [FE-15] The member picker only filters the first 20 users the page loaded (admins and faculty
+    // sort first), so most students and reps can never be chosen.
+    test.fail();
     const admin = await seed.user({ role: 'ADMIN' });
     const rep = await seed.user({ role: 'STUDENT_REP' });
     const room = await seed.room({ name: firstSortingName() }); // sorts onto page 1 of the status table
@@ -250,7 +257,7 @@ test.describe('Admin console', () => {
     await expect(row).toContainText(/available/i);
     await row.getByRole('button', { name: /select user/i }).click();
     await page.getByPlaceholder('Search members...').filter({ visible: true }).fill(rep.email);
-    await page.getByRole('button', { name: new RegExp(rep.name) }).filter({ visible: true }).click();
+    await page.getByRole('button', { name: new RegExp(rep.name) }).filter({ visible: true }).click({ timeout: 5000 });
     await row.getByRole('button', { name: /book now/i }).click();
     await expect(toast(page, `Room ${room.name} booked successfully!`)).toBeVisible();
     await expect(row.getByRole('button', { name: /^booked$/i })).toBeDisabled();

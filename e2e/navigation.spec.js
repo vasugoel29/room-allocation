@@ -23,7 +23,7 @@ test.describe('Route guards & navigation', () => {
     test(`logged-out visit to ${path} goes to /login`, async ({ page }) => {
       await page.goto(path);
       await expect(page).toHaveURL(/\/login$/);
-      await expect(page.locator('#email')).toBeVisible();
+      await expect(page.getByRole('button', { name: /sign in with google/i })).toBeVisible();
     });
   }
 
@@ -41,8 +41,10 @@ test.describe('Route guards & navigation', () => {
   test('sidebar shows role-appropriate links', async ({ page, request, seed }) => {
     const nav = (name) => page.getByRole('complementary').getByRole('link', { name, exact: true });
     await signIn(page, request, await seed.user({ role: 'VIEWER' }), '/calendar');
-    await expect(nav('Apply to Book Rooms')).toBeVisible();
+    await expect(nav('Rooms')).toBeVisible();
     await expect(nav('Bookings')).toHaveCount(0);
+    // Roles come from the ACL now, so there is no in-app promotion request link.
+    await expect(nav('Apply to Book Rooms')).toHaveCount(0);
 
     await signIn(page, request, await seed.user({ role: 'STUDENT_REP' }), '/calendar');
     await expect(nav('Bookings')).toBeVisible();
@@ -66,10 +68,8 @@ test.describe('Route guards & navigation', () => {
     return resp;
   }
 
-  test('profile edits are saved and survive a reload', async ({ page, request, seed }) => {
-    // [FE-18] Profile.jsx updates React state only; localStorage 'user' keeps the old profile, so a reload
-    // shows the stale name even though the DB was updated.
-    test.fail();
+  test('[FE-18] profile edits are saved and survive a reload', async ({ page, request, seed }) => {
+    // Regression: the app now refreshes the profile from /auth/me on load.
     const rep = await seed.user({ role: 'STUDENT_REP', branch: 'CSE', semester: 4, year: 2, section: 1, group_name: 1 });
     const newName = `Renamed Rep ${tag()}`;
     await signIn(page, request, rep, '/profile');

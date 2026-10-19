@@ -55,7 +55,7 @@ describe('App routing — role landing and guards', () => {
     ['/admin', 'STUDENT_REP', 'Calendar'],
     ['/admin', 'ADMIN', 'AdminDashboard'],
     ['/faculty', 'STUDENT_REP', 'Calendar'],
-    ['/faculty', 'ADMIN', 'Calendar'],
+    ['/faculty', 'ADMIN', 'FacultyDashboard'],
     ['/faculty', 'FACULTY', 'FacultyDashboard'],
     ['/bookings', 'VIEWER', 'Calendar'],
     ['/bookings', 'STUDENT_REP', 'Bookings'],
@@ -102,9 +102,9 @@ describe('App shell', () => {
   });
 
   it.each([
-    ['ADMIN', ['Admin Console', 'Rooms', 'Timetable', 'Profile']],
+    ['ADMIN', ['Admin Console', 'Rooms', 'Bookings', 'Timetable', 'Profile']],
     ['FACULTY', ['Faculty Portal', 'Rooms', 'Timetable', 'Profile']],
-    ['VIEWER', ['Rooms', 'Timetable', 'Apply to Book Rooms', 'Profile']],
+    ['VIEWER', ['Rooms', 'Timetable', 'Profile']],
     ['STUDENT_REP', ['Rooms', 'Bookings', 'Timetable', 'Profile']],
   ])('%s sidebar navigation', async (role, labels) => {
     go('/profile', USERS[role]);

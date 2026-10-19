@@ -67,6 +67,22 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
+  // Refresh role/permissions/profile from the server once per load, so changes made in the ACL
+  // (promotion, revocation) reach the UI without signing out and in again.
+  const userId = user?.id;
+  useEffect(() => {
+    if (!userId || !localStorage.getItem('token')) return;
+    let cancelled = false;
+    authService.me()
+      .then((fresh) => {
+        if (cancelled || !fresh) return;
+        setUser(fresh);
+        try { localStorage.setItem('user', JSON.stringify(fresh)); } catch { /* storage unavailable */ }
+      })
+      .catch((err) => console.warn('Could not refresh profile', err));
+    return () => { cancelled = true; };
+  }, [userId]);
+
   const fetchTransfers = useCallback(async () => {
     if (!user) return;
     try {

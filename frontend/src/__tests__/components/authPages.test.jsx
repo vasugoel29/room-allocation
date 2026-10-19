@@ -11,86 +11,82 @@ import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
 beforeEach(() => { localStorage.clear(); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-const fillLogin = async (user, email, pw = 'secret123') => {
-  await user.type(screen.getByLabelText(/email address/i), email);
-  await user.type(screen.getByLabelText(/^password/i), pw);
-};
+afterEach(() => { vi.unstubAllEnvs(); delete window.google; });
+
+/** Minimal Google Identity Services stub; returns a trigger for the sign-in callback. */
+function installGoogle() {
+  const gis = { initialize: vi.fn(), renderButton: vi.fn(), prompt: vi.fn() };
+  window.google = { accounts: { id: gis } };
+  return { gis, signIn: (credential) => gis.initialize.mock.calls.at(-1)[0].callback({ credential }) };
+}
 
 describe('Login', () => {
-  it('rejects non-NSUT emails client-side without calling the API', async () => {
+  it('renders the official Google button when a client id is configured', async () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'cid.apps.googleusercontent.com');
+    const { gis } = installGoogle();
+    renderWithContext(<Login />, { ctx: { user: null } });
+    await waitFor(() => expect(gis.renderButton).toHaveBeenCalled());
+    expect(gis.initialize.mock.calls[0][0].client_id).toBe('cid.apps.googleusercontent.com');
+  });
+
+  it('[ACL-01] posts only the Google credential, stores the session and sets the user', async () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'cid');
+    const f = installFetch([['POST', '/api/auth/google', { token: 'tk', user: USERS.VIEWER }]]);
+    const { signIn } = installGoogle();
+    const { ctx } = renderWithContext(<Login />, { ctx: { user: null } });
+    await waitFor(() => expect(window.google.accounts.id.initialize).toHaveBeenCalled());
+    await act(async () => { signIn('google-id-token'); });
+    await waitFor(() => expect(ctx.setUser).toHaveBeenCalledWith(USERS.VIEWER));
+    expect(fetchCalls(f)[0]).toEqual(['POST', '/api/auth/google', { credential: 'google-id-token' }]);
+    expect(localStorage.getItem('token')).toBe('tk');
+  });
+
+  it('shows the server error and stores nothing when sign-in is refused', async () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'cid');
+    installFetch([['POST', '/api/auth/google', () => jsonResponse({ error: 'You are not registered in the institutional access directory.' }, 403)]]);
+    const { signIn } = installGoogle();
+    const { ctx } = renderWithContext(<Login />, { ctx: { user: null } });
+    await waitFor(() => expect(window.google.accounts.id.initialize).toHaveBeenCalled());
+    await act(async () => { signIn('t'); });
+    expect(await screen.findByRole('alert')).toHaveTextContent('not registered');
+    expect(ctx.setUser).not.toHaveBeenCalled();
+    expect(localStorage.getItem('token')).toBeNull();
+  });
+
+  it('[ACL-01] without a Google client id, the button explains the problem and calls no API (no hardcoded fallback)', async () => {
     const f = installFetch([]);
     const user = userEvent.setup();
     renderWithContext(<Login />, { ctx: { user: null } });
-    await fillLogin(user, 'someone@gmail.com');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(screen.getByRole('alert')).toHaveTextContent('Only NSUT emails (@nsut.ac.in) are accepted');
-    expect(screen.getByLabelText(/email address/i)).toHaveAttribute('aria-invalid', 'true');
+    await user.click(screen.getByRole('button', { name: /sign in with google/i }));
+    expect(screen.getByRole('alert')).toHaveTextContent(/not configured/i);
     expect(f).not.toHaveBeenCalled();
   });
 
-  it('accepts mixed-case @NSUT.AC.IN', async () => {
-    const f = installFetch([['POST', '/api/auth/login', { token: 'tk', user: USERS.VIEWER }]]);
-    const user = userEvent.setup();
+  it('hides developer sign-in unless VITE_DEV_LOGIN=true', () => {
     renderWithContext(<Login />, { ctx: { user: null } });
-    await fillLogin(user, 'Roll@NSUT.AC.IN');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-    await waitFor(() => expect(f).toHaveBeenCalledTimes(1));
+    expect(screen.queryByLabelText(/developer sign-in/i)).toBeNull();
   });
 
-  it('on success posts credentials, stores session and sets the user', async () => {
-    const f = installFetch([['POST', '/api/auth/login', { token: 'tk', user: USERS.VIEWER }]]);
+  it('developer sign-in posts the email and stores the session', async () => {
+    vi.stubEnv('VITE_DEV_LOGIN', 'true');
+    const f = installFetch([['POST', '/api/auth/dev-login', { token: 'dev', user: USERS.STUDENT_REP }]]);
     const user = userEvent.setup();
     const { ctx } = renderWithContext(<Login />, { ctx: { user: null } });
-    await fillLogin(user, 'viewer@nsut.ac.in', 'pw123456');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-    await waitFor(() => expect(ctx.setUser).toHaveBeenCalledWith(USERS.VIEWER));
-    expect(fetchCalls(f)[0]).toEqual(['POST', '/api/auth/login', { email: 'viewer@nsut.ac.in', password: 'pw123456' }]);
-    expect(JSON.parse(localStorage.getItem('user'))).toEqual(USERS.VIEWER);
-    expect(localStorage.getItem('token')).toBe('tk');
-    expect(screen.queryByRole('alert')).toBeNull();
+    await user.type(screen.getByLabelText(/developer sign-in \(local only\)/i), 'rep@nsut.ac.in');
+    await user.click(screen.getByRole('button', { name: /dev sign in/i }));
+    await waitFor(() => expect(ctx.setUser).toHaveBeenCalledWith(USERS.STUDENT_REP));
+    expect(fetchCalls(f)[0]).toEqual(['POST', '/api/auth/dev-login', { email: 'rep@nsut.ac.in' }]);
+    expect(localStorage.getItem('token')).toBe('dev');
   });
 
-  it('shows the server error and does not store anything on 401', async () => {
-    installFetch([['POST', '/api/auth/login', () => jsonResponse({ error: 'Invalid email or password' }, 401)]]);
+  // FE-04: the (now 12-hour) session token is still kept in localStorage, readable by any XSS.
+  it.fails('[FE-04] does not persist the session token in localStorage', async () => {
+    vi.stubEnv('VITE_DEV_LOGIN', 'true');
+    installFetch([['POST', '/api/auth/dev-login', { token: 'tk', user: USERS.VIEWER }]]);
     const user = userEvent.setup();
     const { ctx } = renderWithContext(<Login />, { ctx: { user: null } });
-    await fillLogin(user, 'viewer@nsut.ac.in');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid email or password');
-    expect(ctx.setUser).not.toHaveBeenCalled();
-    expect(localStorage.getItem('token')).toBeNull();
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeEnabled();
-  });
-
-  it('shows "Server is waking up..." after 4s and disables the button while pending', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    let resolve;
-    installFetch([['POST', '/api/auth/login', () => new Promise((r) => { resolve = r; })]]);
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    renderWithContext(<Login />, { ctx: { user: null } });
-    await fillLogin(user, 'viewer@nsut.ac.in');
-    await user.click(screen.getByRole('button', { name: /authenticat|sign in/i }));
-    const btn = screen.getByRole('button', { name: /authenticating/i });
-    expect(btn).toBeDisabled();
-    expect(btn).toHaveTextContent('Contacting server...');
-    await act(async () => { vi.advanceTimersByTime(4000); });
-    expect(btn).toHaveTextContent('Server is waking up...');
-    await act(async () => { resolve(jsonResponse({ token: 't', user: USERS.VIEWER })); });
-    await waitFor(() => expect(localStorage.getItem('token')).toBe('t'));
-  });
-
-  it('links to forgot password', () => {
-    renderWithContext(<Login />, { ctx: { user: null } });
-    expect(screen.getByRole('link', { name: /forgot password/i })).toHaveAttribute('href', '/forgot-password');
-  });
-
-  // FE-04 / SEC-09: a 30-day bearer JWT is written to localStorage (readable by any XSS).
-  it.fails('[FE-04] does not persist the JWT in localStorage', async () => {
-    installFetch([['POST', '/api/auth/login', { token: 'tk', user: USERS.VIEWER }]]);
-    const user = userEvent.setup();
-    const { ctx } = renderWithContext(<Login />, { ctx: { user: null } });
-    await fillLogin(user, 'viewer@nsut.ac.in');
-    await user.click(screen.getByRole('button', { name: /sign in/i }));
+    await user.type(screen.getByLabelText(/developer sign-in \(local only\)/i), 'viewer@nsut.ac.in');
+    await user.click(screen.getByRole('button', { name: /dev sign in/i }));
     await waitFor(() => expect(ctx.setUser).toHaveBeenCalled());
     expect(localStorage.getItem('token')).toBeNull();
   });
