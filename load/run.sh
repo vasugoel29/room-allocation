@@ -16,7 +16,8 @@ STAMP="$(date +%Y%m%d-%H%M%S)"
 
 [[ $SEED == 1 ]] && node load/seed.mjs
 
-( cd backend && NODE_ENV=e2e PORT=$PORT DATABASE_URL="$DB_URL" JWT_SECRET=load_jwt_secret_do_not_use_elsewhere \
+if ss -ltn | grep -q ":$PORT "; then echo "port $PORT already in use — stop that process first"; exit 1; fi
+( cd backend && exec env NODE_ENV=e2e PORT=$PORT DATABASE_URL="$DB_URL" JWT_SECRET=load_jwt_secret_do_not_use_elsewhere \
     CORS_ORIGIN=http://localhost:5180 SMTP_USER= SMTP_PASS= node src/server.js > "../load/results/$SCENARIO-$STAMP.server.log" 2>&1 ) &
 SERVER_PID=$!
 trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
