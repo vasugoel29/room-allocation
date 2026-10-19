@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import { logActivity } from './services/loggerService.js';
 
 import { apiLimiter } from './middleware/leakyBucket.js';
+import { JWT_SECRET } from './middleware/auth.js';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
@@ -21,8 +22,9 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 
 // Initialize Sentry before any other imports if possible
 Sentry.init({
-  enabled: !['test', 'e2e'].includes(process.env.NODE_ENV),
-  dsn: "https://fffcdd6cd5e09e0fcaeea616debb0bd3@o4511015599341568.ingest.us.sentry.io/4511015602618368",
+  enabled: Boolean(process.env.SENTRY_DSN) && !['test', 'e2e'].includes(process.env.NODE_ENV),
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
   integrations: [
     nodeProfilingIntegration(),
     Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
@@ -137,7 +139,7 @@ app.use(async (req, res, next) => {
     const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
     if (token) {
       try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+        const decoded = jwt.verify(token, JWT_SECRET);
         userId = decoded.id;
       } catch (err) {
         // Ignored

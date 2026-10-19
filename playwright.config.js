@@ -49,7 +49,7 @@ export default defineConfig({
       url: WEB_URL,
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { VITE_API_URL: API_URL },
+      env: { VITE_API_URL: API_URL, VITE_SENTRY_DSN: '' },
     },
   ],
 });

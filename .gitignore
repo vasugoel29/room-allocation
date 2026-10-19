@@ -12,3 +12,10 @@ e2e-report/
 e2e-results/
 load/.data/
 load/results/
+
+# Personal data / credentials — never commit (kept locally for dev seeding only)
+backend/scripts/seeded_students_credentials.json
+backend/scripts/seeded_credentials.csv
+Report*.xlsx
+Faculty Details.xlsx
+faculties_data.json
