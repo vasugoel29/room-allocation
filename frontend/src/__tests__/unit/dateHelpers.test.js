@@ -5,11 +5,11 @@ import {
 } from '../../utils/dateHelpers';
 import { getIstDateKey, getIstHour, getIstTime, getIstWeekday, istDateTimeToUtc, addMinutesToUtc } from '../../utils/timezone';
 import { getRoleLabel, toTitleCase, getShortDept } from '../../utils/roleUtils';
-import { useIST, ist } from '../utils/ist';
+import { runInIST, ist } from '../utils/ist';
 
 // All local-time helpers are exercised with the worker switched to IST (container default is UTC).
 // Week of 2026-10-19 (Mon) .. 2026-10-25 (Sun).
-useIST();
+runInIST();
 
 const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 

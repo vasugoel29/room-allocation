@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import FacultyDashboard from '../../pages/FacultyDashboard';
 import { renderWithContext, USERS } from '../utils/renderWithContext';
 import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
-import { useIST, ist } from '../utils/ist';
+import { runInIST, ist } from '../utils/ist';
 
 vi.mock('react-hot-toast', () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -14,7 +14,7 @@ vi.mock('react-hot-toast', () => {
 import toast from 'react-hot-toast';
 
 // Card dates/times are formatted in browser-local time → IST worker, clock at Wed 2026-10-21 10:00 IST.
-useIST();
+runInIST();
 
 const FAC = USERS.FACULTY;
 const iso = (d, h) => ist(2026, 10, d, h).toISOString();

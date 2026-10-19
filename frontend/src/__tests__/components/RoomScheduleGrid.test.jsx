@@ -4,7 +4,7 @@ import { render, screen, waitFor, within, fireEvent } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import RoomScheduleGrid from '../../pages/RoomScheduleGrid';
 import { installFetch, fetchCalls } from '../utils/http';
-import { useIST, ist } from '../utils/ist';
+import { runInIST, ist } from '../utils/ist';
 
 vi.mock('react-hot-toast', () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -15,7 +15,7 @@ import { toast } from 'react-hot-toast';
 // FE-01 only manifests east of UTC: the grid builds local-midnight Dates and serialises them with
 // toISOString(). In the UTC container it would look correct, so this file runs the worker in IST.
 // Clock: Wed 2026-10-21 10:00 IST → current week Mon 2026-10-19 .. Fri 2026-10-23.
-useIST();
+runInIST();
 
 const ROOMS = [{ id: 4, name: 'R-4', building: '5th Block', capacity: 60 }, { id: 5, name: 'L-5', building: 'APJ', capacity: 30 }];
 const SCHEDULE = {

@@ -15,7 +15,7 @@ import {
   Layers,
   ChevronDown
 } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
 import { getTodayRange, getWeekRange, formatRangeToISO } from '../utils/dateHelpers';
@@ -50,8 +50,7 @@ import AdminBranches from '../features/admin/AdminBranches';
 import AdminBranchModal from '../components/modals/AdminBranchModal';
 
 function AdminDashboard() {
-  const { user, filters } = useContext(AppContext);
-  const navigate = useNavigate();
+  const { user } = useContext(AppContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'bookings';
   const setActiveTab = (tab) => {
@@ -60,7 +59,6 @@ function AdminDashboard() {
   };
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRange, setFilterRange] = useState('day'); // 'day' | 'week'
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const { bookings, bookingsMeta, loading, fetchData } = useAdminData(filterRange);
   const { users, usersMeta, departments, fetchUsers, handleDeactivateUser } = useAdminUsers(activeTab, searchTerm);

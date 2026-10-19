@@ -66,7 +66,7 @@ const RoomScheduleGrid = () => {
           setSelectedRoomId(data[0].id);
         }
       })
-      .catch(err => toast.error('Failed to load rooms list'));
+      .catch(() => toast.error('Failed to load rooms list'));
   }, []);
 
   // Fetch week schedule when selected room or week change
@@ -147,7 +147,7 @@ const RoomScheduleGrid = () => {
     try {
       const result = await roomService.checkRoomConflict(selectedRoomId, date, startHour, endHour);
       setConflictData(result);
-    } catch (err) {
+    } catch {
       toast.error('Conflict check failed');
     } finally {
       setConflictChecking(false);

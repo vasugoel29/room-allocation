@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import BookingModal from '../../components/modals/BookingModal';
 import { renderWithContext, USERS } from '../utils/renderWithContext';
 import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
-import { ist, useIST } from '../utils/ist';
+import { ist, runInIST } from '../utils/ist';
 
 vi.mock('react-hot-toast', () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -16,7 +16,7 @@ import toast from 'react-hot-toast';
 // slot.date is the IST midnight of Tue 2026-10-20. Payload instants go through utils/timezone (explicit
 // Asia/Kolkata), but the header/toast use toLocaleDateString() in the *browser* zone — in the UTC container
 // they would read "Oct 19". Users are in IST, so the worker is switched to IST for this file.
-useIST();
+runInIST();
 const DATE = ist(2026, 10, 20);
 const ROOMS = [
   { id: 5, name: 'R-501', type: 'Lecture Room', building: '5th Block' },
@@ -119,7 +119,7 @@ describe('BookingModal', () => {
 
   it('faculty check failure is non-blocking', async () => {
     const { ue, f, onSuccess } = setup();
-    f.mockImplementation(async (url, init) => (url.includes('/faculty/check/') ? jsonResponse({}, 500) : jsonResponse({ id: 1 })));
+    f.mockImplementation(async (url) => (url.includes('/faculty/check/') ? jsonResponse({}, 500) : jsonResponse({ id: 1 })));
     await pickFaculty(ue, 'Prof Fay');
     await submit(ue);
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());

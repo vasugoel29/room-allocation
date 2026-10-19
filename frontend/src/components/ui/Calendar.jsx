@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
-import { getDayOfWeek, isRoomReallyFree, getHourFromTime } from '../../utils/timetableLogic';
+import { getDayOfWeek, getHourFromTime } from '../../utils/timetableLogic';
 import { getIstDateKey, getIstHour } from '../../utils/timezone';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -10,7 +10,7 @@ const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 08:00–18:00; fin
 import PageSearch from './PageSearch';
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, setFilters, timetableData, user } = useContext(AppContext);
+  const { bookings, rooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, timetableData, user } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`

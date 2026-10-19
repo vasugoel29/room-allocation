@@ -8,7 +8,7 @@ import { useAdminData } from '../../hooks/useAdminData';
 import { useAdminQuickBook } from '../../hooks/useAdminQuickBook';
 import { useFacultyRequests } from '../../hooks/useFacultyRequests';
 import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
-import { useIST, ist } from '../utils/ist';
+import { runInIST, ist } from '../utils/ist';
 
 vi.mock('react-hot-toast', () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -17,7 +17,7 @@ vi.mock('react-hot-toast', () => {
 import toast from 'react-hot-toast';
 
 // Hooks that compute "today" are tested with the worker in IST (container default is UTC).
-useIST();
+runInIST();
 
 beforeEach(() => {
   vi.clearAllMocks();

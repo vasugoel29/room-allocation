@@ -160,7 +160,6 @@ function App() {
   const { isDesktop } = useWindowSize();
   const location = useLocation();
   const navigate = useNavigate();
-  const activeTab = new URLSearchParams(location.search).get('tab');
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {

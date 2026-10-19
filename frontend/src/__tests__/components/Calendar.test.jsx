@@ -7,11 +7,11 @@ import { AppProvider } from '../../context/AppContext';
 import { renderWithContext, USERS } from '../utils/renderWithContext';
 import { installFetch } from '../utils/http';
 import { getIstDateKey } from '../../utils/timezone';
-import { useIST, ist } from '../utils/ist';
+import { runInIST, ist } from '../utils/ist';
 
 // Calendar computes "today"/week days with local Date methods; users are in IST, the container is UTC,
 // so the worker is switched to IST and the clock pinned to Mon 2026-10-19 09:00 IST.
-useIST();
+runInIST();
 
 const ROOMS = [
   { id: 1, name: 'R-1', floor: 0, capacity: 60, has_ac: true, has_projector: true, type: 'Lecture Room' },

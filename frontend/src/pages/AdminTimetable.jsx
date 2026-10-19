@@ -82,7 +82,7 @@ function AdminTimetable() {
       if (!res.ok) throw new Error('Search failed');
       const result = await res.json();
       setData(result);
-    } catch (err) {
+    } catch {
       setData(null);
     } finally {
       setLoading(false);
@@ -172,33 +172,6 @@ function AdminTimetable() {
     
     return weekData;
   }, [viewMode, data, selectedDay]);
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results) => {
-        setCsvData(results.data);
-        toast.success(`Loaded ${results.data.length} rows`);
-      }
-    });
-  };
-
-  const handleBulkUpload = async () => {
-    if (csvData.length === 0) return;
-    setIsUploading(true);
-    try {
-      const response = await api.post('/timetable/upload', { slots: csvData });
-      if (response.ok) {
-        toast.success("Timetable uploaded successfully!");
-        setCsvData([]);
-        setShowImport(false);
-      } else throw new Error("Upload failed");
-    } catch (err) { toast.error(err.message); }
-    finally { setIsUploading(false); }
-  };
 
   const schedule = getMergedSchedule();
 

@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import HistoryView from '../../features/history/HistoryView';
 import { renderWithContext, USERS } from '../utils/renderWithContext';
 import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
-import { useIST, ist } from '../utils/ist';
+import { runInIST, ist } from '../utils/ist';
 
 vi.mock('react-hot-toast', () => {
   const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
@@ -14,7 +14,7 @@ vi.mock('react-hot-toast', () => {
 import toast from 'react-hot-toast';
 
 // Today/This-week ranges use local Date math → run in IST with the clock at Wed 2026-10-21 10:00 IST.
-useIST();
+runInIST();
 
 const REP = USERS.STUDENT_REP;
 const b = (id, day, h, over = {}) => ({
