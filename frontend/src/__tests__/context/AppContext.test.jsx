@@ -1,0 +1,251 @@
+import React, { useContext } from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { AppProvider, AppContext } from '../../context/AppContext';
+import Profile from '../../pages/Profile';
+import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
+import { USERS } from '../utils/renderWithContext';
+
+vi.mock('react-hot-toast', () => {
+  const toast = Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() });
+  return { default: toast, toast };
+});
+
+let ctx;
+const Probe = () => { ctx = useContext(AppContext); return null; };
+const mount = (children = <Probe />) => render(<MemoryRouter><AppProvider>{children}</AppProvider></MemoryRouter>);
+
+const baseRoutes = () => [
+  ['GET', '/api/health', { status: 'ok' }],
+  ['GET', /\/api\/rooms\?/, [{ id: 1, name: 'R-1' }]],
+  ['GET', '/api/auth/faculties', [{ id: 21, name: 'Prof Fay' }]],
+  ['GET', '/api/departments', [{ id: 1, name: 'IT' }]],
+  ['GET', /\/api\/bookings\?/, { data: [{ id: 100 }], meta: { page: 1, totalPages: 1 } }],
+  ['GET', '/api/availability', []],
+  ['GET', '/api/transfers/incoming', [{ id: 1, status: 'PENDING' }, { id: 2, status: 'ACCEPTED' }, { id: 3, status: 'PENDING' }]],
+  ['GET', '/api/transfers/outgoing', []],
+  ['GET', /\/api\/timetable\?/, [{ day_of_week: 'Monday' }]],
+  ['GET', '/api/timetable/faculty', { Mon: [] }],
+  ['GET', '/api/timetable/faculty/overrides', [{ date: '2026-10-20', hour: 9 }]],
+  ['POST', '/api/auth/logout', { ok: true }],
+];
+
+beforeEach(() => {
+  localStorage.clear();
+  document.documentElement.classList.remove('dark');
+  ctx = undefined;
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'log').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+});
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+// Polling helper that does not rely on RTL's setInterval (faked in the health-check test).
+const until = async (fn, ms = 3000) => {
+  const t0 = Date.now();
+  for (;;) {
+    try { fn(); return; } catch (e) {
+      if (Date.now() - t0 > ms) throw e;
+      await act(() => new Promise((r) => setTimeout(r, 10)));
+    }
+  }
+};
+
+const urls = (f) => fetchCalls(f).map(([m, u]) => `${m} ${u}`);
+
+describe('AppProvider initial user', () => {
+  it.each([
+    ['missing', null],
+    ['literal "undefined"', 'undefined'],
+    ['corrupt JSON', '{not json'],
+  ])('%s localStorage user -> null user, only health is polled', async (_l, raw) => {
+    if (raw !== null) localStorage.setItem('user', raw);
+    const f = installFetch(baseRoutes());
+    mount();
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    expect(ctx.user).toBeNull();
+    expect(urls(f)).toEqual(['GET /api/health']);
+  });
+
+  it('parses a stored user', () => {
+    localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
+    installFetch(baseRoutes());
+    mount();
+    expect(ctx.user).toEqual(USERS.VIEWER);
+  });
+});
+
+describe('AppProvider data loading per role', () => {
+  it('student/viewer: rooms (5th Block default), faculties, departments, bookings, availability, transfers, student timetable', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
+    const f = installFetch(baseRoutes());
+    mount();
+    await waitFor(() => expect(ctx.timetableData).toEqual([{ day_of_week: 'Monday' }]));
+    await waitFor(() => expect(ctx.pendingTransferCount).toBe(2));
+    const u = urls(f);
+    expect(u).toEqual(expect.arrayContaining([
+      'GET /api/rooms?building=5th+Block',
+      'GET /api/auth/faculties',
+      'GET /api/departments',
+      'GET /api/bookings?limit=1000',
+      'GET /api/availability',
+      'GET /api/transfers/incoming',
+      'GET /api/transfers/outgoing',
+      'GET /api/timetable?',
+    ]));
+    expect(u.some((x) => x.includes('/timetable/faculty'))).toBe(false);
+    expect(ctx.rooms).toEqual([{ id: 1, name: 'R-1' }]);
+    expect(ctx.bookings).toEqual([{ id: 100 }]);
+    expect(ctx.faculties).toEqual([{ id: 21, name: 'Prof Fay' }]);
+  });
+
+  it('faculty: loads faculty timetable + overrides instead of the student timetable', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.FACULTY));
+    const f = installFetch(baseRoutes());
+    mount();
+    await waitFor(() => expect(ctx.facultyOverrides).toHaveLength(1));
+    expect(ctx.facultyTimetableData).toEqual({ Mon: [] });
+    const u = urls(f);
+    expect(u).toContain('GET /api/timetable/faculty');
+    expect(u).toContain('GET /api/timetable/faculty/overrides');
+    expect(u).not.toContain('GET /api/timetable?');
+  });
+
+  it('changing the building filter refetches rooms with Others expanded to Other+Others', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.ADMIN));
+    const f = installFetch(baseRoutes());
+    mount();
+    await waitFor(() => expect(ctx.rooms).toHaveLength(1));
+    act(() => ctx.setFilters((p) => ({ ...p, building: ['4th Block', 'Others'] })));
+    await waitFor(() => expect(urls(f)).toContain('GET /api/rooms?building=4th+Block&building=Other&building=Others'));
+  });
+
+  it('non-array rooms payload is ignored, failed fetches leave defaults', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
+    const routes = baseRoutes().filter(([, m]) => !(m instanceof RegExp && String(m).includes('rooms')));
+    routes.unshift(['GET', /\/api\/rooms\?/, { error: 'nope' }]);
+    installFetch(routes);
+    mount();
+    await waitFor(() => expect(ctx.bookings).toHaveLength(1));
+    expect(ctx.rooms).toEqual([]);
+  });
+
+  // FE-12: the calendar's occupancy comes from a single `GET /bookings?limit=1000` (sorted by created_at);
+  // anything past the first page is silently dropped, so those rooms show as free.
+  it.fails('[FE-12] loads every page of bookings when the server reports more than one page', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.STUDENT_REP));
+    const routes = baseRoutes().filter(([, m]) => !(m instanceof RegExp && String(m).includes('bookings')));
+    routes.unshift(['GET', /\/api\/bookings\?/, (url) => (/page=2/.test(url)
+      ? { data: [{ id: 2 }], meta: { page: 2, totalPages: 2, total: 1001 } }
+      : { data: [{ id: 1 }], meta: { page: 1, totalPages: 2, total: 1001 } })]);
+    installFetch(routes);
+    mount();
+    await waitFor(() => expect(ctx.bookings.length).toBeGreaterThan(0));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(ctx.bookings.map((b) => b.id).sort()).toEqual([1, 2]);
+  });
+});
+
+describe('AppProvider health check', () => {
+  it('shows connection error only after 2 consecutive failures, recovers and refreshes data', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
+    let healthy = false;
+    const routes = baseRoutes();
+    routes[0] = ['GET', '/api/health', () => (healthy ? jsonResponse({ ok: 1 }) : jsonResponse({}, 500))];
+    const f = installFetch(routes);
+    mount();
+    await until(() => expect(urls(f).filter((u) => u === 'GET /api/health')).toHaveLength(1));
+    await act(async () => {});
+    expect(ctx.backendError).toBeNull();
+
+    await act(async () => { vi.advanceTimersByTime(30000); });
+    await until(() => expect(ctx.backendError).toBe('Cannot connect to server. Please ensure the backend is running.'));
+
+    healthy = true;
+    const before = urls(f).filter((u) => u === 'GET /api/availability').length;
+    await act(async () => { vi.advanceTimersByTime(30000); });
+    await until(() => expect(ctx.backendError).toBeNull());
+    await until(() => expect(urls(f).filter((u) => u === 'GET /api/availability').length).toBe(before + 1));
+  });
+});
+
+describe('AppProvider logout / theme', () => {
+  it('logout calls the API and clears storage + user even if the call fails', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
+    localStorage.setItem('token', 't');
+    const routes = baseRoutes().filter(([, m]) => m !== '/api/auth/logout');
+    routes.push(['POST', '/api/auth/logout', () => jsonResponse({}, 500)]);
+    const f = installFetch(routes);
+    mount();
+    await act(() => ctx.logout());
+    expect(urls(f)).toContain('POST /api/auth/logout');
+    expect(ctx.user).toBeNull();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it('theme defaults to light, persists and toggles the dark class', () => {
+    installFetch(baseRoutes());
+    mount();
+    expect(ctx.theme).toBe('light');
+    act(() => ctx.setTheme('dark'));
+    expect(localStorage.getItem('theme')).toBe('dark');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
+  });
+
+  it('captures the PWA beforeinstallprompt event', () => {
+    installFetch(baseRoutes());
+    mount();
+    const ev = new Event('beforeinstallprompt', { cancelable: true });
+    act(() => { window.dispatchEvent(ev); });
+    expect(ev.defaultPrevented).toBe(true);
+    expect(ctx.deferredPrompt).toBe(ev);
+    act(() => ctx.clearInstallPrompt());
+    expect(ctx.deferredPrompt).toBeNull();
+  });
+});
+
+describe('Profile save through the real provider', () => {
+  const setup = () => {
+    localStorage.setItem('user', JSON.stringify(USERS.STUDENT_REP));
+    localStorage.setItem('token', 't');
+    const routes = baseRoutes();
+    routes.push(['PATCH', '/api/auth/users/12', (_u, init) => ({ ...USERS.STUDENT_REP, ...JSON.parse(init.body) })]);
+    const f = installFetch(routes);
+    mount(<><Probe /><Profile /></>);
+    return f;
+  };
+
+  it('PATCHes the form and updates the in-memory user', async () => {
+    const f = setup();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /edit profile/i }));
+    const name = screen.getByPlaceholderText('Full Name');
+    await user.clear(name);
+    await user.type(name, 'Rita Renamed');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => expect(ctx.user.name).toBe('Rita Renamed'));
+    const patch = fetchCalls(f).find(([m]) => m === 'PATCH');
+    expect(patch[2]).toMatchObject({ name: 'Rita Renamed', branch: 'IT', semester: 5, section: 1 });
+  });
+
+  // FE-18: setUser() is called but localStorage('user') is never rewritten, so a reload restores the old profile.
+  it.fails('[FE-18] persists the updated profile to localStorage', async () => {
+    setup();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /edit profile/i }));
+    const name = screen.getByPlaceholderText('Full Name');
+    await user.clear(name);
+    await user.type(name, 'Rita Renamed');
+    await user.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => expect(ctx.user.name).toBe('Rita Renamed'));
+    expect(JSON.parse(localStorage.getItem('user')).name).toBe('Rita Renamed');
+  });
+});
