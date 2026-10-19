@@ -13,9 +13,11 @@ import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 /**
  * Fetch bookings with optional filters
  */
+export const MAX_BOOKINGS_PAGE = 1000;
+
 export const getBookings = async (filters) => {
-  const page = parseInt(filters.page) || 1;
-  const limit = parseInt(filters.limit) || 20;
+  const page = Math.max(1, parseInt(filters.page) || 1);
+  const limit = Math.min(MAX_BOOKINGS_PAGE, Math.max(1, parseInt(filters.limit) || 20));
   const offset = (page - 1) * limit;
 
   const [bookings, total] = await Promise.all([

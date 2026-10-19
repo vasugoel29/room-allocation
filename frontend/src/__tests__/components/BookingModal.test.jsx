@@ -206,6 +206,19 @@ describe('BookingModal', () => {
     expect(toast.success).toHaveBeenCalledWith('Transfer request sent successfully!');
   });
 
+  it('[SEC-10] limited view of someone else\'s booking shows who holds it (name · class), never a purpose', () => {
+    setup({ ctx: { bookings: [booking({ purpose: undefined, visibility: 'limited', user_name: 'Arjun Sharma', class_name: 'IT-2 3rd Year', can_request_transfer: true })] } });
+    expect(screen.getByTestId('booked-by')).toHaveTextContent('Arjun Sharma · IT-2 3rd Year');
+    expect(screen.queryByText(/purpose/i)).toBeNull();
+    expect(screen.getByRole('button', { name: /request transfer/i })).toBeEnabled();
+  });
+
+  it('[SEC-10] Request Transfer is disabled when the server says the booking cannot be transferred', () => {
+    setup({ ctx: { bookings: [booking({ visibility: 'limited', user_name: 'Arjun Sharma', can_request_transfer: false })] } });
+    expect(screen.getByRole('button', { name: /request transfer/i })).toBeDisabled();
+    expect(screen.getByTestId('booked-by')).toHaveTextContent(/can't be transferred/i);
+  });
+
   it('own booking: shows details and cancels via PATCH', async () => {
     const { ue, f, onSuccess } = setup({ ctx: { bookings: [booking({ created_by: USERS.STUDENT_REP.id })] } });
     expect(screen.getByRole('heading', { name: /booking details/i })).toBeInTheDocument();

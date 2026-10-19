@@ -78,26 +78,62 @@ describe('GET /api/bookings', () => {
     expect(res.body.meta).toMatchObject({ page: 1, limit: 20 });
   });
 
-  // QUESTION (SEC-10): any authenticated user, including a VIEWER, can list every user's bookings
-  // with names/branch/section. Probably intended for a shared room calendar; confirm with product.
-  test('VIEWER can list other users\' bookings including names (current behaviour)', async () => {
+  // SEC-10 (fixed): other people's bookings are free/busy plus who holds them — never the purpose.
+  test('[SEC-10] a VIEWER sees others\' bookings with booker name/branch/year/section but no purpose or faculty', async () => {
     const res = await get(viewer.auth, '/api/bookings', { user_id: owner.user.id });
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(3);
-    expect(res.body.data[0].user_name).toBe(owner.user.name);
+    for (const b of res.body.data) {
+      expect(b.visibility).toBe('limited');
+      expect(b.user_name).toBe(owner.user.name);
+      expect(b).toHaveProperty('branch');
+      expect(b).toHaveProperty('year');
+      expect(b).toHaveProperty('section');
+      expect(b).toHaveProperty('class_name');
+      for (const hidden of ['purpose', 'faculty_id', 'faculty_name', 'department_name', 'user_email', 'is_semester_booking']) {
+        expect(b).not.toHaveProperty(hidden);
+      }
+      expect(typeof b.can_request_transfer).toBe('boolean');
+    }
+    // A VIEWER can't request transfers at all.
+    expect(res.body.data.every((b) => b.can_request_transfer === false)).toBe(true);
   });
 
-  test.failing('[SEC-10] limit is capped server-side (limit=100000 is not honoured)', async () => {
+  test('[SEC-10] the booker sees their own bookings in full', async () => {
+    const res = await get(owner.auth, '/api/bookings', { user_id: owner.user.id });
+    expect(res.body.data.every((b) => b.visibility === 'full' && 'purpose' in b)).toBe(true);
+  });
+
+  test('[SEC-10] admins see everything in full (list and admin/all)', async () => {
+    const admin = await createAdmin();
+    for (const path of ['/api/bookings', '/api/bookings/admin/all']) {
+      const res = await get(admin.auth, path, { user_id: owner.user.id });
+      expect(res.body.data.every((b) => b.visibility === 'full' && 'purpose' in b)).toBe(true);
+    }
+  });
+
+  test('[SEC-10] a rep may request transfers only of future ACTIVE bookings of others', async () => {
+    const rep = await createRep();
+    const res = await get(rep.auth, '/api/bookings', { user_id: owner.user.id });
+    for (const b of res.body.data) {
+      const expected = b.status === 'ACTIVE' && new Date(b.start_time) > new Date();
+      expect(b.can_request_transfer).toBe(expected);
+    }
+  });
+
+  test('[SEC-10] limit is capped server-side at 1000', async () => {
     const res = await get(viewer.auth, '/api/bookings', { limit: 100000 });
     expect(res.status).toBe(200);
-    expect(res.body.meta.limit).toBeLessThanOrEqual(100);
+    expect(res.body.meta.limit).toBe(1000);
   });
 
-  test.failing('[NEW-bookings-3] negative limit / page=0 → 400 or clamped, not 500', async () => {
+  test('[NEW-bookings-3] negative limit / page are clamped, not a 500', async () => {
     const a = await get(viewer.auth, '/api/bookings', { limit: -5 });
     const b = await get(viewer.auth, '/api/bookings', { page: -1 });
-    expect(a.status).toBeLessThan(500);
-    expect(b.status).toBeLessThan(500);
+    expect(a.status).toBe(200);
+    expect(a.body.meta.limit).toBe(1);
+    expect(b.status).toBe(200);
+    expect(b.body.meta.page).toBe(1);
   });
 
   test.failing('[BKG-13] slot filter matches the IST hour (slot=10 finds a 10:00 IST booking)', async () => {

@@ -408,8 +408,21 @@ function BookingModal({ slot, onClose, onSuccess }) {
             );
           }
 
+          const transferBlocked = !!existingBooking && existingBooking.can_request_transfer === false;
           return (
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+              {existingBooking && (
+                <div className="rounded-2xl border border-border/20 bg-surface-lowest px-5 py-4 text-sm" data-testid="booked-by">
+                  <span className="block text-[10px] font-extrabold tracking-wider text-text-secondary opacity-60">Currently booked by</span>
+                  <span className="font-bold text-text-primary">
+                    {existingBooking.user_name || 'Another user'}
+                    {existingBooking.class_name && existingBooking.class_name !== existingBooking.user_name ? ` · ${existingBooking.class_name}` : ''}
+                  </span>
+                  {transferBlocked && (
+                    <span className="mt-1 block text-xs text-text-secondary">This booking can't be transferred (it is past, not active, or you can't request transfers).</span>
+                  )}
+                </div>
+              )}
               <div className="space-y-3 sm:space-y-4">
                 <div className={`grid grid-cols-1 ${isStudent ? 'sm:grid-cols-2' : ''} gap-3 sm:gap-4`}>
                   <BookingTypeSelector
@@ -473,7 +486,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 {user?.role !== "VIEWER" ? (
                   <button
                     type="submit"
-                    disabled={loading || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
+                    disabled={loading || transferBlocked || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
                     className={`flex-[2] flex items-center justify-center gap-3 ${existingBooking ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest`}
                   >
                     {loading ? "Processing..." : (
