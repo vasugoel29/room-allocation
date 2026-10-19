@@ -138,7 +138,7 @@ describe('PATCH /api/bookings/:id (reschedule)', () => {
     expect(res.body.conflict).toEqual({ type: 'faculty_busy' });
   });
 
-  test.failing('[NEW-P4-2] a student moving an approved (ACTIVE) booking goes back to PENDING for re-approval', async () => {
+  test('[NEW-P4-2] a student moving an approved (ACTIVE) booking goes back to PENDING for re-approval', async () => {
     // Approval is mandatory for students, but PATCH keeps status ACTIVE, so an approved request can be
     // moved to any other day/time/room without the faculty member ever seeing the new slot.
     const fac = await createFaculty();
@@ -450,7 +450,7 @@ describe('POST /api/bookings with RESCHEDULE booking type (BKG-04)', () => {
     expect(res.body).toMatchObject({ status: 'PENDING', reschedule_room_id: null, reschedule_date: null, reschedule_hour: null });
   });
 
-  test.failing('[NEW-P4-3] a RESCHEDULE booking cancelled by deleting its owner withdraws its release', async () => {
+  test('[NEW-P4-3] a RESCHEDULE booking cancelled by deleting its owner withdraws its release', async () => {
     // Only cancelBooking() withdraws reschedule releases. Other paths that cancel bookings (user
     // deactivation, room deletion, transfers, approved cancellation requests) leave the release active,
     // so the original room stays "free" during its class although the replacement booking is gone.
@@ -465,7 +465,7 @@ describe('POST /api/bookings with RESCHEDULE booking type (BKG-04)', () => {
     expect(release.is_active).toBe(false);
   });
 
-  test.failing('[NEW-P4-3] a RESCHEDULE booking cancelled by deleting its room withdraws its release', async () => {
+  test('[NEW-P4-3] a RESCHEDULE booking cancelled by deleting its room withdraws its release', async () => {
     const admin = await createAdmin();
     const fac = await createFaculty();
     const freed = await classroom();

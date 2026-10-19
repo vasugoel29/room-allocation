@@ -104,9 +104,19 @@ export const userRepository = {
     if (result.rows[0]) {
       await client.query(
         `UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
-          WHERE created_by = $1 AND status IN ('ACTIVE', 'PENDING') AND start_time > NOW()`,
+          WHERE created_by = $1 AND status IN ('ACTIVE', 'PENDING') AND start_time > NOW()
+          RETURNING id`,
         [id],
-      );
+      ).then(async ({ rows }) => {
+        // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
+        if (rows.length) {
+          await client.query(
+            `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
+              WHERE source_type = 'reschedule' AND source_id = ANY($1) AND is_active`,
+            [rows.map((r) => r.id)],
+          );
+        }
+      });
     }
     return result.rows[0];
   },

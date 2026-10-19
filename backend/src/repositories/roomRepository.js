@@ -213,17 +213,25 @@ export const roomRepository = {
    * Update room details
    */
   update: async (id, data, client = db) => {
-    const { name, building, floor, capacity, has_ac, has_projector, type, description, student_access } = data;
-    const query = `
-      UPDATE rooms 
-      SET name = $1, building = $2, floor = $3, capacity = $4, has_ac = $5, has_projector = $6, type = $7, description = $8, student_access = $9
-      WHERE id = $10 AND is_active
-      RETURNING *
-    `;
-    const result = await client.query(query, [
-      name, building, floor, capacity, has_ac, has_projector, type, 
-      description || null, student_access !== undefined ? student_access : true, id
-    ]);
+    // Partial update: only the fields sent are changed (NEW-RTT-4).
+    const FIELDS = ['name', 'building', 'floor', 'capacity', 'has_ac', 'has_projector', 'type', 'description', 'student_access'];
+    const sets = [];
+    const values = [];
+    for (const f of FIELDS) {
+      if (data[f] !== undefined) {
+        values.push(f === 'description' && data[f] === '' ? null : data[f]);
+        sets.push(`${f} = $${values.length}`);
+      }
+    }
+    if (!sets.length) {
+      const { rows } = await client.query('SELECT * FROM rooms WHERE id = $1 AND is_active', [id]);
+      return rows[0];
+    }
+    values.push(id);
+    const result = await client.query(
+      `UPDATE rooms SET ${sets.join(', ')} WHERE id = $${values.length} AND is_active RETURNING *`,
+      values,
+    );
     return result.rows[0];
   },
 
@@ -239,9 +247,19 @@ export const roomRepository = {
     if (result.rows[0]) {
       await client.query(
         `UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
-          WHERE room_id = $1 AND status IN ('ACTIVE', 'PENDING') AND start_time > NOW()`,
+          WHERE room_id = $1 AND status IN ('ACTIVE', 'PENDING') AND start_time > NOW()
+          RETURNING id`,
         [id],
-      );
+      ).then(async ({ rows }) => {
+        // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
+        if (rows.length) {
+          await client.query(
+            `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
+              WHERE source_type = 'reschedule' AND source_id = ANY($1) AND is_active`,
+            [rows.map((r) => r.id)],
+          );
+        }
+      });
     }
     return result.rows[0];
   }

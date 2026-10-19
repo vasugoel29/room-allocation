@@ -144,7 +144,7 @@ export const getAnalytics = async (req, res) => {
 
     // 4. Daily Trends
     const dailyTrendsQuery = `
-      SELECT DATE_TRUNC('day', start_time) as date, COUNT(*) as count
+      SELECT (start_time AT TIME ZONE 'Asia/Kolkata')::date as date, COUNT(*) as count
       FROM bookings
       WHERE start_time >= NOW() - INTERVAL '1 day' * $1
       AND status = 'ACTIVE'

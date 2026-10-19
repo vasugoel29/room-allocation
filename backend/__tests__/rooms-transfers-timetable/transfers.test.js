@@ -1,14 +1,16 @@
 // Booking transfer state machine (transferRoutes / transferService / transferRepository).
 //
-// States (transferService.acceptTransfer):
+// States (transferService.acceptTransfer) — the booking stays ACTIVE with its owner until the last step:
 //   PENDING --owner (booking.created_by) accepts-->
-//       booking.faculty_id set   -> REP2_ACCEPTED (booking still ACTIVE)
-//       no owner faculty         -> booking CANCELLED, then
-//             target_faculty_id  -> FACULTY2_ACCEPTED
-//             none               -> ACCEPTED (booking reassigned, ACTIVE)
-//   REP2_ACCEPTED --owner faculty accepts--> booking CANCELLED, then FACULTY2_ACCEPTED or ACCEPTED
-//   FACULTY2_ACCEPTED --target faculty accepts--> ACCEPTED (booking reassigned to requester, faculty_id = target)
-// ADMIN can perform any step. Reject: owner, owner faculty, target faculty or ADMIN, any state.
+//       booking.faculty_id set   -> REP2_ACCEPTED
+//       else target_faculty_id   -> FACULTY2_ACCEPTED
+//       else                     -> ACCEPTED
+//   REP2_ACCEPTED --owner faculty (faculty-directory id) accepts--> FACULTY2_ACCEPTED or ACCEPTED
+//   FACULTY2_ACCEPTED --target faculty accepts--> ACCEPTED
+//   ACCEPTED: one locked transaction moves created_by -> requester, faculty_id -> target_faculty_id (or null),
+//             purpose -> new_purpose; every other open transfer on the booking becomes REJECTED.
+// ADMIN can perform any step. Reject: owner, owner faculty, target faculty or ADMIN -> REJECTED;
+// the requester may withdraw their own open request -> CANCELLED. Closed transfers -> 409.
 import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
@@ -16,7 +18,7 @@ import {
   createAdmin, createRep, createFaculty, createFacultyEntry, createViewer, createRoom, insertBooking,
   futureSlot, pastSlot, closeDb,
 } from '../../test/helpers/factories.js';
-import { plusHours } from '../../test/helpers/bookings.js';
+import { plusHours, insertTimetableSlot } from '../../test/helpers/bookings.js';
 
 afterAll(closeDb);
 
@@ -30,15 +32,21 @@ const incoming = (auth) => request(app).get('/api/transfers/incoming').set('Auth
 const outgoing = (auth) => request(app).get('/api/transfers/outgoing').set('Authorization', auth);
 const bookingRow = async (id) => (await db.query('SELECT * FROM bookings WHERE id = $1', [id])).rows[0];
 const transferRow = async (id) => (await db.query('SELECT * FROM booking_transfers WHERE id = $1', [id])).rows[0];
+const auditActions = async (id) =>
+  (await db.query("SELECT action FROM audit_logs WHERE entity_type = 'transfer' AND entity_id = $1 ORDER BY id", [id])).rows.map((r) => r.action);
+const UNAVAILABLE = { error: 'This booking is no longer available for transfer.', conflict: { type: 'booking_unavailable' } };
 
 let hourSeq = 0;
 /**
- * Owner rep with an ACTIVE future booking, and a requester rep.
+ * Owner rep with an ACTIVE future booking, and a requester.
+ * requester: 'rep' (a student — must name a target faculty) or 'faculty' (staff — may omit one).
  * ownerFaculty: booking.faculty_id is a faculty-directory entry linked to a FACULTY account.
- * targetFaculty: requester names such an entry (target_faculty_id = faculties.id).
+ * targetFaculty: requester names such an entry (target_faculty_id = faculties.id); defaults on for reps.
  */
-async function scenario({ ownerFaculty = false, targetFaculty = false, booking = {} } = {}) {
-  const [owner, requester, room] = await Promise.all([createRep(), createRep(), createRoom()]);
+async function scenario({ ownerFaculty = false, requester: requesterRole = 'rep', targetFaculty = requesterRole === 'rep', booking = {} } = {}) {
+  const [owner, requester, room] = await Promise.all([
+    createRep(), requesterRole === 'faculty' ? createFaculty() : createRep(), createRoom(),
+  ]);
   const ownerFac = ownerFaculty ? await createFaculty() : null;
   const targetFac = targetFaculty ? await createFaculty() : null;
   const slot = futureSlot({ hour: 8 + (hourSeq++ % 10) });
@@ -54,6 +62,15 @@ async function requestFor(s, extra = {}) {
     booking_id: s.booking.id, new_purpose: 'Transferred purpose',
     ...(s.targetFac ? { target_faculty_id: s.targetFac.faculty.id } : {}), ...extra,
   });
+  expect(res.status).toBe(201);
+  return res.body.transfer;
+}
+
+/** Another rep's open request on the same booking (with its own approving faculty entry). */
+async function competingRequest(s, purpose = 'competitor') {
+  const rep = await createRep();
+  const entry = await createFacultyEntry();
+  const res = await post(rep.auth, { booking_id: s.booking.id, target_faculty_id: entry.id, new_purpose: purpose });
   expect(res.status).toBe(201);
   return res.body.transfer;
 }
@@ -79,9 +96,29 @@ describe('POST /api/transfers/request', () => {
       [res.body.transfer.id, s.requester.user.id],
     );
     expect(rows).toHaveLength(1);
-    expect(rows[0].details).toMatchObject({ booking_id: s.booking.id, new_purpose: 'Need it' });
+    expect(rows[0].details).toMatchObject({ booking_id: s.booking.id });
     // booking untouched by a request
     expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id });
+  });
+
+  test('a student must name the faculty member who will approve the booking (400, nothing created)', async () => {
+    const s = await scenario({ targetFaculty: false });
+    for (const target_faculty_id of [undefined, null, '']) {
+      const res = await post(s.requester.auth, { booking_id: s.booking.id, new_purpose: 'no approver', target_faculty_id });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Choose the faculty member who will approve this booking');
+    }
+    expect((await db.query('SELECT 1 FROM booking_transfers WHERE booking_id = $1', [s.booking.id])).rowCount).toBe(0);
+  });
+
+  test('staff (FACULTY, ADMIN) may request without a target faculty', async () => {
+    const s = await scenario({ requester: 'faculty' });
+    const res = await post(s.requester.auth, { booking_id: s.booking.id, new_purpose: 'staff' });
+    expect(res.status).toBe(201);
+    expect(res.body.transfer).toMatchObject({ target_faculty_id: null, status: 'PENDING' });
+    const byAdmin = await post(admin.auth, { booking_id: s.booking.id, new_purpose: 'admin' });
+    expect(byAdmin.status).toBe(201);
+    expect(byAdmin.body.transfer.target_faculty_id).toBeNull();
   });
 
   test('404 for an unknown booking', async () => {
@@ -100,7 +137,7 @@ describe('POST /api/transfers/request', () => {
 
   test.each([['CANCELLED'], ['PENDING'], ['REJECTED']])('400 for a %s booking', async (status) => {
     const s = await scenario({ booking: { status } });
-    const res = await post(s.requester.auth, { booking_id: s.booking.id });
+    const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id: s.targetFac.faculty.id });
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('Can only request transfer for an ACTIVE booking.');
   });
@@ -108,25 +145,38 @@ describe('POST /api/transfers/request', () => {
   test('400 for a duplicate open request by the same requester', async () => {
     const s = await scenario();
     await requestFor(s);
-    const res = await post(s.requester.auth, { booking_id: s.booking.id, new_purpose: 'again' });
+    const res = await post(s.requester.auth, { booking_id: s.booking.id, new_purpose: 'again', target_faculty_id: s.targetFac.faculty.id });
     expect(res.status).toBe(400);
     expect(res.body.error).toBe('You have already requested this booking.');
     expect((await db.query('SELECT 1 FROM booking_transfers WHERE booking_id = $1', [s.booking.id])).rowCount).toBe(1);
+  });
+
+  // BUG: requestTransfer only refuses an OPEN duplicate, but booking_transfers still carries the legacy
+  // UNIQUE(booking_id, requested_by) (db.js:124), so re-asking after a withdrawal or rejection trips 23505
+  // and the client gets the generic 409 "That already exists." instead of a new PENDING request.
+  test('[NEW-P4-T2] a duplicate check only counts OPEN requests: after withdrawing, the requester may ask again', async () => {
+    const s = await scenario();
+    const t = await requestFor(s);
+    expect((await reject(s.requester.auth, t.id)).status).toBe(200);
+    const again = await requestFor(s, { new_purpose: 'second try' });
+    expect(again.id).not.toBe(t.id);
+    expect(again.status).toBe('PENDING');
   });
 
   test('a rep cannot request a booking owned by FACULTY or ADMIN (403); an ADMIN can', async () => {
     const fac = await createFaculty();
     const room = await createRoom();
     const rep = await createRep();
+    const entry = await createFacultyEntry();
     const slot = futureSlot({ hour: 9 });
     const fb = await insertBooking({ room_id: room.id, created_by: fac.user.id, start_time: slot.start });
-    const res = await post(rep.auth, { booking_id: fb.id });
+    const res = await post(rep.auth, { booking_id: fb.id, target_faculty_id: entry.id });
     expect(res.status).toBe(403);
     expect(res.body.error).toBe('Cannot request transfers for faculty or admin bookings.');
 
     const room2 = await createRoom();
     const ab = await insertBooking({ room_id: room2.id, created_by: admin.user.id, start_time: slot.start });
-    expect((await post(rep.auth, { booking_id: ab.id })).status).toBe(403);
+    expect((await post(rep.auth, { booking_id: ab.id, target_faculty_id: entry.id })).status).toBe(403);
 
     const ok = await post(admin.auth, { booking_id: fb.id, new_purpose: 'Admin needs it' });
     expect(ok.status).toBe(201);
@@ -196,24 +246,26 @@ describe('POST /api/transfers/request', () => {
     expect(res.body.transfer).toMatchObject({ target_faculty_id: entry.id, status: 'PENDING' });
   });
 
-  test.failing('[BKG-06] a transfer cannot be requested for a booking that has already ended', async () => {
+  test('[BKG-06] a transfer cannot be requested for a booking that has already ended', async () => {
     const owner = await createRep();
     const requester = await createRep();
     const room = await createRoom();
+    const entry = await createFacultyEntry();
     const p = pastSlot(30);
     const b = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: p.start, end_time: p.end });
-    const res = await post(requester.auth, { booking_id: b.id });
+    const res = await post(requester.auth, { booking_id: b.id, target_faculty_id: entry.id });
     expect(res.status).toBe(400);
+    expect(res.body.error).toBe('This booking has already started and can no longer be transferred.');
+    expect((await db.query('SELECT 1 FROM booking_transfers WHERE booking_id = $1', [b.id])).rowCount).toBe(0);
   });
 });
 
 // ─── Happy paths ─────────────────────────────────────────────────────────────
 describe('transfer happy paths', () => {
-  test('no owner faculty, no target faculty: owner accept completes immediately', async () => {
-    const s = await scenario();
+  test('no owner faculty, no target faculty (staff requester): owner accept completes immediately', async () => {
+    const s = await scenario({ requester: 'faculty' });
     const t = await requestFor(s);
-    const other = await createRep();
-    const tOther = (await post(other.auth, { booking_id: s.booking.id, new_purpose: 'loser' })).body.transfer;
+    const tOther = await competingRequest(s, 'loser');
 
     const res = await accept(s.owner.auth, t.id);
     expect(res.status).toBe(200);
@@ -222,9 +274,15 @@ describe('transfer happy paths', () => {
       status: 'ACTIVE', created_by: s.requester.user.id, purpose: 'Transferred purpose', faculty_id: null,
     });
     expect((await transferRow(t.id)).status).toBe('ACCEPTED');
-    expect((await transferRow(tOther.id)).status).toBe('REJECTED'); // other pending requests closed
-    const { rowCount } = await db.query("SELECT 1 FROM audit_logs WHERE action = 'ACCEPT_TRANSFER_REP2_COMPLETED' AND entity_id = $1", [t.id]);
-    expect(rowCount).toBe(1);
+    expect((await transferRow(tOther.id)).status).toBe('REJECTED'); // other open requests closed
+    expect(await auditActions(t.id)).toEqual(['REQUEST_TRANSFER', 'COMPLETE_TRANSFER']);
+  });
+
+  test('purpose is kept when the request gives no new_purpose', async () => {
+    const s = await scenario({ requester: 'faculty' });
+    const t = await requestFor(s, { new_purpose: undefined });
+    expect((await accept(s.owner.auth, t.id)).status).toBe(200);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ created_by: s.requester.user.id, purpose: 'Original purpose' });
   });
 
   test('no owner faculty, with target faculty: owner → FACULTY2_ACCEPTED → target faculty completes', async () => {
@@ -233,9 +291,10 @@ describe('transfer happy paths', () => {
 
     const step1 = await accept(s.owner.auth, t.id);
     expect(step1.status).toBe(200);
-    expect(step1.body.message).toBe('Class owner accepted. Pending approval from requester faculty.');
+    expect(step1.body.message).toBe('Booking owner accepted. Pending approval from the requester\'s faculty.');
     expect((await transferRow(t.id)).status).toBe('FACULTY2_ACCEPTED');
-    expect((await bookingRow(s.booking.id)).status).toBe('CANCELLED'); // freed mid-flow (see BKG-06 tests)
+    // nothing is cancelled mid-flow: the owner keeps the booking until the last step
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, purpose: 'Original purpose' });
 
     const step2 = await accept(s.targetFac.auth, t.id);
     expect(step2.status).toBe(200);
@@ -244,17 +303,18 @@ describe('transfer happy paths', () => {
       status: 'ACTIVE', created_by: s.requester.user.id, faculty_id: s.targetFac.faculty.id, purpose: 'Transferred purpose',
     });
     expect((await transferRow(t.id)).status).toBe('ACCEPTED');
+    expect(await auditActions(t.id)).toEqual(['REQUEST_TRANSFER', 'ACCEPT_TRANSFER_OWNER', 'COMPLETE_TRANSFER']);
   });
 
-  test('owner faculty, no target faculty: owner → REP2_ACCEPTED → owner faculty completes', async () => {
-    const s = await scenario({ ownerFaculty: true });
+  test('owner faculty, no target faculty (staff requester): owner → REP2_ACCEPTED → owner faculty completes', async () => {
+    const s = await scenario({ ownerFaculty: true, requester: 'faculty' });
     const t = await requestFor(s);
 
     const step1 = await accept(s.owner.auth, t.id);
     expect(step1.status).toBe(200);
-    expect(step1.body.message).toBe('Transfer accepted by class owner. Pending approval from owner faculty.');
+    expect(step1.body.message).toBe('Transfer accepted by the booking owner. Pending approval from their faculty.');
     expect((await transferRow(t.id)).status).toBe('REP2_ACCEPTED');
-    expect((await bookingRow(s.booking.id)).status).toBe('ACTIVE');
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, faculty_id: s.ownerFac.faculty.id });
 
     const step2 = await accept(s.ownerFac.auth, t.id);
     expect(step2.status).toBe(200);
@@ -272,15 +332,14 @@ describe('transfer happy paths', () => {
 
     const step2 = await accept(s.ownerFac.auth, t.id);
     expect(step2.status).toBe(200);
-    expect(step2.body.message).toBe('Owner faculty approved. Pending approval from requester faculty.');
+    expect(step2.body.message).toBe('Owner faculty approved. Pending approval from the requester\'s faculty.');
     expect((await transferRow(t.id)).status).toBe('FACULTY2_ACCEPTED');
-    expect((await bookingRow(s.booking.id)).status).toBe('CANCELLED');
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, faculty_id: s.ownerFac.faculty.id });
 
     expect((await accept(s.targetFac.auth, t.id)).status).toBe(200);
     expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.requester.user.id, faculty_id: s.targetFac.faculty.id });
     expect((await transferRow(t.id)).status).toBe('ACCEPTED');
-    const { rows } = await db.query("SELECT action FROM audit_logs WHERE entity_type = 'transfer' AND entity_id = $1 ORDER BY id", [t.id]);
-    expect(rows.map((r) => r.action)).toEqual(['REQUEST_TRANSFER', 'ACCEPT_TRANSFER_REP2', 'APPROVE_TRANSFER_FACULTY2', 'APPROVE_TRANSFER_FACULTY1']);
+    expect(await auditActions(t.id)).toEqual(['REQUEST_TRANSFER', 'ACCEPT_TRANSFER_OWNER', 'APPROVE_TRANSFER_OWNER_FACULTY', 'COMPLETE_TRANSFER']);
   });
 
   test('ADMIN can drive every step', async () => {
@@ -329,29 +388,45 @@ describe('transfer authorization and invalid transitions', () => {
     await accept(s.owner.auth, t.id);
     await accept(s.ownerFac.auth, t.id);
     for (const u of [s.owner, s.requester, s.ownerFac]) {
-      expect((await accept(u.auth, t.id)).status).toBe(403);
+      const res = await accept(u.auth, t.id);
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('Not authorized to approve this transfer.');
     }
     expect((await transferRow(t.id)).status).toBe('FACULTY2_ACCEPTED');
+    expect((await bookingRow(s.booking.id)).created_by).toBe(s.owner.user.id);
   });
 
-  test('accepting an ACCEPTED or REJECTED transfer is 400; unknown id is 404', async () => {
-    const s = await scenario();
+  test('accepting an ACCEPTED, REJECTED or CANCELLED transfer is 409; unknown id is 404', async () => {
+    const s = await scenario({ requester: 'faculty' });
     const t = await requestFor(s);
     await accept(s.owner.auth, t.id);
     const again = await accept(admin.auth, t.id);
-    expect(again.status).toBe(400);
-    expect(again.body.error).toBe('Invalid transfer status');
+    expect(again.status).toBe(409);
+    expect(again.body.error).toBe('This transfer is already accepted.');
+    expect((await transferRow(t.id)).status).toBe('ACCEPTED');
 
     const s2 = await scenario();
     const t2 = await requestFor(s2);
     await reject(s2.owner.auth, t2.id);
-    expect((await accept(s2.owner.auth, t2.id)).status).toBe(400);
+    const rej = await accept(s2.owner.auth, t2.id);
+    expect(rej.status).toBe(409);
+    expect(rej.body.error).toBe('This transfer is already rejected.');
     expect((await bookingRow(s2.booking.id)).created_by).toBe(s2.owner.user.id);
+
+    const s3 = await scenario();
+    const t3 = await requestFor(s3);
+    await reject(s3.requester.auth, t3.id); // withdrawn
+    const can = await accept(s3.owner.auth, t3.id);
+    expect(can.status).toBe(409);
+    expect(can.body.error).toBe('This transfer is already cancelled.');
+    expect((await bookingRow(s3.booking.id)).created_by).toBe(s3.owner.user.id);
 
     const nf = await accept(admin.auth, 987654321);
     expect(nf.status).toBe(404);
-    expect(nf.body.error).toBe('Valid transfer request not found');
-    expect((await reject(admin.auth, 987654321)).status).toBe(404);
+    expect(nf.body.error).toBe('Transfer not found');
+    const nfr = await reject(admin.auth, 987654321);
+    expect(nfr.status).toBe(404);
+    expect(nfr.body.error).toBe('Transfer not found');
   });
 
   test('accept/reject: 401 without token', async () => {
@@ -359,9 +434,12 @@ describe('transfer authorization and invalid transitions', () => {
     expect((await request(app).patch('/api/transfers/1/reject')).status).toBe(401);
   });
 
-  test('[NEW-RTT-6] a non-numeric transfer id returns 400/404, not 500', async () => {
-    const res = await accept(admin.auth, 'abc');
-    expect([400, 404]).toContain(res.status);
+  test('[NEW-RTT-6] a non-numeric transfer id returns 404, not 500', async () => {
+    for (const send of [accept, reject]) {
+      const res = await send(admin.auth, 'abc');
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Transfer not found');
+    }
   });
 });
 
@@ -384,13 +462,14 @@ describe('transfer rejection', () => {
     await accept(s.owner.auth, t.id);
     expect((await reject(s.ownerFac.auth, t.id)).status).toBe(200);
     expect((await transferRow(t.id)).status).toBe('REJECTED');
-    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id });
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, faculty_id: s.ownerFac.faculty.id });
   });
 
   test('target faculty and admin are allowed to reject', async () => {
     const s = await scenario({ targetFaculty: true });
     const t = await requestFor(s);
     expect((await reject(s.targetFac.auth, t.id)).status).toBe(200);
+    expect((await transferRow(t.id)).status).toBe('REJECTED');
     const s2 = await scenario();
     const t2 = await requestFor(s2);
     expect((await reject(admin.auth, t2.id)).status).toBe(200);
@@ -408,61 +487,91 @@ describe('transfer rejection', () => {
     expect((await transferRow(t.id)).status).toBe('PENDING');
   });
 
-  // QUESTION: the requester has no way to withdraw their own request (reject → 403, no cancel endpoint).
-  test('the requester cannot reject/withdraw their own request (current behaviour)', async () => {
-    const s = await scenario();
+  test('the requester may withdraw their own open request (CANCELLED, booking untouched, audit row)', async () => {
+    const s = await scenario({ ownerFaculty: true });
     const t = await requestFor(s);
-    expect((await reject(s.requester.auth, t.id)).status).toBe(403);
+    await accept(s.owner.auth, t.id); // REP2_ACCEPTED: withdrawal works at any open step
+    const res = await reject(s.requester.auth, t.id);
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Transfer request withdrawn');
+    expect((await transferRow(t.id)).status).toBe('CANCELLED');
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, purpose: 'Original purpose' });
+    expect(await auditActions(t.id)).toEqual(['REQUEST_TRANSFER', 'ACCEPT_TRANSFER_OWNER', 'WITHDRAW_TRANSFER']);
   });
 
-  test.failing('[BKG-06] rejecting mid-flow (after the booking was CANCELLED) restores the booking to its owner', async () => {
+  test('[BKG-06] rejecting mid-flow leaves the booking ACTIVE with its owner (it was never cancelled)', async () => {
     const s = await scenario({ targetFaculty: true });
     const t = await requestFor(s);
-    await accept(s.owner.auth, t.id); // booking CANCELLED, FACULTY2_ACCEPTED
-    expect((await reject(s.targetFac.auth, t.id)).status).toBe(200);
+    await accept(s.owner.auth, t.id); // FACULTY2_ACCEPTED
     expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id });
+    const res = await reject(s.targetFac.auth, t.id);
+    expect(res.status).toBe(200);
+    expect((await transferRow(t.id)).status).toBe('REJECTED');
+    expect(await bookingRow(s.booking.id)).toMatchObject({
+      status: 'ACTIVE', created_by: s.owner.user.id, faculty_id: null, purpose: 'Original purpose',
+    });
   });
 
-  test.failing('[NEW-RTT-7] an already ACCEPTED transfer cannot be "rejected" afterwards (status would lie about the booking)', async () => {
+  test('[NEW-RTT-7] an already ACCEPTED transfer cannot be "rejected" afterwards (status would lie about the booking)', async () => {
+    const s = await scenario({ requester: 'faculty' });
+    const t = await requestFor(s);
+    expect((await accept(s.owner.auth, t.id)).status).toBe(200);
+    for (const who of [admin, s.requester]) {
+      const res = await reject(who.auth, t.id);
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('This transfer is already accepted.');
+    }
+    expect((await transferRow(t.id)).status).toBe('ACCEPTED');
+    expect((await bookingRow(s.booking.id)).created_by).toBe(s.requester.user.id);
+  });
+
+  test('rejecting an already REJECTED transfer is 409', async () => {
     const s = await scenario();
     const t = await requestFor(s);
-    await accept(s.owner.auth, t.id);
+    await reject(s.owner.auth, t.id);
     const res = await reject(admin.auth, t.id);
-    expect(res.status).toBe(400);
-    expect((await transferRow(t.id)).status).toBe('ACCEPTED');
+    expect(res.status).toBe(409);
+    expect(res.body.error).toBe('This transfer is already rejected.');
   });
 });
 
-// ─── BKG-06 state machine bugs ───────────────────────────────────────────────
+// ─── BKG-06 state machine ────────────────────────────────────────────────────
 describe('BKG-06 transfer state machine', () => {
-  test('[BKG-06] slot re-booked while CANCELLED mid-flow: final approval returns 409 and leaves the new booking intact (currently 500, transfer stuck)', async () => {
+  test('[BKG-06] the slot stays held mid-flow: nobody can grab it, and the final approval completes', async () => {
     const s = await scenario({ targetFaculty: true });
     const t = await requestFor(s);
-    await accept(s.owner.auth, t.id); // original booking now CANCELLED
-    const intruder = await createFaculty(); // staff booking: ACTIVE immediately, so it really takes the slot
+    await accept(s.owner.auth, t.id); // FACULTY2_ACCEPTED, booking still ACTIVE
+    const intruder = await createFaculty(); // staff booking would be ACTIVE immediately
     const nb = await request(app).post('/api/bookings').set('Authorization', intruder.auth)
-      .send({ room_id: s.room.id, start_time: s.slot.start, end_time: s.slot.end, purpose: 'Grabbed the freed slot' });
-    expect(nb.status).toBe(201);
+      .send({ room_id: s.room.id, start_time: s.slot.start, end_time: s.slot.end, purpose: 'Grab the slot' });
+    expect(nb.status).toBe(409);
+    expect(nb.body.conflict).toMatchObject({ type: 'room_booked' });
 
     const res = await accept(s.targetFac.auth, t.id);
-    expect(res.status).toBe(409);
-    expect((await bookingRow(nb.body.id)).status).toBe('ACTIVE');
+    expect(res.status).toBe(200);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.requester.user.id });
+    expect((await db.query("SELECT 1 FROM bookings WHERE room_id = $1 AND status = 'ACTIVE'", [s.room.id])).rowCount).toBe(1);
   });
 
-  test.failing('[BKG-06] two transfers on the same booking cannot both complete', async () => {
+  test('[BKG-06] two transfers on the same booking cannot both complete', async () => {
     const s = await scenario({ targetFaculty: true });
     const tA = await requestFor(s);
     const reqB = await createRep();
     const facB = await createFaculty();
     const tB = (await post(reqB.auth, { booking_id: s.booking.id, target_faculty_id: facB.faculty.id, new_purpose: 'B' })).body.transfer;
 
-    await accept(s.owner.auth, tA.id);
-    await accept(s.owner.auth, tB.id); // currently also 200 → both FACULTY2_ACCEPTED
-    await accept(s.targetFac.auth, tA.id);
-    await accept(facB.auth, tB.id);
+    expect((await accept(s.owner.auth, tA.id)).status).toBe(200);
+    expect((await accept(s.owner.auth, tB.id)).status).toBe(200); // both FACULTY2_ACCEPTED
+    expect((await accept(s.targetFac.auth, tA.id)).status).toBe(200);
+    expect((await transferRow(tB.id)).status).toBe('REJECTED'); // closed when tA completed
+
+    const late = await accept(facB.auth, tB.id);
+    expect(late.status).toBe(409);
+    expect(late.body.error).toBe('This transfer is already rejected.');
 
     const { rows } = await db.query("SELECT id FROM booking_transfers WHERE booking_id = $1 AND status = 'ACCEPTED'", [s.booking.id]);
-    expect(rows).toHaveLength(1);
+    expect(rows).toEqual([{ id: tA.id }]);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ created_by: s.requester.user.id, faculty_id: s.targetFac.faculty.id });
   });
 
   // Fixed via BKG-17: cancelling a booking closes its open transfers, so they can't be accepted later.
@@ -476,41 +585,86 @@ describe('BKG-06 transfer state machine', () => {
 
     for (const who of [s.owner, admin]) {
       const res = await accept(who.auth, t.id);
-      expect(res.status).toBe(400);
-      expect(res.body.error).toBe('Invalid transfer status');
+      expect(res.status).toBe(409);
+      expect(res.body.error).toBe('This transfer is already rejected.');
     }
     expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'CANCELLED', created_by: s.owner.user.id });
   });
 
-  test.failing('[NEW-P4-9] slot re-booked with a different start while CANCELLED mid-flow: final approval → 409, not 500', async () => {
-    // Same start is caught by the legacy unique index (23505 → 409, test above); a different-start
-    // overlap trips bookings_no_room_overlap (23P01), which httpErrors does not map → 500.
+  test('a booking cancelled mid-flow closes the transfer; the final approval is refused (409)', async () => {
+    const s = await scenario({ targetFaculty: true });
+    const t = await requestFor(s);
+    await accept(s.owner.auth, t.id); // FACULTY2_ACCEPTED
+    expect((await request(app).patch(`/api/bookings/${s.booking.id}/cancel`).set('Authorization', s.owner.auth)).status).toBe(200);
+    expect((await transferRow(t.id)).status).toBe('REJECTED');
+    const res = await accept(s.targetFac.auth, t.id);
+    expect(res.status).toBe(409);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'CANCELLED', created_by: s.owner.user.id });
+  });
+
+  test('[NEW-P4-9] an overlapping grab with a different start is refused mid-flow (409, not 500); final approval completes', async () => {
     const slot = futureSlot({ hour: 12 });
     const s = await scenario({ targetFaculty: true, booking: { start_time: slot.start, end_time: slot.end } });
     const t = await requestFor(s);
-    await accept(s.owner.auth, t.id); // original booking now CANCELLED
+    await accept(s.owner.auth, t.id); // booking still ACTIVE
     const nb = await request(app).post('/api/bookings').set('Authorization', (await createFaculty()).auth)
       .send({ room_id: s.room.id, start_time: plusHours(slot.start, -1), end_time: slot.end, purpose: 'Earlier, longer grab' });
-    expect(nb.status).toBe(201);
+    expect(nb.status).toBe(409);
+    expect(nb.body.conflict).toMatchObject({ type: 'room_booked' });
+    const res = await accept(s.targetFac.auth, t.id);
+    expect(res.status).toBe(200);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.requester.user.id });
+  });
+
+  test('[NEW-P4-9] completing a transfer to a requester who is busy at that time → 409 person_busy, not 500', async () => {
+    const slot = futureSlot({ hour: 12 });
+    const s = await scenario({ targetFaculty: true, booking: { start_time: slot.start, end_time: slot.end } });
+    // The requester already has 11:00-13:00 elsewhere.
+    const otherRoom = await createRoom();
+    await insertBooking({ room_id: otherRoom.id, created_by: s.requester.user.id, start_time: plusHours(slot.start, -1), end_time: slot.end });
+    const t = await requestFor(s);
+    expect((await accept(s.owner.auth, t.id)).status).toBe(200); // intermediate step: no person check yet
     const res = await accept(s.targetFac.auth, t.id);
     expect(res.status).toBe(409);
-    expect((await bookingRow(nb.body.id)).status).toBe('ACTIVE');
+    expect(res.body.error).toBe(`You already have another booking during this time in Room ${otherRoom.name}`);
+    expect(res.body.conflict).toMatchObject({ type: 'person_busy' });
+    expect((await transferRow(t.id)).status).toBe('FACULTY2_ACCEPTED'); // stays open
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, purpose: 'Original purpose' });
   });
 
-  test.failing('[NEW-P4-9] completing a transfer to a requester who is busy at that time → 409, not 500', async () => {
-    // transferService sets created_by = requester without any conflict check; the person-overlap
-    // constraint (23P01) is not in httpErrors' PG_CLIENT_ERRORS map, so the client gets a 500.
-    const slot = futureSlot({ hour: 12 });
-    const s = await scenario({ booking: { start_time: slot.start, end_time: slot.end } });
-    // The requester already has 11:00-13:00 elsewhere (a different start, so no legacy unique index hit).
-    await insertBooking({ room_id: (await createRoom()).id, created_by: s.requester.user.id, start_time: plusHours(slot.start, -1), end_time: slot.end });
+  test('final step: the target faculty supervising another booking at that time → 409 faculty_busy, transfer stays open', async () => {
+    const s = await scenario({ targetFaculty: true });
+    const someone = await createRep();
+    await insertBooking({
+      room_id: (await createRoom()).id, created_by: someone.user.id, start_time: s.slot.start, end_time: s.slot.end,
+      faculty_id: s.targetFac.faculty.id,
+    });
     const t = await requestFor(s);
-    const res = await accept(s.owner.auth, t.id);
+    await accept(s.owner.auth, t.id);
+    const res = await accept(admin.auth, t.id);
     expect(res.status).toBe(409);
-    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id });
+    expect(res.body).toEqual({ error: 'The selected faculty member is busy during this slot.', conflict: { type: 'faculty_busy' } });
+    expect((await transferRow(t.id)).status).toBe('FACULTY2_ACCEPTED');
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.owner.user.id, faculty_id: null });
   });
 
-  test.failing('[BKG-06] a booking that has already ended cannot be transferred (accept refused)', async () => {
+  test('final step: the target faculty teaching at that time (timetable) → 409 faculty_busy', async () => {
+    const slot = futureSlot({ hour: 10 });
+    const s = await scenario({ targetFaculty: true, booking: { start_time: slot.start, end_time: slot.end } });
+    await insertTimetableSlot({
+      department: 'TT', semester: 1, section: 1, day_of_week: slot.day,
+      slot_time: '10:00-11:00', faculty_name: s.targetFac.user.name, subject_name: 'Teaching',
+    });
+    const t = await requestFor(s);
+    await accept(s.owner.auth, t.id);
+    const res = await accept(s.targetFac.auth, t.id);
+    expect(res.status).toBe(409);
+    expect(res.body.conflict).toMatchObject({ type: 'faculty_busy' });
+    expect((await transferRow(t.id)).status).toBe('FACULTY2_ACCEPTED');
+    expect((await bookingRow(s.booking.id)).created_by).toBe(s.owner.user.id);
+  });
+
+  async function endedBookingTransfer() {
     const owner = await createRep();
     const requester = await createRep();
     const room = await createRoom();
@@ -521,9 +675,35 @@ describe('BKG-06 transfer state machine', () => {
       'INSERT INTO booking_transfers (booking_id, requested_by, owner_id, new_purpose) VALUES ($1,$2,$3,$4) RETURNING id',
       [b.id, requester.user.id, owner.user.id, 'late'],
     );
+    return { owner, b, t };
+  }
+
+  test('[BKG-06] a booking that has already ended cannot be transferred (accept → 409 booking_unavailable)', async () => {
+    const { owner, b, t } = await endedBookingTransfer();
     const res = await accept(owner.auth, t.id);
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect((await bookingRow(b.id)).created_by).toBe(owner.user.id);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(UNAVAILABLE);
+    expect(await bookingRow(b.id)).toMatchObject({ status: 'ACTIVE', created_by: owner.user.id, purpose: 'Seeded' });
+  });
+
+  test('a booking that is no longer ACTIVE (closed outside the cancel endpoint) → 409 booking_unavailable at a later step', async () => {
+    const s = await scenario({ ownerFaculty: true });
+    const t = await requestFor(s);
+    await accept(s.owner.auth, t.id); // REP2_ACCEPTED
+    await db.query("UPDATE bookings SET status = 'CANCELLED' WHERE id = $1", [s.booking.id]);
+    const res = await accept(s.ownerFac.auth, t.id);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(UNAVAILABLE);
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'CANCELLED', created_by: s.owner.user.id });
+  });
+
+  // BUG: acceptTransfer/completeTransfer call updateStatus(t.id, 'REJECTED') and then return an error
+  // result; inTransaction (bookingService.js:53) throws error results to roll the transaction back, so
+  // the REJECTED write is discarded and the dead transfer stays open (owner keeps seeing it as PENDING).
+  test('[NEW-P4-T1] a transfer whose booking is no longer available becomes REJECTED on the refused accept', async () => {
+    const { owner, t } = await endedBookingTransfer();
+    expect((await accept(owner.auth, t.id)).status).toBe(409);
+    expect((await transferRow(t.id)).status).toBe('REJECTED');
   });
 });
 
@@ -558,6 +738,7 @@ describe('GET /api/transfers/incoming and /outgoing', () => {
     expect(await ids(s.ownerFac)).toEqual([]);
     expect(await ids(s.targetFac)).toEqual([t.id]);
     expect(await ids(s.owner)).toEqual([t.id]); // owner keeps seeing it (by stored owner_id)
+    expect((await incoming(s.owner.auth)).body[0]).toMatchObject({ booking_status: 'ACTIVE', requestee_name: s.owner.user.name });
 
     await accept(s.targetFac.auth, t.id);
     expect(await ids(s.targetFac)).toEqual([]);
@@ -570,7 +751,7 @@ describe('GET /api/transfers/incoming and /outgoing', () => {
     const s2 = await scenario();
     const me = s1.requester;
     const t1 = await requestFor(s1);
-    const t2 = (await post(me.auth, { booking_id: s2.booking.id, new_purpose: 'second' })).body.transfer;
+    const t2 = (await post(me.auth, { booking_id: s2.booking.id, new_purpose: 'second', target_faculty_id: s1.targetFac.faculty.id })).body.transfer;
     await requestFor(s2); // s2.requester's own request – must not appear for `me`
 
     const res = await outgoing(me.auth);

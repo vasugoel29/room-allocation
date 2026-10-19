@@ -135,8 +135,14 @@ export async function checkRoomTimetable(client, room, t) {
       WHERE is_active AND is_occupied AND room_id = $1 AND day_of_week = $2`,
     [room.id, t.day],
   );
-  const hit = [...classes, ...staffSlots].find((c) => slotOverlaps(c.slot_time, t.startMin, t.endMin));
-  if (hit && !(await isReleased(client, room.id, t.dateKey, t.startHour, t.endHour))) {
+  // Each booked hour that has a class must be released on this date (NEW-P4-1: a release for 10–11
+  // doesn't need to cover a free 11–12).
+  let hit = null;
+  for (let h = t.startHour; h < t.endHour && !hit; h++) {
+    const cls = [...classes, ...staffSlots].find((c) => slotOverlaps(c.slot_time, h * 60, h * 60 + 60));
+    if (cls && !(await isReleased(client, room.id, t.dateKey, h, h + 1))) hit = cls;
+  }
+  if (hit) {
     return bad(`Room ${room.name} has a scheduled class at this time`, 409, {
       conflict: {
         type: 'room_timetable', subject: hit.subject_name || 'Scheduled class', faculty: hit.faculty_name || null,
@@ -150,7 +156,11 @@ export async function checkRoomTimetable(client, room, t) {
       WHERE room_id = $1 AND day = $2 AND is_available = FALSE AND hour >= $3 AND hour < $4`,
     [room.id, t.day, t.startHour, t.endHour],
   );
-  if (blocks.length && !(await isReleased(client, room.id, t.dateKey, t.startHour, t.endHour))) {
+  let blocked = false;
+  for (const b of blocks) {
+    if (!(await isReleased(client, room.id, t.dateKey, b.hour, b.hour + 1))) { blocked = true; break; }
+  }
+  if (blocked) {
     return bad(`Room ${room.name} is not available at this time`, 409, { conflict: { type: 'room_blocked', room: room.name, day: t.day } });
   }
   return null;

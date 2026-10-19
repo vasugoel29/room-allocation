@@ -25,17 +25,10 @@ export const approveBooking = async (req, res) => {
   const { id } = req.params;
   const isAdmin = req.user.role === 'ADMIN';
   
-  const result = await db.runInTransaction(async (client) => {
-    const resVal = await bookingService.approveBooking(client, id, req.user, isAdmin);
-    if (resVal.error) throw resVal;
-    return resVal;
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
-  });
+  const result = await bookingService.inTransaction((client) => bookingService.approveBooking(client, id, req.user, isAdmin));
 
   if (result.error) {
-    return res.status(result.status).json({ error: result.error });
+    return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
   }
 
   cache.deletePattern('admin_status_.*');

@@ -813,6 +813,27 @@ const migrations = [
         ALTER TABLE bookings ADD COLUMN IF NOT EXISTS reschedule_hour INTEGER CHECK (reschedule_hour BETWEEN 0 AND 23);
       `);
     }
+  },
+  {
+    version: 28,
+    name: 'Drop same-start unique indexes superseded by the v26 exclusion constraints',
+    run: async (client) => {
+      // They made same-start races fail with a generic unique-violation instead of the specific
+      // overlap conflict (NEW-P4-8); the exclusion constraints cover every overlap.
+      await client.query('DROP INDEX IF EXISTS idx_room_slot_active; DROP INDEX IF EXISTS idx_user_slot_active;');
+    }
+  },
+  {
+    version: 29,
+    name: 'Transfers: one OPEN request per requester and booking (re-requesting after withdraw/reject allowed)',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE booking_transfers DROP CONSTRAINT IF EXISTS booking_transfers_booking_id_requested_by_key;
+        CREATE UNIQUE INDEX IF NOT EXISTS booking_transfers_one_open_request
+          ON booking_transfers (booking_id, requested_by)
+          WHERE status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED');
+      `);
+    }
   }
 ];
 

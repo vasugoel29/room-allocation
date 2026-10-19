@@ -31,6 +31,20 @@ describe('POST /api/bookings/admin/quick', () => {
     expect(await auditRows(res.body.id, 'CREATE_BOOKING')).toHaveLength(1);
   });
 
+  test('hours books a multi-hour block (Room Grid drawer); invalid hours → 400', async () => {
+    const room = await createRoom();
+    const { dateKey } = futureSlot({ hour: 13 });
+    const res = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 13, hours: 2 });
+    expect(res.status).toBe(201);
+    expect(iso(res.body.start_time)).toBe(ist(dateKey, 13));
+    expect(iso(res.body.end_time)).toBe(ist(dateKey, 15));
+    for (const hours of [0, -1, 1.5, 'two']) {
+      expect((await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 16, hours })).status).toBe(400);
+    }
+    // Longer than the 4-hour rule → 400 from the shared rules.
+    expect((await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 8, hours: 5 })).status).toBe(400);
+  });
+
   test('room lookup is case-insensitive and custom purpose is kept', async () => {
     const room = await createRoom({ name: uniq('qb-').slice(0, 30) });
     const { dateKey } = futureSlot({ hour: 11 });
@@ -151,7 +165,7 @@ describe('POST /api/bookings/admin/quick', () => {
     expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
   });
 
-  test.failing('[NEW-P4-6] an impossible calendar date (Feb 30) → 400, not a booking on another day', async () => {
+  test('[NEW-P4-6] an impossible calendar date (Feb 30) → 400, not a booking on another day', async () => {
     // isISO8601() (non-strict) and the YYYY-MM-DD regex both accept "YYYY-02-30"; istDateTimeToUtc then
     // rolls it over to 2 March and an admin (no 7-day window) gets a 201 booking on a date nobody asked for.
     const room = await createRoom();

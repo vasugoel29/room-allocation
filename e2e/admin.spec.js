@@ -259,9 +259,7 @@ test.describe('Admin console', () => {
   });
 
   test('Room Grid: a seeded booking shows on its own weekday row', async ({ page, request, seed }) => {
-    // [FE-01] RoomScheduleGrid builds row dates with toISOString() on local (IST) midnight, so every
-    // row is labelled one day late: Tuesday's booking renders in the Wednesday row.
-    test.fail();
+    // [FE-01] regression: fixed in Phase 4 (IST calendar dates / quick-book contract).
     const admin = await seed.user({ role: 'ADMIN' });
     const booker = await seed.user({ role: 'STUDENT_REP' });
     const room = await seed.room();
@@ -284,9 +282,7 @@ test.describe('Admin console', () => {
   });
 
   test('Room Grid: "Confirm Booking" creates a booking for a free cell', async ({ page, request, seed }) => {
-    // [FE-02] The drawer posts {room_id,start_time,end_time,purpose} to /bookings/admin/quick, which
-    // requires room_name/date/slot -> always 400 "Room name required".
-    test.fail();
+    // [FE-02] regression: fixed in Phase 4 (IST calendar dates / quick-book contract).
     const admin = await seed.user({ role: 'ADMIN' });
     const room = await seed.room();
     const purpose = `Grid book ${tag()}`;

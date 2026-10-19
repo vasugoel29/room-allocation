@@ -6,7 +6,7 @@ export const requestTransfer = async (req, res) => {
   try {
     const result = await transferService.requestTransfer(req.body, req.user.id, req.user.role);
     if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+      return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
     }
     res.status(201).json({ message: 'Transfer request sent', transfer: result.data });
   } catch (err) {
@@ -39,7 +39,7 @@ export const acceptTransfer = async (req, res) => {
   try {
     const result = await transferService.acceptTransfer(req.params.id, req.user.id, req.user.role, req.user.faculty_id);
     if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+      return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
     }
     res.json({ message: result.message });
   } catch (err) {
@@ -52,7 +52,7 @@ export const rejectTransfer = async (req, res) => {
   try {
     const result = await transferService.rejectTransfer(req.params.id, req.user.id, req.user.role, req.user.faculty_id);
     if (result.error) {
-      return res.status(result.status).json({ error: result.error });
+      return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
     }
     res.json({ message: result.message });
   } catch (err) {

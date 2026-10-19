@@ -172,3 +172,18 @@ Severity: C critical · H high · M medium · L low. Status: open unless noted.
 | ACL-07 | C | fixed in tree; **history purge pending** | Branch re-committed `seeded_students_credentials.json` |
 | NEW-P2-1 | M | fixed | Admin could edit/approve a soft-deleted user (update lacked `AND is_active`) |
 | NEW-P2-2 | L | fixed | Deactivating a user didn't clear admin-status/availability caches after cancelling their bookings |
+
+## Found while unifying the booking rules (Phase 4)
+| ID | Sev | Status | Finding |
+|---|---|---|---|
+| NEW-P4-1 | M | fixed | Room-timetable check treated a multi-hour booking as one slot, so a release covering only the first hour hid a class in the second |
+| NEW-P4-2 | H | fixed | A student could reschedule an approved booking anywhere and keep it ACTIVE without the faculty re-approving |
+| NEW-P4-3 | M | fixed | Cancelling a reschedule booking via owner/room soft-delete left its class-slot release active |
+| NEW-P4-4 | L | fixed | Approval 409s had no `conflict` body (create/reschedule did) |
+| NEW-P4-5 | H | fixed | Concurrent approvals of overlapping requests → 500 (exclusion violation not mapped) |
+| NEW-P4-6 | M | fixed | Quick Book accepted impossible dates (Feb 30) and booked the rolled-over day |
+| NEW-P4-7 | M | fixed | Deadlocks / serialization failures surfaced as 500; now retried, then 409 |
+| NEW-P4-8 | L | fixed | Legacy same-start unique indexes duplicated (and contradicted) the exclusion constraints (migration v28) |
+| NEW-P4-9 | H | fixed | Transfer completion to a busy requester, or an overlapping grab mid-flow → 500 |
+| NEW-P4-T1 | M | fixed | A refused accept on an unavailable booking marked the transfer REJECTED, then rolled that back |
+| NEW-P4-T2 | M | fixed | Unique (booking, requester) blocked asking again after a withdrawal (migration v29: unique only among open requests) |

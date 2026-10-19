@@ -81,7 +81,7 @@ test('future ACTIVE bookings are counted in the "last N days" totals (current be
 
 // dailyTrends uses DATE_TRUNC('day', start_time) in the DB session time zone (UTC), while
 // peakHours explicitly converts to Asia/Kolkata. A booking at 02:00 IST lands on the previous day.
-test.failing('[NEW-admin-4] dailyTrends buckets bookings by IST calendar day', async () => {
+test('[NEW-admin-4] dailyTrends buckets bookings by IST calendar day', async () => {
   const day = istDateDaysAgo(5);
   const before = await analytics();
   const room = await createRoom();

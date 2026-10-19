@@ -42,7 +42,7 @@ export const bookingRepository = {
     if (user_id) { params.push(user_id); query += ` AND b.created_by = $${params.length}`; }
     if (start_date) { params.push(start_date); query += ` AND b.start_time >= $${params.length}`; }
     if (end_date) { params.push(end_date); query += ` AND b.end_time <= $${params.length}`; }
-    if (slot) { params.push(slot); query += ` AND EXTRACT(HOUR FROM b.start_time) = $${params.length}`; }
+    if (slot) { params.push(slot); query += ` AND EXTRACT(HOUR FROM b.start_time AT TIME ZONE 'Asia/Kolkata') = $${params.length}`; }
 
     query += " ORDER BY b.created_at DESC";
     
@@ -71,7 +71,7 @@ export const bookingRepository = {
     if (user_id) { params.push(user_id); query += ` AND b.created_by = $${params.length}`; }
     if (start_date) { params.push(start_date); query += ` AND b.start_time >= $${params.length}`; }
     if (end_date) { params.push(end_date); query += ` AND b.end_time <= $${params.length}`; }
-    if (slot) { params.push(slot); query += ` AND EXTRACT(HOUR FROM b.start_time) = $${params.length}`; }
+    if (slot) { params.push(slot); query += ` AND EXTRACT(HOUR FROM b.start_time AT TIME ZONE 'Asia/Kolkata') = $${params.length}`; }
 
     const result = await db.query(query, params);
     return parseInt(result.rows[0].count);

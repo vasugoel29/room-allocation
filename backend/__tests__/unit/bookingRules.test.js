@@ -134,15 +134,24 @@ describe('constraintConflict (lost races become 409s)', () => {
   // deadlock (each waits for the other's uncommitted row). Postgres aborts one with 40P01, which
   // bookingService.inTransaction rethrows → 500. Seen in __tests__/bookings/concurrency.test.js
   // ("same student, N rooms, overlapping PENDING requests in parallel") in roughly 1 run in 6.
-  test.failing('[NEW-P4-7] a deadlock between two racing bookings (40P01) is reported as a 409 conflict', () => {
-    expect(constraintConflict({ code: '40P01' })).toMatchObject({ status: 409 });
+  // NEW-P4-7 (fixed): deadlocks are retried by inTransaction and finally reported as 409.
+  test('[NEW-P4-7] inTransaction retries a deadlock and then reports a 409, never a 500', async () => {
+    const { inTransaction } = await import('../../src/services/bookingService.js');
+    let calls = 0;
+    const res = await inTransaction(async () => { calls++; throw Object.assign(new Error('deadlock detected'), { code: '40P01' }); });
+    expect(calls).toBe(3);
+    expect(res).toMatchObject({ status: 409, conflict: { type: 'race' } });
+    let n = 0;
+    const ok = await inTransaction(async () => { if (n++ === 0) throw Object.assign(new Error('deadlock'), { code: '40P01' }); return { status: 201 }; });
+    expect(ok).toEqual({ status: 201 });
   });
 
-  // Same-start races hit the pre-v26 partial unique indexes idx_room_slot_active / idx_user_slot_active
-  // (23505) before the exclusion constraint; they fall through to the generic mapper: 409 "That already
-  // exists." with no conflict body, unlike every other room/person conflict.
-  test.failing('[NEW-P4-8] a same-start race on the legacy unique index (23505 idx_room_slot_active) → 409 room_booked', () => {
-    expect(constraintConflict({ code: '23505', constraint: 'idx_room_slot_active' })).toMatchObject({ status: 409, conflict: { type: 'room_booked' } });
+  // NEW-P4-8 (fixed): migration v28 dropped the same-start unique indexes, so every overlap —
+  // same start or not — hits the exclusion constraints and gets the specific 409.
+  test('[NEW-P4-8] the legacy same-start unique indexes are gone', async () => {
+    const db = await import('../../src/db.js');
+    const { rows } = await db.query("SELECT indexname FROM pg_indexes WHERE indexname IN ('idx_room_slot_active', 'idx_user_slot_active')");
+    expect(rows).toEqual([]);
   });
 });
 

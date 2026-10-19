@@ -229,14 +229,14 @@ describe('Room CRUD (admin)', () => {
     expect(rows[0].capacity).toBe(60);
   });
 
-  test.failing('[NEW-RTT-4] PATCH with only { capacity } updates capacity and keeps the other fields (currently 500)', async () => {
+  test('[NEW-RTT-4] PATCH with only { capacity } updates capacity and keeps the other fields (currently 500)', async () => {
     const room = await createRoom({ capacity: 60, building: 'Keep', type: 'Lab', has_ac: true });
     const res = await request(app).patch(`/api/rooms/${room.id}`).set('Authorization', admin.auth).send({ capacity: 70 });
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ name: room.name, capacity: 70, building: 'Keep', type: 'Lab', has_ac: true });
   });
 
-  test.failing('[NEW-RTT-4] PATCH with { name, capacity } does not wipe building/floor/type/ac/projector/student_access', async () => {
+  test('[NEW-RTT-4] PATCH with { name, capacity } does not wipe building/floor/type/ac/projector/student_access', async () => {
     const room = await createRoom({ building: 'Keep', floor: 3, type: 'Lab', has_ac: true, has_projector: true, student_access: false });
     const res = await request(app).patch(`/api/rooms/${room.id}`).set('Authorization', admin.auth).send({ name: room.name, capacity: 61 });
     expect(res.status).toBe(200);
@@ -692,7 +692,7 @@ describe('GET /api/rooms/:id/conflict-check', () => {
 
   // [BKG-13] conflict-check builds its window with server-local `new Date(y, m, d, h)`; the suite
   // runs with TZ=UTC like production, where the window is 5.5h off and the clashing booking is missed.
-  test.failing('[BKG-13] reports timetable (room_availability) and ACTIVE booking conflicts with resolution hints', async () => {
+  test('[BKG-13] reports timetable (room_availability) and ACTIVE booking conflicts with resolution hints', async () => {
     const room = await createRoom();
     const owner = await createRep();
     const slot = futureSlot({ hour: 10 });

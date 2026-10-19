@@ -142,17 +142,22 @@ export const updateRoom = async (req, res) => {
   const { name, building, floor, capacity, type, has_ac, has_projector, description, student_access } = req.body;
 
   try {
-    const room = await roomRepository.update(id, {
-      name,
-      building,
-      floor: floor !== undefined && floor !== null ? parseInt(floor) : null,
-      capacity: parseInt(capacity),
-      type,
-      has_ac: !!has_ac,
-      has_projector: !!has_projector,
-      description,
-      student_access: student_access !== undefined ? student_access : true
-    });
+    // Only fields present in the request change; capacity/floor must be valid numbers.
+    const patch = { name, building, type, description, student_access };
+    if (floor !== undefined) patch.floor = floor === null || floor === '' ? null : Number(floor);
+    if (capacity !== undefined) patch.capacity = Number(capacity);
+    if (has_ac !== undefined) patch.has_ac = !!has_ac;
+    if (has_projector !== undefined) patch.has_projector = !!has_projector;
+    if (patch.capacity !== undefined && (!Number.isInteger(patch.capacity) || patch.capacity < 1)) {
+      return res.status(400).json({ error: 'capacity must be a positive whole number' });
+    }
+    if (patch.floor !== undefined && patch.floor !== null && !Number.isInteger(patch.floor)) {
+      return res.status(400).json({ error: 'floor must be a whole number' });
+    }
+    if (patch.name !== undefined && (typeof patch.name !== 'string' || !patch.name.trim() || patch.name.length > 32)) {
+      return res.status(400).json({ error: 'name must be 1–32 characters' });
+    }
+    const room = await roomRepository.update(id, patch);
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
     }
@@ -351,9 +356,9 @@ export const checkRoomConflict = async (req, res) => {
         }
       }
 
-      const [year, month, day] = date.split('-').map(Number);
-      const startTime = new Date(year, month - 1, day, sh, 0, 0, 0);
-      const endTime   = new Date(year, month - 1, day, eh, 0, 0, 0);
+      // IST wall-clock window, independent of the server's time zone (BKG-13).
+      const startTime = new Date(istDateTimeToUtc(date, sh));
+      const endTime   = new Date(istDateTimeToUtc(date, eh));
 
       const bookingResult = await db.query(`
         SELECT b.id, b.start_time, b.end_time, b.purpose,

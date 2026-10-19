@@ -100,7 +100,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
     const { booking } = await pending();
     const res = await approve((await createFaculty()).auth, booking.id);
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Not authorized' });
+    expect(res.body).toMatchObject({ error: 'Not authorized' });
     expect((await getBooking(booking.id)).status).toBe('PENDING');
   });
 
@@ -128,7 +128,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
     const { booking, student } = await pending();
     const res = await approve(student.auth, booking.id);
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Forbidden' });
+    expect(res.body).toMatchObject({ error: 'Forbidden' });
     expect((await getBooking(booking.id)).status).toBe('PENDING');
   });
 
@@ -136,11 +136,11 @@ describe('PATCH /api/faculty/:id/approve', () => {
     const { fac, booking } = await pending({ status: 'ACTIVE' });
     let res = await approve(fac.auth, booking.id);
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'Booking is not pending' });
+    expect(res.body).toMatchObject({ error: 'Booking is not pending' });
 
     res = await approve(fac.auth, 2147483000);
     expect(res.status).toBe(404);
-    expect(res.body).toEqual({ error: 'Booking not found' });
+    expect(res.body).toMatchObject({ error: 'Booking not found' });
 
     expect((await approve(null, booking.id)).status).toBe(401);
   });
@@ -150,7 +150,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
     await insertBooking({ room_id: room.id, created_by: (await createRep()).user.id, start_time: slot.start, end_time: slot.end });
     const res = await approve(fac.auth, booking.id);
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: 'Room is already booked for this time period' });
+    expect(res.body).toMatchObject({ error: 'Room is already booked for this time period' });
     expect((await getBooking(booking.id)).status).toBe('PENDING');
   });
 
@@ -162,7 +162,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       await insertTimetableSlot({ department: uniq('D '), semester: 7, section: 1, day_of_week: 'Wed', slot_time: '11:00-12:00', room_name: room.name, subject_name: 'New class' });
       const res = await approve(fac.auth, booking.id);
       expect(res.status).toBe(409);
-      expect(res.body).toEqual({ error: `Room ${room.name} has a scheduled class at this time` });
+      expect(res.body).toMatchObject({ error: `Room ${room.name} has a scheduled class at this time` });
       expect((await getBooking(booking.id)).status).toBe('PENDING');
     });
 
@@ -180,7 +180,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       await db.query('UPDATE rooms SET is_active = FALSE WHERE id = $1', [room.id]);
       const res = await approve(fac.auth, booking.id);
       expect(res.status).toBe(409);
-      expect(res.body).toEqual({ error: 'Room is no longer available' });
+      expect(res.body).toMatchObject({ error: 'Room is no longer available' });
       expect((await getBooking(booking.id)).status).toBe('PENDING');
     });
 
@@ -203,7 +203,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       expect(own.status).toBe(201);
       const res = await approve(fac.auth, booking.id);
       expect(res.status).toBe(409);
-      expect(res.body).toEqual({ error: 'The selected faculty member is busy during this slot.' });
+      expect(res.body).toMatchObject({ error: 'The selected faculty member is busy during this slot.' });
       expect((await getBooking(booking.id)).status).toBe('PENDING');
     });
 
@@ -217,7 +217,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       expect((await getBooking(b.booking.id)).status).toBe('PENDING');
     });
 
-    test.failing('[NEW-P4-4] a 409 from approval carries the conflict body like create/reschedule do', async () => {
+    test('[NEW-P4-4] a 409 from approval carries the conflict body like create/reschedule do', async () => {
       // facultyController.approveBooking returns only { error }; the create, reschedule and quick-book
       // controllers forward result.conflict, so the faculty UI cannot show what clashed.
       const { fac, room, slot, booking } = await pending({ slot: futureSlot({ hour: 17 }) });
@@ -227,7 +227,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       expect(res.body.conflict).toEqual({ type: 'room_booked' });
     });
 
-    test.failing('[NEW-P4-5] concurrent approval of two overlapping requests for one room: one 200, the other 409 (never 500)', async () => {
+    test('[NEW-P4-5] concurrent approval of two overlapping requests for one room: one 200, the other 409 (never 500)', async () => {
       // approveBooking runs in a plain runInTransaction: a lost race surfaces as the exclusion-constraint
       // error (23P01) or a deadlock with rejectConflicts (40P01), and the controller turns both into 500.
       const statuses = [];

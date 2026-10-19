@@ -203,6 +203,25 @@ export async function createCancellationRequest(req, res) {
     if (!room_name || !date || hour === undefined || !faculty_name) {
       return res.status(400).json({ error: 'Room, date, hour, and faculty are required.' });
     }
+    const h = Number(hour);
+    const realDate = /^\d{4}-\d{2}-\d{2}$/.test(String(date)) && new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === String(date);
+    if (!realDate) return res.status(400).json({ error: 'date must be a real YYYY-MM-DD date.' });
+    if (!Number.isInteger(h) || h < 0 || h > 23) return res.status(400).json({ error: 'hour must be between 0 and 23.' });
+    const room = await roomRepository.findByName(room_name);
+    if (!room) return res.status(404).json({ error: `Room ${room_name} not found.` });
+
+    // A linked booking must be the one in this room at this date and hour (BKG-12).
+    if (booking_id) {
+      const { rows: [b] } = await db.query(
+        `SELECT id FROM bookings
+          WHERE id = $1 AND room_id = $2 AND status IN ('ACTIVE','PENDING')
+            AND (start_time AT TIME ZONE 'Asia/Kolkata')::date = $3::date
+            AND EXTRACT(HOUR FROM start_time AT TIME ZONE 'Asia/Kolkata') <= $4
+            AND EXTRACT(HOUR FROM end_time AT TIME ZONE 'Asia/Kolkata') > $4`,
+        [booking_id, room.id, date, h],
+      );
+      if (!b) return res.status(400).json({ error: 'The booking does not match this room, date and hour.' });
+    }
 
     const facultyResult = await db.query(
       `SELECT id FROM faculties WHERE is_active AND UPPER(TRIM(name)) = UPPER(TRIM($1)) ORDER BY id LIMIT 1`,
@@ -259,11 +278,22 @@ export async function reviewCancellationRequest(req, res) {
 
       if (approved) {
         if (request.booking_id) {
-          await client.query(`UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW() WHERE id = $1`, [request.booking_id]);
+          // Only the still-open booking the request was made for (soft cancel; history kept).
+          await client.query(
+            `UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
+              WHERE id = $1 AND status IN ('ACTIVE','PENDING')`,
+            [request.booking_id],
+          );
         } else {
           const room = await roomRepository.findByName(request.room_name, client);
-          if (!room) throw new Error('Room no longer exists.');
-          await roomRepository.upsertAvailability(room.id, request.class_date, request.hour, true, req.user.id, client);
+          if (!room) return { notFoundRoom: true };
+          // The timetabled class doesn't happen on this one date: release that hour for that date
+          // only, instead of changing the room's weekly availability (BKG-05).
+          await client.query(
+            `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, created_by)
+             SELECT $1, class_date, hour, hour + 1, 'cancellation_request', id, $2 FROM class_cancellation_requests WHERE id = $3`,
+            [room.id, req.user.id, request.id],
+          );
         }
       }
 
@@ -276,7 +306,9 @@ export async function reviewCancellationRequest(req, res) {
     });
 
     if (!result) return res.status(404).json({ error: 'Cancellation request was not found or has already been reviewed.' });
+    if (result.notFoundRoom) return res.status(409).json({ error: 'The room for this class no longer exists.' });
     cache.delete('room_availability_all');
+    cache.deletePattern('admin_status_.*');
     res.json({ message: approved ? 'Cancellation approved; the room is now available.' : 'Cancellation request rejected.' });
   } catch (err) {
     sendServerError(res, err, 'Failed to review cancellation request.');

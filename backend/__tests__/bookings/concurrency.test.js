@@ -18,13 +18,14 @@ const fire = (reqs) => Promise.all(reqs.map(({ auth, body }) =>
 
 /**
  * Exactly one winner; every loser is refused. Losers should all be 409 — but two inserts that hit an
- * exclusion constraint at the same moment can deadlock, and a deadlock currently surfaces as 500
- * (NEW-P4-7, asserted deterministically in __tests__/unit/bookingRules.test.js).
+ * exclusion constraint at the same moment can deadlock; inTransaction retries and reports 409
+ * (NEW-P4-7, also asserted deterministically in __tests__/unit/bookingRules.test.js).
  */
 function expectOneWinner(res, conflictType) {
   const statuses = res.map((r) => r.status);
   expect(statuses.filter((s) => s === 201)).toHaveLength(1);
-  expect(statuses.filter((s) => s !== 201).every((s) => s === 409 || s === 500)).toBe(true);
+  // Deadlocks are retried and reported as 409 (NEW-P4-7 fixed), so losers never get a 500.
+  expect(statuses.filter((s) => s !== 201).every((s) => s === 409)).toBe(true);
   // A loser that shares its start time with the winner trips a legacy unique index instead and gets a
   // generic 409 without a conflict body (NEW-P4-8).
   for (const r of res.filter((x) => x.status === 409 && x.body.conflict)) expect(r.body.conflict).toEqual({ type: conflictType });
@@ -92,8 +93,7 @@ describe('BKG-02 concurrency', () => {
     }
   });
 
-  // Same start: the losers trip the legacy unique index idx_room_slot_active (23505), which the
-  // generic DB-error mapper turns into a 409 with a generic body (NEW-P4-8).
+  // Same start: losers hit the exclusion constraint (legacy unique indexes dropped in v28, NEW-P4-8).
   test('[BKG-02] same room + same start in parallel: every loser gets 409 (not 500)', async () => {
     for (let i = 0; i < ROUNDS; i++) {
       const { statuses } = await sameStartRound(13 + i);

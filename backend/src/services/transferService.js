@@ -1,65 +1,78 @@
 import * as db from '../db.js';
-import logger from '../utils/logger.js';
 import cache from '../utils/cache.js';
 import { transferRepository } from '../repositories/transferRepository.js';
-import { bookingRepository } from '../repositories/bookingRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { logActivity } from './loggerService.js';
+import { checkTimes, checkPeopleTimetables, checkBookingConflicts, isStaff } from './bookingRules.js';
+import { inTransaction } from './bookingService.js';
+
+/**
+ * Booking transfers: a student asks for someone else's upcoming booking.
+ *
+ *   PENDING ──owner accepts──▶ REP2_ACCEPTED (if the booking has a supervising faculty)
+ *          └─────────────────▶ FACULTY2_ACCEPTED (no owner faculty, requester named one)
+ *          └─────────────────▶ ACCEPTED (neither)
+ *   REP2_ACCEPTED ──owner's faculty approves──▶ FACULTY2_ACCEPTED | ACCEPTED
+ *   FACULTY2_ACCEPTED ──requester's faculty approves──▶ ACCEPTED
+ *   any open state ──reject (owner / a faculty in the chain / admin) or withdraw (requester)──▶ REJECTED / CANCELLED
+ *
+ * The booking stays ACTIVE with its owner until the final step, which moves ownership in one
+ * locked transaction after re-checking the booking is still ACTIVE and upcoming and the requester
+ * (and their faculty) are free. Nothing is cancelled mid-flow, so a rejection can't lose a booking
+ * and a completed transfer can't resurrect a cancelled one (BKG-06).
+ */
+
+const OPEN = ['PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED'];
+const fail = (error, status = 400, extra = {}) => ({ error, status, ...extra });
+
+async function lockTransfer(client, transferId) {
+  const id = Number(transferId);
+  if (!Number.isInteger(id) || id <= 0) return { error: 'Transfer not found', status: 404 };
+  const { rows: [t] } = await client.query('SELECT * FROM booking_transfers WHERE id = $1 FOR UPDATE', [id]);
+  if (!t) return { error: 'Transfer not found', status: 404 };
+  const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [t.booking_id]);
+  return { t, booking };
+}
+
+const bookingUpcomingActive = (booking) =>
+  booking && booking.status === 'ACTIVE' && new Date(booking.start_time).getTime() > Date.now();
 
 export const requestTransfer = async (reqData, userId, userRole) => {
   const { booking_id, target_faculty_id, new_purpose } = reqData;
+  return inTransaction(async (client) => {
+    const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [booking_id]);
+    if (!booking) return fail('Target booking not found', 404);
+    if (booking.status !== 'ACTIVE') return fail('Can only request transfer for an ACTIVE booking.');
+    if (new Date(booking.start_time).getTime() <= Date.now()) return fail('This booking has already started and can no longer be transferred.');
+    if (booking.created_by === userId) return fail('Cannot request transfer from yourself.');
 
-  const booking = await bookingRepository.findById(booking_id);
-  if (!booking) {
-    return { error: 'Target booking not found', status: 404 };
-  }
-  
-  // Get owner role (we could add this to findById join if needed, but for now let's just fetch it)
-  const owner = await userRepository.findById(booking.created_by);
-  const owner_role = owner?.role;
-  
-  if ((owner_role === 'ADMIN' || owner_role === 'FACULTY') && userRole !== 'ADMIN') {
-    return { error: 'Cannot request transfers for faculty or admin bookings.', status: 403 };
-  }
-
-  if (booking.status !== 'ACTIVE') {
-    return { error: 'Can only request transfer for an ACTIVE booking.', status: 400 };
-  }
-  // The approving faculty must be an active faculty-directory entry (not an arbitrary user id).
-  if (target_faculty_id !== undefined && target_faculty_id !== null && target_faculty_id !== '') {
-    if (!(await facultyRepository.findActiveById(target_faculty_id))) {
-      return { error: 'Selected faculty member was not found', status: 400 };
+    const owner = await userRepository.findById(booking.created_by, client);
+    if ((owner?.role === 'ADMIN' || owner?.role === 'FACULTY') && userRole !== 'ADMIN') {
+      return fail('Cannot request transfers for faculty or admin bookings.', 403);
     }
-  }
-  if (booking.created_by === userId) {
-    return { error: 'Cannot request transfer from yourself.', status: 400 };
-  }
-  
-  // Check if duplicate request
-  const existingReq = await transferRepository.findPending(booking_id, userId);
-  if (existingReq) {
-    return { error: 'You have already requested this booking.', status: 400 };
-  }
 
-  try {
-    const result = await transferRepository.create({
-      booking_id, requested_by: userId, target_faculty_id, new_purpose, owner_id: booking.created_by
-    });
+    // Students taking over a booking need a supervising faculty, like any student booking.
+    const given = target_faculty_id !== undefined && target_faculty_id !== null && target_faculty_id !== '';
+    if (!given && !isStaff(userRole)) return fail('Choose the faculty member who will approve this booking');
+    if (given && !(await facultyRepository.findActiveById(target_faculty_id, client))) {
+      return fail('Selected faculty member was not found');
+    }
 
+    const { rows: [existing] } = await client.query(
+      `SELECT id FROM booking_transfers WHERE booking_id = $1 AND requested_by = $2 AND status = ANY($3)`,
+      [booking_id, userId, OPEN],
+    );
+    if (existing) return fail('You have already requested this booking.');
+
+    const created = await transferRepository.create({
+      booking_id, requested_by: userId, target_faculty_id: given ? target_faculty_id : null, new_purpose, owner_id: booking.created_by,
+    }, client);
     await logActivity({
-      userId,
-      action: 'REQUEST_TRANSFER',
-      entityType: 'transfer',
-      entityId: result.id,
-      details: { booking_id, new_purpose }
-    });
-
-    return { data: result, status: 201 };
-  } catch (err) {
-    if (err.code === '23505') return { error: 'You have already requested this transfer.', status: 400 };
-    throw err;
-  }
+      userId, action: 'REQUEST_TRANSFER', entityType: 'transfer', entityId: created.id, details: { booking_id },
+    }, client);
+    return { data: created, status: 201 };
+  });
 };
 
 export const getIncomingRequests = async (userId, facultyId = null) => {
@@ -70,169 +83,103 @@ export const getOutgoingRequests = async (userId) => {
   return transferRepository.findOutgoing(userId);
 };
 
+/** Final step: re-validate and move the booking to the requester. */
+async function completeTransfer(client, t, booking, actorId) {
+  if (!bookingUpcomingActive(booking)) {
+    await transferRepository.updateStatus(t.id, 'REJECTED', client);
+    return fail('This booking is no longer available for transfer.', 409, { conflict: { type: 'booking_unavailable' }, commit: true });
+  }
+  const requester = await userRepository.findById(t.requested_by, client);
+  if (!requester || requester.is_active === false) {
+    await transferRepository.updateStatus(t.id, 'REJECTED', client);
+    return fail('The requester can no longer receive this booking.', 409, { commit: true });
+  }
+  const faculty = t.target_faculty_id ? await facultyRepository.findById(t.target_faculty_id, client) : null;
+  const times = checkTimes(booking.start_time, booking.end_time, { role: 'ADMIN', mode: 'approve' });
+  if (times.error) return times;
+  const people = await checkPeopleTimetables(client, requester, faculty, times.ok);
+  if (people) return people;
+  const conflict = await checkBookingConflicts(client, {
+    roomId: booking.room_id, personId: requester.id, faculty, t: times.ok, excludeId: booking.id,
+  });
+  if (conflict) return conflict;
+
+  await client.query(
+    `UPDATE bookings SET created_by = $1, faculty_id = $2, purpose = COALESCE($3, purpose), updated_at = NOW() WHERE id = $4`,
+    [t.requested_by, t.target_faculty_id ?? null, t.new_purpose || null, booking.id],
+  );
+  await transferRepository.updateStatus(t.id, 'ACCEPTED', client);
+  await client.query(
+    `UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW() WHERE booking_id = $1 AND id <> $2 AND status = ANY($3)`,
+    [booking.id, t.id, OPEN],
+  );
+  await logActivity({
+    userId: actorId, action: 'COMPLETE_TRANSFER', entityType: 'transfer', entityId: t.id,
+    details: { booking_id: booking.id, from_user: booking.created_by, to_user: t.requested_by },
+  }, client);
+  cache.deletePattern('admin_status_.*');
+  cache.delete('room_availability_all');
+  return { status: 200, message: 'Transfer completed successfully' };
+}
+
 export const acceptTransfer = async (transferId, userId, userRole, facultyId = null) => {
-  return db.runInTransaction(async (client) => {
-    const t = await transferRepository.findById(transferId, client);
-    if (!t) {
-      throw { error: 'Valid transfer request not found', status: 404 };
+  return inTransaction(async (client) => {
+    const locked = await lockTransfer(client, transferId);
+    if (locked.error) return locked;
+    const { t, booking } = locked;
+    if (!OPEN.includes(t.status)) return fail(`This transfer is already ${t.status.toLowerCase()}.`, 409);
+    if (!bookingUpcomingActive(booking)) {
+      await transferRepository.updateStatus(t.id, 'REJECTED', client);
+      return fail('This booking is no longer available for transfer.', 409, { conflict: { type: 'booking_unavailable' }, commit: true });
     }
 
-    // Step 1: Rep 2 accepts
+    const isAdmin = userRole === 'ADMIN';
+    const ownerFaculty = booking.faculty_id;
+    const step = async (next, action, message) => {
+      if (next === 'ACCEPTED') return completeTransfer(client, t, booking, userId);
+      await transferRepository.updateStatus(t.id, next, client);
+      await logActivity({ userId, action, entityType: 'transfer', entityId: t.id, details: { booking_id: t.booking_id, step: next } }, client);
+      return { status: 200, message };
+    };
+
     if (t.status === 'PENDING') {
-      if (t.owner_id !== userId && userRole !== 'ADMIN') {
-        throw { error: 'Not authorized to accept this transfer.', status: 403 };
-      }
-
-      if (t.owner_faculty_id) {
-        await transferRepository.updateStatus(transferId, 'REP2_ACCEPTED', client);
-        await logActivity({
-          userId,
-          action: 'ACCEPT_TRANSFER_REP2',
-          entityType: 'transfer',
-          entityId: transferId,
-          details: { booking_id: t.booking_id, step: 'REP2_ACCEPTED' }
-        }, client);
-        return { status: 200, message: 'Transfer accepted by class owner. Pending approval from owner faculty.' };
-      } else {
-        // No owner faculty, mark original booking cancelled (available) and move to next step
-        await client.query("UPDATE bookings SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1", [t.booking_id]);
-        
-        if (t.target_faculty_id) {
-          await transferRepository.updateStatus(transferId, 'FACULTY2_ACCEPTED', client);
-          await logActivity({
-            userId,
-            action: 'ACCEPT_TRANSFER_REP2',
-            entityType: 'transfer',
-            entityId: transferId,
-            details: { booking_id: t.booking_id, step: 'FACULTY2_ACCEPTED' }
-          }, client);
-          return { status: 200, message: 'Class owner accepted. Pending approval from requester faculty.' };
-        } else {
-          // No target faculty either! Complete immediately.
-          await client.query(`
-            UPDATE bookings 
-            SET created_by = $1, faculty_id = $2, purpose = $3, status = 'ACTIVE', updated_at = NOW()
-            WHERE id = $4
-          `, [t.requested_by, null, t.new_purpose, t.booking_id]);
-
-          await transferRepository.updateStatus(transferId, 'ACCEPTED', client);
-          await transferRepository.rejectOtherPending(t.booking_id, transferId, client);
-          await logActivity({
-            userId,
-            action: 'ACCEPT_TRANSFER_REP2_COMPLETED',
-            entityType: 'transfer',
-            entityId: transferId,
-            details: { booking_id: t.booking_id, step: 'ACCEPTED' }
-          }, client);
-          
-          cache.deletePattern('room_availability_.*');
-          return { status: 200, message: 'Transfer completed successfully' };
-        }
-      }
+      if (booking.created_by !== userId && !isAdmin) return fail('Not authorized to accept this transfer.', 403);
+      if (ownerFaculty) return step('REP2_ACCEPTED', 'ACCEPT_TRANSFER_OWNER', 'Transfer accepted by the booking owner. Pending approval from their faculty.');
+      if (t.target_faculty_id) return step('FACULTY2_ACCEPTED', 'ACCEPT_TRANSFER_OWNER', 'Booking owner accepted. Pending approval from the requester\'s faculty.');
+      return step('ACCEPTED');
     }
-
-    // Step 2: Faculty of Rep 2 accepts
     if (t.status === 'REP2_ACCEPTED') {
-      if ((facultyId == null || String(t.owner_faculty_id) !== String(facultyId)) && userRole !== 'ADMIN') {
-        throw { error: 'Not authorized to approve this transfer.', status: 403 };
-      }
-
-      // Mark slot available (original booking cancelled)
-      await client.query("UPDATE bookings SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1", [t.booking_id]);
-
-      if (t.target_faculty_id) {
-        await transferRepository.updateStatus(transferId, 'FACULTY2_ACCEPTED', client);
-        await logActivity({
-          userId,
-          action: 'APPROVE_TRANSFER_FACULTY2',
-          entityType: 'transfer',
-          entityId: transferId,
-          details: { booking_id: t.booking_id, step: 'FACULTY2_ACCEPTED' }
-        }, client);
-        return { status: 200, message: 'Owner faculty approved. Pending approval from requester faculty.' };
-      } else {
-        // Complete transfer directly if no target faculty
-        await client.query(`
-          UPDATE bookings 
-          SET created_by = $1, faculty_id = $2, purpose = $3, status = 'ACTIVE', updated_at = NOW()
-          WHERE id = $4
-        `, [t.requested_by, null, t.new_purpose, t.booking_id]);
-
-        await transferRepository.updateStatus(transferId, 'ACCEPTED', client);
-        await transferRepository.rejectOtherPending(t.booking_id, transferId, client);
-        await logActivity({
-          userId,
-          action: 'APPROVE_TRANSFER_FACULTY2_COMPLETED',
-          entityType: 'transfer',
-          entityId: transferId,
-          details: { booking_id: t.booking_id, step: 'ACCEPTED' }
-        }, client);
-
-        cache.deletePattern('room_availability_.*');
-        return { status: 200, message: 'Transfer completed successfully' };
-      }
+      if (!isAdmin && (facultyId == null || String(ownerFaculty) !== String(facultyId))) return fail('Not authorized to approve this transfer.', 403);
+      if (t.target_faculty_id) return step('FACULTY2_ACCEPTED', 'APPROVE_TRANSFER_OWNER_FACULTY', 'Owner faculty approved. Pending approval from the requester\'s faculty.');
+      return step('ACCEPTED');
     }
-
-    // Step 3: Faculty of Rep 1 accepts
-    if (t.status === 'FACULTY2_ACCEPTED') {
-      if ((facultyId == null || String(t.target_faculty_id) !== String(facultyId)) && userRole !== 'ADMIN') {
-        throw { error: 'Not authorized to approve this transfer.', status: 403 };
-      }
-
-      await client.query(`
-        UPDATE bookings 
-        SET created_by = $1, faculty_id = $2, purpose = $3, status = 'ACTIVE', updated_at = NOW()
-        WHERE id = $4
-      `, [t.requested_by, t.target_faculty_id, t.new_purpose, t.booking_id]);
-
-      await transferRepository.updateStatus(transferId, 'ACCEPTED', client);
-      await transferRepository.rejectOtherPending(t.booking_id, transferId, client);
-      await logActivity({
-        userId,
-        action: 'APPROVE_TRANSFER_FACULTY1',
-        entityType: 'transfer',
-        entityId: transferId,
-        details: { booking_id: t.booking_id, step: 'ACCEPTED' }
-      }, client);
-
-      cache.deletePattern('room_availability_.*');
-      return { status: 200, message: 'Transfer completed successfully' };
-    }
-
-    throw { error: 'Invalid transfer status', status: 400 };
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
+    // FACULTY2_ACCEPTED
+    if (!isAdmin && (facultyId == null || String(t.target_faculty_id) !== String(facultyId))) return fail('Not authorized to approve this transfer.', 403);
+    return step('ACCEPTED');
   });
 };
 
 export const rejectTransfer = async (transferId, userId, userRole, facultyId = null) => {
-  return db.runInTransaction(async (client) => {
-    const t = await transferRepository.findById(transferId, client);
-    if (!t) {
-      throw { error: 'Transfer not found', status: 404 };
-    }
+  return inTransaction(async (client) => {
+    const locked = await lockTransfer(client, transferId);
+    if (locked.error) return locked;
+    const { t, booking } = locked;
+    if (!OPEN.includes(t.status)) return fail(`This transfer is already ${t.status.toLowerCase()}.`, 409);
 
-    const isAuthorized = t.owner_id === userId ||
-      (facultyId != null && String(t.owner_faculty_id) === String(facultyId)) ||
+    const isRequester = t.requested_by === userId;
+    const isAuthorized = isRequester ||
+      booking?.created_by === userId ||
+      (facultyId != null && String(booking?.faculty_id) === String(facultyId)) ||
       (facultyId != null && String(t.target_faculty_id) === String(facultyId)) ||
       userRole === 'ADMIN';
+    if (!isAuthorized) return fail('Not authorized to reject this transfer', 403);
 
-    if (!isAuthorized) {
-      throw { error: 'Not authorized to reject this transfer', status: 403 };
-    }
-
-    await transferRepository.updateStatus(transferId, 'REJECTED', client);
+    const status = isRequester && userRole !== 'ADMIN' ? 'CANCELLED' : 'REJECTED';
+    await transferRepository.updateStatus(t.id, status, client);
     await logActivity({
-      userId,
-      action: 'REJECT_TRANSFER',
-      entityType: 'transfer',
-      entityId: transferId,
-      details: { booking_id: t.booking_id }
+      userId, action: status === 'CANCELLED' ? 'WITHDRAW_TRANSFER' : 'REJECT_TRANSFER', entityType: 'transfer', entityId: t.id,
+      details: { booking_id: t.booking_id },
     }, client);
-    return { status: 200, message: 'Transfer rejected' };
-  }).catch(err => {
-    if (err && err.error) return err;
-    throw err;
+    return { status: 200, message: status === 'CANCELLED' ? 'Transfer request withdrawn' : 'Transfer rejected' };
   });
 };

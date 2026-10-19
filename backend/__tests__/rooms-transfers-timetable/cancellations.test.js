@@ -101,7 +101,7 @@ describe('POST /api/timetable/cancellation-requests', () => {
     expect(res.status).toBe(400);
   });
 
-  test.failing('[BKG-12] a rep cannot attach someone else\'s booking_id to a cancellation request', async () => {
+  test('[BKG-12] a rep cannot attach someone else\'s booking_id to a cancellation request', async () => {
     const s = await setup();
     const victim = await createRep();
     const room = await createRoom();
@@ -116,16 +116,14 @@ describe('POST /api/timetable/cancellation-requests', () => {
     expect([400, 404]).toContain(res.status);
   });
 
-  test('[BKG-12] (impact) approving a request that carries a victim\'s booking_id cancels the victim\'s booking', async () => {
+  test("[BKG-12] a request can't carry an unrelated user's booking, so approval can never cancel it", async () => {
     const s = await setup();
     const victim = await createRep();
     const room = await createRoom();
     const vb = await insertBooking({ room_id: room.id, created_by: victim.user.id, start_time: futureSlot({ hour: 15 }).start });
     const c = await create(s.rep.auth, { ...s.body, booking_id: vb.id });
-    if (c.status !== 201) return; // fixed at creation time (see failing test above)
-    await review(s.fac.auth, c.body.request.id, 'approve').expect(200);
-    // Documents current behaviour: an unrelated user's booking is cancelled.
-    expect((await db.query('SELECT status FROM bookings WHERE id = $1', [vb.id])).rows[0].status).toBe('CANCELLED');
+    expect(c.status).toBe(400);
+    expect((await db.query('SELECT status FROM bookings WHERE id = $1', [vb.id])).rows[0].status).toBe('ACTIVE');
   });
 });
 
@@ -202,7 +200,7 @@ describe('PATCH /api/timetable/cancellation-requests/:id/:action', () => {
     expect((await reqRow(c.id)).status).toBe('APPROVED');
   });
 
-  test.failing('[BKG-05] approving a timetable-class cancellation (no booking_id) succeeds and frees only that date, not the weekday every week', async () => {
+  test('[BKG-05] approving a timetable-class cancellation (no booking_id) succeeds and frees only that date, not the weekday every week', async () => {
     const s = await setup();
     await db.query('INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, 10, false)', [s.room.id, s.slot.day]);
     const c = (await create(s.rep.auth, s.body)).body.request;
@@ -225,7 +223,7 @@ describe('PATCH /api/timetable/cancellation-requests/:id/:action', () => {
     expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [s.room.id])).rowCount).toBe(0);
   });
 
-  test.failing('[BKG-16] approving a booking cancellation is reflected in admin room status immediately', async () => {
+  test('[BKG-16] approving a booking cancellation is reflected in admin room status immediately', async () => {
     const s = await setup();
     const b = await insertBooking({ room_id: s.room.id, created_by: s.rep.user.id, start_time: s.slot.start });
     const q = { date: s.slot.dateKey, slot: 10 };

@@ -656,7 +656,7 @@ describe('POST /api/bookings — room timetable releases', () => {
     expect((await post(fac.auth, body(room, slot))).status).toBe(201); // the released hour alone is fine
   });
 
-  test.failing('[NEW-P4-1] a 2-hour booking over a released 1-hour class plus a free hour is allowed', async () => {
+  test('[NEW-P4-1] a 2-hour booking over a released 1-hour class plus a free hour is allowed', async () => {
     // Class 10-11 is released for the date and 11-12 has no class at all. bookingRules.isReleased
     // demands a single release covering the whole booking (start_hour <= 10 AND end_hour >= 12), so
     // the booking is refused 409 room_timetable although nothing is scheduled in the room then.

@@ -39,19 +39,32 @@ export const getBookings = async (filters) => {
   };
 };
 
-/** Runs `fn` in a transaction; returned/thrown `{ error }` objects and lost races come back as results. */
-async function inTransaction(fn) {
-  try {
-    return await db.runInTransaction(async (client) => {
-      const res = await fn(client);
-      if (res?.error) throw res;
-      return res;
-    });
-  } catch (err) {
-    if (err?.error) return err;
-    const raced = constraintConflict(err);
-    if (raced) return raced;
-    throw err;
+const RETRYABLE = new Set(['40P01', '40001']); // deadlock / serialization failure between racing bookings
+
+/**
+ * Runs `fn` in a transaction; returned/thrown `{ error }` objects and lost races come back as
+ * results. Deadlocks between racing requests are retried, then reported as a 409 (NEW-P4-7).
+ */
+export async function inTransaction(fn, attempts = 3) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await db.runInTransaction(async (client) => {
+        const res = await fn(client);
+        // `commit: true` marks an error whose bookkeeping writes must persist (e.g. closing a
+        // transfer whose booking became unavailable — NEW-P4-T1); every other error rolls back.
+        if (res?.error && !res.commit) throw res;
+        return res;
+      });
+    } catch (err) {
+      if (err?.error) return err;
+      if (RETRYABLE.has(err?.code)) {
+        if (attempt < attempts) continue;
+        return { error: 'That time slot was just taken — please try again', status: 409, conflict: { type: 'race' } };
+      }
+      const raced = constraintConflict(err);
+      if (raced) return raced;
+      throw err;
+    }
   }
 }
 
@@ -274,7 +287,13 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
     modified_by: user.id,
     change_type: 'RESCHEDULE',
   }, client);
-  const updated = await bookingRepository.updateBooking(bookingId, { start_time: t.start, end_time: t.end, room_id: room.id }, client);
+  let updated = await bookingRepository.updateBooking(bookingId, { start_time: t.start, end_time: t.end, room_id: room.id }, client);
+  // A student's approved booking that moves needs its faculty to approve the new slot (NEW-P4-2).
+  const moved = t.start !== new Date(booking.start_time).toISOString() || t.end !== new Date(booking.end_time).toISOString() || room.id !== booking.room_id;
+  if (moved && !isStaff(user.role) && booking.faculty_id && booking.status === 'ACTIVE') {
+    updated = await bookingRepository.updateStatus(bookingId, 'PENDING', client);
+    await deactivateReleasesFor(client, 'reschedule', booking.id);
+  }
 
   await logActivity({
     userId: user.id,
@@ -365,6 +384,8 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
  */
 export const quickBookHandler = async (reqData, user) => {
   const { room_name, target_user_id, date, slot, purpose } = reqData;
+  const hours = reqData.hours === undefined ? 1 : Number(reqData.hours);
+  if (!Number.isInteger(hours) || hours < 1) return { error: 'hours must be a whole number of hours', status: 400 };
   if (!room_name || !date || slot === undefined) {
     return { error: 'Missing required fields: room_name, date, slot', status: 400 };
   }
@@ -389,7 +410,10 @@ export const quickBookHandler = async (reqData, user) => {
     }
 
     const start = istDateTimeToUtc(String(date), hour);
-    const end = new Date(new Date(start).getTime() + 3600000).toISOString();
+    if (new Date(new Date(start).getTime() + 5.5 * 3600000).toISOString().slice(0, 10) !== String(date)) {
+      return { error: 'date is not a real calendar date', status: 400 };
+    }
+    const end = new Date(new Date(start).getTime() + hours * 3600000).toISOString();
     return createBooking(client, {
       room_id: room.id, start_time: start, end_time: end, purpose: purpose || 'Admin Quick Booking',
     }, owner, user, { requireFaculty: false });

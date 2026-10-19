@@ -136,20 +136,12 @@ describe('GET /api/bookings', () => {
     expect(b.body.meta.page).toBe(1);
   });
 
-  test.failing('[BKG-13] slot filter matches the IST hour (slot=10 finds a 10:00 IST booking)', async () => {
+  test('[BKG-13] slot filter matches the IST hour (slot=10 finds a 10:00 IST booking)', async () => {
     const res = await get(owner.auth, '/api/bookings', { user_id: owner.user.id, slot: 10 });
     expect(res.status).toBe(200);
     expect(res.body.data.map((b) => b.id)).toEqual([bookings[1].id]);
   });
 
-  test('slot filter currently matches the UTC hour (10:00 IST = 04 UTC) — documents BKG-13', async () => {
-    const { dateKey } = slots[1];
-    expect(slots[1].start).toBe(ist(dateKey, 10));
-    const res = await get(owner.auth, '/api/bookings', { user_id: owner.user.id, slot: 4 });
-    expect(res.status).toBe(200);
-    // 09:00 IST = 03:30 UTC (hour 3), 10:00 IST = 04:30 UTC (hour 4), 11:00 IST = 05:30 UTC (hour 5)
-    expect(res.body.data.map((b) => b.id)).toEqual([bookings[1].id]);
-  });
 });
 
 describe('GET /api/bookings/admin/all', () => {

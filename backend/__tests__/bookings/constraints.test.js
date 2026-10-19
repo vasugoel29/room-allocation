@@ -13,9 +13,9 @@ beforeAll(() => { slot = futureSlot({ hour: 10 }); });
 const overlapping = () => ({ start_time: plusHours(slot.start, 0.5), end_time: plusHours(slot.start, 1.5) });
 const adjacent = () => ({ start_time: slot.end, end_time: plusHours(slot.end) });
 
-test('migrations v26 and v27 are recorded', async () => {
-  const { rows } = await db.query('SELECT version FROM schema_migrations WHERE version IN (26, 27) ORDER BY version');
-  expect(rows.map((r) => r.version)).toEqual([26, 27]);
+test('migrations v26–v28 are recorded', async () => {
+  const { rows } = await db.query('SELECT version FROM schema_migrations WHERE version IN (26, 27, 28) ORDER BY version');
+  expect(rows.map((r) => r.version)).toEqual([26, 27, 28]);
 });
 
 describe('bookings_no_room_overlap (ACTIVE bookings of one room)', () => {
@@ -24,7 +24,7 @@ describe('bookings_no_room_overlap (ACTIVE bookings of one room)', () => {
     await insertBooking({ room_id: room.id, created_by: (await createRep()).user.id, start_time: slot.start, end_time: slot.end });
     for (const s of [{ start_time: slot.start, end_time: slot.end }, overlapping()]) {
       await expect(insertBooking({ room_id: room.id, created_by: (await createRep()).user.id, ...s }))
-        .rejects.toEqual(violation(s.start_time === slot.start ? 'idx_room_slot_active' : 'bookings_no_room_overlap', s.start_time === slot.start ? '23505' : '23P01'));
+        .rejects.toEqual(violation('bookings_no_room_overlap', '23P01')); // same-start indexes dropped in v28 (NEW-P4-8)
     }
   });
 
