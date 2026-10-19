@@ -5,7 +5,7 @@ import * as db from '../db.js';
  */
 export const departmentRepository = {
   findAll: async () => {
-    const query = 'SELECT * FROM departments ORDER BY name ASC';
+    const query = 'SELECT * FROM departments WHERE is_active ORDER BY name ASC';
     const result = await db.query(query);
     return result.rows;
   },
@@ -14,8 +14,8 @@ export const departmentRepository = {
    * Find all departments with pagination
    */
   findAllPaginated: async (limit, offset) => {
-    const countQuery = 'SELECT COUNT(*) FROM departments';
-    const dataQuery = 'SELECT * FROM departments ORDER BY name ASC LIMIT $1 OFFSET $2';
+    const countQuery = 'SELECT COUNT(*) FROM departments WHERE is_active';
+    const dataQuery = 'SELECT * FROM departments WHERE is_active ORDER BY name ASC LIMIT $1 OFFSET $2';
     const [countRes, dataRes] = await Promise.all([
       db.query(countQuery),
       db.query(dataQuery, [limit, offset])
@@ -30,7 +30,7 @@ export const departmentRepository = {
    * Upsert a department by name
    */
   upsert: async (name, client = db) => {
-    const query = 'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING *';
+    const query = 'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) WHERE is_active DO UPDATE SET name = EXCLUDED.name RETURNING *';
     const result = await client.query(query, [name]);
     return result.rows[0];
   },
@@ -39,16 +39,16 @@ export const departmentRepository = {
    * Update department name
    */
   update: async (id, name, client = db) => {
-    const query = 'UPDATE departments SET name = $1 WHERE id = $2 RETURNING *';
+    const query = 'UPDATE departments SET name = $1 WHERE id = $2 AND is_active RETURNING *';
     const result = await client.query(query, [name, id]);
     return result.rows[0];
   },
 
   /**
-   * Delete a department
+   * Soft-delete a department (rows are never removed; see the soft-delete rule).
    */
   delete: async (id, client = db) => {
-    const query = 'DELETE FROM departments WHERE id = $1 RETURNING *';
+    const query = 'UPDATE departments SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1 AND is_active RETURNING *';
     const result = await client.query(query, [id]);
     return result.rows[0];
   }

@@ -157,7 +157,7 @@ export const getAnalytics = async (req, res) => {
     const utilizationQuery = `
       WITH stats AS (
         SELECT COUNT(*) as booking_count, 
-               (SELECT COUNT(*) FROM rooms) as room_count
+               (SELECT COUNT(*) FROM rooms WHERE is_active) as room_count
         FROM bookings
         WHERE start_time >= NOW() - INTERVAL '1 day' * $1
         AND status = 'ACTIVE'

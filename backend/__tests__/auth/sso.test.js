@@ -8,7 +8,7 @@ import * as db from '../../src/db.js';
 import { mockAcl } from '../../src/auth/aclClient.js';
 import { setGoogleVerifier } from '../../src/auth/google.js';
 import { effectivePermissions, hasPermission, normalizeRole, PERMISSIONS as P } from '../../src/auth/permissions.js';
-import { createViewer, closeDb } from '../../test/helpers/factories.js';
+import { createViewer, createAdmin, createFacultyEntry, closeDb } from '../../test/helpers/factories.js';
 
 let seq = 0;
 const uniqEmail = (tag) => `sso.${tag}.${process.pid}.${Date.now().toString(36)}${seq++}@nsut.ac.in`;
@@ -186,6 +186,52 @@ describe('POST /api/auth/dev-login', () => {
     const res = await devLogin(email);
     expect(res.status).toBe(200);
     expect(res.body.user).toMatchObject({ section: null, year: null, semester: null });
+  });
+});
+
+describe('soft-deleted accounts and the faculty directory', () => {
+  test('a soft-deleted (deactivated) account cannot sign in again, even with a valid ACL entry', async () => {
+    const email = uniqEmail('softdel');
+    mockAcl.set(email, aclEntry(email));
+    const first = await devLogin(email);
+    expect(first.status).toBe(200);
+    const admin = await createAdmin();
+    expect((await request(app).delete(`/api/auth/users/${first.body.user.id}`).set('Authorization', admin.auth)).status).toBe(200);
+
+    expect((await me(first.body.token)).status).toBe(401); // existing session ends
+    const again = await devLogin(email);
+    expect(again.status).toBe(403);
+    expect(again.body).toEqual({ error: 'Your CRAS account has been deactivated. Contact the administrator.' });
+    expect(again.body.token).toBeUndefined();
+
+    setGoogleVerifier(async () => googlePayload(email));
+    const g = await request(app).post('/api/auth/google').send({ credential: 'google-id-token' });
+    expect(g.status).toBe(403);
+    expect(g.body.token).toBeUndefined();
+    // No second account is created.
+    const { rows } = await db.query('SELECT is_active FROM users WHERE lower(email) = $1', [email]);
+    expect(rows).toEqual([{ is_active: false }]);
+  });
+
+  test('signing in links the active faculty-directory entry with that email; principal.faculty_id is the directory id', async () => {
+    const email = uniqEmail('facdir');
+    const entry = await createFacultyEntry({ email });
+    mockAcl.set(email, aclEntry(email, { role: 'FACULTY', permissions: [] }));
+    const res = await devLogin(email);
+    expect(res.status).toBe(200);
+    expect((await me(res.body.token)).body.user.faculty_id).toBe(entry.id);
+    const { rows: [f] } = await db.query('SELECT user_id FROM faculties WHERE id = $1', [entry.id]);
+    expect(f.user_id).toBe(res.body.user.id);
+  });
+
+  test('an inactive directory entry is not linked; principal.faculty_id is null', async () => {
+    const email = uniqEmail('facoff');
+    const entry = await createFacultyEntry({ email, is_active: false });
+    mockAcl.set(email, aclEntry(email, { role: 'FACULTY', permissions: [] }));
+    const res = await devLogin(email);
+    expect(res.status).toBe(200);
+    expect((await me(res.body.token)).body.user.faculty_id).toBeNull();
+    expect((await db.query('SELECT user_id FROM faculties WHERE id = $1', [entry.id])).rows[0].user_id).toBeNull();
   });
 });
 

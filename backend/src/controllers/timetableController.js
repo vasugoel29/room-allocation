@@ -97,7 +97,7 @@ export async function getFacultyTimetable(req, res) {
         SELECT fts.*, r.name AS room_name 
         FROM faculty_timetable_slots fts
         LEFT JOIN rooms r ON r.id = fts.room_id
-        WHERE UPPER(fts.faculty_name) = $1
+        WHERE UPPER(fts.faculty_name) = $1 AND fts.is_active
       `;
       const params = [user.name.toUpperCase()];
       
@@ -127,7 +127,8 @@ export async function checkFacultyAvailability(req, res) {
         const { id } = req.params; // Faculty ID
         const { date, hour } = req.query; // Date (YYYY-MM-DD), Hour (0-23)
 
-        const faculty = await db.query('SELECT name FROM users WHERE id = $1 AND role = $2', [id, 'FACULTY']);
+        // `id` is a faculty-directory id (what the faculty picker returns).
+        const faculty = await db.query('SELECT name FROM faculties WHERE id = $1 AND is_active', [id]);
         if (faculty.rows.length === 0) return res.status(404).json({ error: 'Faculty not found' });
         
         const facultyName = faculty.rows[0].name.toUpperCase();
@@ -141,7 +142,7 @@ export async function checkFacultyAvailability(req, res) {
 
         const facultyStaticRes = await db.query(`
             SELECT slot_time FROM faculty_timetable_slots 
-            WHERE is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
+            WHERE is_active AND is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
         `, [facultyName, dayName]);
 
         const combinedSlots = [...staticRes.rows, ...facultyStaticRes.rows];
@@ -203,7 +204,7 @@ export async function createCancellationRequest(req, res) {
     }
 
     const facultyResult = await db.query(
-      `SELECT id FROM users WHERE role = 'FACULTY' AND UPPER(TRIM(name)) = UPPER(TRIM($1)) LIMIT 1`,
+      `SELECT id FROM faculties WHERE is_active AND UPPER(TRIM(name)) = UPPER(TRIM($1)) ORDER BY id LIMIT 1`,
       [faculty_name]
     );
     if (!facultyResult.rows[0]) {
@@ -234,7 +235,7 @@ export async function getPendingCancellationRequests(req, res) {
       JOIN users u ON u.id = c.requested_by
       WHERE c.faculty_id = $1 AND c.status = 'PENDING'
       ORDER BY c.created_at DESC
-    `, [req.user.id]);
+    `, [req.user.faculty_id ?? -1]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message || 'Failed to load cancellation requests.' });
@@ -251,7 +252,7 @@ export async function reviewCancellationRequest(req, res) {
         SELECT * FROM class_cancellation_requests
         WHERE id = $1 AND faculty_id = $2 AND status = 'PENDING'
         FOR UPDATE
-      `, [req.params.id, req.user.id]);
+      `, [req.params.id, req.user.faculty_id ?? -1]);
       const request = requestResult.rows[0];
       if (!request) return null;
 
@@ -303,7 +304,7 @@ export async function searchTimetable(req, res) {
           FROM bookings b
           JOIN rooms r ON b.room_id = r.id
           JOIN users u ON b.created_by = u.id
-          LEFT JOIN users f ON b.faculty_id = f.id
+          LEFT JOIN faculties f ON b.faculty_id = f.id
           WHERE (UPPER(f.name) = $1 OR UPPER(u.name) = $1)
           AND b.status = 'ACTIVE'
         `, [facultyName]);
@@ -340,7 +341,7 @@ export async function searchTimetable(req, res) {
           FROM bookings b
           JOIN rooms r ON b.room_id = r.id
           JOIN users u ON b.created_by = u.id
-          LEFT JOIN users f ON b.faculty_id = f.id
+          LEFT JOIN faculties f ON b.faculty_id = f.id
           WHERE (UPPER(u.branch) = $1 OR UPPER(u.branch) = $2 OR UPPER(u.department_name) = $1 OR UPPER(u.department_name) = $2)
           AND u.semester::TEXT = $3::TEXT
           AND u.section::TEXT = $4::TEXT
@@ -379,7 +380,7 @@ export async function autocompleteFaculty(req, res) {
     const likeQuery = `%${query}%`;
     const result = await db.query(`
       SELECT MAX(name) AS name FROM (
-        SELECT name FROM users WHERE role = 'FACULTY' AND name ILIKE $1
+        SELECT name FROM faculties WHERE is_active AND name ILIKE $1
         UNION
         SELECT DISTINCT faculty_name AS name FROM timetable_slots WHERE faculty_name ILIKE $1
       ) AS combined
@@ -408,7 +409,8 @@ export async function listSlots(req, res) {
     if (day_of_week)  { conditions.push(`fts.day_of_week ILIKE $${idx++}`); values.push(day_of_week); }
     if (semester)     { conditions.push(`fts.semester = $${idx++}`);         values.push(semester); }
 
-    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    conditions.unshift('fts.is_active');
+    const where = `WHERE ${conditions.join(' AND ')}`;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
     const [dataResult, countResult] = await Promise.all([
@@ -465,7 +467,7 @@ export async function updateSlot(req, res) {
           content      = COALESCE($5, content),
           is_occupied  = COALESCE($6, is_occupied),
           room_id      = $7
-      WHERE id = $8
+      WHERE id = $8 AND is_active
       RETURNING id, faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id
     `, [faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id ?? null, id]);
 
@@ -479,7 +481,11 @@ export async function updateSlot(req, res) {
 export async function deleteSlot(req, res) {
   try {
     const { id } = req.params;
-    const result = await db.query('DELETE FROM faculty_timetable_slots WHERE id = $1 RETURNING id', [id]);
+    // Soft delete (rows are never removed from the app).
+    const result = await db.query(
+      'UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1 AND is_active RETURNING id',
+      [id],
+    );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
     res.json({ success: true });
   } catch (err) {

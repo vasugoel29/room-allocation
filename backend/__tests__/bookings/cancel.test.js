@@ -80,7 +80,7 @@ describe('PATCH /api/bookings/:id/cancel', () => {
 
   test('assigned faculty can cancel the booking they supervise', async () => {
     const fac = await createFaculty();
-    const { booking } = await seeded({ status: 'PENDING', faculty_id: fac.user.id });
+    const { booking } = await seeded({ status: 'PENDING', faculty_id: fac.faculty.id });
     const res = await cancel(fac.auth, booking.id);
     expect(res.status).toBe(200);
     expect((await getBooking(booking.id)).status).toBe('CANCELLED');
@@ -90,7 +90,7 @@ describe('PATCH /api/bookings/:id/cancel', () => {
 
   test('creator can withdraw their own PENDING request', async () => {
     const fac = await createFaculty();
-    const { owner, booking } = await seeded({ status: 'PENDING', faculty_id: fac.user.id });
+    const { owner, booking } = await seeded({ status: 'PENDING', faculty_id: fac.faculty.id });
     expect((await cancel(owner.auth, booking.id)).status).toBe(200);
     expect((await getBooking(booking.id)).status).toBe('CANCELLED');
   });
@@ -135,7 +135,7 @@ describe('PATCH /api/bookings/:id/cancel', () => {
 
   test.failing('[BKG-17] cancelling a REJECTED booking is refused and status stays REJECTED', async () => {
     const fac = await createFaculty();
-    const { owner, booking } = await seeded({ status: 'REJECTED', faculty_id: fac.user.id });
+    const { owner, booking } = await seeded({ status: 'REJECTED', faculty_id: fac.faculty.id });
     const res = await cancel(owner.auth, booking.id);
     expect(res.status).toBe(400);
     expect((await getBooking(booking.id)).status).toBe('REJECTED');

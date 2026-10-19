@@ -43,7 +43,7 @@ export const transferRepository = {
   /**
    * Find incoming requests for a user
    */
-  findIncoming: async (userId) => {
+  findIncoming: async (userId, facultyId = null) => {
     const query = `
       SELECT t.*, r.name as room_name, u.name as requester_name, o.name as requestee_name, b.start_time, b.end_time, b.status as booking_status, b.faculty_id as owner_faculty_id 
       FROM booking_transfers t
@@ -52,11 +52,11 @@ export const transferRepository = {
       JOIN users u ON t.requested_by = u.id
       JOIN users o ON b.created_by = o.id
       WHERE (t.owner_id = $1 AND t.status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED'))
-         OR (b.faculty_id = $1 AND t.status = 'REP2_ACCEPTED')
-         OR (t.target_faculty_id = $1 AND t.status = 'FACULTY2_ACCEPTED')
+         OR ($2::int IS NOT NULL AND b.faculty_id = $2 AND t.status = 'REP2_ACCEPTED')
+         OR ($2::int IS NOT NULL AND t.target_faculty_id = $2 AND t.status = 'FACULTY2_ACCEPTED')
       ORDER BY t.created_at DESC
     `;
-    const result = await db.query(query, [userId]);
+    const result = await db.query(query, [userId, facultyId]);
     return result.rows;
   },
 

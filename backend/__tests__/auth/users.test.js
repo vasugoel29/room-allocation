@@ -16,7 +16,7 @@ jest.unstable_mockModule('../../src/utils/emailService.js', () => ({
 
 const { default: app } = await import('../../src/server.js');
 const db = await import('../../src/db.js');
-const { createAdmin, createFaculty, createRep, createViewer, closeDb } = await import('../../test/helpers/factories.js');
+const { createAdmin, createFaculty, createRep, createViewer, createRoom, insertBooking, futureSlot, closeDb } = await import('../../test/helpers/factories.js');
 
 afterAll(closeDb);
 
@@ -34,7 +34,7 @@ describe('GET /api/auth/users', () => {
     const all = await request(app).get('/api/auth/users').set('Authorization', admin.auth);
     expect(all.status).toBe(200);
     expect(all.body.meta).toMatchObject({ page: 1, limit: 20 });
-    const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM users');
+    const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM users WHERE is_active');
     expect(all.body.meta.total).toBe(c);
     const res = await request(app).get(`/api/auth/users?search=${encodeURIComponent(user.email)}`).set('Authorization', admin.auth);
     expect(res.body.meta.totalPages).toBe(Math.ceil(res.body.meta.total / 20));
@@ -229,12 +229,49 @@ describe('PATCH /api/auth/users/:id', () => {
 
 // ─── DELETE /users/:id ──────────────────────────────────────────────────────
 describe('DELETE /api/auth/users/:id', () => {
-  test('admin deletes a user → 200 and row is gone', async () => {
+  test('admin deletes a user → 200; row soft-deleted (is_active=false, deactivated_at), hidden from the list; second delete 404', async () => {
     const { user } = await createViewer();
     const res = await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ message: 'User deleted successfully' });
-    expect(await getUser(user.id)).toBeUndefined();
+    const row = await getUser(user.id);
+    expect(row).toMatchObject({ id: user.id, email: user.email, is_active: false });
+    expect(row.deactivated_at).not.toBeNull();
+    expect(row.session_version).toBe((user.session_version || 0) + 1);
+    const list = await request(app).get(`/api/auth/users?search=${encodeURIComponent(user.email)}`).set('Authorization', admin.auth);
+    expect(list.body.data.map((u) => u.id)).not.toContain(user.id);
+    expect(list.body.meta.total).toBe(0);
+    const again = await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth);
+    expect(again.status).toBe(404);
+    expect(again.body).toEqual({ error: 'User not found' });
+  });
+
+  test('a soft-deleted user\'s token → 401 and password sign-in is refused', async () => {
+    const { user, auth } = await createViewer();
+    expect((await request(app).get('/api/auth/faculties').set('Authorization', auth)).status).toBe(200); // token works before
+    expect((await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth)).status).toBe(200);
+    const res = await request(app).get('/api/auth/faculties').set('Authorization', auth);
+    expect(res.status).toBe(401);
+    const login = await request(app).post('/api/auth/login').send({ email: user.email, password: 'Password@123' });
+    expect(login.status).toBe(401);
+    expect(login.body.token).toBeUndefined();
+  });
+
+  test('deleting a user cancels their upcoming ACTIVE/PENDING bookings (rows kept); past bookings untouched', async () => {
+    const { user } = await createRep();
+    const room = await createRoom();
+    const s1 = futureSlot({ hour: 10 });
+    const s2 = futureSlot({ hour: 11 });
+    const active = await insertBooking({ room_id: room.id, created_by: user.id, start_time: s1.start });
+    const pending = await insertBooking({ room_id: room.id, created_by: user.id, start_time: s2.start, status: 'PENDING' });
+    const past = await insertBooking({ room_id: room.id, created_by: user.id, start_time: new Date(Date.now() - 48 * 3600_000).toISOString() });
+    expect((await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth)).status).toBe(200);
+    const st = async (id) => (await db.query('SELECT status, cancelled_at, created_by FROM bookings WHERE id = $1', [id])).rows[0];
+    for (const b of [active, pending]) {
+      expect(await st(b.id)).toMatchObject({ status: 'CANCELLED', created_by: user.id });
+      expect((await st(b.id)).cancelled_at).not.toBeNull();
+    }
+    expect(await st(past.id)).toMatchObject({ status: 'ACTIVE', created_by: user.id });
   });
 
   test('non-existent id → 404', async () => {
@@ -252,11 +289,28 @@ describe('DELETE /api/auth/users/:id', () => {
     expect(await getUser(user.id)).toBeDefined();
   });
 
-  test('deleting a user cascades their pending promotion requests', async () => {
-    const { user } = await createViewer();
-    await db.query("INSERT INTO promotion_requests (user_id, reason) VALUES ($1, 'cascade me')", [user.id]);
+  // NEW-P2-1: rooms, departments, branches and timetable slots refuse updates once soft-deleted
+  // (UPDATE ... WHERE id = $n AND is_active → 404), but userRepository.update / approve-user still
+  // match inactive users: an admin can edit or "approve" a deleted account (approval also emails it).
+  test('[NEW-P2-1] PATCH /users/:id and PATCH /approve-user/:id on a soft-deleted user → 404, row unchanged', async () => {
+    const { user } = await createFaculty({ is_approved: false });
     expect((await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth)).status).toBe(200);
-    expect((await db.query('SELECT 1 FROM promotion_requests WHERE user_id = $1', [user.id])).rows).toHaveLength(0);
+    notifyFacultyApproved.mockClear();
+    const patch = await request(app).patch(`/api/auth/users/${user.id}`).set('Authorization', admin.auth).send({ name: 'Edited After Delete' });
+    const approve = await request(app).patch(`/api/auth/approve-user/${user.id}`).set('Authorization', admin.auth);
+    expect(patch.status).toBe(404);
+    expect(approve.status).toBe(404);
+    expect(notifyFacultyApproved).not.toHaveBeenCalled();
+    expect(await getUser(user.id)).toMatchObject({ name: user.name, is_approved: false, is_active: false });
+  });
+
+  test('deleting a user keeps their pending promotion requests and department/branch references', async () => {
+    const { rows: [dept] } = await db.query('SELECT id FROM departments WHERE is_active ORDER BY id LIMIT 1');
+    const { user } = await createViewer({ department_id: dept.id });
+    await db.query("INSERT INTO promotion_requests (user_id, reason) VALUES ($1, 'keep me')", [user.id]);
+    expect((await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth)).status).toBe(200);
+    expect((await db.query('SELECT reason FROM promotion_requests WHERE user_id = $1', [user.id])).rows).toEqual([{ reason: 'keep me' }]);
+    expect((await getUser(user.id)).department_id).toBe(dept.id);
   });
 });
 

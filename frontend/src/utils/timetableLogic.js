@@ -118,7 +118,8 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
 
       if (user.role === 'FACULTY') {
         // Faculty's own bookings or bookings they accepted
-        return String(b.faculty_id) === String(user.id) || String(b.created_by) === String(user.id);
+        // faculty_id is a faculty-directory id, so compare with the user's directory id, not user.id.
+        return (user.faculty_id != null && String(b.faculty_id) === String(user.faculty_id)) || String(b.created_by) === String(user.id);
       } else {
         // Student section bookings
         const normalize = (val) => {

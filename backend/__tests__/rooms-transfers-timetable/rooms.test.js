@@ -243,27 +243,57 @@ describe('Room CRUD (admin)', () => {
     expect(res.body).toMatchObject({ building: 'Keep', floor: 3, type: 'Lab', has_ac: true, has_projector: true, student_access: false });
   });
 
-  test('legacy: admin deletes a room; availability rows cascade; second delete is 404', async () => {
+  test('admin deletes a room: 200, row soft-deleted (is_active=false, deactivated_at), availability rows kept; second delete is 404', async () => {
     const room = await createRoom();
     await db.query("INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, 'Mon', 9, false)", [room.id]);
     const res = await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'Success', message: `Room ${room.name} deleted successfully` });
-    expect((await db.query('SELECT 1 FROM rooms WHERE id = $1', [room.id])).rowCount).toBe(0);
-    expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [room.id])).rowCount).toBe(0);
+    const { rows: [row] } = await db.query('SELECT * FROM rooms WHERE id = $1', [room.id]);
+    expect(row).toMatchObject({ id: room.id, name: room.name, is_active: false });
+    expect(row.deactivated_at).not.toBeNull();
+    expect((await db.query('SELECT 1 FROM room_availability WHERE room_id = $1', [room.id])).rowCount).toBe(1);
     const again = await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth);
     expect(again.status).toBe(404);
+    expect(again.body).toEqual({ error: 'Room not found' });
   });
 
-  test('delete detaches faculty timetable slots (room_id set NULL) rather than deleting them', async () => {
+  test('a soft-deleted room is hidden from GET /api/rooms (plain and paginated) and cannot be updated', async () => {
+    const building = `SD-${tag()}`;
+    const keep = await createRoom({ building });
+    const gone = await createRoom({ building });
+    await request(app).delete(`/api/rooms/${gone.id}`).set('Authorization', admin.auth).expect(200);
+    for (const u of [admin, rep]) {
+      const res = await request(app).get('/api/rooms').set('Authorization', u.auth).query({ building });
+      expect(res.status).toBe(200);
+      expect(res.body.map((r) => r.id)).toEqual([keep.id]);
+    }
+    const paged = await request(app).get('/api/rooms').set('Authorization', admin.auth).query({ building, page: 1, limit: 10 });
+    expect(paged.body.data.map((r) => r.id)).toEqual([keep.id]);
+    expect(paged.body.meta.total).toBe(1);
+    const patch = await request(app).patch(`/api/rooms/${gone.id}`).set('Authorization', admin.auth).send({ name: gone.name, capacity: 5 });
+    expect(patch.status).toBe(404);
+    expect((await db.query('SELECT capacity FROM rooms WHERE id = $1', [gone.id])).rows[0].capacity).toBe(gone.capacity);
+  });
+
+  test('a soft-deleted room\'s name can be reused by a new room (names are unique among active rooms)', async () => {
+    const room = await createRoom();
+    await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth).expect(200);
+    const res = await request(app).post('/api/rooms').set('Authorization', admin.auth).send({ name: room.name, capacity: 10 });
+    expect(res.status).toBe(201);
+    expect(res.body.id).not.toBe(room.id);
+    expect((await db.query('SELECT COUNT(*)::int AS n FROM rooms WHERE name = $1', [room.name])).rows[0].n).toBe(2);
+  });
+
+  test('delete keeps faculty timetable slots pointing at the room (room_id is not nulled)', async () => {
     const room = await createRoom();
     const { rows: [slot] } = await db.query(
       "INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, room_id) VALUES ('RTT Prof', 'Mon', '09:00-10:00', $1) RETURNING id",
       [room.id],
     );
     expect((await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth)).status).toBe(200);
-    const { rows } = await db.query('SELECT room_id FROM faculty_timetable_slots WHERE id = $1', [slot.id]);
-    expect(rows[0].room_id).toBeNull();
+    const { rows } = await db.query('SELECT room_id, is_active FROM faculty_timetable_slots WHERE id = $1', [slot.id]);
+    expect(rows[0]).toEqual({ room_id: room.id, is_active: true });
   });
 
   test('delete: 401 without token; 403 for VIEWER, STUDENT_REP (legacy), FACULTY', async () => {
@@ -275,17 +305,34 @@ describe('Room CRUD (admin)', () => {
     expect((await db.query('SELECT 1 FROM rooms WHERE id = $1', [room.id])).rowCount).toBe(1);
   });
 
-  test.failing('[BKG-14] deleting a room with future ACTIVE bookings is refused (409) instead of silently cascading them', async () => {
+  // BKG-14 (fixed by soft delete): room delete used to fail on FKs or silently cascade future bookings away.
+  // Now the room is deactivated and its upcoming ACTIVE/PENDING bookings are CANCELLED (rows kept).
+  test('[BKG-14] deleting a room cancels its upcoming ACTIVE/PENDING bookings (rows kept); past and other rooms untouched', async () => {
     const room = await createRoom();
+    const other = await createRoom();
     const owner = await createRep();
-    const slot = futureSlot({ hour: 11 });
-    const b = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: slot.start, end_time: slot.end });
+    const s1 = futureSlot({ hour: 11 });
+    const s2 = futureSlot({ hour: 12 });
+    const active = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: s1.start, end_time: s1.end });
+    const pending = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: s2.start, end_time: s2.end, status: 'PENDING' });
+    const pastStart = new Date(Date.now() - 48 * 3600_000).toISOString();
+    const past = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: pastStart, status: 'ACTIVE' });
+    const otherOwner = await createRep();
+    const elsewhere = await insertBooking({ room_id: other.id, created_by: otherOwner.user.id, start_time: s1.start, end_time: s1.end });
+
     const res = await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth);
-    expect(res.status).toBe(409);
-    expect((await db.query('SELECT status FROM bookings WHERE id = $1', [b.id])).rows[0]?.status).toBe('ACTIVE');
+    expect(res.status).toBe(200);
+    const st = async (id) => (await db.query('SELECT status, cancelled_at FROM bookings WHERE id = $1', [id])).rows[0];
+    for (const b of [active, pending]) {
+      const row = await st(b.id);
+      expect(row.status).toBe('CANCELLED');
+      expect(row.cancelled_at).not.toBeNull();
+    }
+    expect((await st(past.id)).status).toBe('ACTIVE');
+    expect((await st(elsewhere.id)).status).toBe('ACTIVE');
   });
 
-  test.failing('[BKG-14] deleting a room that appears in booking_history (after a reschedule) does not 500', async () => {
+  test('[BKG-14] deleting a room that appears in booking_history (after a reschedule) does not 500', async () => {
     const oldRoom = await createRoom();
     const newRoom = await createRoom();
     const owner = await createRep();
@@ -296,7 +343,10 @@ describe('Room CRUD (admin)', () => {
     expect((await db.query('SELECT previous_room_id FROM booking_history WHERE booking_id = $1', [b.id])).rows[0].previous_room_id).toBe(oldRoom.id);
 
     const res = await request(app).delete(`/api/rooms/${oldRoom.id}`).set('Authorization', admin.auth);
-    expect([200, 409]).toContain(res.status); // currently 500: booking_history_previous_room_id_fkey
+    expect(res.status).toBe(200);
+    // History and the moved booking are untouched.
+    expect((await db.query('SELECT previous_room_id FROM booking_history WHERE booking_id = $1', [b.id])).rows[0].previous_room_id).toBe(oldRoom.id);
+    expect((await db.query('SELECT room_id, status FROM bookings WHERE id = $1', [b.id])).rows[0]).toEqual({ room_id: newRoom.id, status: 'ACTIVE' });
   });
 });
 
@@ -436,7 +486,7 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(availRows(a.body, room.id)).toEqual([expect.objectContaining({ day: 'Fri', hour: 16 })]);
   });
 
-  test('deleting a room removes its rows from /availability immediately', async () => {
+  test('deleting (soft-deleting) a room hides its rows from /availability immediately', async () => {
     const room = await createRoom();
     await override(admin.auth, { room_name: room.name, day: 'Mon', hour: 8, is_available: false });
     expect(availRows((await request(app).get('/api/availability').set('Authorization', rep.auth)).body, room.id)).toHaveLength(1);
@@ -518,7 +568,7 @@ describe('GET /api/rooms/admin/status', () => {
     expect(res.body.map((r) => r.room_id)).toContain(created.body.id);
   });
 
-  test.failing('[BKG-16] a deleted room disappears from admin status immediately (cached for 30s)', async () => {
+  test('[BKG-16] a deleted room disappears from admin status immediately (cached for 30s)', async () => {
     const room = await createRoom();
     const date = futureSlot({ hour: 9 }).dateKey;
     const first = await status(admin.auth, { date, slot: 6 });
@@ -526,6 +576,22 @@ describe('GET /api/rooms/admin/status', () => {
     await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth).expect(200);
     const res = await status(admin.auth, { date, slot: 6 });
     expect(res.body.map((r) => r.room_id)).not.toContain(room.id);
+  });
+
+  // NEW-P2-2: user deactivation cancels the user's upcoming bookings in userRepository.delete, but
+  // userService.deleteUser never clears the admin_status_* / room_availability_all caches (room
+  // deletion and booking cancel do), so the cancelled booking keeps showing for up to 30s.
+  test('[NEW-P2-2] bookings cancelled by deleting their owner disappear from admin status immediately', async () => {
+    const room = await createRoom();
+    const owner = await createRep();
+    const slot = futureSlot({ hour: 15 });
+    const b = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: slot.start, end_time: slot.end });
+    const before = await status(admin.auth, { date: slot.dateKey, slot: 15 });
+    expect(before.body.find((r) => r.room_id === room.id).booking_id).toBe(b.id);
+    await request(app).delete(`/api/auth/users/${owner.user.id}`).set('Authorization', admin.auth).expect(200);
+    expect((await db.query('SELECT status FROM bookings WHERE id = $1', [b.id])).rows[0].status).toBe('CANCELLED');
+    const after = await status(admin.auth, { date: slot.dateKey, slot: 15 });
+    expect(after.body.find((r) => r.room_id === room.id).booking_id ?? null).toBeNull();
   });
 
   test('a booking created through the API is reflected in admin status immediately', async () => {

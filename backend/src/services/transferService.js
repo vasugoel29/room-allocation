@@ -4,6 +4,7 @@ import cache from '../utils/cache.js';
 import { transferRepository } from '../repositories/transferRepository.js';
 import { bookingRepository } from '../repositories/bookingRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { facultyRepository } from '../repositories/facultyRepository.js';
 import { logActivity } from './loggerService.js';
 
 export const requestTransfer = async (reqData, userId, userRole) => {
@@ -24,6 +25,12 @@ export const requestTransfer = async (reqData, userId, userRole) => {
 
   if (booking.status !== 'ACTIVE') {
     return { error: 'Can only request transfer for an ACTIVE booking.', status: 400 };
+  }
+  // The approving faculty must be an active faculty-directory entry (not an arbitrary user id).
+  if (target_faculty_id !== undefined && target_faculty_id !== null && target_faculty_id !== '') {
+    if (!(await facultyRepository.findActiveById(target_faculty_id))) {
+      return { error: 'Selected faculty member was not found', status: 400 };
+    }
   }
   if (booking.created_by === userId) {
     return { error: 'Cannot request transfer from yourself.', status: 400 };
@@ -55,15 +62,15 @@ export const requestTransfer = async (reqData, userId, userRole) => {
   }
 };
 
-export const getIncomingRequests = async (userId) => {
-  return transferRepository.findIncoming(userId);
+export const getIncomingRequests = async (userId, facultyId = null) => {
+  return transferRepository.findIncoming(userId, facultyId);
 };
 
 export const getOutgoingRequests = async (userId) => {
   return transferRepository.findOutgoing(userId);
 };
 
-export const acceptTransfer = async (transferId, userId, userRole) => {
+export const acceptTransfer = async (transferId, userId, userRole, facultyId = null) => {
   return db.runInTransaction(async (client) => {
     const t = await transferRepository.findById(transferId, client);
     if (!t) {
@@ -126,7 +133,7 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
 
     // Step 2: Faculty of Rep 2 accepts
     if (t.status === 'REP2_ACCEPTED') {
-      if (String(t.owner_faculty_id) !== String(userId) && userRole !== 'ADMIN') {
+      if ((facultyId == null || String(t.owner_faculty_id) !== String(facultyId)) && userRole !== 'ADMIN') {
         throw { error: 'Not authorized to approve this transfer.', status: 403 };
       }
 
@@ -168,7 +175,7 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
 
     // Step 3: Faculty of Rep 1 accepts
     if (t.status === 'FACULTY2_ACCEPTED') {
-      if (String(t.target_faculty_id) !== String(userId) && userRole !== 'ADMIN') {
+      if ((facultyId == null || String(t.target_faculty_id) !== String(facultyId)) && userRole !== 'ADMIN') {
         throw { error: 'Not authorized to approve this transfer.', status: 403 };
       }
 
@@ -199,7 +206,7 @@ export const acceptTransfer = async (transferId, userId, userRole) => {
   });
 };
 
-export const rejectTransfer = async (transferId, userId, userRole) => {
+export const rejectTransfer = async (transferId, userId, userRole, facultyId = null) => {
   return db.runInTransaction(async (client) => {
     const t = await transferRepository.findById(transferId, client);
     if (!t) {
@@ -207,8 +214,8 @@ export const rejectTransfer = async (transferId, userId, userRole) => {
     }
 
     const isAuthorized = t.owner_id === userId ||
-      String(t.owner_faculty_id) === String(userId) ||
-      String(t.target_faculty_id) === String(userId) ||
+      (facultyId != null && String(t.owner_faculty_id) === String(facultyId)) ||
+      (facultyId != null && String(t.target_faculty_id) === String(facultyId)) ||
       userRole === 'ADMIN';
 
     if (!isAuthorized) {

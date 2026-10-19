@@ -16,7 +16,7 @@ export const roomRepository = {
    * Find a room by name (case-insensitive)
    */
   findByName: async (name, client = db) => {
-    const result = await client.query('SELECT * FROM rooms WHERE UPPER(name) = UPPER($1)', [name]);
+    const result = await client.query('SELECT * FROM rooms WHERE UPPER(name) = UPPER($1) AND is_active', [name]);
     return result.rows[0];
   },
 
@@ -74,6 +74,7 @@ export const roomRepository = {
         AND b.status = 'ACTIVE'
         AND tstzrange(b.start_time, b.end_time) && tstzrange($1::timestamptz, $2::timestamptz)
       LEFT JOIN users u ON b.created_by = u.id
+      WHERE r.is_active
       ORDER BY r.name ASC
     `;
     const result = await client.query(query, [startTime, endTime]);
@@ -84,7 +85,7 @@ export const roomRepository = {
    * Find available rooms with filters
    */
   findFiltered: async (capacity, ac, projector, building, floor, type) => {
-    let query = 'SELECT * FROM rooms WHERE 1=1';
+    let query = 'SELECT * FROM rooms WHERE is_active';
     const params = [];
 
     if (capacity) { params.push(capacity); query += ` AND capacity >= $${params.length}`; }
@@ -125,7 +126,7 @@ export const roomRepository = {
    */
   findFilteredPaginated: async (filters) => {
     const { capacity, ac, projector, building, floor, type, limit, offset } = filters;
-    let baseQuery = 'FROM rooms WHERE 1=1';
+    let baseQuery = 'FROM rooms WHERE is_active';
     const params = [];
 
     if (capacity) { params.push(capacity); baseQuery += ` AND capacity >= $${params.length}`; }
@@ -178,6 +179,7 @@ export const roomRepository = {
       SELECT ra.*, r.name as room_name 
       FROM room_availability ra
       JOIN rooms r ON ra.room_id = r.id
+      WHERE r.is_active
     `);
     return result.rows;
   },
@@ -215,7 +217,7 @@ export const roomRepository = {
     const query = `
       UPDATE rooms 
       SET name = $1, building = $2, floor = $3, capacity = $4, has_ac = $5, has_projector = $6, type = $7, description = $8, student_access = $9
-      WHERE id = $10
+      WHERE id = $10 AND is_active
       RETURNING *
     `;
     const result = await client.query(query, [
@@ -226,11 +228,21 @@ export const roomRepository = {
   },
 
   /**
-   * Delete a room
+   * Soft-delete a room. Its upcoming ACTIVE/PENDING bookings are cancelled (kept, not removed)
+   * because they can no longer take place; past bookings and history are untouched.
    */
   delete: async (id, client = db) => {
-    const query = 'DELETE FROM rooms WHERE id = $1 RETURNING *';
-    const result = await client.query(query, [id]);
+    const result = await client.query(
+      'UPDATE rooms SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1 AND is_active RETURNING *',
+      [id],
+    );
+    if (result.rows[0]) {
+      await client.query(
+        `UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
+          WHERE room_id = $1 AND status IN ('ACTIVE', 'PENDING') AND start_time > NOW()`,
+        [id],
+      );
+    }
     return result.rows[0];
   }
 };

@@ -46,7 +46,26 @@ export async function createUser(overrides = {}) {
 
 export const createAdmin = (o) => createUser({ ...o, role: 'ADMIN' });
 export const createRep = (o) => createUser({ ...o, role: 'STUDENT_REP' });
-export const createFaculty = (o) => createUser({ ...o, role: 'FACULTY' });
+/** A directory entry (faculties row). Pass `user` to link it to a sign-in account. */
+export async function createFacultyEntry({ user = null, name, email, department_name = null, is_active = true } = {}) {
+  const { rows } = await db.query(
+    `INSERT INTO faculties (name, email, department_name, is_active, user_id)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [name || user?.name || `Test Faculty ${uid()}`, (email || user?.email || `t.fac.${uid()}@nsut.ac.in`).toLowerCase(),
+      department_name, is_active, user?.id ?? null],
+  );
+  return rows[0];
+}
+
+/**
+ * A FACULTY account plus its linked faculty-directory entry.
+ * Returns { user, token, auth, faculty } — use `faculty.id` wherever the API expects a faculty id.
+ */
+export async function createFaculty(o = {}) {
+  const created = await createUser({ ...o, role: 'FACULTY' });
+  const faculty = await createFacultyEntry({ user: created.user });
+  return { ...created, faculty };
+}
 export const createViewer = (o) => createUser({ ...o, role: 'VIEWER' });
 
 export async function createRoom(overrides = {}) {

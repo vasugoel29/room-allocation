@@ -1,3 +1,6 @@
+import cache from '../utils/cache.js';
+import * as db from '../db.js';
+import { invalidatePrincipal } from '../auth/session.js';
 import { userRepository } from '../repositories/userRepository.js';
 
 export const getUsers = async (filters = {}) => {
@@ -40,7 +43,14 @@ export const updateUser = async (id, userData) => {
 };
 
 export const deleteUser = async (id) => {
-  return userRepository.delete(id);
+  const user = await db.runInTransaction((client) => userRepository.delete(id, client));
+  if (user) {
+    invalidatePrincipal(user.id);
+    // Their upcoming bookings were cancelled, so cached room status/availability is stale.
+    cache.deletePattern('admin_status_.*');
+    cache.delete('room_availability_all');
+  }
+  return user;
 };
 
 export const getFaculties = async () => {

@@ -4,7 +4,7 @@ import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import {
-  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking,
+  createAdmin, createRep, createFaculty, createFacultyEntry, createViewer, createRoom, insertBooking,
   futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
@@ -97,9 +97,9 @@ describe('GET /api/timetable/search (admin)', () => {
     const room = await createRoom();
     const student = await createRep();
     const slot = futureSlot({ hour: 11 });
-    const active = await insertBooking({ room_id: room.id, created_by: student.user.id, start_time: slot.start, faculty_id: fac.user.id, purpose: 'Supervised' });
+    const active = await insertBooking({ room_id: room.id, created_by: student.user.id, start_time: slot.start, faculty_id: fac.faculty.id, purpose: 'Supervised' });
     const room2 = await createRoom();
-    await insertBooking({ room_id: room2.id, created_by: student.user.id, start_time: futureSlot({ hour: 12 }).start, faculty_id: fac.user.id, status: 'CANCELLED' });
+    await insertBooking({ room_id: room2.id, created_by: student.user.id, start_time: futureSlot({ hour: 12 }).start, faculty_id: fac.faculty.id, status: 'CANCELLED' });
 
     const res = await search(admin.auth, { type: 'FACULTY', name: name.toLowerCase() });
     expect(res.status).toBe(200);
@@ -209,39 +209,52 @@ describe('GET /api/timetable/faculty/check/:id', () => {
     await db.query("INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, is_occupied) VALUES ($1,'Tue','03:00-04:00',true), ($1,'Tue','04:00-05:00',false)", [name]);
     const room = await createRoom();
     const student = await createRep();
-    await insertBooking({ room_id: room.id, created_by: student.user.id, start_time: slot.start, faculty_id: fac.user.id });
+    await insertBooking({ room_id: room.id, created_by: student.user.id, start_time: slot.start, faculty_id: fac.faculty.id });
   });
 
-  test('401 without token; 404 for a non-faculty id', async () => {
-    expect((await request(app).get(`/api/timetable/faculty/check/${fac.user.id}`)).status).toBe(401);
-    const res = await check(viewer.auth, rep.user.id, { date: slot.dateKey, hour: 10 });
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBe('Faculty not found');
+  test('401 without token; 404 for an id that is not an active faculty-directory entry', async () => {
+    expect((await request(app).get(`/api/timetable/faculty/check/${fac.faculty.id}`)).status).toBe(401);
+    const inactive = await createFacultyEntry({ is_active: false });
+    // A user id (even the faculty member's own account id) is not a directory id.
+    for (const id of [rep.user.id, fac.user.id, inactive.id]) {
+      const res = await check(viewer.auth, id, { date: slot.dateKey, hour: 10 });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Faculty not found');
+    }
   });
 
   test('static timetable class (12h data converted) → occupied, details hidden', async () => {
-    const res = await check(viewer.auth, fac.user.id, { date: slot.dateKey, hour: 13 });
+    const res = await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 13 });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ isOccupied: true, reason: 'Static Class', details: null });
   });
 
   test('occupied faculty_timetable_slots count, unoccupied ones do not', async () => {
-    expect((await check(viewer.auth, fac.user.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(true);
-    expect((await check(viewer.auth, fac.user.id, { date: slot.dateKey, hour: 16 })).body.isOccupied).toBe(false);
+    expect((await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(true);
+    expect((await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 16 })).body.isOccupied).toBe(false);
   });
 
   test('ACTIVE booking supervised by the faculty → Dynamic Booking', async () => {
-    const res = await check(viewer.auth, fac.user.id, { date: slot.dateKey, hour: 10 });
+    const res = await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 10 });
     expect(res.body).toEqual({ isOccupied: true, reason: 'Dynamic Booking', details: null });
   });
 
+  test('a soft-deleted faculty_timetable_slot no longer makes the faculty busy', async () => {
+    await db.query("UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE UPPER(faculty_name) = UPPER($1) AND slot_time = '03:00-04:00'", [fac.faculty.name]);
+    try {
+      expect((await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(false);
+    } finally {
+      await db.query("UPDATE faculty_timetable_slots SET is_active = TRUE, deactivated_at = NULL WHERE UPPER(faculty_name) = UPPER($1) AND slot_time = '03:00-04:00'", [fac.faculty.name]);
+    }
+  });
+
   test('free hour → not occupied', async () => {
-    const res = await check(viewer.auth, fac.user.id, { date: slot.dateKey, hour: 9 });
+    const res = await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 9 });
     expect(res.body).toEqual({ isOccupied: false, reason: null, details: null });
   });
 
   test.failing('[NEW-RTT-8] missing date/hour returns 400 (currently 500 TypeError)', async () => {
-    const res = await check(viewer.auth, fac.user.id, {});
+    const res = await check(viewer.auth, fac.faculty.id, {});
     expect(res.status).toBe(400);
   });
 });
@@ -334,12 +347,19 @@ describe('/api/timetable/slots (admin CRUD on faculty_timetable_slots)', () => {
     expect(res.body.room_id).toBe(room.id);
   });
 
-  test('delete: 200 then 404; row gone', async () => {
-    const created = (await slotsApi('post', '', admin.auth).send({ faculty_name: `RTT Del ${tag()}`, day_of_week: 'Mon', slot_time: '09:00-10:00' })).body;
+  test('delete: 200 then 404; row soft-deleted (is_active=false, deactivated_at), hidden from the list, not updatable', async () => {
+    const fname = `RTT Del ${tag()}`;
+    const created = (await slotsApi('post', '', admin.auth).send({ faculty_name: fname, day_of_week: 'Mon', slot_time: '09:00-10:00' })).body;
     const res = await slotsApi('delete', `/${created.id}`, admin.auth);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
-    expect((await db.query('SELECT 1 FROM faculty_timetable_slots WHERE id = $1', [created.id])).rowCount).toBe(0);
+    const { rows: [row] } = await db.query('SELECT * FROM faculty_timetable_slots WHERE id = $1', [created.id]);
+    expect(row).toMatchObject({ id: created.id, faculty_name: fname, is_active: false });
+    expect(row.deactivated_at).not.toBeNull();
+    const list = await request(app).get('/api/timetable/slots').query({ faculty_name: fname }).set('Authorization', admin.auth);
+    expect(list.status).toBe(200);
+    expect(JSON.stringify(list.body)).not.toContain(fname);
+    expect((await slotsApi('patch', `/${created.id}`, admin.auth).send({ content: 'revived?' })).status).toBe(404);
     expect((await slotsApi('delete', `/${created.id}`, admin.auth)).status).toBe(404);
   });
 });

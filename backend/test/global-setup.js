@@ -36,5 +36,8 @@ export default async function globalSetup() {
   const drift = new pg.Client({ connectionString: url.toString() });
   await drift.connect();
   await drift.query(fs.readFileSync(path.join(__dirname, 'known-drift.sql'), 'utf8'));
+  // Faculty-directory ids must never coincide with user ids in tests, so any code or test that
+  // mixes the two id spaces fails loudly instead of passing by accident.
+  await drift.query('ALTER SEQUENCE faculties_id_seq RESTART WITH 500000');
   await drift.end();
 }

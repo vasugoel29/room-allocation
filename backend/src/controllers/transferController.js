@@ -16,7 +16,7 @@ export const requestTransfer = async (req, res) => {
 
 export const getIncomingRequests = async (req, res) => {
   try {
-    const requests = await transferService.getIncomingRequests(req.user.id);
+    const requests = await transferService.getIncomingRequests(req.user.id, req.user.faculty_id);
     res.json(requests);
   } catch (err) {
     logger.error('Failed to fetch incoming transfers', err);
@@ -36,7 +36,7 @@ export const getOutgoingRequests = async (req, res) => {
 
 export const acceptTransfer = async (req, res) => {
   try {
-    const result = await transferService.acceptTransfer(req.params.id, req.user.id, req.user.role);
+    const result = await transferService.acceptTransfer(req.params.id, req.user.id, req.user.role, req.user.faculty_id);
     if (result.error) {
       return res.status(result.status).json({ error: result.error });
     }
@@ -49,7 +49,7 @@ export const acceptTransfer = async (req, res) => {
 
 export const rejectTransfer = async (req, res) => {
   try {
-    const result = await transferService.rejectTransfer(req.params.id, req.user.id, req.user.role);
+    const result = await transferService.rejectTransfer(req.params.id, req.user.id, req.user.role, req.user.faculty_id);
     if (result.error) {
       return res.status(result.status).json({ error: result.error });
     }

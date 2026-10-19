@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import { facultyRepository } from '../repositories/facultyRepository.js';
 import XLSX from 'xlsx-js-style';
 import bcrypt from 'bcrypt';
 import logger from '../utils/logger.js';
@@ -71,7 +72,7 @@ export const getFacultyTemplate = async (req, res) => {
   }
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=faculty_template.csv");
-  res.send("name,email,department_name\n");
+  res.send("name,email,department_name,status\n");
 };
 
 export const getTimetableTemplate = async (req, res) => {
@@ -276,7 +277,9 @@ export const exportFaculty = async (req, res) => {
         details: { format: 'xlsx' }
       });
     }
-    const result = await db.query("SELECT name, email, department_name FROM users WHERE role = 'FACULTY'");
+    const result = await db.query(`
+      SELECT name, email, department_name, CASE WHEN is_active THEN 'active' ELSE 'inactive' END AS status
+      FROM faculties ORDER BY name`);
     return exportToXLSX(result.rows, 'faculty_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export faculty XLSX', err);
@@ -300,6 +303,7 @@ export const exportTimetable = async (req, res) => {
              fts.content, fts.is_occupied, fts.room_id, r.name AS room_name
       FROM faculty_timetable_slots fts
       LEFT JOIN rooms r ON r.id = fts.room_id
+      WHERE fts.is_active
       ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
     `);
     return exportTimetableCalendar(result.rows, res, view);
@@ -379,48 +383,56 @@ export const importStudents = async (req, res) => {
   runStudentsImport(jobId, csvContent, req.user?.id);
 };
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Faculty CSV → faculty directory (faculties table). Creates or updates entries by email; a row
+ * with status "inactive" soft-deletes that entry. No sign-in accounts or passwords are created:
+ * faculty sign in with Google, and their directory entry is linked on first sign-in.
+ */
 const runFacultyImport = async (jobId, csvContent, userId) => {
   try {
     const rows = parseCSV(csvContent);
-    const processedFaculty = [];
-    const batchSize = 10;
-    for (let i = 0; i < rows.length; i += batchSize) {
-      const chunk = rows.slice(i, i + batchSize);
-      await Promise.all(chunk.map(async (row) => {
-        if (!row.email) return;
-        let password = row.password || (row.name || '').toLowerCase().replace(/\s+/g, '');
-        const hashedPassword = await bcrypt.hash(password, 10);
-        processedFaculty.push({
-          name: row.name || '', email: row.email.toLowerCase(),
-          password: hashedPassword, department_name: row.department_name || ''
-        });
-      }));
-    }
-    await db.runInTransaction(async (client) => {
-      const chunkSize = 500;
-      for (let i = 0; i < processedFaculty.length; i += chunkSize) {
-        const chunk = processedFaculty.slice(i, i + chunkSize);
-        const values = [];
-        const placeholders = [];
-        let idx = 1;
-        for (const row of chunk) {
-          placeholders.push(`($${idx},$${idx+1},$${idx+2},'FACULTY',$${idx+3})`);
-          values.push(row.name, row.email, row.password, row.department_name);
-          idx += 5;
-        }
-        await client.query(`
-          INSERT INTO users (name, email, password, role, department_name)
-          VALUES ${placeholders.join(',')}
-          ON CONFLICT (email) DO UPDATE SET
-            name=EXCLUDED.name, department_name=EXCLUDED.department_name
-        `, values);
-      }
-      if (userId) await logActivity({ userId, action: 'IMPORT_FACULTY_CSV', entityType: 'upload', details: { recordCount: rows.length } }, client);
+    const seen = new Map();
+    const skipped = [];
+    rows.forEach((row, i) => {
+      const line = i + 2; // header is line 1
+      const email = (row.email || '').trim().toLowerCase();
+      const name = (row.name || '').trim();
+      if (!email || !EMAIL_RE.test(email)) return skipped.push({ line, reason: 'invalid or missing email' });
+      if (!name) return skipped.push({ line, reason: 'missing name' });
+      if (seen.has(email)) return skipped.push({ line, reason: `duplicate of line ${seen.get(email).line}` });
+      seen.set(email, { line, email, name, department_name: (row.department_name || '').trim() || null,
+        inactive: /^(inactive|deactivated|deleted)$/i.test((row.status || '').trim()) });
     });
-    jobStore.set(jobId, { status: 'completed', message: `Successfully imported ${rows.length} faculty records` });
+
+    const counts = { created: 0, updated: 0, deactivated: 0 };
+    await db.runInTransaction(async (client) => {
+      for (const entry of seen.values()) {
+        if (entry.inactive) {
+          const { rows: found } = await client.query('SELECT id FROM faculties WHERE lower(email) = $1 AND is_active', [entry.email]);
+          if (found[0] && (await facultyRepository.deactivate(found[0].id, client))) counts.deactivated++;
+          continue;
+        }
+        const saved = await facultyRepository.upsert(entry, client);
+        if (saved.inserted) counts.created++; else counts.updated++;
+      }
+      if (userId) {
+        await logActivity({
+          userId, action: 'IMPORT_FACULTY_CSV', entityType: 'upload',
+          details: { recordCount: rows.length, ...counts, skipped: skipped.length },
+        }, client);
+      }
+    });
+    jobStore.set(jobId, {
+      status: 'completed',
+      message: `Faculty directory updated: ${counts.created} added, ${counts.updated} updated, ${counts.deactivated} deactivated, ${skipped.length} skipped`,
+      ...counts,
+      skipped,
+    });
   } catch (err) {
     logger.error('Failed to import faculty CSV', err);
-    jobStore.set(jobId, { status: 'failed', error: err.message || 'Import failed' });
+    jobStore.set(jobId, { status: 'failed', error: 'Import failed' });
   }
 };
 
@@ -437,7 +449,8 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
   try {
     const rows = parseCSV(csvContent);
     await db.runInTransaction(async (client) => {
-      await client.query('TRUNCATE faculty_timetable_slots');
+      // A timetable import replaces the active timetable; previous slots are soft-deleted, never removed.
+      await client.query('UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE is_active');
       
       const chunkSize = 500;
       for (let i = 0; i < rows.length; i += chunkSize) {

@@ -3,7 +3,7 @@ import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import {
-  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking,
+  createUser, createAdmin, createRep, createFaculty, createFacultyEntry, createViewer, createRoom, insertBooking,
   futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
@@ -44,15 +44,26 @@ describe('POST /api/timetable/cancellation-requests', () => {
     expect(res.body.error).toBe('Room, date, hour, and faculty are required.');
   });
 
-  test('404 when the faculty name does not match a FACULTY user (a rep with that name does not count)', async () => {
+  test('404 when the faculty name does not match an ACTIVE faculty-directory entry (a rep, a FACULTY account without an entry, or an inactive entry do not count)', async () => {
     const s = await setup();
     const repName = `RTT NotFac ${tag()}`;
     await createRep({ name: repName });
-    for (const faculty_name of [`Nobody ${tag()}`, repName]) {
+    const accountOnly = `RTT AccountOnly ${tag()}`;
+    await createUser({ role: 'FACULTY', name: accountOnly });
+    const inactive = await createFacultyEntry({ name: `RTT Inactive ${tag()}`, is_active: false });
+    for (const faculty_name of [`Nobody ${tag()}`, repName, accountOnly, inactive.name]) {
       const res = await create(s.rep.auth, { ...s.body, faculty_name });
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('The class faculty could not be found, so approval cannot be requested.');
     }
+  });
+
+  test('a directory entry without a sign-in account can be addressed (faculty_id = faculties.id)', async () => {
+    const s = await setup();
+    const entry = await createFacultyEntry({ name: `RTT DirOnly ${tag()}` });
+    const res = await create(s.rep.auth, { ...s.body, faculty_name: entry.name });
+    expect(res.status).toBe(201);
+    expect(res.body.request).toMatchObject({ faculty_id: entry.id, status: 'PENDING' });
   });
 
   test('201 creates a PENDING request; faculty matched case-insensitively and trimmed', async () => {
@@ -61,7 +72,7 @@ describe('POST /api/timetable/cancellation-requests', () => {
     expect(res.status).toBe(201);
     expect(res.body.message).toBe('Cancellation request sent to the faculty member for approval.');
     expect(res.body.request).toMatchObject({
-      requested_by: s.rep.user.id, faculty_id: s.fac.user.id, room_name: s.room.name, subject_name: 'DSA', hour: 10, status: 'PENDING', booking_id: null,
+      requested_by: s.rep.user.id, faculty_id: s.fac.faculty.id, room_name: s.room.name, subject_name: 'DSA', hour: 10, status: 'PENDING', booking_id: null,
     });
     const row = await reqRow(res.body.request.id);
     expect(row.reviewed_at).toBeNull();

@@ -107,7 +107,7 @@ async function seed() {
         await client.query(
           `INSERT INTO rooms (id, name, building, floor, capacity, has_ac, has_projector, type, description, student_access)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-           ON CONFLICT (name) DO UPDATE SET
+           ON CONFLICT (name) WHERE is_active DO UPDATE SET
              id = EXCLUDED.id,
              building = EXCLUDED.building,
              floor = EXCLUDED.floor,
@@ -179,7 +179,7 @@ async function processBatch(rooms) {
       const roomRes = await client.query(
         `INSERT INTO rooms (name, building, floor, capacity, has_ac, has_projector, type, description, student_access) 
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-         ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name
+         ON CONFLICT (name) WHERE is_active DO UPDATE SET name = EXCLUDED.name
          RETURNING id`,
         [roomName, building, floor, capacity, hasAc, hasProjector, type, description, studentAccess]
       );

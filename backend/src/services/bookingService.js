@@ -2,6 +2,7 @@ import * as db from '../db.js';
 import logger from '../utils/logger.js';
 import cache from '../utils/cache.js';
 import { bookingRepository } from '../repositories/bookingRepository.js';
+import { facultyRepository } from '../repositories/facultyRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { notifyFacultyNewRequest, notifyBookingCancelled } from '../utils/emailService.js';
@@ -94,7 +95,7 @@ const checkTimetableClash = async (client, requester, reqData, userId) => {
     const facultyFacultyRows = await client.query(`
       SELECT slot_time, content AS subject_name, faculty_name
       FROM faculty_timetable_slots
-      WHERE is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
+      WHERE is_active AND is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
     `, [facultyName.toUpperCase(), dayName]);
 
     const combinedRows = [...facultyRows.rows, ...facultyFacultyRows.rows];
@@ -154,7 +155,7 @@ const checkTimetableClash = async (client, requester, reqData, userId) => {
   }
 
   if (faculty_id) {
-    const targetFaculty = await userRepository.findById(faculty_id, client);
+    const targetFaculty = await facultyRepository.findById(faculty_id, client);
     if (targetFaculty?.name) {
       await checkFacultySchedule(targetFaculty.name, 'the selected faculty timetable');
     }
@@ -174,8 +175,14 @@ export const createBooking = async (client, reqData, userId, requester = null) =
     : await userRepository.findById(userId, client);
 
   const room = await roomRepository.findById(room_id, client);
-  if (!room) {
+  if (!room || !room.is_active) {
     return { error: 'Room not found', status: 404 };
+  }
+
+  // The supervising faculty must be an active entry in the faculty directory.
+  if (faculty_id !== undefined && faculty_id !== null && faculty_id !== '') {
+    const faculty = await facultyRepository.findActiveById(faculty_id, client);
+    if (!faculty) return { error: 'Selected faculty member was not found', status: 400 };
   }
 
   // Restrict student access
@@ -269,12 +276,12 @@ const handleRescheduleFreedUpRoom = async (client, reqData, start_time) => {
 /**
  * Cancel a booking
  */
-export const cancelBooking = async (client, bookingId, userId, isAdmin) => {
+export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFacultyId = null) => {
   const booking = await bookingRepository.findById(bookingId, client);
 
   if (!booking) return { error: 'Booking not found', status: 404 };
   const isCreator = String(booking.created_by) === String(userId);
-  const isAssignedFaculty = String(booking.faculty_id) === String(userId);
+  const isAssignedFaculty = actorFacultyId != null && String(booking.faculty_id) === String(actorFacultyId);
   
   if (!isCreator && !isAssignedFaculty && !isAdmin) return { error: 'Not authorized', status: 403 };
 
@@ -366,11 +373,12 @@ export const getPendingFacultyRequests = async (facultyId) => {
   return bookingRepository.findPendingByFaculty(facultyId);
 };
 
-export const approveBooking = async (client, id, facultyId, isAdmin) => {
+/** `actor` is the principal: approvals compare its faculty-directory id with booking.faculty_id. */
+export const approveBooking = async (client, id, actor, isAdmin) => {
   const booking = await bookingRepository.findById(id, client);
   
   if (!booking) return { error: 'Booking not found', status: 404 };
-  if (!isAdmin && booking.faculty_id !== facultyId) return { error: 'Not authorized', status: 403 };
+  if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
   if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
 
   // Conflict check
@@ -380,7 +388,7 @@ export const approveBooking = async (client, id, facultyId, isAdmin) => {
   const approvedBooking = await bookingRepository.updateStatus(id, 'ACTIVE', client);
 
   await logActivity({
-    userId: isAdmin ? -1 : facultyId, // System/Admin or Faculty
+    userId: isAdmin ? -1 : actor.id, // System/Admin or Faculty
     action: 'APPROVE_BOOKING',
     entityType: 'booking',
     entityId: id,
@@ -393,10 +401,10 @@ export const approveBooking = async (client, id, facultyId, isAdmin) => {
   return { data: approvedBooking, status: 200 };
 };
 
-export const rejectBooking = async (id, facultyId, isAdmin) => {
+export const rejectBooking = async (id, actor, isAdmin) => {
   const booking = await bookingRepository.findById(id);
   if (!booking) return { error: 'Booking not found', status: 404 };
-  if (!isAdmin && booking.faculty_id !== facultyId) return { error: 'Not authorized', status: 403 };
+  if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
   if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
 
   const rejectedBooking = await bookingRepository.updateStatus(id, 'REJECTED');
@@ -426,7 +434,7 @@ export const createBookingHandler = async (reqData, user) => {
 
   // Enforce room type restriction
   const room = await roomRepository.findById(reqData.room_id);
-  if (!room) {
+  if (!room || !room.is_active) {
     return { error: 'Room not found', status: 404 };
   }
   if ((room.type === 'Committee Room' || room.type === 'Auditorium') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
@@ -451,7 +459,7 @@ export const createBookingHandler = async (reqData, user) => {
   // PROD-02: Notify faculty of new pending request
   if (reqData.faculty_id && result.data) {
     try {
-      const faculty = await userRepository.findById(reqData.faculty_id);
+      const faculty = await facultyRepository.findById(reqData.faculty_id);
       const student = await userRepository.findById(userId);
       const room = await roomRepository.findById(reqData.room_id);
       if (faculty?.email) {
@@ -479,7 +487,7 @@ export const cancelBookingHandler = async (bookingId, user) => {
   const isAdmin = user.role === 'ADMIN';
   
   const result = await db.runInTransaction(async (client) => {
-    const res = await cancelBooking(client, bookingId, userId, isAdmin);
+    const res = await cancelBooking(client, bookingId, userId, isAdmin, user.faculty_id ?? null);
     if (res.error) throw res;
     return res;
   }).catch(err => {
@@ -528,7 +536,7 @@ export const rescheduleBookingHandler = async (bookingId, reqData, user) => {
 
   const targetRoomId = reqData.room_id || booking.room_id;
   const targetRoom = await roomRepository.findById(targetRoomId);
-  if (!targetRoom) return { error: 'Target room not found', status: 404 };
+  if (!targetRoom || !targetRoom.is_active) return { error: 'Target room not found', status: 404 };
 
   if ((targetRoom.type === 'Committee Room' || targetRoom.type === 'Auditorium') && user.role !== 'ADMIN' && user.role !== 'FACULTY') {
     return { error: 'Committee Rooms and Auditoriums can only be booked by Faculty or Admin', status: 403 };

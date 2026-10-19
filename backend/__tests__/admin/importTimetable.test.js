@@ -1,5 +1,6 @@
 // POST /api/admin/uploads/import/timetable and GET /api/admin/uploads/export/timetable.
-// The import TRUNCATEs faculty_timetable_slots, so every timetable-dependent test lives in this file.
+// The import soft-deletes every active faculty_timetable_slots row (is_active=false) before inserting the
+// new timetable, so every timetable-dependent test lives in this file.
 import request from 'supertest';
 import XLSX from 'xlsx-js-style';
 import app from '../../src/server.js';
@@ -15,7 +16,7 @@ beforeAll(async () => {
 });
 afterAll(closeDb);
 
-const slots = async () => (await db.query('SELECT faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id FROM faculty_timetable_slots ORDER BY id')).rows;
+const slots = async () => (await db.query('SELECT faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id FROM faculty_timetable_slots WHERE is_active ORDER BY id')).rows;
 const availability = async (roomId) => (await db.query('SELECT day, hour, is_available FROM room_availability WHERE room_id = $1 ORDER BY day, hour', [roomId])).rows;
 
 const exportTimetable = (view) => request(app)
@@ -28,7 +29,10 @@ const exportTimetable = (view) => request(app)
 test('imports slots, replaces the previous timetable, and blocks the assigned room for that day/hour', async () => {
   const room = await createRoom();
   const prof = `Prof Import ${uniq()}`;
-  await runImport(app, admin.auth, 'timetable', `${HEADER}\nOld Prof,2,Tue,10:00-11:00,Old,true,\n`);
+  const oldProf = `Old Prof ${uniq()}`;
+  await runImport(app, admin.auth, 'timetable', `${HEADER}\n${oldProf},2,Tue,10:00-11:00,Old,true,\n`);
+  const { rows: [oldSlot] } = await db.query('SELECT id FROM faculty_timetable_slots WHERE faculty_name = $1 AND is_active', [oldProf]);
+  expect(oldSlot).toBeDefined();
 
   const csv = [
     HEADER,
@@ -47,6 +51,15 @@ test('imports slots, replaces the previous timetable, and blocks the assigned ro
     { faculty_name: prof, semester: '6', day_of_week: 'Thu', slot_time: '12:00-13:00', content: 'Free', is_occupied: false, room_id: null },
   ]);
   expect(await availability(room.id)).toEqual([{ day: 'Mon', hour: 9, is_available: false }]);
+
+  // The previous timetable is soft-deleted, not removed.
+  const { rows: [old] } = await db.query('SELECT * FROM faculty_timetable_slots WHERE id = $1', [oldSlot.id]);
+  expect(old).toMatchObject({ faculty_name: oldProf, content: 'Old', is_active: false });
+  expect(old.deactivated_at).not.toBeNull();
+  // ...and hidden from the admin slot list.
+  const list = await request(app).get('/api/timetable/slots').query({ faculty_name: oldProf }).set('Authorization', admin.auth);
+  expect(list.status).toBe(200);
+  expect(JSON.stringify(list.body)).not.toContain(oldProf);
 
   const audit = await db.query("SELECT details FROM audit_logs WHERE action = 'IMPORT_TIMETABLE_CSV' AND user_id = $1 ORDER BY id DESC LIMIT 1", [admin.user.id]);
   expect(audit.rows[0].details).toEqual({ recordCount: 4 });

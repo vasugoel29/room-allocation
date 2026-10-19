@@ -139,7 +139,7 @@ function FacultyDashboard() {
 
   const getFilteredBookings = () => {
     if (activeTab === 'ACCEPTED') {
-      return bookings.filter(b => String(b.faculty_id) === String(user.id) && (b.status === 'ACTIVE' || b.status == null));
+      return bookings.filter(b => user.faculty_id != null && String(b.faculty_id) === String(user.faculty_id) && (b.status === 'ACTIVE' || b.status == null));
     }
     if (activeTab === 'MY') {
       return bookings.filter(b => String(b.created_by) === String(user.id));

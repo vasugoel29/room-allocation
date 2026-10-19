@@ -13,7 +13,7 @@ import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import {
-  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking,
+  createAdmin, createRep, createFaculty, createFacultyEntry, createViewer, createRoom, insertBooking,
   futureSlot, pastSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
@@ -33,7 +33,8 @@ const transferRow = async (id) => (await db.query('SELECT * FROM booking_transfe
 let hourSeq = 0;
 /**
  * Owner rep with an ACTIVE future booking, and a requester rep.
- * ownerFaculty: booking.faculty_id is a FACULTY user. targetFaculty: requester names a FACULTY.
+ * ownerFaculty: booking.faculty_id is a faculty-directory entry linked to a FACULTY account.
+ * targetFaculty: requester names such an entry (target_faculty_id = faculties.id).
  */
 async function scenario({ ownerFaculty = false, targetFaculty = false, booking = {} } = {}) {
   const [owner, requester, room] = await Promise.all([createRep(), createRep(), createRoom()]);
@@ -42,7 +43,7 @@ async function scenario({ ownerFaculty = false, targetFaculty = false, booking =
   const slot = futureSlot({ hour: 8 + (hourSeq++ % 10) });
   const b = await insertBooking({
     room_id: room.id, created_by: owner.user.id, start_time: slot.start, end_time: slot.end,
-    purpose: 'Original purpose', faculty_id: ownerFac?.user.id ?? null, ...booking,
+    purpose: 'Original purpose', faculty_id: ownerFac?.faculty.id ?? null, ...booking,
   });
   return { owner, requester, room, ownerFac, targetFac, booking: b, slot };
 }
@@ -50,7 +51,7 @@ async function scenario({ ownerFaculty = false, targetFaculty = false, booking =
 async function requestFor(s, extra = {}) {
   const res = await post(s.requester.auth, {
     booking_id: s.booking.id, new_purpose: 'Transferred purpose',
-    ...(s.targetFac ? { target_faculty_id: s.targetFac.user.id } : {}), ...extra,
+    ...(s.targetFac ? { target_faculty_id: s.targetFac.faculty.id } : {}), ...extra,
   });
   expect(res.status).toBe(201);
   return res.body.transfer;
@@ -65,12 +66,12 @@ describe('POST /api/transfers/request', () => {
 
   test('201 creates a PENDING transfer with owner_id, purpose and target faculty; audit row written', async () => {
     const s = await scenario({ targetFaculty: true });
-    const res = await post(s.requester.auth, { booking_id: s.booking.id, new_purpose: 'Need it', target_faculty_id: s.targetFac.user.id });
+    const res = await post(s.requester.auth, { booking_id: s.booking.id, new_purpose: 'Need it', target_faculty_id: s.targetFac.faculty.id });
     expect(res.status).toBe(201);
     expect(res.body.message).toBe('Transfer request sent');
     expect(res.body.transfer).toMatchObject({
       booking_id: s.booking.id, requested_by: s.requester.user.id, owner_id: s.owner.user.id,
-      target_faculty_id: s.targetFac.user.id, new_purpose: 'Need it', status: 'PENDING',
+      target_faculty_id: s.targetFac.faculty.id, new_purpose: 'Need it', status: 'PENDING',
     });
     const { rows } = await db.query(
       "SELECT details FROM audit_logs WHERE action = 'REQUEST_TRANSFER' AND entity_id = $1 AND user_id = $2",
@@ -137,36 +138,61 @@ describe('POST /api/transfers/request', () => {
     expect(res.status).toBe(403);
   });
 
-  test.failing('[SEC-06] target_faculty_id must be a FACULTY user (self is rejected)', async () => {
+  // SEC-06 (fixed): target_faculty_id must be an ACTIVE faculty-directory entry (faculties.id).
+  const NOT_FOUND = { error: 'Selected faculty member was not found' };
+  const noTransfer = async (s) => (await db.query('SELECT 1 FROM booking_transfers WHERE booking_id = $1', [s.booking.id])).rowCount === 0;
+
+  test('[SEC-06] target_faculty_id must be a faculty-directory entry (self is rejected)', async () => {
     const s = await scenario();
     const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id: s.requester.user.id });
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+    expect(await noTransfer(s)).toBe(true);
   });
 
-  test.failing('[SEC-06] target_faculty_id must be a FACULTY user (another rep is rejected)', async () => {
+  test('[SEC-06] target_faculty_id must be a faculty-directory entry (another rep is rejected)', async () => {
     const s = await scenario();
     const accomplice = await createRep();
     const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id: accomplice.user.id });
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+    expect(await noTransfer(s)).toBe(true);
   });
 
-  test.failing('[SEC-06] an unknown target_faculty_id is a 400, not a 500 (FK violation)', async () => {
+  test('[SEC-06] an unknown target_faculty_id is a 400, not a 500 (FK violation)', async () => {
     const s = await scenario();
     const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id: 987654321 });
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
   });
 
-  test.failing('[SEC-06] a requester who names themselves as target faculty cannot approve the faculty step', async () => {
+  test('[SEC-06] a requester who names themselves as target faculty is refused at request time', async () => {
     const s = await scenario();
     const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id: s.requester.user.id, new_purpose: 'self-approved' });
-    if (res.status !== 201) {
-      expect(res.status).toBe(400); // fixed at request time
-      return;
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+    expect(await noTransfer(s)).toBe(true);
+    expect((await bookingRow(s.booking.id)).created_by).toBe(s.owner.user.id);
+  });
+
+  test('a FACULTY account\'s user id or a soft-deleted directory entry is rejected as target_faculty_id', async () => {
+    const s = await scenario();
+    const fac = await createFaculty();
+    const inactive = await createFacultyEntry({ is_active: false });
+    for (const target_faculty_id of [fac.user.id, inactive.id]) {
+      const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id });
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual(NOT_FOUND);
     }
-    expect((await accept(s.owner.auth, res.body.transfer.id)).status).toBe(200);
-    const self = await accept(s.requester.auth, res.body.transfer.id);
-    expect(self.status).toBe(403);
-    expect((await bookingRow(s.booking.id)).created_by).not.toBe(s.requester.user.id);
+    expect(await noTransfer(s)).toBe(true);
+  });
+
+  test('a directory entry without a sign-in account is a valid target_faculty_id', async () => {
+    const s = await scenario();
+    const entry = await createFacultyEntry();
+    const res = await post(s.requester.auth, { booking_id: s.booking.id, target_faculty_id: entry.id, new_purpose: 'dir only' });
+    expect(res.status).toBe(201);
+    expect(res.body.transfer).toMatchObject({ target_faculty_id: entry.id, status: 'PENDING' });
   });
 
   test.failing('[BKG-06] a transfer cannot be requested for a booking that has already ended', async () => {
@@ -214,7 +240,7 @@ describe('transfer happy paths', () => {
     expect(step2.status).toBe(200);
     expect(step2.body.message).toBe('Transfer completed successfully');
     expect(await bookingRow(s.booking.id)).toMatchObject({
-      status: 'ACTIVE', created_by: s.requester.user.id, faculty_id: s.targetFac.user.id, purpose: 'Transferred purpose',
+      status: 'ACTIVE', created_by: s.requester.user.id, faculty_id: s.targetFac.faculty.id, purpose: 'Transferred purpose',
     });
     expect((await transferRow(t.id)).status).toBe('ACCEPTED');
   });
@@ -250,7 +276,7 @@ describe('transfer happy paths', () => {
     expect((await bookingRow(s.booking.id)).status).toBe('CANCELLED');
 
     expect((await accept(s.targetFac.auth, t.id)).status).toBe(200);
-    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.requester.user.id, faculty_id: s.targetFac.user.id });
+    expect(await bookingRow(s.booking.id)).toMatchObject({ status: 'ACTIVE', created_by: s.requester.user.id, faculty_id: s.targetFac.faculty.id });
     expect((await transferRow(t.id)).status).toBe('ACCEPTED');
     const { rows } = await db.query("SELECT action FROM audit_logs WHERE entity_type = 'transfer' AND entity_id = $1 ORDER BY id", [t.id]);
     expect(rows.map((r) => r.action)).toEqual(['REQUEST_TRANSFER', 'ACCEPT_TRANSFER_REP2', 'APPROVE_TRANSFER_FACULTY2', 'APPROVE_TRANSFER_FACULTY1']);
@@ -427,7 +453,7 @@ describe('BKG-06 transfer state machine', () => {
     const tA = await requestFor(s);
     const reqB = await createRep();
     const facB = await createFaculty();
-    const tB = (await post(reqB.auth, { booking_id: s.booking.id, target_faculty_id: facB.user.id, new_purpose: 'B' })).body.transfer;
+    const tB = (await post(reqB.auth, { booking_id: s.booking.id, target_faculty_id: facB.faculty.id, new_purpose: 'B' })).body.transfer;
 
     await accept(s.owner.auth, tA.id);
     await accept(s.owner.auth, tB.id); // currently also 200 → both FACULTY2_ACCEPTED
@@ -483,7 +509,7 @@ describe('GET /api/transfers/incoming and /outgoing', () => {
     const ownerView = (await incoming(s.owner.auth)).body;
     expect(ownerView).toEqual([expect.objectContaining({
       id: t.id, status: 'PENDING', room_name: s.room.name, requester_name: s.requester.user.name,
-      requestee_name: s.owner.user.name, booking_status: 'ACTIVE', owner_faculty_id: s.ownerFac.user.id,
+      requestee_name: s.owner.user.name, booking_status: 'ACTIVE', owner_faculty_id: s.ownerFac.faculty.id,
     })]);
     expect(await ids(s.ownerFac)).toEqual([]);
     expect(await ids(s.targetFac)).toEqual([]);

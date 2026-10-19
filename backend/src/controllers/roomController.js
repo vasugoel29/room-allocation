@@ -166,11 +166,12 @@ export const updateRoom = async (req, res) => {
 export const deleteRoom = async (req, res) => {
   const { id } = req.params;
   try {
-    const room = await roomRepository.delete(id);
+    const room = await db.runInTransaction((client) => roomRepository.delete(id, client));
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
     }
     cache.delete('room_availability_all');
+    cache.deletePattern('admin_status_.*');
     res.json({ status: 'Success', message: `Room ${room.name} deleted successfully` });
   } catch (err) {
     logger.error('deleteRoom error', err);
@@ -212,7 +213,7 @@ export const getRoomWeekSchedule = async (req, res) => {
       db.query(`
         SELECT day_of_week, slot_time, faculty_name, content, semester
         FROM faculty_timetable_slots
-        WHERE room_id = $1
+        WHERE room_id = $1 AND is_active
         ORDER BY day_of_week, slot_time
       `, [id]),
 
@@ -323,7 +324,7 @@ export const checkRoomConflict = async (req, res) => {
           const ttResult = await db.query(`
             SELECT id, faculty_name, content, slot_time
             FROM faculty_timetable_slots
-            WHERE room_id = $1 AND day_of_week = $2
+            WHERE room_id = $1 AND day_of_week = $2 AND is_active
           `, [id, dayShort]);
 
           for (const row of availResult.rows) {

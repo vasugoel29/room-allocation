@@ -28,7 +28,7 @@ export const userRepository = {
       FROM users u 
       LEFT JOIN departments d ON u.department_id = d.id 
       LEFT JOIN branches b ON u.branch_id = b.id
-      WHERE u.email = $1
+      WHERE u.email = $1 AND u.is_active
     `;
     const result = await client.query(query, [email]);
     return result.rows[0];
@@ -42,7 +42,7 @@ export const userRepository = {
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN branches b ON u.branch_id = b.id
-      WHERE 1=1
+      WHERE u.is_active
     `;
     const params = [];
     if (search) {
@@ -73,7 +73,7 @@ export const userRepository = {
    * Count total users (for pagination)
    */
   countUsers: async (search = '', role = '') => {
-    let query = 'SELECT COUNT(*) FROM users u WHERE 1=1';
+    let query = 'SELECT COUNT(*) FROM users u WHERE u.is_active';
     const params = [];
     if (search) {
       params.push(`%${search}%`);
@@ -126,7 +126,7 @@ export const userRepository = {
           group_name = COALESCE($9, group_name),
           department_id = COALESCE($10, department_id), 
           is_approved = COALESCE($11, is_approved) 
-      WHERE id = $12
+      WHERE id = $12 AND is_active
       RETURNING id, name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved
     `;
     const values = [name, email, role, branch, branch_id, year, semester, section, group_name, department_id, is_approved, id];
@@ -144,11 +144,23 @@ export const userRepository = {
   },
 
   /**
-   * Delete a user
+   * Soft-delete a user: the account is deactivated (sessions revoked, upcoming bookings cancelled)
+   * but the row and its history stay.
    */
   delete: async (id, client = db) => {
-    const query = 'DELETE FROM users WHERE id = $1 RETURNING id';
-    const result = await client.query(query, [id]);
+    const result = await client.query(
+      `UPDATE users SET is_active = FALSE, deactivated_at = NOW(), session_version = COALESCE(session_version, 0) + 1,
+              updated_at = NOW()
+        WHERE id = $1 AND is_active RETURNING id`,
+      [id],
+    );
+    if (result.rows[0]) {
+      await client.query(
+        `UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
+          WHERE created_by = $1 AND status IN ('ACTIVE', 'PENDING') AND start_time > NOW()`,
+        [id],
+      );
+    }
     return result.rows[0];
   },
 
@@ -156,31 +168,16 @@ export const userRepository = {
    * Find approved faculties
    */
   findFaculties: async () => {
-    try {
-      const query = `
-        SELECT f.id, f.name, f.email, COALESCE(f.department_name, d.name, 'General') as department
-        FROM faculties f
-        LEFT JOIN departments d ON f.department_id = d.id
-        WHERE f.is_active = true
-        ORDER BY f.name ASC
-      `;
-      const result = await db.query(query);
-      if (result.rowCount > 0) {
-        return result.rows;
-      }
-    } catch {
-      // Fallback to legacy table if faculties table is not yet migrated
-    }
-
-    const fallbackQuery = `
-      SELECT u.id, u.name, u.email, d.name as department 
-      FROM users u 
-      LEFT JOIN departments d ON u.department_id = d.id 
-      WHERE u.role = 'FACULTY' AND u.is_approved = true
-      ORDER BY u.name ASC
-    `;
-    const fallbackResult = await db.query(fallbackQuery);
-    return fallbackResult.rows;
+    // The faculty directory is CRAS data (faculties table); ids here are faculties.id, which is
+    // what bookings.faculty_id references. Soft-deleted entries are hidden.
+    const { rows } = await db.query(`
+      SELECT f.id, f.name, f.email, COALESCE(f.department_name, d.name, 'General') as department
+      FROM faculties f
+      LEFT JOIN departments d ON f.department_id = d.id
+      WHERE f.is_active
+      ORDER BY f.name ASC
+    `);
+    return rows;
   },
 
 

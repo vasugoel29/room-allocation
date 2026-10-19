@@ -159,3 +159,16 @@ Severity: C critical · H high · M medium · L low. Status: open unless noted.
 | NEW-FE-2 | L | services/adminService.js:120 | Audit-log search not URL-encoded ("R&D" breaks the query) |
 | NEW-FE-3 | L | components/ui/BottomNav.jsx:55 | Pending-transfer badge only on a `history` tab; reps get `bookings`, so never see it on mobile |
 | NEW-FE-4 | L | pages/RoomScheduleGrid.jsx:222 | Week header reads `weekDates[5]` (only 0–4 exist) → "Oct 19 – " |
+
+## Found while migrating to the ACL / faculty-directory model (Phase 1–2)
+| ID | Sev | Status | Finding |
+|---|---|---|---|
+| ACL-01 | C | fixed | `/auth/google` accepted an email with no Google token, and only `jwt.decode`d tokens → anyone could sign in as anyone |
+| ACL-02 | C | fixed | Startup auto-wiped all tables on a "mismatched schema" heuristic; migration v1 began with DROP TABLE |
+| ACL-03 | C | fixed | Boot seeded `admin@nsut.ac.in` with a fixed password hash whenever no admin existed |
+| ACL-04 | C | fixed in code; **rotate secret** | ACL client secret hardcoded as a fallback in the public repo (still valid) |
+| ACL-05 | H | fixed | Faculty picker returned `faculties.id` but bookings/approvals used `users.id` |
+| ACL-06 | H | fixed | Full ACL payload (incl. mobile) in a 30-day localStorage JWT; ACL revocation ineffective |
+| ACL-07 | C | fixed in tree; **history purge pending** | Branch re-committed `seeded_students_credentials.json` |
+| NEW-P2-1 | M | fixed | Admin could edit/approve a soft-deleted user (update lacked `AND is_active`) |
+| NEW-P2-2 | L | fixed | Deactivating a user didn't clear admin-status/availability caches after cancelling their bookings |

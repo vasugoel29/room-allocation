@@ -33,7 +33,7 @@ export const bookingRepository = {
       FROM bookings b
       JOIN rooms r ON b.room_id = r.id
       JOIN users u ON b.created_by = u.id
-      LEFT JOIN users f ON b.faculty_id = f.id
+      LEFT JOIN faculties f ON b.faculty_id = f.id
       LEFT JOIN departments d ON u.department_id = d.id
       WHERE 1=1
     `;

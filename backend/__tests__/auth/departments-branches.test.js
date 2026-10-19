@@ -22,21 +22,21 @@ const newBranch = async (o = {}) =>
 
 // ─── Departments ────────────────────────────────────────────────────────────
 describe('departments', () => {
-  test('GET is public and returns all departments sorted by name', async () => {
+  test('GET is public and returns all active departments sorted by name', async () => {
     const d = await newDept();
     const res = await request(app).get('/api/departments');
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body)).toBe(true);
-    expect(res.body.find((x) => x.id === d.id)).toEqual({ id: d.id, name: d.name });
+    expect(res.body.find((x) => x.id === d.id)).toMatchObject({ id: d.id, name: d.name, is_active: true });
     const names = res.body.map((x) => x.name);
-    const { rows } = await db.query('SELECT name FROM departments ORDER BY name ASC');
+    const { rows } = await db.query('SELECT name FROM departments WHERE is_active ORDER BY name ASC');
     expect(names).toEqual(rows.map((r) => r.name));
   });
 
   test('GET with page & limit → {data, meta}', async () => {
     const res = await request(app).get('/api/departments?page=2&limit=3');
     expect(res.status).toBe(200);
-    const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM departments');
+    const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM departments WHERE is_active');
     expect(res.body.meta).toEqual({ total: c, page: 2, limit: 3, totalPages: Math.ceil(c / 3) });
     expect(res.body.data.length).toBeLessThanOrEqual(3);
   });
@@ -68,7 +68,7 @@ describe('departments', () => {
     const name = uniq('Department of Renamed');
     const res = await request(app).patch(`/api/departments/${d.id}`).set('Authorization', admin.auth).send({ name });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ id: d.id, name });
+    expect(res.body).toMatchObject({ id: d.id, name });
   });
 
   test('PATCH without name → 400; unknown id → 404', async () => {
@@ -87,15 +87,34 @@ describe('departments', () => {
     expect(res.status).toBe(409);
   });
 
-  test('DELETE (admin) removes it and nulls users.department_id / branches.department_id', async () => {
+  test('DELETE (admin) soft-deletes it: row kept (is_active=false), users/branches keep department_id; hidden from GET; second delete 404', async () => {
     const d = await newDept();
     const { user } = await createFaculty({ department_id: d.id });
     const br = await newBranch({ department_id: d.id });
     const res = await request(app).delete(`/api/departments/${d.id}`).set('Authorization', admin.auth);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'Success', message: `Department ${d.name} deleted successfully` });
-    expect((await db.query('SELECT department_id FROM users WHERE id = $1', [user.id])).rows[0].department_id).toBeNull();
-    expect((await db.query('SELECT department_id FROM branches WHERE id = $1', [br.id])).rows[0].department_id).toBeNull();
+    const { rows: [row] } = await db.query('SELECT * FROM departments WHERE id = $1', [d.id]);
+    expect(row).toMatchObject({ id: d.id, name: d.name, is_active: false });
+    expect(row.deactivated_at).not.toBeNull();
+    expect((await db.query('SELECT department_id FROM users WHERE id = $1', [user.id])).rows[0].department_id).toBe(d.id);
+    expect((await db.query('SELECT department_id FROM branches WHERE id = $1', [br.id])).rows[0].department_id).toBe(d.id);
+    expect((await request(app).get('/api/departments')).body.map((x) => x.id)).not.toContain(d.id);
+    expect((await request(app).patch(`/api/departments/${d.id}`).set('Authorization', admin.auth).send({ name: uniq('x') })).status).toBe(404);
+    const again = await request(app).delete(`/api/departments/${d.id}`).set('Authorization', admin.auth);
+    expect(again.status).toBe(404);
+  });
+
+  test('a soft-deleted department\'s name can be created again (unique among active rows only)', async () => {
+    const d = await newDept();
+    expect((await request(app).delete(`/api/departments/${d.id}`).set('Authorization', admin.auth)).status).toBe(200);
+    const res = await request(app).post('/api/departments').set('Authorization', admin.auth).send({ name: d.name });
+    expect(res.status).toBe(201);
+    expect(res.body.id).not.toBe(d.id);
+    expect(res.body).toMatchObject({ name: d.name, is_active: true });
+    // ...and POSTing it once more upserts onto the new active row.
+    const again = await request(app).post('/api/departments').set('Authorization', admin.auth).send({ name: d.name });
+    expect(again.body.id).toBe(res.body.id);
   });
 
   test('DELETE unknown id → 404', async () => {
@@ -142,7 +161,7 @@ describe('branches', () => {
     await newBranch();
     const res = await request(app).get('/api/branches?page=1&limit=1');
     expect(res.status).toBe(200);
-    const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM branches');
+    const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM branches WHERE is_active');
     expect(res.body.meta).toEqual({ total: c, page: 1, limit: 1, totalPages: c });
     expect(res.body.data).toHaveLength(1);
   });
@@ -200,13 +219,19 @@ describe('branches', () => {
     expect(res.body).toEqual({ error: 'Branch not found' });
   });
 
-  test('DELETE (admin) removes it and nulls users.branch_id', async () => {
+  test('DELETE (admin) soft-deletes it: row kept, users.branch_id kept, hidden from GET; second delete 404', async () => {
     const b = await newBranch();
     const { user } = await createViewer({ branch_id: b.id });
     const res = await request(app).delete(`/api/branches/${b.id}`).set('Authorization', admin.auth);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ status: 'Success', message: `Branch ${b.name} deleted successfully` });
-    expect((await db.query('SELECT branch_id FROM users WHERE id = $1', [user.id])).rows[0].branch_id).toBeNull();
+    const { rows: [row] } = await db.query('SELECT * FROM branches WHERE id = $1', [b.id]);
+    expect(row).toMatchObject({ id: b.id, name: b.name, is_active: false });
+    expect(row.deactivated_at).not.toBeNull();
+    expect((await db.query('SELECT branch_id FROM users WHERE id = $1', [user.id])).rows[0].branch_id).toBe(b.id);
+    expect((await request(app).get('/api/branches')).body.map((x) => x.id)).not.toContain(b.id);
+    expect((await request(app).patch(`/api/branches/${b.id}`).set('Authorization', admin.auth).send({ name: uniq('x') })).status).toBe(404);
+    expect((await request(app).delete(`/api/branches/${b.id}`).set('Authorization', admin.auth)).status).toBe(404);
   });
 
   test('DELETE unknown id → 404', async () => {

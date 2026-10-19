@@ -80,9 +80,12 @@ export async function upsertUserFromAcl(access) {
 
   return db.runInTransaction(async (client) => {
     const existing = await client.query(
-      'SELECT id FROM users WHERE acl_id = $1 OR lower(email) = $2 ORDER BY (acl_id = $1) DESC NULLS LAST LIMIT 1',
+      'SELECT id, is_active FROM users WHERE acl_id = $1 OR lower(email) = $2 ORDER BY (acl_id = $1) DESC NULLS LAST LIMIT 1',
       [access.aclId, access.email],
     );
+    if (existing.rows[0] && !existing.rows[0].is_active) {
+      throw new SessionError(403, 'Your CRAS account has been deactivated. Contact the administrator.');
+    }
     let user;
     if (existing.rows[0]) {
       ({ rows: [user] } = await client.query(
@@ -102,6 +105,13 @@ export async function upsertUserFromAcl(access) {
       ));
     }
 
+    // Link the faculty directory entry with this email to the signed-in account.
+    await client.query(
+      `UPDATE faculties SET user_id = $1, updated_at = NOW()
+        WHERE lower(email) = lower($2) AND is_active AND (user_id IS NULL OR user_id = $1)`,
+      [user.id, user.email],
+    );
+
     await client.query(
       `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, allowed_scope, scopes_by_permission, academic, fetched_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
@@ -118,12 +128,13 @@ export async function upsertUserFromAcl(access) {
 
 async function readRow(userId) {
   const { rows } = await db.query(
-    `SELECT u.*, d.name AS department_label,
+    `SELECT u.*, d.name AS department_label, fac.id AS faculty_directory_id,
             ua.role AS acl_role, ua.roles AS acl_roles, ua.permissions AS acl_permissions,
             ua.allowed_scope, ua.scopes_by_permission, ua.fetched_at AS acl_fetched_at
        FROM users u
        LEFT JOIN user_access ua ON ua.user_id = u.id
        LEFT JOIN departments d ON d.id = u.department_id
+       LEFT JOIN faculties fac ON fac.user_id = u.id AND fac.is_active
       WHERE u.id = $1`,
     [userId],
   );
@@ -153,6 +164,9 @@ function toPrincipal(row) {
     department_id: row.department_id,
     department_name: row.department_name || row.department_label || null,
     is_approved: row.is_approved,
+    // This person's entry in the faculty directory (faculties.id), or null. Faculty references on
+    // bookings, transfers and cancellation requests are directory ids, never user ids.
+    faculty_id: row.faculty_directory_id || null,
     session_version: row.session_version || 0,
   };
 }
@@ -187,7 +201,7 @@ export async function loadPrincipal(userId, sv = 0) {
   if (hit && hit.sv === sv && Date.now() - hit.at < CACHE_MS()) return hit.principal;
 
   let row = await readRow(userId);
-  if (!row || (row.session_version || 0) !== sv) {
+  if (!row || !row.is_active || (row.session_version || 0) !== sv) {
     cache.delete(userId);
     return null;
   }
@@ -231,5 +245,6 @@ export function publicProfile(p) {
     degree: p.degree,
     department_id: p.department_id,
     department_name: p.department_name,
+    faculty_id: p.faculty_id,
   };
 }

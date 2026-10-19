@@ -63,7 +63,7 @@ async function setup() {
         ('LH-101', '5th Block', 1, 60, true, true, 'Lecture Hall'),
         ('LH-102', '5th Block', 1, 60, true, false, 'Lecture Hall'),
         ('CR-201', '5th Block', 2, 40, false, true, 'Classroom')
-      ON CONFLICT (name) DO NOTHING;
+      ON CONFLICT (name) WHERE is_active DO NOTHING;
     `);
   }
 

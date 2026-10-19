@@ -1,7 +1,8 @@
 import request from 'supertest';
 import app from '../../src/server.js';
+import * as db from '../../src/db.js';
 import {
-  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, closeDb,
+  createUser, createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 import { plusHours, getBooking, auditRows } from '../../test/helpers/bookings.js';
 
@@ -20,7 +21,7 @@ async function pending({ fac, student, room, slot = futureSlot({ hour: 10 }), st
   student = student || (await createRep());
   room = room || (await createRoom());
   const booking = await insertBooking({
-    room_id: room.id, created_by: student.user.id, start_time: slot.start, end_time: slot.end, status, faculty_id: fac.user.id,
+    room_id: room.id, created_by: student.user.id, start_time: slot.start, end_time: slot.end, status, faculty_id: fac.faculty.id,
   });
   return { fac, student, room, slot, booking };
 }
@@ -62,14 +63,14 @@ describe('PATCH /api/faculty/:id/approve', () => {
     const room = await createRoom();
     const slot = futureSlot({ hour: 10 });
     const created = await request(app).post('/api/bookings').set('Authorization', student.auth)
-      .send({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Seminar', faculty_id: fac.user.id });
+      .send({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Seminar', faculty_id: fac.faculty.id });
     expect(created.status).toBe(201);
     expect(created.body.status).toBe('PENDING');
 
     const res = await approve(fac.auth, created.body.id);
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Booking approved');
-    expect(res.body.booking).toMatchObject({ id: created.body.id, status: 'ACTIVE', faculty_id: fac.user.id });
+    expect(res.body.booking).toMatchObject({ id: created.body.id, status: 'ACTIVE', faculty_id: fac.faculty.id });
     expect((await getBooking(created.body.id)).status).toBe('ACTIVE');
 
     const audit = await auditRows(created.body.id, 'APPROVE_BOOKING');
@@ -99,6 +100,26 @@ describe('PATCH /api/faculty/:id/approve', () => {
     const res = await approve((await createFaculty()).auth, booking.id);
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Not authorized' });
+    expect((await getBooking(booking.id)).status).toBe('PENDING');
+  });
+
+  test('approval is keyed on the directory link: a FACULTY account whose user id equals booking.faculty_id is not the assignee', async () => {
+    const { booking, fac } = await pending();
+    // A FACULTY account without any directory entry → no faculty_id → 403, and its pending list is empty.
+    const unlinked = await createUser({ role: 'FACULTY' });
+    expect((await approve(unlinked.auth, booking.id)).status).toBe(403);
+    expect((await call('get', unlinked.auth, '/api/faculty/pending')).body).toEqual([]);
+    // The assignee is identified by faculties.id (≥ 500000 in tests), never by users.id.
+    expect(booking.faculty_id).toBe(fac.faculty.id);
+    expect(booking.faculty_id).not.toBe(fac.user.id);
+  });
+
+  test('once the faculty directory entry is soft-deleted, its linked account can no longer approve or list the request', async () => {
+    const { booking, fac } = await pending();
+    await db.query('UPDATE faculties SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1', [fac.faculty.id]);
+    expect((await call('get', fac.auth, '/api/faculty/pending')).body).toEqual([]);
+    const res = await approve(fac.auth, booking.id);
+    expect(res.status).toBe(403);
     expect((await getBooking(booking.id)).status).toBe('PENDING');
   });
 
@@ -180,7 +201,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       const student = await createRep();
       const fac = await createFaculty();
       const slot = futureSlot({ hour: 15, skip: 1 });
-      const body = (room) => ({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'p', faculty_id: fac.user.id });
+      const body = (room) => ({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'p', faculty_id: fac.faculty.id });
       const r1 = await request(app).post('/api/bookings').set('Authorization', student.auth).send(body(await createRoom()));
       const r2 = await request(app).post('/api/bookings').set('Authorization', student.auth).send(body(await createRoom()));
       expect([r1.status, r2.status]).toEqual([201, 201]);

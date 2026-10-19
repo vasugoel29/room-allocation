@@ -2,7 +2,7 @@ import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
 import {
-  createUser, createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking,
+  createUser, createAdmin, createRep, createFaculty, createFacultyEntry, createViewer, createRoom, insertBooking,
   futureSlot, pastSlot, tokenFor, closeDb,
 } from '../../test/helpers/factories.js';
 import {
@@ -55,10 +55,10 @@ describe('POST /api/bookings — success', () => {
     const fac = await createFaculty();
     const room = await createRoom();
     const slot = futureSlot({ hour: 11 });
-    const res = await post(rep.auth, body(room, slot, { faculty_id: fac.user.id }));
+    const res = await post(rep.auth, body(room, slot, { faculty_id: fac.faculty.id }));
 
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({ status: 'PENDING', faculty_id: fac.user.id, created_by: rep.user.id });
+    expect(res.body).toMatchObject({ status: 'PENDING', faculty_id: fac.faculty.id, created_by: rep.user.id });
     expect((await getBooking(res.body.id)).status).toBe('PENDING');
     expect(await auditRows(res.body.id, 'REQUEST_BOOKING')).toHaveLength(1);
     expect(await auditRows(res.body.id, 'CREATE_BOOKING')).toHaveLength(0);
@@ -365,7 +365,7 @@ describe('POST /api/bookings — conflicts', () => {
        VALUES ($1, 'Mon', '10:00-11:00', 'Lecture', true)`, [fac.user.name.toLowerCase()]);
     const rep = await createRep();
     const room = await createRoom();
-    const res = await post(rep.auth, body(room, futureSlot({ hour: 10, day: 'Mon', minLeadHours: 0 }), { faculty_id: fac.user.id }));
+    const res = await post(rep.auth, body(room, futureSlot({ hour: 10, day: 'Mon', minLeadHours: 0 }), { faculty_id: fac.faculty.id }));
     expect(res.status).toBe(409);
     expect(res.body).toEqual({ error: 'The selected faculty member is busy during this slot.', conflict: { type: 'faculty_busy' } });
 
@@ -374,7 +374,7 @@ describe('POST /api/bookings — conflicts', () => {
     await db.query(
       `INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content, is_occupied)
        VALUES ($1, 'Mon', '10:00-11:00', '', false)`, [fac2.user.name]);
-    const ok = await post((await createRep()).auth, body(await createRoom(), futureSlot({ hour: 10, day: 'Mon', minLeadHours: 0 }), { faculty_id: fac2.user.id }));
+    const ok = await post((await createRep()).auth, body(await createRoom(), futureSlot({ hour: 10, day: 'Mon', minLeadHours: 0 }), { faculty_id: fac2.faculty.id }));
     expect(ok.status).toBe(201);
     expect(ok.body.status).toBe('PENDING');
   });
@@ -383,7 +383,7 @@ describe('POST /api/bookings — conflicts', () => {
     const fac = await createFaculty({ name: uniq('Prof TT ') });
     await insertTimetableSlot({ department: uniq('D '), semester: 1, section: 1, day_of_week: 'Fri', slot_time: '11:00-12:00', faculty_name: fac.user.name, subject_name: 'X' });
     const admin = await createAdmin();
-    const res = await post(admin.auth, body(await createRoom(), futureSlot({ hour: 11, day: 'Fri', minLeadHours: 0 }), { faculty_id: fac.user.id }));
+    const res = await post(admin.auth, body(await createRoom(), futureSlot({ hour: 11, day: 'Fri', minLeadHours: 0 }), { faculty_id: fac.faculty.id }));
     expect(res.status).toBe(409);
     expect(res.body.conflict).toEqual({ type: 'faculty_busy' });
   });
@@ -426,7 +426,7 @@ describe('POST /api/bookings — conflicts', () => {
     const room = await createRoom();
     const fac = await createFaculty();
     const slot = futureSlot({ hour: 15 });
-    const first = await post((await createRep()).auth, body(room, slot, { faculty_id: fac.user.id }));
+    const first = await post((await createRep()).auth, body(room, slot, { faculty_id: fac.faculty.id }));
     expect(first.status).toBe(201);
     expect(first.body.status).toBe('PENDING');
     const second = await post((await createRep()).auth, body(room, slot));
@@ -437,7 +437,7 @@ describe('POST /api/bookings — conflicts', () => {
     const rep = await createRep();
     const fac = await createFaculty();
     const slot = futureSlot({ hour: 16 });
-    expect((await post(rep.auth, body(await createRoom(), slot, { faculty_id: fac.user.id }))).status).toBe(201);
+    expect((await post(rep.auth, body(await createRoom(), slot, { faculty_id: fac.faculty.id }))).status).toBe(201);
     const res = await post(rep.auth, body(await createRoom(), slot));
     expect(res.status).toBe(409);
   });
@@ -484,23 +484,70 @@ describe('POST /api/bookings — end_time validation (BKG-08)', () => {
 });
 
 describe('POST /api/bookings — faculty_id validation (BKG-10)', () => {
-  test.failing('[BKG-10] faculty_id that is not a FACULTY user → 400', async () => {
+  // faculty_id is a faculty-directory id (faculties.id) and must name an ACTIVE entry.
+  const NOT_FOUND = { error: 'Selected faculty member was not found' };
+  const noBookingFor = async (rep) => (await db.query('SELECT 1 FROM bookings WHERE created_by = $1', [rep.user.id])).rows.length === 0;
+
+  test('[BKG-10] faculty_id that is not a faculty-directory entry (another user\'s id) → 400', async () => {
     const rep = await createRep();
     const notFaculty = await createRep();
     const res = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 9 }), { faculty_id: notFaculty.user.id }));
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+    expect(await noBookingFor(rep)).toBe(true);
   });
 
-  test.failing('[BKG-10] the requester naming themselves as approving faculty → 400', async () => {
+  test('[BKG-10] the requester naming themselves as approving faculty → 400', async () => {
     const rep = await createRep();
     const res = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 10 }), { faculty_id: rep.user.id }));
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
   });
 
-  test.failing('[BKG-10] non-existent faculty_id → 400 (currently FK violation → 500)', async () => {
+  test('[BKG-10] non-existent faculty_id → 400 (not an FK violation 500)', async () => {
     const rep = await createRep();
     const res = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 11 }), { faculty_id: 2147483000 }));
     expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+  });
+
+  test('a FACULTY account\'s user id is not accepted as faculty_id (directory id required)', async () => {
+    const rep = await createRep();
+    const fac = await createFaculty();
+    const res = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 12 }), { faculty_id: fac.user.id }));
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+  });
+
+  test('a directory entry without a sign-in account is a valid faculty_id → PENDING', async () => {
+    const rep = await createRep();
+    const entry = await createFacultyEntry();
+    const res = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 13 }), { faculty_id: entry.id }));
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({ status: 'PENDING', faculty_id: entry.id });
+  });
+
+  test('a soft-deleted (inactive) faculty entry is rejected as faculty_id → 400', async () => {
+    const rep = await createRep();
+    const fac = await createFaculty();
+    await db.query('UPDATE faculties SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1', [fac.faculty.id]);
+    const res = await post(rep.auth, body(await createRoom(), futureSlot({ hour: 14 }), { faculty_id: fac.faculty.id }));
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(NOT_FOUND);
+    expect(await noBookingFor(rep)).toBe(true);
+  });
+});
+
+describe('POST /api/bookings — soft-deleted room', () => {
+  test('a soft-deleted room cannot be booked → 404, nothing inserted', async () => {
+    const rep = await createRep();
+    const admin = await createAdmin();
+    const room = await createRoom();
+    await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth).expect(200);
+    const res = await post(rep.auth, body(room, futureSlot({ hour: 15 })));
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Room not found' });
+    expect((await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id])).rows).toHaveLength(0);
   });
 });
 

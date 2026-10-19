@@ -136,7 +136,7 @@ async function seed() {
     // Ensure all departments are in the database and map them to their database IDs
     for (const deptName of uniqueDeptsInSheet) {
       const res = await initClient.query(
-        'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING id',
+        'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) WHERE is_active DO UPDATE SET name = EXCLUDED.name RETURNING id',
         [deptName]
       );
       deptMapping[deptName] = res.rows[0].id;

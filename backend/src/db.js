@@ -659,6 +659,72 @@ const migrations = [
         );
       `);
     }
+  },
+  {
+    version: 23,
+    name: 'Faculty directory: link to users, faculty references point at faculties(id)',
+    run: async (client) => {
+      await client.query(`
+        -- 1. The directory knows which sign-in account (if any) belongs to each faculty member.
+        ALTER TABLE faculties ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS faculties_user_id_key ON faculties(user_id) WHERE user_id IS NOT NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS faculties_email_lower_key ON faculties(lower(email));
+
+        -- 2. Every account referenced as a faculty, or holding the FACULTY role, gets a directory entry.
+        INSERT INTO faculties (name, email, department_id, department_name, is_active)
+        SELECT u.name, lower(u.email), u.department_id, d.name, true
+          FROM users u LEFT JOIN departments d ON d.id = u.department_id
+         WHERE u.role = 'FACULTY'
+            OR u.id IN (SELECT faculty_id FROM bookings WHERE faculty_id IS NOT NULL)
+            OR u.id IN (SELECT target_faculty_id FROM booking_transfers WHERE target_faculty_id IS NOT NULL)
+            OR u.id IN (SELECT faculty_id FROM class_cancellation_requests)
+        ON CONFLICT DO NOTHING;
+        UPDATE faculties f SET user_id = u.id FROM users u
+         WHERE f.user_id IS NULL AND lower(f.email) = lower(u.email);
+
+        -- 3. Re-point faculty references from users(id) to faculties(id).
+        ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_faculty_id_fkey;
+        UPDATE bookings b SET faculty_id = f.id FROM faculties f WHERE f.user_id = b.faculty_id;
+        ALTER TABLE bookings ADD CONSTRAINT bookings_faculty_id_fkey
+          FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE SET NULL;
+
+        ALTER TABLE booking_transfers DROP CONSTRAINT IF EXISTS booking_transfers_target_faculty_id_fkey;
+        UPDATE booking_transfers t SET target_faculty_id = f.id FROM faculties f WHERE f.user_id = t.target_faculty_id;
+        ALTER TABLE booking_transfers ADD CONSTRAINT booking_transfers_target_faculty_id_fkey
+          FOREIGN KEY (target_faculty_id) REFERENCES faculties(id) ON DELETE SET NULL;
+
+        ALTER TABLE class_cancellation_requests DROP CONSTRAINT IF EXISTS class_cancellation_requests_faculty_id_fkey;
+        UPDATE class_cancellation_requests c SET faculty_id = f.id FROM faculties f WHERE f.user_id = c.faculty_id;
+        ALTER TABLE class_cancellation_requests ADD CONSTRAINT class_cancellation_requests_faculty_id_fkey
+          FOREIGN KEY (faculty_id) REFERENCES faculties(id) ON DELETE CASCADE;
+
+        CREATE INDEX IF NOT EXISTS idx_bookings_faculty ON bookings(faculty_id);
+      `);
+    }
+  },
+  {
+    version: 24,
+    name: 'Soft delete: is_active + deactivated_at on every table the UI can delete from',
+    run: async (client) => {
+      // Product rule: deletes from the app never remove rows; they deactivate them.
+      for (const table of ['users', 'faculties', 'rooms', 'departments', 'branches', 'faculty_timetable_slots']) {
+        await client.query(`
+          ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+          UPDATE ${table} SET is_active = TRUE WHERE is_active IS NULL;
+          ALTER TABLE ${table} ALTER COLUMN is_active SET NOT NULL;
+          ALTER TABLE ${table} ALTER COLUMN is_active SET DEFAULT TRUE;
+          ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ;
+          CREATE INDEX IF NOT EXISTS idx_${table}_active ON ${table}(is_active);
+        `);
+      }
+      // Names stay unique among active rows only, so a deactivated room/department/branch name can be reused.
+      await client.query(`
+        ALTER TABLE rooms DROP CONSTRAINT IF EXISTS rooms_name_key;
+        CREATE UNIQUE INDEX IF NOT EXISTS rooms_name_active_key ON rooms(name) WHERE is_active;
+        ALTER TABLE departments DROP CONSTRAINT IF EXISTS departments_name_key;
+        CREATE UNIQUE INDEX IF NOT EXISTS departments_name_active_key ON departments(name) WHERE is_active;
+      `);
+    }
   }
 ];
 

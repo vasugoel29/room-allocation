@@ -2,7 +2,8 @@
 import request from 'supertest';
 import XLSX from 'xlsx-js-style';
 import app from '../../src/server.js';
-import { createAdmin, createUser, createFaculty, createRep, closeDb } from '../../test/helpers/factories.js';
+import * as db from '../../src/db.js';
+import { createAdmin, createUser, createFaculty, createFacultyEntry, createRep, closeDb } from '../../test/helpers/factories.js';
 import { uniq, binaryParser, maxAuditId, auditRowsSince } from './helpers.js';
 
 let admin;
@@ -14,7 +15,7 @@ afterAll(closeDb);
 describe('CSV templates', () => {
   test.each([
     ['students', 'name,email,branch,year,section,degree,department_name,roll_no\n', 'DOWNLOAD_STUDENTS_TEMPLATE'],
-    ['faculty', 'name,email,department_name\n', 'DOWNLOAD_FACULTY_TEMPLATE'],
+    ['faculty', 'name,email,department_name,status\n', 'DOWNLOAD_FACULTY_TEMPLATE'],
     ['timetable', 'faculty_name,semester,day_of_week,slot_time,content,is_occupied,room_id\n', 'DOWNLOAD_TIMETABLE_TEMPLATE'],
   ])('%s template: exact header row, CSV attachment, audit entry', async (kind, body, action) => {
     const since = await maxAuditId();
@@ -71,16 +72,23 @@ describe('XLSX exports', () => {
     expect(audit).toMatchObject({ user_id: admin.user.id, details: { format: 'xlsx' } });
   });
 
-  test('faculty export: FACULTY accounts with name/email/department only', async () => {
-    const prof = await createFaculty({ name: `Export Prof ${uniq()}`, department_name: 'Department Of Electrical Engineering (EE)' });
+  test('faculty export: faculty-directory entries with name/email/department/status (inactive ones included)', async () => {
+    const prof = await createFaculty({ name: `Export Prof ${uniq()}` });
+    await db.query('UPDATE faculties SET department_name = $1 WHERE id = $2', ['Department Of Electrical Engineering (EE)', prof.faculty.id]);
+    const dirOnly = await createFacultyEntry({ name: `Export Dir ${uniq()}`, department_name: 'Department Of Mechanical Engineering (ME)' });
+    const gone = await createFacultyEntry({ name: `Export Gone ${uniq()}`, is_active: false });
     const student = await createUser();
     const res = await download('faculty');
     expect(res.status).toBe(200);
     expect(res.headers['content-disposition']).toBe('attachment; filename=faculty_export.xlsx');
     const rows = sheetRows(res.body);
-    expect(rows.find((r) => r.email === prof.user.email)).toEqual({
-      name: prof.user.name, email: prof.user.email, department_name: 'Department Of Electrical Engineering (EE)',
+    expect(rows.find((r) => r.email === prof.faculty.email)).toEqual({
+      name: prof.faculty.name, email: prof.faculty.email, department_name: 'Department Of Electrical Engineering (EE)', status: 'active',
     });
+    expect(rows.find((r) => r.email === dirOnly.email)).toEqual({
+      name: dirOnly.name, email: dirOnly.email, department_name: 'Department Of Mechanical Engineering (ME)', status: 'active',
+    });
+    expect(rows.find((r) => r.email === gone.email)).toMatchObject({ name: gone.name, status: 'inactive' });
     expect(rows.map((r) => r.email)).not.toContain(student.user.email);
   });
 

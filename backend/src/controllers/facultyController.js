@@ -8,9 +8,10 @@ import { bookingRepository } from '../repositories/bookingRepository.js';
 import { notifyStudentBookingStatus } from '../utils/emailService.js';
 
 export const getPendingRequests = async (req, res) => {
-  const facultyId = req.user.id;
+  // Requests are addressed to the faculty-directory entry linked to this account.
+  const facultyId = req.user.faculty_id;
   try {
-    const requests = await bookingService.getPendingFacultyRequests(facultyId);
+    const requests = facultyId ? await bookingService.getPendingFacultyRequests(facultyId) : [];
     res.json(requests);
   } catch (err) {
     logger.error('Failed to fetch pending requests', err);
@@ -20,11 +21,10 @@ export const getPendingRequests = async (req, res) => {
 
 export const approveBooking = async (req, res) => {
   const { id } = req.params;
-  const facultyId = req.user.id;
   const isAdmin = req.user.role === 'ADMIN';
   
   const result = await db.runInTransaction(async (client) => {
-    const resVal = await bookingService.approveBooking(client, id, facultyId, isAdmin);
+    const resVal = await bookingService.approveBooking(client, id, req.user, isAdmin);
     if (resVal.error) throw resVal;
     return resVal;
   }).catch(err => {
@@ -66,11 +66,10 @@ export const approveBooking = async (req, res) => {
 
 export const rejectBooking = async (req, res) => {
   const { id } = req.params;
-  const facultyId = req.user.id;
   const isAdmin = req.user.role === 'ADMIN';
   
   try {
-    const result = await bookingService.rejectBooking(id, facultyId, isAdmin);
+    const result = await bookingService.rejectBooking(id, req.user, isAdmin);
     if (result.error) return res.status(result.status).json({ error: result.error });
 
     // PROD-02: Notify student their booking was rejected

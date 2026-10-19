@@ -24,7 +24,7 @@ beforeAll(async () => {
   slots = [futureSlot({ hour: 9 }), futureSlot({ hour: 10 }), futureSlot({ hour: 11, skip: 1 })];
   bookings = [
     await insertBooking({ room_id: roomA.id, created_by: owner.user.id, start_time: slots[0].start, purpose: 'b0' }),
-    await insertBooking({ room_id: roomB.id, created_by: owner.user.id, start_time: slots[1].start, purpose: 'b1', status: 'PENDING', faculty_id: fac.user.id }),
+    await insertBooking({ room_id: roomB.id, created_by: owner.user.id, start_time: slots[1].start, purpose: 'b1', status: 'PENDING', faculty_id: fac.faculty.id }),
     await insertBooking({ room_id: roomA.id, created_by: owner.user.id, start_time: slots[2].start, purpose: 'b2', status: 'CANCELLED' }),
   ];
 });
@@ -41,7 +41,7 @@ describe('GET /api/bookings', () => {
     expect(res.body.data.map((b) => b.id)).toEqual([bookings[2].id, bookings[1].id, bookings[0].id]);
     const pending = res.body.data.find((b) => b.id === bookings[1].id);
     expect(pending).toMatchObject({
-      room_name: roomB.name, user_name: owner.user.name, user_role: 'STUDENT_REP', faculty_name: fac.user.name,
+      room_name: roomB.name, user_name: owner.user.name, user_role: 'STUDENT_REP', faculty_name: fac.faculty.name,
       status: 'PENDING', class_name: 'IT-2 3rd Year',
     });
     expect(res.body.data.every((b) => b.created_by === owner.user.id)).toBe(true);

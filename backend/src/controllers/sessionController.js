@@ -6,6 +6,7 @@ import {
   loadPrincipal,
   publicProfile,
   revokeSessions,
+  SessionError,
   upsertUserFromAcl,
   verifySessionToken,
 } from '../auth/session.js';
@@ -24,6 +25,7 @@ async function startSession(email, res) {
 function sendAuthError(res, err, context) {
   if (err instanceof GoogleAuthError) return res.status(GOOGLE_STATUS[err.code] || 401).json({ error: err.message });
   if (err instanceof AclError) return res.status(ACL_STATUS[err.code] || 503).json({ error: err.message });
+  if (err instanceof SessionError) return res.status(err.status).json({ error: err.message });
   logger.error(`${context} failed`, err);
   return res.status(500).json({ error: 'Sign-in failed. Please try again.' });
 }
