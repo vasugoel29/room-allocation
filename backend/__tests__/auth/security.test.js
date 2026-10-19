@@ -382,7 +382,7 @@ describe('request hardening', () => {
     }
   });
 
-  test.failing('[SEC-14] anonymous mutations are not attributed to user id 1 in the audit log', async () => {
+  test('[SEC-14] anonymous mutations are not attributed to user id 1 in the audit log', async () => {
     const marker = `audit-marker-${Date.now()}`;
     // Logout without a token is an anonymous 2xx mutation, so the audit middleware records it.
     expect((await request(app).post('/api/auth/logout').send({ marker })).status).toBe(200);

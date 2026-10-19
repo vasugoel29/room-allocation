@@ -6,12 +6,12 @@ import cors from 'cors';
 import helmet from 'helmet';
 import bodyParser from 'body-parser';
 import compression from 'compression';
-import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
 import { logActivity } from './services/loggerService.js';
+import { redactForAudit } from './utils/redact.js';
+import { verifySessionToken } from './auth/session.js';
 
 import { apiLimiter } from './middleware/leakyBucket.js';
-import { JWT_SECRET } from './middleware/auth.js';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
@@ -141,34 +141,32 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// Universal Mutation Audit Log Middleware
-app.use(async (req, res, next) => {
+// Universal mutation audit log. The actor is the verified session's user (null when anonymous —
+// never a stand-in id); request bodies are redacted and summarised (SEC-14).
+app.use((req, res, next) => {
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
     let userId = null;
-    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
-    if (token) {
+    const header = req.headers.authorization;
+    if (header?.startsWith('Bearer ')) {
       try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        userId = Number(decoded.sub ?? decoded.id) || null;
-      } catch (err) {
-        // Ignored
+        userId = verifySessionToken(header.slice(7)).userId;
+      } catch {
+        // invalid/expired token: anonymous
       }
     }
-    
-    res.on('finish', async () => {
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        await logActivity({
-          userId: userId || req.user?.id || 1,
-          action: `${req.method}_${req.originalUrl.split('?')[0].toUpperCase().replace(/\//g, '_').substring(1)}`,
-          entityType: req.originalUrl.split('/')[2] || 'system',
-          details: {
-            method: req.method,
-            path: req.originalUrl,
-            status: res.statusCode,
-            body: req.body ? { ...req.body, password: undefined } : {}
-          }
-        });
-      }
+    res.on('finish', () => {
+      if (res.statusCode < 200 || res.statusCode >= 300) return;
+      logActivity({
+        userId: req.user?.id ?? userId,
+        action: `${req.method}_${req.originalUrl.split('?')[0].toUpperCase().replace(/\//g, '_').substring(1)}`,
+        entityType: req.originalUrl.split('/')[2] || 'system',
+        details: {
+          method: req.method,
+          path: req.originalUrl.split('?')[0],
+          status: res.statusCode,
+          body: req.body ? redactForAudit(req.body) : {},
+        },
+      });
     });
   }
   next();

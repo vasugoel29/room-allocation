@@ -136,7 +136,7 @@ describe('audit middleware contents (SEC-14)', () => {
 
   // Only `password` is stripped, so the whole Google ID token (a bearer credential for its
   // lifetime, and full of personal data) is persisted in audit_logs.details.body.credential.
-  test.failing('[SEC-14] a Google ID token (credential) is not stored in the audit log', async () => {
+  test('[SEC-14] a Google ID token (credential) is not stored in the audit log', async () => {
     const email = signInable('gcred');
     setGoogleVerifier(async () => ({ email, email_verified: true, hd: 'nsut.ac.in', sub: `g-${email}` }));
     const credential = `google-id-token-${uniq()}`;
@@ -150,7 +150,7 @@ describe('audit middleware contents (SEC-14)', () => {
 
   // The middleware falls back to `userId || req.user?.id || 1`, so every anonymous mutation
   // (sign-in, logout without a token) is attributed to whoever owns users.id = 1.
-  test.failing('[SEC-14] unauthenticated actions are not attributed to user id 1', async () => {
+  test('[SEC-14] unauthenticated actions are not attributed to user id 1', async () => {
     await createUser(); // make sure a user 1 exists (fresh DB) and it isn't the sign-in target
     const email = signInable('anon');
     const since = await maxAuditId();
@@ -162,7 +162,7 @@ describe('audit middleware contents (SEC-14)', () => {
     expect(row.user_id).not.toBe(1);
   });
 
-  test.failing('[SEC-14] CSV import content is not stored verbatim in the audit log', async () => {
+  test('[SEC-14] CSV import content is not stored verbatim in the audit log', async () => {
     const email = `audit.csv.${uniq()}@nsut.ac.in`;
     const secret = `S3cret-${uniq()}`;
     const csv = `name,email,password\nCsv Prof ${secret},${email},${secret}\n`;
@@ -175,6 +175,8 @@ describe('audit middleware contents (SEC-14)', () => {
     expect(row).toBeDefined();
     const stored = JSON.stringify(row.details);
     expect(stored).not.toContain(secret);
-    expect(stored).not.toContain('csvContent');
+    expect(stored).not.toContain(email);
+    // The audit keeps that a CSV was uploaded and its size, not its contents.
+    expect(row.details.body.csvContent).toMatch(/^\[\d+ chars omitted\]$/);
   });
 });
