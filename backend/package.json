@@ -10,6 +10,8 @@
     "dev:staging": "NODE_ENV=staging nodemon src/server.js",
     "seed": "node scripts/seed.js",
     "seed:students": "node scripts/seed_students.js",
+    "seed:faculties-snapshot": "node scripts/seed_faculties_snapshot.js",
+    "db:create": "node scripts/create_db.js",
     "unseed": "node scripts/unseed.js",
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testTimeout=30000"
   },

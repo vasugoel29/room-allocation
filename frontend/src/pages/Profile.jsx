@@ -9,13 +9,21 @@ import CustomSelect from '../components/ui/CustomSelect';
 function Profile() {
   const { user, setUser, logout, theme, setTheme, departments } = useContext(AppContext);
   const [isEditing, setIsEditing] = useState(false);
+  const deptName = user?.academic?.dept || user?.department_name || '';
+  const branchName = user?.academic?.branch || user?.branch || '';
+  const semNum = user?.academic?.semester ?? user?.semester ?? '';
+  const secNum = user?.academic?.section ?? user?.section ?? '';
+  const grpNum = user?.academic?.group_no ?? user?.academic?.group ?? user?.group_name ?? '';
+  const rollNo = user?.academic?.roll_no || user?.roll_no || '';
+  const degree = user?.academic?.degree || user?.degree || '';
+
   const [formData, setFormData] = useState({
     name: user?.name || '',
-    branch: user?.branch || '',
-    semester: user?.semester || '',
-    section: user?.section || '',
-    group_name: user?.group_name || '',
-    departmentName: user?.department_name || '',
+    branch: branchName,
+    semester: semNum,
+    section: secNum,
+    group_name: grpNum,
+    departmentName: deptName,
   });
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +39,11 @@ function Profile() {
       setUser(prev => ({ 
         ...prev, 
         ...updatedUser,
-        department_name: formData.departmentName
+        department_name: formData.departmentName,
+        branch: formData.branch,
+        semester: formData.semester,
+        section: formData.section,
+        group_name: formData.group_name
       }));
       setIsEditing(false);
       toast.success('Profile updated successfully!');
@@ -100,7 +112,14 @@ function Profile() {
                 className="text-2xl sm:text-3xl font-black text-text-primary bg-bg-primary border border-border rounded-xl px-3 py-2 focus:outline-none focus:border-accent w-full"
               />
             ) : (
-              <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
+              <div className="space-y-1">
+                <h2 className="text-2xl sm:text-3xl font-black text-text-primary truncate">{user.name}</h2>
+                {rollNo && (
+                  <p className="text-xs font-bold text-text-secondary tracking-wider">
+                    Roll No: <span className="text-text-primary font-mono">{rollNo}</span> {degree ? `(${degree})` : ''}
+                  </p>
+                )}
+              </div>
             )}
             <p className="text-accent font-black capitalize tracking-[0.2em] text-[10px] sm:text-xs bg-accent/10 px-3 py-1 rounded-full inline-block mt-2">
               {getRoleLabel(user.role)}
@@ -134,7 +153,7 @@ function Profile() {
                     placeholder="Select Department"
                   />
                 ) : (
-                  <p className="font-bold text-base sm:text-lg text-text-primary">{user.department_name || 'General'}</p>
+                  <p className="font-bold text-base sm:text-lg text-text-primary">{deptName || 'General'}</p>
                 )}
               </div>
             )}
@@ -156,7 +175,7 @@ function Profile() {
                       className="w-full bg-bg-primary border border-border rounded-xl px-3 py-2.5 text-sm sm:text-base font-bold focus:outline-none focus:border-accent"
                     />
                   ) : (
-                    <p className="font-bold text-base sm:text-lg text-text-primary">{user.branch || 'Not set'}</p>
+                    <p className="font-bold text-base sm:text-lg text-text-primary">{branchName || 'Not set'}</p>
                   )}
                 </div>
 
@@ -199,9 +218,9 @@ function Profile() {
                       </>
                     ) : (
                       <p className="font-bold text-base sm:text-lg text-text-primary">
-                        {user.semester ? `Semester ${user.semester}` : 'No Semester'} 
-                        {user.section ? ` · Section ${user.section}` : ''} 
-                        {user.group_name ? ` · Group ${user.group_name}` : ''}
+                        {semNum ? `Semester ${semNum}` : 'No Semester'} 
+                        {secNum ? ` · Section ${secNum}` : ''} 
+                        {grpNum ? ` · Group ${grpNum}` : ''}
                       </p>
                     )}
                   </div>
@@ -210,6 +229,7 @@ function Profile() {
             )}
           </div>
         </div>
+
 
         {/* BOTTOM: Preferences and Account Actions */}
         <div className="pt-6 sm:pt-10 border-t border-border/50 space-y-6 sm:space-y-8 shrink-0">

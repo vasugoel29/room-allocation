@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
 
-export function useAdminUsers(activeTab) {
+export function useAdminUsers(activeTab, searchTerm = '') {
   const [users, setUsers] = useState([]);
   const [usersMeta, setUsersMeta] = useState({ page: 1, totalPages: 1 });
   const [departments, setDepartments] = useState([]);
@@ -11,7 +11,7 @@ export function useAdminUsers(activeTab) {
 
   const fetchUsers = async (page = usersMeta.page) => {
     try {
-      const result = await adminService.getUsers(page);
+      const result = await adminService.getUsers(page, 20, searchTerm);
       setUsers(result.data || result);
       if (result.meta) setUsersMeta(result.meta);
     } catch (err) {
@@ -62,9 +62,9 @@ export function useAdminUsers(activeTab) {
 
   useEffect(() => {
     if (activeTab === 'users' || activeTab === 'quick') {
-      fetchUsers();
+      fetchUsers(1);
     }
-  }, [activeTab]);
+  }, [activeTab, searchTerm]);
 
   useEffect(() => {
     fetchDepartments();

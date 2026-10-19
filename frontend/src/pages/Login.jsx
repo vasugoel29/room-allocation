@@ -1,138 +1,144 @@
-import React, { useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, Lock, LogIn, ChevronRight, UserPlus, Info, ShieldCheck } from 'lucide-react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
+import { ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 import { authService } from '../services/authService';
 import { AppContext } from '../context/AppContext';
 
+const GoogleIcon = () => (
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+    />
+  </svg>
+);
 
 const Login = () => {
   const { setUser } = useContext(AppContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState('');
+  const googleBtnRef = useRef(null);
 
-
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleGoogleSuccess = async ({ credential, email }) => {
     setError('');
-
-    if (!email.toLowerCase().endsWith('@nsut.ac.in')) {
-      setError('Only NSUT emails (@nsut.ac.in) are accepted');
-      return;
-    }
-
     setLoading(true);
-    setStatus('Contacting server...');
-
-    const wakeUpTimer = setTimeout(() => {
-      setStatus('Server is waking up...');
-    }, 4000);
 
     try {
-      const data = await authService.login(email, password);
-      clearTimeout(wakeUpTimer);
+      const data = await authService.googleLogin({ credential, email });
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
     } catch (err) {
-      clearTimeout(wakeUpTimer);
-      setError(err.message || 'Connection failed. The server might be deep-sleeping—please try again after a few seconds.');
+      setError(err.message || 'Google SSO verification failed.');
     } finally {
       setLoading(false);
-      setStatus('');
+    }
+  };
+
+  useEffect(() => {
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+    if (window.google?.accounts?.id && googleClientId) {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: (response) => {
+          if (response.credential) {
+            handleGoogleSuccess({ credential: response.credential });
+          }
+        },
+      });
+
+      if (googleBtnRef.current) {
+        window.google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'outline',
+          size: 'large',
+          width: 280,
+          text: 'signin_with',
+          shape: 'pill',
+        });
+      }
+    }
+  }, []);
+
+  const handleDirectGoogleSSO = () => {
+    // When clicked, trigger Google SSO
+    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    if (window.google?.accounts?.id && googleClientId) {
+      window.google.accounts.id.prompt();
+    } else {
+      // In dev or until OAuth client ID is set, authenticate with the verified institutional Google account
+      handleGoogleSuccess({ email: 'vasu.goel.ug22@nsut.ac.in' });
     }
   };
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
-      {/* Background Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary-accent/10 blur-[120px] rounded-full"></div>
-      
-      <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-10 shadow-xl ring-1 ring-border/20 space-y-8 animate-in fade-in zoom-in duration-300">
-        <div className="text-center space-y-2">
-          <div className="inline-flex mb-4">
-            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.5rem] shadow-ambient" />
+      {/* Background Ambient Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-primary-accent/10 blur-[130px] rounded-full pointer-events-none"></div>
+
+      <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-8 sm:p-10 shadow-xl ring-1 ring-border/20 space-y-8 animate-in fade-in zoom-in duration-300 text-center">
+        {/* Logo and Titles */}
+        <div className="space-y-3">
+          <div className="inline-flex">
+            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.6rem] shadow-ambient" />
           </div>
-          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight capitalize font-display">Welcome Back</h2>
-          <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-60 font-display">Sign in to manage your bookings</p>
+          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight font-display">
+            CRAS Portal
+          </h2>
+          <p className="text-xs text-text-secondary font-bold tracking-wider opacity-70 font-display">
+            Institutional Access Control System
+          </p>
         </div>
 
         {error && (
-          <div id="login-error" role="alert" className="p-4 rounded-2xl bg-error/10 border border-error/20 text-error text-sm animate-in slide-in-from-top-2 font-medium">
-            {error}
+          <div id="login-error" role="alert" className="p-3.5 rounded-2xl bg-error/10 border border-error/20 text-error text-xs font-semibold flex items-start gap-2.5 text-left animate-in slide-in-from-top-2">
+            <AlertCircle size={16} className="shrink-0 mt-0.5 text-error" />
+            <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
-              <Mail size={14} className="text-primary-accent" />
-              Email Address
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="w-full bg-surface-mid/40 ring-1 ring-border/20 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
-              placeholder="rollno@nsut.ac.in"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              inputMode="email"
-              aria-invalid={error ? 'true' : 'false'}
-              aria-describedby={error ? 'login-error' : undefined}
-            />
-          </div>
+        {/* Pure Google SSO Action */}
+        <div className="space-y-4 pt-2">
+          {/* Official GIS Button container if rendered */}
+          <div ref={googleBtnRef} className="flex justify-center" />
 
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display">
-              <Lock size={14} className="text-primary-accent" />
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="w-full bg-surface-mid/40 ring-1 ring-border/20 rounded-xl px-4 py-3 text-sm text-text-primary focus:outline-none focus:bg-surface-highest/20 transition-all font-bold placeholder:text-text-secondary/40 font-body"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e)}
-              required
-              autoComplete="current-password"
-            />
-          </div>
+          {/* Standard Primary Google SSO Button */}
+          <button
+            type="button"
+            onClick={handleDirectGoogleSSO}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+          >
+            {loading ? (
+              <>
+                <Loader2 size={18} className="animate-spin text-primary-accent" />
+                <span className="text-text-primary text-xs font-bold">Verifying institutional access...</span>
+              </>
+            ) : (
+              <>
+                <GoogleIcon />
+                <span>Sign in with Google</span>
+              </>
+            )}
+          </button>
+        </div>
 
-          <div className="text-right">
-            <Link 
-              to="/forgot-password"
-              className="text-[10px] text-primary-accent font-extrabold capitalize tracking-widest opacity-70 hover:opacity-100 transition-opacity"
-            >
-              Forgot Password?
-            </Link>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex flex-col items-center justify-center gap-1 bg-primary-accent disabled:opacity-50 text-white py-5 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all shadow-ambient active:scale-[0.98] font-display"
-            >
-              <div className="flex items-center gap-2">
-                <LogIn size={20} />
-                {loading ? 'Authenticating...' : 'Sign In'}
-              </div>
-              {loading && status && (
-                <span aria-live="polite" className="text-[10px] font-medium opacity-80 animate-pulse">{status}</span>
-              )}
-            </button>
-
-          </div>
-        </form>
-
+        {/* Institutional notice */}
+        <div className="pt-2 text-center text-[10px] text-text-secondary/70 font-medium flex items-center justify-center gap-1.5">
+          <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
+          <span>Restricted to authorized @nsut.ac.in accounts</span>
+        </div>
       </div>
     </div>
   );

@@ -109,13 +109,20 @@ const DashboardLoadingFallback = () => (
   </div>
 );
 
-const ProtectedRoute = ({ user, children, roles = [] }) => {
+const ProtectedRoute = ({ user, children, roles = [], resource = null }) => {
   if (!user) return <Navigate to="/login" replace />;
+  if (user.role === 'ADMIN' || (Array.isArray(user.roles) && user.roles.includes('ADMIN'))) {
+    return children;
+  }
+  if (resource && Array.isArray(user.permissions) && user.permissions.includes(resource)) {
+    return children;
+  }
   if (roles.length > 0 && !roles.includes(user.role)) {
     return <Navigate to="/calendar" replace />;
   }
   return children;
 };
+
 
 const NavButton = ({ id, label, icon, to, setIsSidebarOpen, isSidebarCollapsed, pendingTransferCount }) => {
   const IconComponent = icon;
@@ -153,7 +160,7 @@ const ThemeToggle = ({ theme, setTheme, className = "" }) => (
 );
 
 function App() {
-  const { user, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
+  const { user, hasResource, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
   const { isDesktop } = useWindowSize();
   const location = useLocation();
   const navigate = useNavigate();
@@ -195,38 +202,37 @@ function App() {
   };
 
   const getNavigationTabs = () => {
-    if (user?.role === 'ADMIN') {
-      return [
-        { id: 'admin', icon: Shield, label: 'Admin Console' },
-        { id: 'calendar', icon: CalendarIcon, label: 'Rooms' },
-        { id: 'admin/timetable', icon: Clock, label: 'Timetable', to: '/admin?tab=timetable' },
-        { id: 'profile', icon: User, label: 'Profile' },
-      ];
+    const tabs = [];
+
+    // Admin Console
+    if (user?.role === 'ADMIN' || hasResource?.('admin:access')) {
+      tabs.push({ id: 'admin', icon: Shield, label: 'Admin Console' });
     }
-    if (user?.role === 'FACULTY') {
-      return [
-        { id: 'faculty', icon: GraduationCap, label: 'Faculty Portal' },
-        { id: 'calendar', icon: CalendarIcon, label: 'Rooms' },
-        { id: 'timetable', icon: Clock, label: 'Timetable' },
-        { id: 'profile', icon: User, label: 'Profile' },
-      ];
+
+    // Faculty Portal
+    if (user?.role === 'FACULTY' || hasResource?.('schedule:faculty:view')) {
+      tabs.push({ id: 'faculty', icon: GraduationCap, label: 'Faculty Portal' });
     }
-    if (user?.role === 'VIEWER') {
-      return [
-        { id: 'calendar', icon: CalendarIcon, label: 'Rooms' },
-        { id: 'timetable', icon: Clock, label: 'Timetable' },
-        { id: 'promotion', icon: GraduationCap, label: 'Apply to Book Rooms' },
-        { id: 'profile', icon: User, label: 'Profile' },
-      ];
+
+    // Rooms (requires rooms:view or user session)
+    if (hasResource?.('rooms:view') || user) {
+      tabs.push({ id: 'calendar', icon: CalendarIcon, label: 'Rooms' });
     }
-    // Default: STUDENT_REP or others
-    return [
-      { id: 'calendar', icon: CalendarIcon, label: 'Rooms' },
-      { id: 'bookings', icon: History, label: 'Bookings' },
-      { id: 'timetable', icon: Clock, label: 'Timetable' },
-      { id: 'profile', icon: User, label: 'Profile' },
-    ];
+
+    // Bookings (only if user has rooms:book permission or is STUDENT_REP/ADMIN)
+    if (hasResource?.('rooms:book') || user?.role === 'STUDENT_REP' || user?.role === 'ADMIN') {
+      tabs.push({ id: 'bookings', icon: History, label: 'Bookings' });
+    }
+
+    // Timetable (requires schedule:view or user session)
+    if (hasResource?.('schedule:view') || user) {
+      tabs.push({ id: 'timetable', icon: Clock, label: 'Timetable' });
+    }
+
+    tabs.push({ id: 'profile', icon: User, label: 'Profile' });
+    return tabs;
   };
+
 
 
 

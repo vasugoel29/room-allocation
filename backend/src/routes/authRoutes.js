@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { body } from 'express-validator';
-import { signup, login, logout, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser, forgotPassword, resetPassword, verifyStudent } from '../controllers/authController.js';
+import { signup, login, logout, googleLogin, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser, forgotPassword, resetPassword, verifyStudent } from '../controllers/authController.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
 
@@ -20,9 +20,11 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Password cannot be empty')
 ];
 
+router.post('/google', authLimiter, googleLogin);
 router.post('/signup', signup);
 router.post('/login', authLimiter, loginValidation, validateRequest, login);
 router.post('/logout', logout);
+
 router.post('/forgot-password', authLimiter, forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/verify-student/:rollNo', authLimiter, verifyStudent);
