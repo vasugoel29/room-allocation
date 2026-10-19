@@ -834,6 +834,16 @@ const migrations = [
           WHERE status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED');
       `);
     }
+  },
+  {
+    version: 30,
+    name: 'Indexes for the calendar window and "my bookings" queries (PERF-01)',
+    run: async (client) => {
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_bookings_open_start ON bookings (start_time) WHERE status IN ('ACTIVE', 'PENDING');
+        CREATE INDEX IF NOT EXISTS idx_bookings_created_by_start ON bookings (created_by, start_time DESC);
+      `);
+    }
   }
 ];
 

@@ -12,9 +12,17 @@ export const admins = new SharedArray('admins', () => raw().admins);
 export const rooms = new SharedArray('rooms', () => raw().rooms);
 
 export const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-export const auth = (token) => ({ headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
+// Browsers always accept gzip; so does the load test, so compression cost is measured too.
+export const auth = (token) => ({ headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept-Encoding': 'gzip' } });
 
 const ok = (name) => ({ [`${name} ok`]: (r) => r.status >= 200 && r.status < 300 });
+
+const IST_MS = 5.5 * 3600 * 1000;
+const dayKey = (offset) => new Date(Date.now() + IST_MS + offset * 86400000).toISOString().slice(0, 10);
+const istWeekday = () => new Date(Date.now() + IST_MS).getUTCDay() || 7;
+// AppContext loads this IST week and next (Monday..Sunday+7).
+const calendarFrom = () => dayKey(1 - istWeekday());
+const calendarTo = () => dayKey(14 - istWeekday());
 
 /** What AppContext fires when any logged-in user opens the app. */
 export function appLoad(user, role) {
@@ -24,7 +32,8 @@ export function appLoad(user, role) {
       ['GET', `${BASE}/health`, null, { ...p, tags: { name: 'health' } }],
       ['GET', `${BASE}/auth/faculties`, null, { ...p, tags: { name: 'faculties' } }],
       ['GET', `${BASE}/departments`, null, { ...p, tags: { name: 'departments' } }],
-      ['GET', `${BASE}/bookings?limit=1000`, null, { ...p, tags: { name: 'bookings_1000' } }],
+      ['GET', `${BASE}/bookings/calendar?from=${calendarFrom()}&to=${calendarTo()}`, null, { ...p, tags: { name: 'calendar' } }],
+      ['GET', `${BASE}/bookings/mine`, null, { ...p, tags: { name: 'bookings_mine' } }],
       ['GET', `${BASE}/availability`, null, { ...p, tags: { name: 'availability' } }],
       ['GET', `${BASE}/transfers/incoming`, null, { ...p, tags: { name: 'transfers_in' } }],
       ['GET', `${BASE}/transfers/outgoing`, null, { ...p, tags: { name: 'transfers_out' } }],
@@ -59,7 +68,7 @@ export function bookAndMaybeCancel(rep, cancelRatio = 0.5) {
   return group('book', () => {
     const slot = randomFutureSlot();
     const room = pick(rooms);
-    const r = http.post(`${BASE}/bookings`, JSON.stringify({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'k6 load' }), {
+    const r = http.post(`${BASE}/bookings`, JSON.stringify({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'k6 load', faculty_id: pick(faculty).faculty_id }), {
       ...auth(rep.token),
       tags: { name: 'create_booking' },
     });
@@ -76,7 +85,8 @@ export function bookAndMaybeCancel(rep, cancelRatio = 0.5) {
 export const defaultThresholds = {
   http_req_failed: ['rate<0.01'],
   'http_req_duration{name:health}': ['p(95)<200'],
-  'http_req_duration{name:bookings_1000}': ['p(95)<1500'],
+  'http_req_duration{name:calendar}': ['p(95)<500'],
+  'http_req_duration{name:bookings_mine}': ['p(95)<500'],
   'http_req_duration{name:create_booking}': ['p(95)<1000'],
   http_req_duration: ['p(95)<800', 'p(99)<2000'],
   checks: ['rate>0.99'],

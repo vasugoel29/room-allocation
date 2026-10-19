@@ -4,6 +4,7 @@ import { authService } from '../services/authService';
 import { bookingService } from '../services/bookingService';
 import { getInitialBookingDateString } from '../utils/dateHelpers';
 import { roomService } from '../services/roomService';
+import { getIstDateKey, addDaysToKey, mondayOfKey } from '../utils/timezone';
 
 export const AppContext = createContext();
 
@@ -128,14 +129,28 @@ export const AppProvider = ({ children }) => {
     }
   }, [filters.building]);
 
+  // Calendar occupancy is loaded for bounded windows rather than as one capped download (PERF-01,
+  // FE-12): this week and next (booking happens there), plus the week of the selected day when the
+  // user browses elsewhere. "Mine" adds the user's own and supervised bookings of any date/status.
+  const thisMonday = mondayOfKey(getIstDateKey(new Date()));
+  const selectedMonday = /^\d{4}-\d{2}-\d{2}$/.test(selectedDay || '') ? mondayOfKey(selectedDay) : thisMonday;
   const fetchBookings = useCallback(async () => {
+    const windows = [[thisMonday, addDaysToKey(thisMonday, 13)]];
+    if (selectedMonday < thisMonday || selectedMonday > addDaysToKey(thisMonday, 7)) {
+      windows.push([selectedMonday, addDaysToKey(selectedMonday, 6)]);
+    }
     try {
-      const data = await bookingService.getBookings({ limit: 1000 });
-      setBookings(data);
+      const [mine, ...calendars] = await Promise.all([
+        bookingService.getMine(),
+        ...windows.map(([from, to]) => bookingService.getCalendar(from, to)),
+      ]);
+      const byId = new Map();
+      for (const b of [...calendars.flat(), ...mine]) byId.set(b.id, b);
+      setBookings([...byId.values()]);
     } catch (err) {
       console.error('Fetch bookings failed', err);
     }
-  }, []);
+  }, [thisMonday, selectedMonday]);
 
   const fetchAvailability = useCallback(async () => {
     try {
@@ -196,13 +211,12 @@ export const AppProvider = ({ children }) => {
     return Promise.all([
       fetchFaculties(),
       fetchDepartments(),
-      fetchBookings(),
       fetchAvailability(),
       fetchTransfers(),
       fetchTimetable(),
       fetchFacultyOverrides()
     ]);
-  }, [user, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
+  }, [user, fetchFaculties, fetchDepartments, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
 
   // Load global data exactly once on user login/change
   useEffect(() => {
@@ -210,6 +224,11 @@ export const AppProvider = ({ children }) => {
       loadInitialData();
     }
   }, [user, loadInitialData]);
+
+  // Bookings reload when the user browses to a week outside the loaded windows.
+  useEffect(() => {
+    if (user) fetchBookings();
+  }, [user, fetchBookings]);
 
   // Load rooms when user or room filter changes (since fetchRooms depends on filters, this runs on filter changes)
   useEffect(() => {

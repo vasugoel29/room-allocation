@@ -138,7 +138,7 @@ export const approverId = async () => (await createFacultyEntry()).id;
 export function farFutureSlot(days = 10, hour = 10) {
   const dateKey = getIstParts(Date.now() + days * 86400_000).date;
   const start = istDateTimeToUtc(dateKey, hour);
-  return { start, end: new Date(new Date(start).getTime() + 3600_000).toISOString(), day: getIstParts(start).day };
+  return { start, end: new Date(new Date(start).getTime() + 3600_000).toISOString(), dateKey, day: getIstParts(start).day };
 }
 
 export { DAYS };

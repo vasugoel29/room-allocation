@@ -5,6 +5,8 @@ import { PERMISSIONS as P } from '../auth/permissions.js';
 import { validateRequest } from '../middleware/validate.js';
 import { 
   getBookings, 
+  getCalendar,
+  getMyBookings,
   createBooking, 
   cancelBooking, 
   rescheduleBooking,
@@ -31,6 +33,8 @@ const quickBookValidation = [
 ];
 
 router.get('/', authenticate, getBookings);
+router.get('/calendar', authenticate, getCalendar);
+router.get('/mine', authenticate, getMyBookings);
 router.post('/', authenticate, requirePermission(P.ROOMS_BOOK), bookingValidation, validateRequest, createBooking);
 router.patch('/:id/cancel', authenticate, idValidation, validateRequest, cancelBooking);
 router.patch('/:id', authenticate, requirePermission(P.ROOMS_BOOK), idValidation, validateRequest, rescheduleBooking);

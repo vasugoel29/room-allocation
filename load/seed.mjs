@@ -68,6 +68,13 @@ const students = await bulkUsers('VIEWER', N.students);
 const reps = await bulkUsers('STUDENT_REP', N.reps);
 const faculty = await bulkUsers('FACULTY', N.faculty);
 const admins = await bulkUsers('ADMIN', N.admins);
+// Each faculty account gets its directory entry; student bookings must name one (Phase 4).
+for (const f of faculty) {
+  const { rows: [entry] } = await db.query(
+    'INSERT INTO faculties (name, email, user_id) VALUES ($1, $2, $3) RETURNING id', [f.name, f.email, f.id],
+  );
+  f.faculty_id = entry.id;
+}
 
 // Historical + upcoming bookings spread over -60..+7 days, 08:00–17:00 IST, no overlaps per room/hour.
 const IST = 5.5 * 3600_000;
@@ -100,7 +107,7 @@ const sign = (u) => jwt.sign({ id: u.id, email: u.email, role: u.role, name: u.n
 const out = {
   students: students.slice(0, 2000).map((u) => ({ id: u.id, email: u.email, token: sign(u) })),
   reps: reps.map((u) => ({ id: u.id, email: u.email, token: sign(u) })),
-  faculty: faculty.map((u) => ({ id: u.id, email: u.email, token: sign(u) })),
+  faculty: faculty.map((u) => ({ id: u.id, email: u.email, faculty_id: u.faculty_id, token: sign(u) })),
   admins: admins.map((u) => ({ id: u.id, email: u.email, token: sign(u) })),
   rooms: roomRows,
   today,

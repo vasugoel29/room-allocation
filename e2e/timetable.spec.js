@@ -42,9 +42,9 @@ test.describe('Timetable & class cancellation', () => {
   });
 
   test('faculty approves a class cancellation -> request APPROVED and room freed for that date', async ({ page, request, seed }) => {
-    // [BKG-05] Approving a cancellation without booking_id writes a JS Date into room_availability.day
-    // (VARCHAR(20)) -> 500 "value too long"; the request stays PENDING.
-    test.fail();
+    // [BKG-05] regression: approving used to 500 (a JS Date into room_availability.day). It now records a
+    // dated release (room_slot_releases), which /availability reports so the UI drops the class
+    // (NEW-P5-4).
     const { faculty, room, rep, dateKey, subject } = await seedSectionClass(seed);
     const req = await seed.one(
       `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_name, subject_name, class_date, hour)
@@ -62,7 +62,10 @@ test.describe('Timetable & class cancellation', () => {
     expect(resp.status(), await resp.text()).toBe(200);
     await expect(toast(page, /cancellation approved/i)).toBeVisible();
     expect((await seed.one('SELECT status FROM class_cancellation_requests WHERE id = $1', [req.id])).status).toBe('APPROVED');
-    expect(await seed.one('SELECT is_available FROM room_availability WHERE room_id = $1 AND day = $2 AND hour = 9', [room.id, dateKey])).toEqual({ is_available: true });
+    expect(await seed.one(
+      `SELECT start_hour, end_hour, source_type FROM room_slot_releases WHERE room_id = $1 AND release_date = $2 AND is_active`,
+      [room.id, dateKey],
+    )).toEqual({ start_hour: 9, end_hour: 10, source_type: 'cancellation_request' });
 
     // The rep's timetable no longer lists the class on that date
     await signIn(page, request, rep, '/timetable');

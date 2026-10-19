@@ -1,10 +1,12 @@
-// Booking integrity under contention: many reps race for the same few room-slots at once.
+// Booking integrity under contention: many bookings race for the same few room-slots at once.
+// Student requests are PENDING until a faculty approves (and only ACTIVE bookings hold a room), so
+// the race goes through admin quick-book on behalf of different reps, which books ACTIVE at once.
 // Correct behaviour: exactly one 201 per (room, slot) and everything else 409 — never 500,
 // never two overlapping ACTIVE bookings (run.sh verifies the DB afterwards).
 import http from 'k6/http';
 import { check } from 'k6';
 import { Counter } from 'k6/metrics';
-import { reps, rooms, BASE, auth } from '../lib/common.js';
+import { reps, rooms, admins, BASE, auth } from '../lib/common.js';
 
 const created = new Counter('bookings_created');
 const conflicts = new Counter('bookings_conflict');
@@ -27,18 +29,19 @@ export function setup() {
     if (dow !== 0 && dow !== 6 && d <= 6) break;
   }
   const [y, m, d] = key.split('-').map(Number);
-  const at = (h) => new Date(Date.UTC(y, m - 1, d, h) - IST).toISOString();
-  return { targets: rooms.slice(-TARGETS).map((r) => r.id), at11: at(11), at12: at(12), at10: at(10) };
+  return { targets: rooms.slice(-TARGETS).map((r) => r.name), date: key };
 }
 
 export default function (t) {
   const rep = reps[(__VU * 7 + __ITER) % reps.length];
   const room = t.targets[__ITER % t.targets.length];
   // Half the racers ask for 11–12, half for the overlapping 10–12 (different start time).
+  const base = { room_name: room, date: t.date, target_user_id: rep.id };
   const body = __ITER % 2 === 0
-    ? { room_id: room, start_time: t.at11, end_time: t.at12, purpose: 'race' }
-    : { room_id: room, start_time: t.at10, end_time: t.at12, purpose: 'race-overlap' };
-  const r = http.post(`${BASE}/bookings`, JSON.stringify(body), { ...auth(rep.token), tags: { name: 'race_booking' } });
+    ? { ...base, slot: 11, hours: 1, purpose: 'race' }
+    : { ...base, slot: 10, hours: 2, purpose: 'race-overlap' };
+  const admin = admins[__VU % admins.length];
+  const r = http.post(`${BASE}/bookings/admin/quick`, JSON.stringify(body), { ...auth(admin.token), tags: { name: 'race_booking' } });
   if (r.status === 201) created.add(1);
   else if (r.status === 409) conflicts.add(1);
   else if (r.status >= 500) serverErrors.add(1);

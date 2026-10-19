@@ -174,12 +174,27 @@ export const roomRepository = {
   /**
    * Get all room availability entries
    */
+  /**
+   * Weekly / dated overrides plus dated releases (approved class cancellations, reschedules) as
+   * one `{ room_id, room_name, day, hour, is_available }` list. Releases come last so they win over
+   * a block on the same date and hour, as they do server-side (checkRoomTimetable) — NEW-P5-4.
+   */
   getAllAvailability: async () => {
     const result = await db.query(`
-      SELECT ra.*, r.name as room_name 
-      FROM room_availability ra
-      JOIN rooms r ON ra.room_id = r.id
-      WHERE r.is_active
+      SELECT ra.id, ra.room_id, ra.day, ra.hour, ra.is_available, ra.user_id, ra.created_at,
+             r.name AS room_name, 'override' AS source
+        FROM room_availability ra
+        JOIN rooms r ON ra.room_id = r.id
+       WHERE r.is_active
+      UNION ALL
+      SELECT NULL, rel.room_id, rel.release_date::text, h, TRUE, rel.created_by, rel.created_at,
+             r.name, 'release'
+        FROM room_slot_releases rel
+        JOIN rooms r ON r.id = rel.room_id
+       CROSS JOIN LATERAL generate_series(rel.start_hour, rel.end_hour - 1) AS h
+       WHERE rel.is_active AND r.is_active
+         AND rel.release_date >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date - 7
+      ORDER BY source, room_id, day, hour
     `);
     return result.rows;
   },

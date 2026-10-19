@@ -187,3 +187,14 @@ Severity: C critical · H high · M medium · L low. Status: open unless noted.
 | NEW-P4-9 | H | fixed | Transfer completion to a busy requester, or an overlapping grab mid-flow → 500 |
 | NEW-P4-T1 | M | fixed | A refused accept on an unavailable booking marked the transfer REJECTED, then rolled that back |
 | NEW-P4-T2 | M | fixed | Unique (booking, requester) blocked asking again after a withdrawal (migration v29: unique only among open requests) |
+
+## Found in Phase 5 (performance and operations)
+| ID | Sev | Status | Finding |
+|---|---|---|---|
+| PERF-06 | H | fixed | `jsonwebtoken` re-derived the HMAC key on every verify (a thrown-and-caught `createPublicKey`) and each request verified its token 2–3× (limiter, authenticate, audit): 24% of server CPU at peak. Now one cached `KeyObject` and one verification per token |
+| PERF-07 | M | fixed | Calendar rows were re-read, re-filtered and re-serialised per viewer; now one shared JSON body per window and view for 5 s, cleared by any successful write |
+| NEW-P5-1 | L | open (Phase 6 dead code) | `bookingService.rescheduleBooking` (frontend) POSTs `/bookings/:id/reschedule`, which doesn't exist (backend is `PATCH /bookings/:id`); nothing calls it |
+| NEW-P5-2 | M | fixed | Sentry: 100% tracing + profiling in the backend; browser sent default PII, 100% traces/profiles, a placeholder `yourserver.io` trace target and fake test metrics on every page load |
+| NEW-P5-4 | H | fixed | Dated releases (approved class cancellations, reschedules) were enforced server-side but missing from `/availability`, so the calendar still showed the room taken and the rep's timetable still listed the cancelled class |
+| NEW-P5-5 | M | fixed | Node's 5 s keep-alive + 511 backlog: users pausing between screens reconnected in bursts that overflowed the accept queue (`dial: i/o timeout` at peak); keep-alive now 65 s, backlog 2048 |
+| NEW-P5-3 | L | fixed | Load-test kit still used pre-Phase-4 flows (student bookings without a faculty; contention via PENDING requests that never hold a room) |

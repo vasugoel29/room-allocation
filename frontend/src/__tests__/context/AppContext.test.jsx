@@ -21,7 +21,8 @@ const baseRoutes = () => [
   ['GET', /\/api\/rooms\?/, [{ id: 1, name: 'R-1' }]],
   ['GET', '/api/auth/faculties', [{ id: 21, name: 'Prof Fay' }]],
   ['GET', '/api/departments', [{ id: 1, name: 'IT' }]],
-  ['GET', /\/api\/bookings\?/, { data: [{ id: 100 }], meta: { page: 1, totalPages: 1 } }],
+  ['GET', /\/api\/bookings\/calendar\?/, { data: [{ id: 100 }], meta: {} }],
+  ['GET', '/api/bookings/mine', { data: [] }],
   ['GET', '/api/availability', []],
   ['GET', '/api/transfers/incoming', [{ id: 1, status: 'PENDING' }, { id: 2, status: 'ACCEPTED' }, { id: 3, status: 'PENDING' }]],
   ['GET', '/api/transfers/outgoing', []],
@@ -92,7 +93,7 @@ describe('AppProvider data loading per role', () => {
       'GET /api/rooms?building=5th+Block',
       'GET /api/auth/faculties',
       'GET /api/departments',
-      'GET /api/bookings?limit=1000',
+      'GET /api/bookings/mine',
       'GET /api/availability',
       'GET /api/transfers/incoming',
       'GET /api/transfers/outgoing',
@@ -101,6 +102,7 @@ describe('AppProvider data loading per role', () => {
     expect(u.some((x) => x.includes('/timetable/faculty'))).toBe(false);
     expect(ctx.rooms).toEqual([{ id: 1, name: 'R-1' }]);
     expect(ctx.bookings).toEqual([{ id: 100 }]);
+    expect(u.some((x) => x.startsWith('GET /api/bookings?'))).toBe(false);
     expect(ctx.faculties).toEqual([{ id: 21, name: 'Prof Fay' }]);
   });
 
@@ -135,19 +137,29 @@ describe('AppProvider data loading per role', () => {
     expect(ctx.rooms).toEqual([]);
   });
 
-  // FE-12: the calendar's occupancy comes from a single `GET /bookings?limit=1000` (sorted by created_at);
-  // anything past the first page is silently dropped, so those rooms show as free.
-  it.fails('[FE-12] loads every page of bookings when the server reports more than one page', async () => {
+  // FE-12 / PERF-01 regression: occupancy used to come from one `GET /bookings?limit=1000` (newest
+  // created first), so older bookings silently dropped off the calendar. It now loads bounded IST
+  // windows — this week and next, plus the selected day's week when browsing elsewhere — and merges
+  // in the user's own bookings.
+  it('[FE-12] loads this week and next, the selected week, and "mine", merged by id', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-21T06:00:00Z')); // Wed 21 Oct 2026, IST
     localStorage.setItem('user', JSON.stringify(USERS.STUDENT_REP));
-    const routes = baseRoutes().filter(([, m]) => !(m instanceof RegExp && String(m).includes('bookings')));
-    routes.unshift(['GET', /\/api\/bookings\?/, (url) => (/page=2/.test(url)
-      ? { data: [{ id: 2 }], meta: { page: 2, totalPages: 2, total: 1001 } }
-      : { data: [{ id: 1 }], meta: { page: 1, totalPages: 2, total: 1001 } })]);
-    installFetch(routes);
+    const routes = baseRoutes().filter(([, m]) => !String(m).includes('bookings'));
+    routes.unshift(
+      ['GET', /\/api\/bookings\/calendar\?/, (url) => ({ data: url.includes('from=2026-10-19') ? [{ id: 1 }, { id: 2 }] : [{ id: 3 }] })],
+      ['GET', '/api/bookings/mine', { data: [{ id: 2, purpose: 'mine' }, { id: 9 }] }],
+    );
+    const f = installFetch(routes);
     mount();
-    await waitFor(() => expect(ctx.bookings.length).toBeGreaterThan(0));
-    await new Promise((r) => setTimeout(r, 50));
-    expect(ctx.bookings.map((b) => b.id).sort()).toEqual([1, 2]);
+    await waitFor(() => expect(ctx.bookings.map((b) => b.id).sort()).toEqual([1, 2, 9]));
+    expect(ctx.bookings.find((b) => b.id === 2)).toEqual({ id: 2, purpose: 'mine' });
+    expect(urls(f)).toContain('GET /api/bookings/calendar?from=2026-10-19&to=2026-11-01');
+
+    act(() => ctx.setSelectedDay('2026-12-10'));
+    await waitFor(() => expect(urls(f)).toContain('GET /api/bookings/calendar?from=2026-12-07&to=2026-12-13'));
+    await waitFor(() => expect(ctx.bookings.map((b) => b.id).sort()).toEqual([1, 2, 3, 9]));
+    vi.useRealTimers();
   });
 });
 

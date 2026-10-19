@@ -55,6 +55,8 @@ const ROUTES = [
   { m: 'get', path: `/api/rooms/${X}/conflict-check`, min: 'ADMIN' },
   // bookingRoutes
   { m: 'get', path: '/api/bookings', min: 'VIEWER' },
+  { m: 'get', path: '/api/bookings/calendar?from=2030-01-07&to=2030-01-07', min: 'VIEWER' },
+  { m: 'get', path: '/api/bookings/mine', min: 'VIEWER' },
   { m: 'post', path: '/api/bookings', min: 'STUDENT_REP', body: {} },
   { m: 'patch', path: `/api/bookings/${X}/cancel`, min: 'VIEWER' },
   { m: 'patch', path: `/api/bookings/${X}`, min: 'STUDENT_REP', body: {} },

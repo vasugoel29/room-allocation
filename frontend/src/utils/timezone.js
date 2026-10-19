@@ -22,3 +22,12 @@ export const istDateTimeToUtc = (dateKey, hour, minute = 0) => {
 };
 
 export const addMinutesToUtc = (utcValue, minutes) => new Date(new Date(utcValue).getTime() + minutes * 60 * 1000).toISOString();
+
+// Calendar-day arithmetic on "YYYY-MM-DD" keys (no time zone involved).
+export const addDaysToKey = (dateKey, days) =>
+  new Date(Date.parse(`${dateKey}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+
+export const mondayOfKey = (dateKey) => {
+  const weekday = new Date(`${dateKey}T00:00:00Z`).getUTCDay() || 7; // Sunday → 7
+  return addDaysToKey(dateKey, 1 - weekday);
+};

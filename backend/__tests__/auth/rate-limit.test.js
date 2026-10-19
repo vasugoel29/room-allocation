@@ -195,6 +195,11 @@ describe('limiters mounted on the app', () => {
     expect(authAccountLimiter.size()).toBe(0);
   });
 
+  test('[PERF-03] /api/health is in front of the API limiter (probes never count or get 429)', async () => {
+    for (let i = 0; i < 5; i++) expect((await request(app).get('/api/health')).status).toBe(200);
+    expect(apiLimiter.size()).toBe(0);
+  });
+
   test('with RATE_LIMIT_DISABLED=true the limiters record nothing', async () => {
     process.env.RATE_LIMIT_DISABLED = 'true';
     await request(app).post('/api/auth/dev-login').send({ email: 'x@nsut.ac.in' });

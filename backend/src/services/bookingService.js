@@ -39,6 +39,42 @@ export const getBookings = async (filters) => {
   };
 };
 
+export const CALENDAR_MAX_DAYS = 31;
+export const MAX_MINE = 500;
+
+const dayNumber = (key) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key ?? ''));
+  if (!m) return null;
+  const t = Date.UTC(+m[1], +m[2] - 1, +m[3]);
+  const d = new Date(t);
+  // Reject roll-overs such as 2026-02-30 (NEW-P4-6).
+  if (d.getUTCFullYear() !== +m[1] || d.getUTCMonth() !== +m[2] - 1 || d.getUTCDate() !== +m[3]) return null;
+  return t / 86_400_000;
+};
+
+/**
+ * Calendar occupancy window: the IST days from..to (inclusive), at most CALENDAR_MAX_DAYS.
+ * Replaces the 1000-row `GET /bookings` download (PERF-01, FE-12).
+ */
+export const calendarRange = ({ from, to }) => {
+  const a = dayNumber(from);
+  const b = dayNumber(to);
+  if (a === null || b === null) return { error: 'from and to must be dates (YYYY-MM-DD)', status: 400 };
+  if (b < a) return { error: 'to must not be before from', status: 400 };
+  if (b - a + 1 > CALENDAR_MAX_DAYS) return { error: `The calendar window is at most ${CALENDAR_MAX_DAYS} days`, status: 400 };
+  const toNext = new Date((b + 1) * 86_400_000).toISOString().slice(0, 10);
+  return { from, to, startUtc: istDateTimeToUtc(from, 0), endUtc: istDateTimeToUtc(toNext, 0) };
+};
+
+/** ACTIVE and PENDING bookings overlapping a window from calendarRange(). */
+export const getCalendarRows = (range) => bookingRepository.findOpenInRange(range.startUtc, range.endUtc);
+
+/** The caller's own bookings plus those they supervise as faculty (History, faculty dashboard). */
+export const getMine = async (principal, { limit } = {}) => {
+  const n = Math.min(MAX_MINE, Math.max(1, parseInt(limit) || MAX_MINE));
+  return bookingRepository.findForPerson(principal.id, principal.faculty_id ?? null, n);
+};
+
 const RETRYABLE = new Set(['40P01', '40001']); // deadlock / serialization failure between racing bookings
 
 /**

@@ -418,6 +418,28 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(availRows(after.body, room.id)).toEqual([expect.objectContaining({ is_available: true })]);
   });
 
+  test('[NEW-P5-4] active dated releases are reported per hour, after overrides; inactive and old ones are not', async () => {
+    const room = await createRoom();
+    const istToday = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+    const day = (n) => new Date(Date.parse(`${istToday}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+    const ins = (date, from, to, active = true) => db.query(
+      `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, is_active)
+       VALUES ($1, $2, $3, $4, 'test', $5)`, [room.id, date, from, to, active]);
+    await db.query("INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, 10, false)", [room.id, day(2)]);
+    await ins(day(2), 10, 12);
+    await ins(day(3), 9, 10, false); // withdrawn
+    await ins(day(-30), 9, 10); // long past
+    await override(admin.auth, { room_name: room.name, day: 'Fri', hour: 15, is_available: false }); // busts the cache
+    const res = await request(app).get('/api/availability').set('Authorization', viewer.auth);
+    const mine = availRows(res.body, room.id).map(({ day: d, hour, is_available, source }) => ({ d, hour, is_available, source }));
+    expect(mine).toEqual([
+      { d: day(2), hour: 10, is_available: false, source: 'override' },
+      { d: 'Fri', hour: 15, is_available: false, source: 'override' },
+      { d: day(2), hour: 10, is_available: true, source: 'release' },
+      { d: day(2), hour: 11, is_available: true, source: 'release' },
+    ]);
+  });
+
   test.each([
     [{ day: 'Mon', hour: 9 }],
     [{ room_name: 'X', hour: 9 }],

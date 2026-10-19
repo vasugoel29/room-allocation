@@ -16,6 +16,20 @@ export const bookingService = {
     return result.data || result;
   },
 
+  /** ACTIVE + PENDING bookings overlapping the IST days from..to (inclusive, at most 31 days). */
+  getCalendar: async (from, to) => {
+    const res = await api.get(`/bookings/calendar?${new URLSearchParams({ from, to })}`);
+    if (!res.ok) throw new Error('Failed to fetch the calendar');
+    return (await res.json()).data;
+  },
+
+  /** The signed-in user's own bookings and the ones they supervise, any status. */
+  getMine: async () => {
+    const res = await api.get('/bookings/mine');
+    if (!res.ok) throw new Error('Failed to fetch your bookings');
+    return (await res.json()).data;
+  },
+
   createBooking: async (data) => {
     const res = await api.post('/bookings', data);
     if (!res.ok) {

@@ -40,8 +40,10 @@ test('numbers reflect seeded ACTIVE bookings only, within the day window', async
   // 40 ACTIVE bookings in the 03:00 IST hour spread over the last 2..21 days (2 per day: 03:00-03:30
   // and 03:30-04:00, so they don't overlap — the room/person exclusion constraints forbid that).
   const N = 40;
+  const starts = [];
   for (let i = 0; i < N; i++) {
     const start = istDateTimeToUtc(istDateDaysAgo(2 + Math.floor(i / 2)), 3, (i % 2) * 30);
+    starts.push(start);
     await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: start, end_time: new Date(new Date(start).getTime() + 30 * 60_000).toISOString() });
   }
   // Excluded: not ACTIVE, and outside the 30-day window. (The PENDING one is someone else's: a person
@@ -63,10 +65,14 @@ test('numbers reflect seeded ACTIVE bookings only, within the day window', async
   expect(after.body.topRooms[0]).toEqual({ name: room.name, booking_count: String(N) });
   expect(hourCount(after.body, 3) - hourCount(before.body, 3)).toBe(N);
 
-  // days=7 only sees the bookings from the last 7 days (days 2..6 ago -> 10 bookings).
+  // days=7 is "start_time >= now - 7 days": days 2..6 ago (10 bookings), plus day 7's 03:00/03:30
+  // ones when the test runs before 03:30 IST.
+  const weekStart = Date.now() - 7 * 86400_000;
   const week = await analytics({ days: 7 });
+  const expected = starts.filter((t) => new Date(t).getTime() >= weekStart).length;
+  expect([10, 11, 12]).toContain(expected);
   const weekRoom = week.body.topRooms.find((r) => r.name === room.name);
-  expect(weekRoom).toEqual({ name: room.name, booking_count: '10' });
+  expect(weekRoom).toEqual({ name: room.name, booking_count: String(expected) });
 });
 
 // QUESTION: "last N days" analytics include every future booking too (there is no upper bound on

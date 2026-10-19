@@ -178,12 +178,20 @@ describe('faculty import (faculty directory)', () => {
     expect(job.status).toBe('completed');
   });
 
-  test.failing('[OPS-06] a realistic bulk CSV just over 100kb is accepted (not 413)', async () => {
+  test('[OPS-06] a realistic bulk CSV just over 100kb is accepted (not 413)', async () => {
     const line = `${'x'.repeat(90)},\n`;
     const csv = `name,email\n${line.repeat(Math.ceil(110_000 / line.length))}`;
     expect(Buffer.byteLength(JSON.stringify({ csvContent: csv }))).toBeGreaterThan(100 * 1024);
     const res = await request(app).post('/api/admin/uploads/import/faculty').set('Authorization', admin.auth).send({ csvContent: csv });
     expect(res.status).toBe(202);
     if (res.status === 202) await pollJob(app, admin.auth, res.body.jobId);
+  });
+
+  test('[OPS-06] imports are capped at 5mb; other endpoints keep the 100kb limit', async () => {
+    const huge = 'x'.repeat(5 * 1024 * 1024 + 10);
+    const big = await request(app).post('/api/admin/uploads/import/faculty').set('Authorization', admin.auth).send({ csvContent: huge });
+    expect(big.status).toBe(413);
+    const other = await request(app).post('/api/bookings').set('Authorization', admin.auth).send({ purpose: 'x'.repeat(110_000) });
+    expect(other.status).toBe(413);
   });
 });

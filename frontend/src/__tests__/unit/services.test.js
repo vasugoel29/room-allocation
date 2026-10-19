@@ -22,6 +22,15 @@ afterEach(() => { vi.unstubAllGlobals(); });
 const failWith = (status, body) => fetchMock.mockResolvedValueOnce(jsonResponse(body, status));
 
 describe('authService', () => {
+  it('getCalendar / getMine hit the bounded endpoints and unwrap data', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 1 }], meta: {} }));
+    expect(await bookingService.getCalendar('2026-10-19', '2026-11-01')).toEqual([{ id: 1 }]);
+    expect(last().url).toBe('/api/bookings/calendar?from=2026-10-19&to=2026-11-01');
+    fetchMock.mockResolvedValueOnce(jsonResponse({ data: [{ id: 2 }] }));
+    expect(await bookingService.getMine()).toEqual([{ id: 2 }]);
+    expect(last().url).toBe('/api/bookings/mine');
+  });
+
   it.each([
     ['googleLogin', () => authService.googleLogin('cred'), 'POST', '/api/auth/google', { credential: 'cred' }],
     ['devLogin', () => authService.devLogin('a@nsut.ac.in'), 'POST', '/api/auth/dev-login', { email: 'a@nsut.ac.in' }],

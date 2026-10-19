@@ -4,16 +4,15 @@ import crypto from 'crypto';
 import client from 'prom-client';
 import cors from 'cors';
 import helmet from 'helmet';
-import bodyParser from 'body-parser';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { logActivity } from './services/loggerService.js';
 import { redactForAudit } from './utils/redact.js';
 import { verifySessionToken } from './auth/session.js';
+import { invalidateShared } from './utils/sharedCache.js';
 
 import { apiLimiter } from './middleware/leakyBucket.js';
 import * as Sentry from "@sentry/node";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
 
 
@@ -22,24 +21,17 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   process.exit(1);
 }
 
-// Initialize Sentry before any other imports if possible
+// Sentry: errors always (when a DSN is set), traces sampled (default 10%) so it costs little at
+// peak; only warn/error console output is forwarded. No profiling in production.
+const sampleRate = (v, d) => (Number.isFinite(Number(v)) && v !== '' && v != null ? Math.min(1, Math.max(0, Number(v))) : d);
 Sentry.init({
   enabled: Boolean(process.env.SENTRY_DSN) && !['test', 'e2e'].includes(process.env.NODE_ENV),
   dsn: process.env.SENTRY_DSN,
   environment: process.env.NODE_ENV,
-  integrations: [
-    nodeProfilingIntegration(),
-    Sentry.consoleLoggingIntegration({ levels: ["log", "warn", "error"] }),
-  ],
-  // Tracing
-  tracesSampleRate: 1.0, //  Capture 100% of the transactions
-  metrics: {
-    count: ['button_click'],
-    gauge: ['page_load_time'],
-    distribution: ['response_time']
-  },
+  integrations: [Sentry.consoleLoggingIntegration({ levels: ['warn', 'error'] })],
+  tracesSampleRate: sampleRate(process.env.SENTRY_TRACES_SAMPLE_RATE, 0.1),
+  sendDefaultPii: false,
   enableLogs: true,
-
 });
 
 
@@ -114,32 +106,48 @@ app.use(cors({
     : ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }));
+// Health probe: in front of the rate limiter and body parsing so platform probes keep working when
+// the API is busy (PERF-03). The DB result is reused for 2 s so thousands of open tabs polling
+// every 30 s cost at most one query per 2 s. 503 while draining so the load balancer stops routing.
+let shuttingDown = false;
+let lastHealth = { at: 0, ok: false };
+const HEALTH_CACHE_MS = Number(process.env.HEALTH_CACHE_MS ?? (process.env.NODE_ENV === 'test' ? 0 : 2000));
+app.get('/api/health', async (req, res) => {
+  if (shuttingDown) return res.status(503).json({ status: 'shutting_down' });
+  if (Date.now() - lastHealth.at > HEALTH_CACHE_MS) {
+    try {
+      await db.query('SELECT 1');
+      lastHealth = { at: Date.now(), ok: true };
+    } catch (err) {
+      console.error('Health check failed (DB):', err);
+      lastHealth = { at: Date.now(), ok: false };
+    }
+  }
+  if (lastHealth.ok) return res.status(200).json({ status: 'ok', db: 'connected' });
+  res.status(503).json({ status: 'error', db: 'disconnected' });
+});
+
+// Any successful write may change what the shared calendar cache holds.
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
+    res.on('finish', () => { if (res.statusCode < 400) invalidateShared(); });
+  }
+  next();
+});
+
 app.use('/api/internal', internalRoutes);
+// CSV imports arrive as JSON ({ csvContent }); a full-college timetable is well over 100 kb (OPS-06).
+// Mounted first so the global parser below sees the body as already parsed and skips it.
+const IMPORT_BODY = express.json({ limit: '5mb' });
+app.use('/api/admin/uploads/import', IMPORT_BODY);
+app.use('/api/timetable/upload', IMPORT_BODY);
 app.use(express.json({ limit: '100kb' }));
-
-
 
 app.use('/api', apiLimiter);
 
-// Enable JS profiling in the browser for Sentry
-app.use((req, res, next) => {
-  res.set("Document-Policy", "js-profiling");
-  next();
-});
 const PORT = process.env.PORT || 4000;
 
 app.get('/', (req, res) => res.json({ status: 'ok', version: '1.2 (Refactored)' }));
-
-// Lightweight health check endpoint with database verification
-app.get('/api/health', async (req, res) => {
-  try {
-    await db.query('SELECT 1');
-    res.status(200).json({ status: 'ok', db: 'connected' });
-  } catch (err) {
-    console.error('Health check failed (DB):', err);
-    res.status(503).json({ status: 'error', db: 'disconnected' });
-  }
-});
 
 // Universal mutation audit log. The actor is the verified session's user (null when anonymous —
 // never a stand-in id); request bodies are redacted and summarised (SEC-14).
@@ -209,12 +217,37 @@ if (process.env.NODE_ENV !== 'test') {
   // Migrations must finish before the server accepts traffic (OPS-03).
   db.connectAndMigrate()
     .then(() => {
-      app.listen(PORT, () => {
+      // Keep idle connections open longer than a load balancer's idle timeout (60 s typical) so
+      // clients reuse them instead of reconnecting in bursts that overflow the accept queue.
+      const server = app.listen(PORT, undefined, Number(process.env.LISTEN_BACKLOG) || 2048, () => {
         console.warn(`Server successfully listening on port ${PORT}`);
       }).on('error', (err) => {
         console.error('Server failed to start:', err);
         process.exit(1);
       });
+
+      server.keepAliveTimeout = Number(process.env.KEEP_ALIVE_TIMEOUT_MS) || 65_000;
+      server.headersTimeout = server.keepAliveTimeout + 1_000;
+
+      // Graceful shutdown (OPS-18): stop accepting connections, let in-flight requests finish
+      // (bounded), then close the DB pool. Deploys and restarts no longer cut bookings mid-write.
+      const shutdown = (signal) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+        console.warn(`${signal} received: draining connections`);
+        const force = setTimeout(() => {
+          console.error('Shutdown timed out; exiting');
+          process.exit(1);
+        }, Number(process.env.SHUTDOWN_TIMEOUT_MS) || 10_000);
+        force.unref();
+        server.close(async () => {
+          try { await db.pool.end(); } catch (err) { console.error('Closing DB pool failed', err); }
+          process.exit(0);
+        });
+        server.closeIdleConnections?.();
+      };
+      process.on('SIGTERM', () => shutdown('SIGTERM'));
+      process.on('SIGINT', () => shutdown('SIGINT'));
     })
     .catch((err) => {
       console.error('Startup failed:', err);

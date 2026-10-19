@@ -1,40 +1,69 @@
 import * as db from '../db.js';
 
+const BOOKING_SELECT = `
+  SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
+         u.branch, u.year, u.section, d.name as department_name,
+         f.name as faculty_name,
+         CASE 
+           WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
+           ELSE CONCAT(
+             u.branch, 
+             '-', 
+             u.section, 
+             ' ', 
+             CASE CEIL(u.semester::float / 2)::int
+               WHEN 1 THEN '1st'
+               WHEN 2 THEN '2nd'
+               WHEN 3 THEN '3rd'
+               WHEN 4 THEN '4th'
+               ELSE CONCAT(CEIL(u.semester::float / 2)::text, 'th')
+             END,
+             ' Year'
+           )
+         END as class_name
+  FROM bookings b
+  JOIN rooms r ON b.room_id = r.id
+  JOIN users u ON b.created_by = u.id
+  LEFT JOIN faculties f ON b.faculty_id = f.id
+  LEFT JOIN departments d ON u.department_id = d.id
+`;
+
 /**
  * Repository for Booking-related database operations
  */
 export const bookingRepository = {
   /**
+   * ACTIVE and PENDING bookings overlapping [from, to) — the calendar's occupancy. Bounded by
+   * the window, not a row limit, so nothing silently drops off (FE-12, PERF-01).
+   */
+  findOpenInRange: async (from, to) => {
+    const result = await db.query(
+      `${BOOKING_SELECT}
+       WHERE b.status IN ('ACTIVE', 'PENDING') AND b.start_time < $2 AND b.end_time > $1
+       ORDER BY b.start_time, b.room_id`,
+      [from, to],
+    );
+    return result.rows;
+  },
+
+  /** A user's own bookings and the ones they supervise as faculty, newest first. */
+  findForPerson: async (userId, facultyId, limit) => {
+    const result = await db.query(
+      `${BOOKING_SELECT}
+       WHERE b.created_by = $1 OR ($2::int IS NOT NULL AND b.faculty_id = $2)
+       ORDER BY b.start_time DESC
+       LIMIT $3`,
+      [userId, facultyId ?? null, limit],
+    );
+    return result.rows;
+  },
+
+  /**
    * Find bookings based on filters
    */
   findBookings: async (filters) => {
     const { room_id, user_id, start_date, end_date, slot, limit, offset } = filters;
-    let query = `
-      SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
-             u.branch, u.year, u.section, d.name as department_name,
-             f.name as faculty_name,
-             CASE 
-               WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
-               ELSE CONCAT(
-                 u.branch, 
-                 '-', 
-                 u.section, 
-                 ' ', 
-                 CASE CEIL(u.semester::float / 2)::int
-                   WHEN 1 THEN '1st'
-                   WHEN 2 THEN '2nd'
-                   WHEN 3 THEN '3rd'
-                   WHEN 4 THEN '4th'
-                   ELSE CONCAT(CEIL(u.semester::float / 2)::text, 'th')
-                 END,
-                 ' Year'
-               )
-             END as class_name
-      FROM bookings b
-      JOIN rooms r ON b.room_id = r.id
-      JOIN users u ON b.created_by = u.id
-      LEFT JOIN faculties f ON b.faculty_id = f.id
-      LEFT JOIN departments d ON u.department_id = d.id
+    let query = `${BOOKING_SELECT}
       WHERE 1=1
     `;
     const params = [];

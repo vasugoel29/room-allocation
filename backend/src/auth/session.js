@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
@@ -34,12 +35,36 @@ export function issueSessionToken(user) {
   });
 }
 
+// jsonwebtoken, given a string secret, first tries to parse it as a PEM public key on every
+// verify (a thrown-and-caught createPublicKey) — a quarter of all server CPU at peak (PERF-06).
+// A ready-made HMAC KeyObject skips that.
+let hmacKey = { secret: null, key: null };
+const verifyKey = () => {
+  const secret = JWT_SECRET();
+  if (hmacKey.secret !== secret) hmacKey = { secret, key: crypto.createSecretKey(Buffer.from(secret, 'utf8')) };
+  return hmacKey.key;
+};
+
+// A token is verified once (the limiter, authenticate and the audit log all ask) and the result
+// is reused until the token expires. Tokens are immutable, and revocation is still enforced on
+// every request by the session-version check in loadPrincipal.
+const verified = new Map(); // token -> { secret, userId, sv, expMs }
+const MAX_VERIFIED = 20_000;
+
 /** Verifies a session token; returns { userId, sv }. Accepts legacy `{ id }` tokens (sv 0). */
 export function verifySessionToken(token) {
-  const decoded = jwt.verify(token, JWT_SECRET());
+  const secret = JWT_SECRET();
+  const hit = verified.get(token);
+  if (hit && hit.secret === secret && hit.expMs > Date.now()) return { userId: hit.userId, sv: hit.sv };
+  const decoded = jwt.verify(token, verifyKey());
   const userId = Number(decoded.sub ?? decoded.id);
   if (!Number.isInteger(userId) || userId <= 0) throw new Error('token has no subject');
-  return { userId, sv: Number(decoded.sv || 0) };
+  const sv = Number(decoded.sv || 0);
+  if (decoded.exp) {
+    if (verified.size >= MAX_VERIFIED) verified.delete(verified.keys().next().value);
+    verified.set(token, { secret, userId, sv, expMs: decoded.exp * 1000 });
+  }
+  return { userId, sv };
 }
 
 // ---- principal cache -------------------------------------------------------------------
