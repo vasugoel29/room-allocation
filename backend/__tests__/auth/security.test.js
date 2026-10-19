@@ -125,7 +125,8 @@ describe('authorization matrix', () => {
     const path = await import('path');
     const dir = path.resolve(process.cwd(), 'src/routes');
     let count = 0;
-    for (const f of fs.readdirSync(dir)) count += (fs.readFileSync(path.join(dir, f), 'utf8').match(/^router\.(get|post|patch|put|delete)\(/gm) || []).length;
+    // internalRoutes.js is service-to-service (shared token, no user roles): covered by admin/internalSync.test.js.
+    for (const f of fs.readdirSync(dir).filter((n) => n !== 'internalRoutes.js')) count += (fs.readFileSync(path.join(dir, f), 'utf8').match(/^router\.(get|post|patch|put|delete)\(/gm) || []).length;
     // + '/', '/api/health', '/metrics' from server.js
     expect(ROUTES.length).toBe(count + 3);
   });

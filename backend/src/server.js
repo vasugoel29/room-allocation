@@ -14,7 +14,6 @@ import { JWT_SECRET } from './middleware/auth.js';
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import * as db from './db.js';
-import { initFacultySyncCron } from './services/facultySyncService.js';
 
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
@@ -45,6 +44,7 @@ Sentry.init({
 
 // Modular Imports
 import authRoutes from './routes/authRoutes.js';
+import internalRoutes from './routes/internalRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import facultyRoutes from './routes/facultyRoutes.js';
@@ -107,6 +107,7 @@ app.use(cors({
     : ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }));
+app.use('/api/internal', internalRoutes);
 app.use(express.json({ limit: '100kb' }));
 
 
@@ -205,7 +206,6 @@ if (process.env.NODE_ENV !== 'test') {
     .then(() => {
       app.listen(PORT, () => {
         console.warn(`Server successfully listening on port ${PORT}`);
-        initFacultySyncCron();
       }).on('error', (err) => {
         console.error('Server failed to start:', err);
         process.exit(1);
