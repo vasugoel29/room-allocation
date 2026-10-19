@@ -1,0 +1,122 @@
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import * as db from '../../src/db.js';
+import { istDateTimeToUtc, getIstParts } from '../../src/utils/timezone.js';
+
+export const TEST_PASSWORD = 'Password@123';
+const PASSWORD_HASH = bcrypt.hashSync(TEST_PASSWORD, 4);
+
+let seq = 0;
+const uid = () => `${process.pid}${Date.now().toString(36)}${(seq++).toString(36)}`;
+
+/** Same payload shape authController.login signs. */
+export function tokenFor(user, opts = {}) {
+  const { id, email, role, name, branch, year, semester, section, group_name, department_id } = user;
+  return jwt.sign(
+    { id, email, role, name, branch, year, semester, section, group_name, department_id },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h', ...opts },
+  );
+}
+
+/**
+ * Inserts a user directly (bypasses signup rules). Defaults to no branch/section so the
+ * real seeded timetable never clashes with test bookings unless a test opts in.
+ * Returns { user, token, auth } where auth is the Authorization header value.
+ */
+export async function createUser(overrides = {}) {
+  const role = overrides.role || 'VIEWER';
+  const fields = {
+    name: `Test ${role} ${uid()}`,
+    email: `t.${role.toLowerCase()}.${uid()}@nsut.ac.in`,
+    password: PASSWORD_HASH,
+    role,
+    is_approved: true,
+    ...overrides,
+  };
+  const cols = Object.keys(fields);
+  const { rows } = await db.query(
+    `INSERT INTO users (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
+    cols.map((c) => fields[c]),
+  );
+  const user = rows[0];
+  const token = tokenFor(user);
+  return { user, token, auth: `Bearer ${token}` };
+}
+
+export const createAdmin = (o) => createUser({ ...o, role: 'ADMIN' });
+export const createRep = (o) => createUser({ ...o, role: 'STUDENT_REP' });
+export const createFaculty = (o) => createUser({ ...o, role: 'FACULTY' });
+export const createViewer = (o) => createUser({ ...o, role: 'VIEWER' });
+
+export async function createRoom(overrides = {}) {
+  const fields = {
+    name: `T-${uid()}`.slice(0, 32),
+    building: 'Test Block',
+    floor: 1,
+    capacity: 60,
+    type: 'Lecture Room',
+    ...overrides,
+  };
+  const cols = Object.keys(fields);
+  const { rows } = await db.query(
+    `INSERT INTO rooms (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
+    cols.map((c) => fields[c]),
+  );
+  return rows[0];
+}
+
+/** Inserts a booking row directly, skipping business rules. */
+export async function insertBooking({ room_id, created_by, start_time, end_time, purpose = 'Seeded', status = 'ACTIVE', faculty_id = null }) {
+  end_time = end_time || new Date(new Date(start_time).getTime() + 3600_000).toISOString();
+  const { rows } = await db.query(
+    `INSERT INTO bookings (room_id, created_by, start_time, end_time, purpose, status, faculty_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [room_id, created_by, start_time, end_time, purpose, status, faculty_id],
+  );
+  return rows[0];
+}
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Next future IST slot on a weekday (Mon–Fri by default) at `hour`, at least `minLeadHours`
+ * from now and within the 7-day booking window. Returns { start, end, dateKey, day }.
+ *   futureSlot({ hour: 10 })             -> soonest weekday 10:00 IST
+ *   futureSlot({ hour: 10, day: 'Wed' }) -> soonest Wednesday 10:00 IST
+ *   futureSlot({ hour: 10, weekend: true })
+ */
+export function futureSlot({ hour = 10, day, weekend = false, minLeadHours = 2, skip = 0 } = {}) {
+  const now = Date.now();
+  let found = 0;
+  for (let i = 0; i < 14; i++) {
+    const dateKey = getIstParts(now + i * 86400_000).date;
+    const start = istDateTimeToUtc(dateKey, hour);
+    const d = getIstParts(start).day;
+    const isWeekend = d === 'Sat' || d === 'Sun';
+    if (new Date(start).getTime() < now + minLeadHours * 3600_000) continue;
+    if (day ? d !== day : isWeekend !== weekend) continue;
+    if (found++ < skip) continue;
+    return { start, end: new Date(new Date(start).getTime() + 3600_000).toISOString(), dateKey, day: d };
+  }
+  throw new Error(`No future slot found for ${JSON.stringify({ hour, day, weekend })}`);
+}
+
+/** A slot `hoursAgo` in the past. */
+export function pastSlot(hoursAgo = 3) {
+  const start = new Date(Date.now() - hoursAgo * 3600_000);
+  start.setUTCMinutes(0, 0, 0);
+  return { start: start.toISOString(), end: new Date(start.getTime() + 3600_000).toISOString() };
+}
+
+/** A slot more than a week out (outside the regular booking window). */
+export function farFutureSlot(days = 10, hour = 10) {
+  const dateKey = getIstParts(Date.now() + days * 86400_000).date;
+  const start = istDateTimeToUtc(dateKey, hour);
+  return { start, end: new Date(new Date(start).getTime() + 3600_000).toISOString(), day: getIstParts(start).day };
+}
+
+export { DAYS };
+
+/** Ends the shared pg pool; call from afterAll in every test file. */
+export const closeDb = () => db.pool.end();
