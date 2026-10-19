@@ -20,7 +20,7 @@ test('unseed.js deletes users with a role filter (it is meant to keep admins)', 
 });
 
 // Roles are stored upper-case ('ADMIN'); `role != 'admin'` matches every row, admins included.
-test.failing("[OPS-01] unseed.js preserves admins using the stored upper-case role ('ADMIN')", () => {
+test("[OPS-01] unseed.js preserves admins using the stored upper-case role ('ADMIN')", () => {
   const src = read('unseed.js');
   const m = src.match(/DELETE FROM users WHERE ([^'"`]*?role[^)]*?)['"`]\)/i) || src.match(/DELETE FROM users WHERE (.*)$/im);
   expect(m).not.toBeNull();
@@ -29,18 +29,44 @@ test.failing("[OPS-01] unseed.js preserves admins using the stored upper-case ro
   expect(clause).not.toMatch(/'admin'/);
 });
 
-test.failing.each(DESTRUCTIVE)('[OPS-01] %s refuses to run when NODE_ENV=production', (file) => {
+// Destructive scripts call the shared guard (scripts/lib/guard.js), which is checked below.
+const usesGuard = (src) => /assertLocalDatabase\(/.test(src) && /from '\.\/lib\/guard\.js'/.test(src);
+
+test.each(DESTRUCTIVE)('[OPS-01] %s refuses to run when NODE_ENV=production', (file) => {
   const src = read(file);
+  if (usesGuard(src)) return;
   expect(src).toMatch(/NODE_ENV[^\n]*['"`]production['"`]/);
   expect(src).toMatch(/process\.exit\(\s*[1-9]|throw new Error/);
 });
 
-test.failing.each(DESTRUCTIVE)('[OPS-01] %s refuses to run against a non-local DATABASE_URL', (file) => {
+test.each(DESTRUCTIVE)('[OPS-01] %s refuses to run against a non-local DATABASE_URL', (file) => {
   const src = read(file);
+  if (usesGuard(src)) return;
   // Must inspect the DB host (e.g. localhost/127.0.0.1) and bail out otherwise; `includes('localhost')`
   // used only to pick SSL settings doesn't count.
   // A `|| 'postgresql://…localhost…'` default doesn't count either: the line must act on the check.
   const guards = src.split('\n').filter((l) => /DATABASE_URL|hostname|host\b/.test(l) && /(localhost|127\.0\.0\.1)/.test(l)
     && !/ssl/i.test(l) && /\b(if|throw|exit|assert)\b/.test(l));
   expect(guards.length).toBeGreaterThan(0);
+});
+
+describe('scripts/lib/guard.js (run in a child process — never touches a database)', () => {
+  const run = async (env) => {
+    const { spawnSync } = await import('child_process');
+    const code = "import('./scripts/lib/guard.js').then(m => { m.assertLocalDatabase(process.env.DATABASE_URL, 'probe'); console.log('ALLOWED'); })";
+    return spawnSync(process.execPath, ['-e', code], { cwd: path.resolve(scriptsDir, '..'), env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' });
+  };
+  test('local database in development → allowed', async () => {
+    expect((await run({ DATABASE_URL: 'postgresql://u:p@localhost:5432/roomdb' })).stdout).toContain('ALLOWED');
+  });
+  test('NODE_ENV=production → refused', async () => {
+    const r = await run({ NODE_ENV: 'production', DATABASE_URL: 'postgresql://u:p@localhost:5432/roomdb' });
+    expect(r.status).toBe(1);
+    expect(r.stdout).not.toContain('ALLOWED');
+  });
+  test('remote host → refused unless explicitly overridden', async () => {
+    const remote = 'postgresql://u:p@ep-cool-db.neon.tech:5432/roomdb';
+    expect((await run({ DATABASE_URL: remote })).status).toBe(1);
+    expect((await run({ DATABASE_URL: remote, ALLOW_REMOTE_DB_SCRIPT: 'i-understand-this-destroys-data' })).stdout).toContain('ALLOWED');
+  });
 });

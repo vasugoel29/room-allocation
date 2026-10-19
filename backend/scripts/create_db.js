@@ -1,4 +1,5 @@
 import pkg from 'pg';
+import { assertLocalDatabase } from './lib/guard.js';
 const { Client } = pkg;
 import dotenv from 'dotenv';
 import path from 'path';
@@ -12,7 +13,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env.development') });
 
 async function run() {
   const connectionString = process.env.DATABASE_URL || 'postgresql://roomuser:roompass@localhost:5432/roomdb';
-  console.log(`Loaded DATABASE_URL: ${connectionString}`);
+  assertLocalDatabase(connectionString, 'create_db.js');
 
   // Connect to 'postgres' system database to perform DROP/CREATE DATABASE
   const url = new URL(connectionString);

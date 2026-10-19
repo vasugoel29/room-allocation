@@ -1,6 +1,9 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 import '../src/config/env.js';
+import { assertLocalDatabase } from './lib/guard.js';
+
+assertLocalDatabase(process.env.DATABASE_URL, 'unseed.js');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -17,7 +20,7 @@ async function unseed() {
     await pool.query('DELETE FROM booking_history');
     await pool.query('DELETE FROM bookings');
     await pool.query('DELETE FROM room_availability');
-    await pool.query('DELETE FROM users WHERE role != \'admin\''); // Keep the admin if it exists
+    await pool.query("DELETE FROM users WHERE role <> 'ADMIN'"); // Keep admins (roles are stored upper-case)
     await pool.query('DELETE FROM rooms');
     await pool.query('DELETE FROM departments');
     

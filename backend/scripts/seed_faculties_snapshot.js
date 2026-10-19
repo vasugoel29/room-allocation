@@ -4,6 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import '../src/config/env.js';
+import { assertLocalDatabase } from './lib/guard.js';
+
+assertLocalDatabase(process.env.DATABASE_URL, 'seed_faculties_snapshot.js');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
