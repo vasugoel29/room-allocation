@@ -5,6 +5,9 @@ import { body, query } from 'express-validator';
 import { authenticate, requireRole, JWT_SECRET } from '../../src/middleware/auth.js';
 import { validateRequest } from '../../src/middleware/validate.js';
 import { sendError, sendServerError } from '../../src/utils/httpErrors.js';
+import { createFaculty, closeDb } from '../../test/helpers/factories.js';
+
+afterAll(closeDb);
 
 function mockRes() {
   const res = { statusCode: 200, body: undefined };
@@ -16,10 +19,9 @@ function mockRes() {
 /** Runs a middleware and reports whether next() was called (and with what). */
 function run(mw, req) {
   const res = mockRes();
-  let nextCalled = false;
-  let nextArg;
-  const ret = mw(req, res, (arg) => { nextCalled = true; nextArg = arg; });
-  return { res, nextCalled, nextArg, ret };
+  const out = { res, nextCalled: false, nextArg: undefined };
+  out.ret = mw(req, res, (arg) => { out.nextCalled = true; out.nextArg = arg; });
+  return out;
 }
 
 describe('authenticate', () => {
@@ -27,14 +29,27 @@ describe('authenticate', () => {
     expect(JWT_SECRET).toBe(process.env.JWT_SECRET);
   });
 
-  test('valid Bearer token -> req.user is the decoded payload and next() is called', () => {
-    const token = jwt.sign({ id: 42, role: 'FACULTY', email: 'f@nsut.ac.in' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+  test('valid session token -> req.user is the principal loaded from the database', async () => {
+    const { user } = await createFaculty();
+    // Claims other than sub/sv are ignored: the role comes from the database, not the token.
+    const token = jwt.sign({ sub: String(user.id), sv: 0, role: 'ADMIN' }, process.env.JWT_SECRET, { expiresIn: '1h' });
     const req = { headers: { authorization: `Bearer ${token}` } };
-    const { res, nextCalled, nextArg } = run(authenticate, req);
-    expect(nextCalled).toBe(true);
-    expect(nextArg).toBeUndefined();
-    expect(res.body).toBeUndefined();
-    expect(req.user).toMatchObject({ id: 42, role: 'FACULTY', email: 'f@nsut.ac.in' });
+    const out = run(authenticate, req);
+    await out.ret;
+    expect(out.nextCalled).toBe(true);
+    expect(out.nextArg).toBeUndefined();
+    expect(out.res.body).toBeUndefined();
+    expect(req.user).toMatchObject({ id: user.id, role: 'FACULTY', email: user.email });
+    expect(req.user.permissions.has('bookings:approve')).toBe(true);
+  });
+
+  test('token for a user that does not exist -> 401', async () => {
+    const token = jwt.sign({ sub: '99999999', sv: 0 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const req = { headers: { authorization: `Bearer ${token}` } };
+    const out = run(authenticate, req);
+    await out.ret;
+    expect(out.nextCalled).toBe(false);
+    expect(out.res.statusCode).toBe(401);
   });
 
   test.each([
@@ -87,17 +102,15 @@ describe('requireRole', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  // requiredRoleValue falls back to 0 for an unknown name, so a typo like requireRole('Admin')
-  // lets every authenticated user (even one with no role) through. All current routes use valid
-  // names, so this is latent.
-  test.failing('[NEW-admin-7] requireRole with an unknown/misspelt role name fails closed', () => {
-    const { nextCalled, res } = run(requireRole('Admin'), { user: { role: 'VIEWER' } });
-    expect(nextCalled).toBe(false);
-    expect(res.statusCode).toBe(403);
+  // A misspelt role name used to fall back to level 0 and let everyone through.
+  test('[NEW-admin-7] requireRole with an unknown/misspelt role name throws when the route is defined', () => {
+    expect(() => requireRole('Admin')).toThrow(/unknown role/);
   });
 
-  test('without authenticate (no req.user) it throws rather than silently allowing', () => {
-    expect(() => run(requireRole('VIEWER'), {})).toThrow(TypeError);
+  test('without authenticate (no req.user) it fails closed with 401', () => {
+    const { res, nextCalled } = run(requireRole('VIEWER'), {});
+    expect(nextCalled).toBe(false);
+    expect(res.statusCode).toBe(401);
   });
 });
 

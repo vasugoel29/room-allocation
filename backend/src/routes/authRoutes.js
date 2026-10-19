@@ -1,8 +1,9 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { signup, login, logout, googleLogin, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser, forgotPassword, resetPassword, verifyStudent } from '../controllers/authController.js';
+import { signup, login, getUsers, createUser, updateUser, deleteUser, getFaculties, approveUser, forgotPassword, resetPassword, verifyStudent } from '../controllers/authController.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { validateRequest } from '../middleware/validate.js';
+import { googleLogin, devLogin, me, logout } from '../controllers/sessionController.js';
 import { authIpLimiter, authAccountLimiter } from '../middleware/leakyBucket.js';
 
 const router = express.Router();
@@ -15,6 +16,8 @@ const loginValidation = [
 ];
 
 router.post('/google', authLimiter, googleLogin);
+router.post('/dev-login', authLimiter, devLogin);
+router.get('/me', authenticate, me);
 router.post('/signup', authLimiter, signup);
 router.post('/login', authLimiter, loginValidation, validateRequest, login);
 router.post('/logout', logout);

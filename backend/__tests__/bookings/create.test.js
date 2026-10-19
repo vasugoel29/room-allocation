@@ -319,10 +319,15 @@ describe('POST /api/bookings — conflicts', () => {
     const res = await post(rep.auth, body(room, slot));
     expect(res.status).toBe(409);
     expect(res.body.error).toBe('This booking clashes with an existing timetable slot in your section timetable');
-    expect(res.body.conflict).toEqual({
-      type: 'timetable', label: 'your section timetable', subject: tt.subject_name, faculty: tt.faculty_name,
-      room: tt.room_name, day: tt.day_of_week, time: '10:00-11:00',
-    });
+    // A section can have several rows in one hour (e.g. lab batches); the app reports one of them.
+    const { rows: candidates } = await db.query(
+      `SELECT subject_name, faculty_name, room_name FROM timetable_slots
+       WHERE slot_time = '10:00-11:00' AND department = $1 AND semester = $2 AND section = $3 AND day_of_week = $4`,
+      [tt.department, tt.semester, tt.section, tt.day_of_week],
+    );
+    expect(res.body.conflict).toMatchObject({ type: 'timetable', label: 'your section timetable', day: tt.day_of_week, time: '10:00-11:00' });
+    expect(candidates.map((c) => [c.subject_name, c.faculty_name, c.room_name]))
+      .toContainEqual([res.body.conflict.subject, res.body.conflict.faculty, res.body.conflict.room]);
   });
 
   test('section timetable clash with a PM slot stored in 12h format ("02:00-03:00" = 14:00 IST)', async () => {

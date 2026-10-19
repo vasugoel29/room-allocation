@@ -1,4 +1,5 @@
-import jwt from 'jsonwebtoken';
+import { loadPrincipal, verifySessionToken, SessionError } from '../auth/session.js';
+import { hasPermission, roleLevel } from '../auth/permissions.js';
 
 if (!process.env.JWT_SECRET) {
   console.error('CRITICAL: JWT_SECRET environment variable is not set!');
@@ -10,78 +11,55 @@ export const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_only_fo
 // Note: In production, the app will exit if JWT_SECRET is missing.
 // For development, we keep a fallback to avoid blocking the team, but warn loudly.
 
-// Middleware to check JWT and role
-export function authenticate(req, res, next) {
+/**
+ * Verifies the session token and loads the principal (role, permissions, profile) from the
+ * database on every request — never from token claims — so revocations and role changes apply
+ * immediately. Sets req.user.
+ */
+export async function authenticate(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Missing or invalid token' });
   }
-  const token = authHeader.split(' ')[1];
+
+  let session;
+  try {
+    session = verifySessionToken(authHeader.slice(7));
+  } catch {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
+    const principal = await loadPrincipal(session.userId, session.sv);
+    if (!principal) return res.status(401).json({ error: 'Session is no longer valid. Please sign in again.' });
+    req.user = principal;
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Invalid token' });
+    if (err instanceof SessionError) return res.status(err.status).json({ error: err.message });
+    next(err);
   }
 }
 
-const roleHierarchy = {
-  'VIEWER': 1,
-  'STUDENT_REP': 2,
-  'FACULTY': 3,
-  'ADMIN': 4
-};
-
+/** Minimum-role gate (kept for routes whose rule is genuinely role-based). */
 export function requireRole(minimumRole) {
+  const required = roleLevel(minimumRole);
+  if (!required) throw new Error(`requireRole: unknown role "${minimumRole}"`);
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-    const userRoleValue = roleHierarchy[req.user.role] || 0;
-    const requiredRoleValue = roleHierarchy[minimumRole] || 0;
-    
-    if (userRoleValue < requiredRoleValue) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (roleLevel(req.user.role) < required) return res.status(403).json({ error: 'Forbidden' });
     next();
   };
 }
 
-/**
- * Middleware to check if the authenticated user has a specific resource permission
- * from the institutional Access Control Layer (ACL).
- * @param {string} resource - The resource permission name, e.g. 'rooms:view', 'rooms:book'
- * @param {string} [fallbackRole] - Optional fallback role (e.g. 'STUDENT_REP')
- */
-export function requireResource(resource, fallbackRole = null) {
+/** Permission gate backed by src/auth/permissions.js (ACL grants + role defaults). */
+export function requirePermission(permission) {
+  if (!permission) throw new Error('requirePermission: permission is required');
   return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
-
-    // Admin always has all resource permissions
-    if (req.user.role === 'ADMIN' || (Array.isArray(req.user.roles) && req.user.roles.includes('ADMIN'))) {
-      return next();
-    }
-
-    // Direct resource check against ACL permissions
-    if (Array.isArray(req.user.permissions) && req.user.permissions.includes(resource)) {
-      return next();
-    }
-
-    // Fallback to role hierarchy if a fallbackRole was supplied
-    if (fallbackRole) {
-      const userRoleValue = roleHierarchy[req.user.role] || 0;
-      const requiredRoleValue = roleHierarchy[fallbackRole] || 0;
-      if (userRoleValue >= requiredRoleValue) {
-        return next();
-      }
-    }
-
-    return res.status(403).json({
-      error: `Forbidden: You do not have access to resource '${resource}'.`
-    });
+    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+    if (!hasPermission(req.user, permission)) return res.status(403).json({ error: 'Forbidden' });
+    next();
   };
 }
+
+/** @deprecated alias kept for the access-control branch call sites; use requirePermission. */
+export const requireResource = (resource) => requirePermission(resource);

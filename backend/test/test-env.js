@@ -7,6 +7,11 @@ export function applyTestEnv() {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || DEFAULT_TEST_DATABASE_URL;
   process.env.JWT_SECRET = process.env.JWT_SECRET_TEST || 'test_jwt_secret_do_not_use_elsewhere';
   process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  // Auth: mock ACL directory, dev login on, no principal caching (tests change roles in the DB).
+  process.env.ACL_MODE = 'mock';
+  process.env.AUTH_DEV_LOGIN = 'true';
+  process.env.PRINCIPAL_CACHE_MS = '0';
+  process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'test-google-client-id.apps.googleusercontent.com';
   // Rate limiting has its own dedicated tests, which re-enable it explicitly.
   process.env.RATE_LIMIT_DISABLED = 'true';
   // Never send real email from tests.

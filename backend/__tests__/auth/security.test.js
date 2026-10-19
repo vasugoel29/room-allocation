@@ -38,6 +38,9 @@ const ROUTES = [
   { m: 'post', path: '/api/auth/signup', min: 'PUBLIC', body: {} },
   { m: 'post', path: '/api/auth/login', min: 'PUBLIC', body: {} },
   { m: 'post', path: '/api/auth/logout', min: 'PUBLIC' },
+  { m: 'post', path: '/api/auth/google', min: 'PUBLIC', body: {} },
+  { m: 'post', path: '/api/auth/dev-login', min: 'PUBLIC', body: {} },
+  { m: 'get', path: '/api/auth/me', min: 'VIEWER' },
   { m: 'post', path: '/api/auth/forgot-password', min: 'PUBLIC', body: { email: 'nobody.matrix@nsut.ac.in' } },
   { m: 'post', path: '/api/auth/reset-password', min: 'PUBLIC', body: {} },
   // QUESTION: verify-student is public (used before an account exists); see SEC-07 for its input handling.
@@ -280,13 +283,13 @@ describe('JWT handling', () => {
     expect(res.status).toBe(401);
   });
 
-  test.failing('[SEC-09] token of a deleted user is rejected', async () => {
+  test('[SEC-09] token of a deleted user is rejected', async () => {
     const { user, auth } = await createViewer();
     await db.query('DELETE FROM users WHERE id = $1', [user.id]);
     expect((await get(ANY, auth)).status).toBe(401);
   });
 
-  test.failing('[SEC-09] demoted admin loses admin access immediately (stale role claim)', async () => {
+  test('[SEC-09] demoted admin loses admin access immediately (stale role claim)', async () => {
     const { user, auth } = await createAdmin();
     expect((await get(ADMIN_ONLY, auth)).status).toBe(200);
     await db.query("UPDATE users SET role = 'VIEWER' WHERE id = $1", [user.id]);

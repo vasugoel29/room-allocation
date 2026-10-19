@@ -142,7 +142,7 @@ app.use(async (req, res, next) => {
     if (token) {
       try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        userId = decoded.id;
+        userId = Number(decoded.sub ?? decoded.id) || null;
       } catch (err) {
         // Ignored
       }
@@ -201,18 +201,22 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-console.warn('Attempting to start server...', { NODE_ENV: process.env.NODE_ENV, PORT });
-if (process.env.NODE_ENV !== 'test') { 
-  app.listen(PORT, () => {
-    console.warn(`Server successfully listening on port ${PORT}`);
-    initFacultySyncCron();
-  }).on('error', (err) => {
-    console.error('Server failed to start (L108):', err);
-  });
-} else {
-
-  console.warn('Server NOT started - NODE_ENV is "test"');
+if (process.env.NODE_ENV !== 'test') {
+  // Migrations must finish before the server accepts traffic (OPS-03).
+  db.connectAndMigrate()
+    .then(() => {
+      app.listen(PORT, () => {
+        console.warn(`Server successfully listening on port ${PORT}`);
+        initFacultySyncCron();
+      }).on('error', (err) => {
+        console.error('Server failed to start:', err);
+        process.exit(1);
+      });
+    })
+    .catch((err) => {
+      console.error('Startup failed:', err);
+      process.exit(1);
+    });
 }
-
 
 export default app;

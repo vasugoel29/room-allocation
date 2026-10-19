@@ -156,16 +156,17 @@ describe('POST /api/auth/login', () => {
       id: user.id, email: user.email, role: 'VIEWER', name: user.name, branch: 'XX', year: 2, semester: 4,
       section: 3, group_name: 1, department_name: dept.name, department_id: dept.id,
     });
+    // The session token carries only the subject and session version; role/profile load server-side.
     const claims = jwt.verify(res.body.token, process.env.JWT_SECRET);
-    expect(claims).toMatchObject({ id: user.id, email: user.email, role: 'VIEWER', name: user.name, semester: 4, section: 3, department_id: dept.id });
-    expect(claims.password).toBeUndefined();
+    expect(claims).toMatchObject({ sub: String(user.id), sv: 0, typ: 'session' });
+    expect(Object.keys(claims).sort()).toEqual(['exp', 'iat', 'sub', 'sv', 'typ']);
     expect(JSON.stringify(res.body)).not.toContain(user.password);
     // The issued token is accepted by authenticated routes.
     const me = await request(app).get('/api/auth/faculties').set('Authorization', `Bearer ${res.body.token}`);
     expect(me.status).toBe(200);
   });
 
-  test.failing('[SEC-09] access tokens are short-lived (≤ 24h), not 30 days', async () => {
+  test('[SEC-09] access tokens are short-lived (≤ 24h), not 30 days', async () => {
     const { user } = await createViewer();
     const res = await login(user.email);
     const { iat, exp } = jwt.decode(res.body.token);
@@ -237,7 +238,7 @@ describe('POST /api/auth/logout', () => {
     expect(res.body).toEqual({ message: 'Logged out successfully' });
   });
 
-  test.failing('[SEC-09] a token is rejected after logout (logout revokes the session)', async () => {
+  test('[SEC-09] a token is rejected after logout (logout revokes the session)', async () => {
     const { user } = await createViewer();
     const { body: { token } } = await login(user.email);
     await request(app).post('/api/auth/logout').set('Authorization', `Bearer ${token}`).expect(200);

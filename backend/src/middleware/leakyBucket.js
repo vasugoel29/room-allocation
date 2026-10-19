@@ -62,8 +62,8 @@ export function userOrIpKey(req) {
   const token = header?.startsWith('Bearer ') ? header.slice(7) : req.cookies?.token;
   if (token) {
     try {
-      const { id } = jwt.verify(token, JWT_SECRET);
-      if (id) return `u:${id}`;
+      const { sub, id } = jwt.verify(token, JWT_SECRET);
+      if (sub ?? id) return `u:${sub ?? id}`;
     } catch {
       // fall through to IP
     }

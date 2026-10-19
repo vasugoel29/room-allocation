@@ -39,6 +39,8 @@ test.failing.each(DESTRUCTIVE)('[OPS-01] %s refuses to run against a non-local D
   const src = read(file);
   // Must inspect the DB host (e.g. localhost/127.0.0.1) and bail out otherwise; `includes('localhost')`
   // used only to pick SSL settings doesn't count.
-  const guards = src.split('\n').filter((l) => /DATABASE_URL|hostname|host\b/.test(l) && /(localhost|127\.0\.0\.1)/.test(l) && !/ssl/i.test(l));
+  // A `|| 'postgresql://…localhost…'` default doesn't count either: the line must act on the check.
+  const guards = src.split('\n').filter((l) => /DATABASE_URL|hostname|host\b/.test(l) && /(localhost|127\.0\.0\.1)/.test(l)
+    && !/ssl/i.test(l) && /\b(if|throw|exit|assert)\b/.test(l));
   expect(guards.length).toBeGreaterThan(0);
 });

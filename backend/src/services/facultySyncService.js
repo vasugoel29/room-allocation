@@ -1,16 +1,19 @@
 import logger from '../utils/logger.js';
 import { pool } from '../db.js';
 
-const ACL_API_URL = process.env.ACL_API_URL || 'https://acl-lake.vercel.app';
-const ACL_CLIENT_ID = process.env.ACL_CLIENT_ID || 'CRAS';
-const ACL_CLIENT_SECRET = process.env.ACL_CLIENT_SECRET || 'cras_sec_S-RO6JLXtZhiUbS-AAoO7VQ4GdYB2Tvg';
-const ACL_FACULTIES_ENDPOINT = process.env.ACL_FACULTIES_ENDPOINT || `${ACL_API_URL}/v1/app-users?role=FACULTY`;
+const ACL_API_URL = process.env.ACL_API_URL;
+const ACL_CLIENT_ID = process.env.ACL_CLIENT_ID;
+const ACL_CLIENT_SECRET = process.env.ACL_CLIENT_SECRET;
+const ACL_FACULTIES_ENDPOINT = process.env.ACL_FACULTIES_ENDPOINT || (ACL_API_URL ? `${ACL_API_URL}/v1/app-users?role=FACULTY` : null);
 
 /**
  * Synchronizes the local faculties catalog with the central Access Control Layer (ACL).
  * Queries ACL for users mapped to the role 'FACULTY' in CRAS and updates the faculties table.
  */
 export async function syncFacultiesFromAcl() {
+  if (!ACL_FACULTIES_ENDPOINT || !ACL_CLIENT_ID || !ACL_CLIENT_SECRET) {
+    return { success: false, reason: 'not_configured' };
+  }
   logger.info(`[FacultySync] Initiating faculty catalog synchronization from ACL...`);
 
   try {

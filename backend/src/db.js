@@ -67,20 +67,18 @@ const migrations = [
     version: 1,
     name: 'Initial Schema',
     run: async (client) => {
-      await client.query(`
-        DROP TABLE IF EXISTS 
-          promotion_requests, booking_history, bookings, room_availability, rooms, users,
-          booking_transfers, class_cancellation_requests, faculty_timetable_slots,
-          faculty_slot_overrides, timetable_slots, audit_logs, branches, departments
-        CASCADE;
-      `);
+      // Baseline schema for a brand-new database only. Never drops anything: if the core
+      // tables already exist this is a no-op (existing deployments predate the tracker).
+      const { rows } = await client.query(`SELECT to_regclass('public.users') IS NOT NULL AS exists`);
+      if (rows[0].exists) return;
       const fs = await import('fs');
       const path = await import('path');
       const { fileURLToPath } = await import('url');
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = path.dirname(__filename);
-      const sqlPath = path.resolve(__dirname, '../sql/schema_v2.sql');
-      const sql = fs.readFileSync(sqlPath, 'utf8');
+      const sqlPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../sql/schema_v2.sql');
+      const sql = fs.readFileSync(sqlPath, 'utf8')
+        .split('\n')
+        .filter((line) => !/^\s*DROP\s+TABLE/i.test(line))
+        .join('\n');
       await client.query(sql);
     }
   },
@@ -637,17 +635,49 @@ const migrations = [
             is_active = true;
       `);
     }
+  },
+  {
+    version: 22,
+    name: 'ACL identity: users.acl_id, session_version, user_access snapshot',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS acl_id VARCHAR(64);
+        CREATE UNIQUE INDEX IF NOT EXISTS users_acl_id_key ON users(acl_id) WHERE acl_id IS NOT NULL;
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS session_version INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE users ALTER COLUMN password DROP NOT NULL;
+
+        CREATE TABLE IF NOT EXISTS user_access (
+          user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+          acl_id VARCHAR(64) NOT NULL,
+          role VARCHAR(32) NOT NULL,
+          roles JSONB NOT NULL DEFAULT '[]',
+          permissions JSONB NOT NULL DEFAULT '[]',
+          allowed_scope JSONB NOT NULL DEFAULT '{}',
+          scopes_by_permission JSONB NOT NULL DEFAULT '{}',
+          academic JSONB NOT NULL DEFAULT '{}',
+          fetched_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        );
+      `);
+    }
   }
 ];
 
 
-export async function testDbConnection() {
-  let client;
-  try {
-    client = await pool.connect();
-    await client.query('SELECT 1');
+// Arbitrary constant key so concurrent app instances serialise their migration runs.
+const MIGRATION_LOCK_KEY = 72_410_001;
 
-    // Create migration tracker
+/**
+ * Applies pending migrations. Each migration and its schema_migrations row commit together
+ * in one transaction, and the whole run holds a Postgres advisory lock, so two instances
+ * booting at once cannot interleave or double-apply. Throws on failure.
+ */
+export async function runMigrations() {
+  const client = await pool.connect();
+  let locked = false;
+  try {
+    await client.query('SELECT pg_advisory_lock($1)', [MIGRATION_LOCK_KEY]);
+    locked = true;
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS schema_migrations (
         version INTEGER PRIMARY KEY,
@@ -656,97 +686,51 @@ export async function testDbConnection() {
       )
     `);
 
-    // Check baseline tables and column structure to detect mismatched branch schemas
-    const tableCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-          AND table_name = 'users'
-      )
-    `);
-    const hasUsersTable = tableCheck.rows[0].exists;
-
-    const columnCheck = await client.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-          AND table_name = 'users' 
-          AND column_name = 'branch_id'
-      )
-    `);
-    const hasBranchId = columnCheck.rows[0].exists;
-
-    const { rows } = await client.query('SELECT MAX(version) as current_version FROM schema_migrations');
-    let currentVersion = rows[0].current_version || 0;
-
-    // If users table is missing, OR we have branch_id but version < 20 (mismatched branch schema), reset!
-    if (!hasUsersTable || (hasBranchId && currentVersion < 20)) {
-      logger.info('Detected mismatched or missing database schema. Wiping tables to re-initialize...');
-      currentVersion = 0;
-      await client.query('TRUNCATE schema_migrations CASCADE');
-      await client.query(`
-        DROP TABLE IF EXISTS 
-          promotion_requests, booking_history, bookings, room_availability, rooms, users,
-          booking_transfers, class_cancellation_requests, faculty_timetable_slots,
-          faculty_slot_overrides, timetable_slots, audit_logs, branches, departments
-        CASCADE;
-      `);
-    }
+    const { rows } = await client.query('SELECT COALESCE(MAX(version), 0) AS current_version FROM schema_migrations');
+    const currentVersion = Number(rows[0].current_version);
 
     for (const migration of migrations) {
-      if (migration.version > currentVersion) {
-        logger.info(`Applying migration v${migration.version}: ${migration.name}`);
+      if (migration.version <= currentVersion) continue;
+      logger.info(`Applying migration v${migration.version}: ${migration.name}`);
+      try {
+        await client.query('BEGIN');
         await migration.run(client);
         await client.query('INSERT INTO schema_migrations (version, name) VALUES ($1, $2)', [migration.version, migration.name]);
+        await client.query('COMMIT');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        throw new Error(`Migration v${migration.version} (${migration.name}) failed: ${err.message}`, { cause: err });
       }
     }
+  } finally {
+    if (locked) await client.query('SELECT pg_advisory_unlock($1)', [MIGRATION_LOCK_KEY]).catch(() => {});
+    client.release();
+  }
+}
 
-    // Ensure at least one ADMIN user exists on trial branch (using 'password' column)
-    const adminCheck = await client.query("SELECT id FROM users WHERE role = 'ADMIN' LIMIT 1");
-    if (adminCheck.rowCount === 0) {
-      logger.info('No admin user found. Seeding default admin account (admin@nsut.ac.in)...');
-      await client.query(`
-        INSERT INTO users (name, email, password, role, is_approved)
-        VALUES ('System Admin', 'admin@nsut.ac.in', '$2b$10$qw1.tfluRGLBfzWMD/w2wunb9HA/kqmOoV7UG9VtWaa5TW4qkeGTu', 'ADMIN', true)
-        ON CONFLICT (email) DO NOTHING
-      `);
-    }
-
+/** Connects and migrates; resolves true/false instead of throwing (used by tests and scripts). */
+export async function testDbConnection() {
+  try {
+    await runMigrations();
     logger.info('Database connected and migrations synchronized');
     return true;
   } catch (err) {
     logger.error('Database connection failed', err);
     return false;
-  } finally {
-    if (client) client.release();
   }
 }
 
-// Auto-check on import with retry for Neon cold starts
-if (process.env.NODE_ENV !== 'test') {
-  (async () => {
-    const MAX_RETRIES = 3;
-    const RETRY_DELAY_MS = 3000;
-
-    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        const isConnected = await testDbConnection();
-        if (isConnected) return; // Success — exit the retry loop
-
-        logger.error(`Database connection attempt ${attempt}/${MAX_RETRIES} failed`);
-      } catch (err) {
-        logger.error(`Database connection attempt ${attempt}/${MAX_RETRIES} threw an error`, err);
-      }
-
-      if (attempt < MAX_RETRIES) {
-        logger.info(`Retrying database connection in ${RETRY_DELAY_MS / 1000}s...`);
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-      }
-    }
-
-    logger.error('Startup failed: Database connection could not be established after all retries', new Error('Database connection failed'));
-    process.exit(1);
-  })();
+/**
+ * Startup helper: retries for cold-starting hosted Postgres (e.g. Neon), then migrates.
+ * The server must await this before it starts accepting requests.
+ */
+export async function connectAndMigrate({ retries = 3, delayMs = 3000 } = {}) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    if (await testDbConnection()) return;
+    logger.error(`Database connection attempt ${attempt}/${retries} failed`);
+    if (attempt < retries) await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  throw new Error('Database connection could not be established after all retries');
 }
 
 export { pool };

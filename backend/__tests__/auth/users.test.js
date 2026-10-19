@@ -31,14 +31,14 @@ beforeAll(async () => { admin = await createAdmin(); });
 describe('GET /api/auth/users', () => {
   test('admin gets paginated {data, meta} without password or reset-token fields', async () => {
     const { user } = await createViewer();
-    const res = await request(app).get('/api/auth/users').set('Authorization', admin.auth);
-    expect(res.status).toBe(200);
-    expect(res.body.meta).toMatchObject({ page: 1, limit: 20 });
+    const all = await request(app).get('/api/auth/users').set('Authorization', admin.auth);
+    expect(all.status).toBe(200);
+    expect(all.body.meta).toMatchObject({ page: 1, limit: 20 });
     const { rows: [{ c }] } = await db.query('SELECT count(*)::int AS c FROM users');
-    expect(res.body.meta.total).toBe(c);
+    expect(all.body.meta.total).toBe(c);
+    const res = await request(app).get(`/api/auth/users?search=${encodeURIComponent(user.email)}`).set('Authorization', admin.auth);
     expect(res.body.meta.totalPages).toBe(Math.ceil(res.body.meta.total / 20));
     expect(res.body.data.length).toBeLessThanOrEqual(20);
-    // Newest first → the user we just created is on page 1.
     const row = res.body.data.find((u) => u.id === user.id);
     expect(row).toMatchObject({ id: user.id, email: user.email, role: 'VIEWER', is_approved: true });
     for (const u of res.body.data) {
