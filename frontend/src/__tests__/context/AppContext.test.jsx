@@ -82,27 +82,34 @@ describe('AppProvider initial user', () => {
 });
 
 describe('AppProvider data loading per role', () => {
-  it('student/viewer: rooms (5th Block default), faculties, departments, bookings, availability, transfers, student timetable', async () => {
+  it('student/viewer (calendar + timetable only): rooms, departments, bookings, availability, own timetable — no faculty list or transfers', async () => {
     localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
     const f = installFetch(baseRoutes());
     mount();
     await waitFor(() => expect(ctx.timetableData).toEqual([{ day_of_week: 'Monday' }]));
-    await waitFor(() => expect(ctx.pendingTransferCount).toBe(2));
+    await waitFor(() => expect(ctx.bookings).toEqual([{ id: 100 }]));
     const u = urls(f);
     expect(u).toEqual(expect.arrayContaining([
       'GET /api/rooms?building=5th+Block',
-      'GET /api/auth/faculties',
       'GET /api/departments',
       'GET /api/bookings/mine',
       'GET /api/availability',
-      'GET /api/transfers/incoming',
-      'GET /api/transfers/outgoing',
       'GET /api/timetable?',
     ]));
+    // Nothing the ACL didn't grant is requested, so nobody collects 403s on app open.
+    expect(u.some((x) => x.includes('/auth/faculties') || x.includes('/transfers/'))).toBe(false);
     expect(u.some((x) => x.includes('/timetable/faculty'))).toBe(false);
     expect(ctx.rooms).toEqual([{ id: 1, name: 'R-1' }]);
-    expect(ctx.bookings).toEqual([{ id: 100 }]);
     expect(u.some((x) => x.startsWith('GET /api/bookings?'))).toBe(false);
+    expect(ctx.faculties).toEqual([]);
+  });
+
+  it('class rep (cras.bookings) also loads the faculty list and transfers', async () => {
+    localStorage.setItem('user', JSON.stringify(USERS.STUDENT_REP));
+    const f = installFetch(baseRoutes());
+    mount();
+    await waitFor(() => expect(ctx.pendingTransferCount).toBe(2));
+    expect(urls(f)).toEqual(expect.arrayContaining(['GET /api/auth/faculties', 'GET /api/transfers/incoming', 'GET /api/transfers/outgoing']));
     expect(ctx.faculties).toEqual([{ id: 21, name: 'Prof Fay' }]);
   });
 

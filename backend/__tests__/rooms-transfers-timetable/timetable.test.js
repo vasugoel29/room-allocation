@@ -18,6 +18,14 @@ const tag = () => `${process.pid.toString(36)}${Date.now().toString(36)}${(n++).
 let admin, rep, faculty, viewer;
 beforeAll(async () => {
   [admin, rep, faculty, viewer] = await Promise.all([createAdmin(), createRep(), createFaculty(), createViewer()]);
+  // Section timetables these tests read (fresh databases carry none: timetables arrive by import).
+  const rows = [
+    [2, 1, 'Mon', '09:00-10:00', 'CS201'], [2, 1, 'Tue', '10:00-11:00', 'CS202'], [2, 1, 'Wed', '02:00-03:00', 'CS203'],
+    [1, 2, 'Mon', '11:00-12:00', 'CS101'], [1, 2, 'Thu', '09:00-10:00', 'CS102'],
+  ];
+  for (const [semester, section, day, time, code] of rows) {
+    await insertTimetableSlot({ department: CSE, semester, section, day_of_week: day, slot_time: time, subject_code: code, subject_name: `${code} subject` });
+  }
 });
 
 const CSE = 'COMPUTER SCIENCE AND ENGINEERING';

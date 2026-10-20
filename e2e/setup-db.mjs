@@ -1,5 +1,4 @@
-// Rebuilds the e2e database exactly like the backend test harness does
-// (schema_v2.sql -> startup migrations -> backend/test/known-drift.sql).
+// Rebuilds the e2e database exactly like the backend test harness does (empty schema -> migrations).
 import { E2E_DB_URL } from './env.mjs';
 
 process.env.TEST_DATABASE_URL = E2E_DB_URL;

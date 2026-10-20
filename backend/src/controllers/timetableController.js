@@ -6,6 +6,7 @@ import cache from '../utils/cache.js';
 import { notify } from '../notifications/notify.js';
 import { slotOverlaps } from '../services/bookingRules.js';
 import { logActivity } from '../services/loggerService.js';
+import { importSectionSlots } from '../services/timetableImport.js';
 
 function toTitleCase(str) {
   if (!str) return '';
@@ -51,47 +52,13 @@ export async function getTimetable(req, res) {
   }
 }
 
-const SLOT_COLUMNS = ['department', 'semester', 'section', 'day_of_week', 'slot_time', 'subject_name', 'room_name', 'subject_code', 'faculty_name'];
-
-/**
- * Adds timetable slots. Re-posting rows that already exist (all columns equal) adds nothing, and
- * duplicates within one upload are collapsed, so uploading the same file twice is harmless (OPS-14).
- * All-or-nothing: any bad row rolls back the whole upload.
- */
+/** POST /api/timetable/upload { slots: [...] } — see services/timetableImport.js. */
 export async function uploadTimetable(req, res) {
   try {
     const { slots } = req.body;
     if (!Array.isArray(slots)) return res.status(400).json({ error: 'Invalid data format' });
-
-    const seen = new Set();
-    const unique = [];
-    for (const slot of slots) {
-      const row = SLOT_COLUMNS.map((c) => (slot?.[c] === undefined || slot?.[c] === null ? null : String(slot[c])));
-      const key = JSON.stringify(row);
-      if (!seen.has(key)) { seen.add(key); unique.push(row); }
-    }
-
-    let inserted = 0;
-    await db.runInTransaction(async (client) => {
-      const chunkSize = 200;
-      for (let i = 0; i < unique.length; i += chunkSize) {
-        const chunk = unique.slice(i, i + chunkSize);
-        const placeholders = chunk.map((_, r) =>
-          `(${SLOT_COLUMNS.map((__, c) => `$${r * SLOT_COLUMNS.length + c + 1}::text`).join(', ')})`);
-        const result = await client.query(`
-          INSERT INTO timetable_slots (${SLOT_COLUMNS.join(', ')})
-          SELECT ${SLOT_COLUMNS.map((c) => `v.${c}`).join(', ')}
-            FROM (VALUES ${placeholders.join(', ')}) AS v(${SLOT_COLUMNS.join(', ')})
-           WHERE NOT EXISTS (
-             SELECT 1 FROM timetable_slots t
-              WHERE ${SLOT_COLUMNS.map((c) => `t.${c}::text IS NOT DISTINCT FROM v.${c}`).join(' AND ')}
-           )
-        `, chunk.flat());
-        inserted += result.rowCount;
-      }
-    });
-
-    res.json({ message: 'Timetable uploaded successfully', inserted, skipped: slots.length - inserted });
+    const { inserted, skipped } = await db.runInTransaction((client) => importSectionSlots(client, slots));
+    res.json({ message: 'Timetable uploaded successfully', inserted, skipped });
   } catch (err) {
     sendServerError(res, err);
   }

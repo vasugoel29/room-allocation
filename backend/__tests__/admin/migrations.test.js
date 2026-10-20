@@ -65,7 +65,7 @@ beforeAll(async () => {
   // used — other test files add timetable rows to it.)
   await recreate(REF_DB);
   await withClient(refUrl, async (c) => {
-    await c.query(fs.readFileSync(path.join(backendDir, 'sql/schema_v2.sql'), 'utf8'));
+    await c.query(db.BASE_SCHEMA);
     // A pre-SSO account with a stored password hash (v25 must clear it on the way up).
     await c.query("INSERT INTO users (name, email, password, role) VALUES ('Legacy User', 'legacy.v25@nsut.ac.in', '$2b$04$legacyhashlegacyhashlegacyhashlegacyhashlegacyhash12', 'VIEWER')");
   });
@@ -74,7 +74,7 @@ beforeAll(async () => {
   ({ slots: expectedSlots, versions: expectedVersions } = await counts(refUrl));
 
   await recreate(MIG_DB);
-  await withClient(migUrl, (c) => c.query(fs.readFileSync(path.join(backendDir, 'sql/schema_v2.sql'), 'utf8')));
+  await withClient(migUrl, (c) => c.query(db.BASE_SCHEMA));
 }, 60000);
 
 afterAll(async () => {
@@ -85,8 +85,8 @@ afterAll(async () => {
   await closeDb();
 }, 30000);
 
-test('[OPS-02] two instances migrating a fresh database concurrently both succeed and seed timetable_slots once', async () => {
-  expect(expectedSlots).toBeGreaterThan(0);
+test('[OPS-02] two instances migrating a fresh database concurrently both succeed and end in the same state', async () => {
+  expect(expectedSlots).toBe(0); // migrations seed no data
   const [a, b] = await Promise.all([migrateInChild(), migrateInChild()]);
   const { slots, versions } = await counts(migUrl);
   expect(versions).toBe(expectedVersions);

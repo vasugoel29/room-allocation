@@ -9,6 +9,8 @@ import {
   uniq, plusHours, ist, pastWeekdaySlot, farWeekdaySlot, getBooking, auditRows, insertTimetableSlot, waitFor, insertRelease,
 } from '../../test/helpers/bookings.js';
 import { getIstParts } from '../../src/utils/timezone.js';
+import { importSectionSlots } from '../../src/services/timetableImport.js';
+import { DEMO_TIMETABLE } from '../../seed/data/demoTimetable.js';
 
 afterAll(closeDb);
 
@@ -339,7 +341,8 @@ describe('POST /api/bookings — conflicts', () => {
     expect(res.body).toEqual({ error: `You already have another booking during this time in Room ${roomA.name}`, conflict: { type: 'person_busy' } });
   });
 
-  test('section timetable clash (real seeded timetable row) → 409 with conflict body', async () => {
+  test('section timetable clash (demo timetable loaded through the import service) → 409 with conflict body', async () => {
+    await db.runInTransaction((client) => importSectionSlots(client, DEMO_TIMETABLE));
     const { rows: [tt] } = await db.query(`
       SELECT * FROM timetable_slots
       WHERE slot_time = '10:00-11:00' AND department = 'INFORMATION TECHNOLOGY'

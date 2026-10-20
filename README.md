@@ -9,8 +9,8 @@ The codebase is organized into a clean mono-repo style structure, now fully unif
 ```text
 room-all/
 ├── backend/            # Express.js server & PostgreSQL logic (ESM)
-│   ├── src/            # server.js, seed.js, unseed.js
-│   ├── sql/            # schema_v2.sql (Source of Truth)
+│   ├── src/            # server.js; db.js holds the baseline schema and every migration
+│   ├── seed/           # deterministic seeder: rooms + faculty directory (+ demo timetable)
 │   └── package.json    # Modernized for "type": "module"
 ├── frontend/           # React + Vite application (ESM)
 │   ├── src/            # App.jsx, components/, index.css

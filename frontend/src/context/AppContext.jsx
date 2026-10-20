@@ -5,7 +5,7 @@ import { bookingService } from '../services/bookingService';
 import { getInitialBookingDateString } from '../utils/dateHelpers';
 import { roomService } from '../services/roomService';
 import { getIstDateKey, addDaysToKey, mondayOfKey } from '../utils/timezone';
-import { teaches, can as canUser } from '../utils/permissions';
+import { teaches, can as canUser, canAny, canSeeCalendar, P } from '../utils/permissions';
 
 export const AppContext = createContext();
 
@@ -86,8 +86,9 @@ export const AppProvider = ({ children }) => {
     return () => { cancelled = true; };
   }, [userId]);
 
+  // Each loader only asks for what this person may see, so nobody collects 403s on app open.
   const fetchTransfers = useCallback(async () => {
-    if (!user) return;
+    if (!canAny(user, P.BOOKINGS, P.FACULTY_PORTAL, P.ADMIN)) return;
     try {
       const [incoming, outgoing] = await Promise.all([
         bookingService.getIncomingTransfers(),
@@ -101,13 +102,14 @@ export const AppProvider = ({ children }) => {
   }, [user]);
 
   const fetchFaculties = useCallback(async () => {
+    if (!canAny(user, P.BOOKINGS, P.BOOKINGS_DIRECT, P.FACULTY_PORTAL, P.ADMIN)) return;
     try {
       const data = await authService.getFaculties();
       setFaculties(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Fetch faculties failed', err);
     }
-  }, []);
+  }, [user]);
 
   const fetchDepartments = useCallback(async () => {
     try {
@@ -118,7 +120,9 @@ export const AppProvider = ({ children }) => {
     }
   }, []);
 
+  const seesCalendar = canSeeCalendar(user);
   const fetchRooms = useCallback(async () => {
+    if (!seesCalendar) return;
     try {
       const queryParams = { 
         building: filters.building.flatMap(b => b === 'Others' ? ['Other', 'Others'] : [b])
@@ -131,7 +135,7 @@ export const AppProvider = ({ children }) => {
       console.error('Fetch rooms failed', err);
       setRoomsError(err.message || 'Could not load rooms');
     }
-  }, [filters.building]);
+  }, [filters.building, seesCalendar]);
 
   // Calendar occupancy is loaded for bounded windows rather than as one capped download (PERF-01,
   // FE-12): this week and next (booking happens there), plus the week of the selected day when the
@@ -146,7 +150,7 @@ export const AppProvider = ({ children }) => {
     try {
       const [mine, ...calendars] = await Promise.all([
         bookingService.getMine(),
-        ...windows.map(([from, to]) => bookingService.getCalendar(from, to)),
+        ...(seesCalendar ? windows.map(([from, to]) => bookingService.getCalendar(from, to)) : []),
       ]);
       const byId = new Map();
       for (const b of [...calendars.flat(), ...mine]) byId.set(b.id, b);
@@ -154,20 +158,21 @@ export const AppProvider = ({ children }) => {
     } catch (err) {
       console.error('Fetch bookings failed', err);
     }
-  }, [thisMonday, selectedMonday]);
+  }, [thisMonday, selectedMonday, seesCalendar]);
 
   const fetchAvailability = useCallback(async () => {
+    if (!seesCalendar) return;
     try {
       const data = await roomService.getAvailability();
       setAvailability(data);
     } catch (err) {
       console.error('Fetch availability failed', err);
     }
-  }, []);
+  }, [seesCalendar]);
 
 
   const fetchTimetable = useCallback(async () => {
-    if (!user) return;
+    if (!user || !canAny(user, P.TIMETABLE, ...(teaches(user) ? [P.FACULTY_PORTAL] : []))) return;
     try {
       if (teaches(user)) {
         const data = await roomService.getFacultyTimetable();
@@ -182,7 +187,7 @@ export const AppProvider = ({ children }) => {
   }, [user]); // Depend on user directly to satisfy ESLint rules
 
   const fetchFacultyOverrides = useCallback(async () => {
-    if (!user || !teaches(user)) return;
+    if (!user || !teaches(user) || !canUser(user, P.FACULTY_PORTAL)) return;
     try {
       const data = await roomService.getFacultyOverrides();
       setFacultyOverrides(data || []);

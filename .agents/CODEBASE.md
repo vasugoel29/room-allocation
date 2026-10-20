@@ -22,8 +22,6 @@ room-allocation/
 ├── backend/                  # Express REST API
 ├── e2e/                      # Playwright end-to-end tests
 ├── docker-compose.yml
-├── faculties_data.json       # Source data: faculty timetables
-├── hajiri.timetables.json    # Source data: section timetables
 └── .agents/CODEBASE.md       # ← you are here
 ```
 

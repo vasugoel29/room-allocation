@@ -17,11 +17,10 @@
     "start": "npx concurrently \"npm run start:backend\" \"npm run preview:frontend\"",
     "seed": "npm run seed --prefix backend",
     "seed:staging": "NODE_ENV=staging npm run seed --prefix backend",
-    "seed:prod": "NODE_ENV=production npm run seed --prefix backend",
-    "seed-faculties:staging": "NODE_ENV=staging node backend/scripts/seed_faculties.js",
+    "seed:prod": "NODE_ENV=production npm run seed --prefix backend -- --confirm-production",
     "unseed": "npm run unseed --prefix backend",
     "unseed:staging": "NODE_ENV=staging npm run unseed --prefix backend",
-    "reset:staging": "npm run unseed:staging && npm run seed:staging && npm run seed-faculties:staging",
+    "reset:staging": "npm run unseed:staging && npm run seed:staging",
     "test:e2e": "node e2e/setup-db.mjs && playwright test",
     "test:e2e:ui": "node e2e/setup-db.mjs && playwright test --ui"
   },

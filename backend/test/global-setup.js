@@ -1,16 +1,9 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import pg from 'pg';
 import { applyTestEnv } from './test-env.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 /**
- * Rebuilds the test database the same way a fresh deployment would:
- *   schema_v2.sql  ->  startup migrations in src/db.js  ->  known-drift.sql
- * known-drift.sql holds columns the code needs but no migration creates (audit findings);
- * each entry there should eventually become a real migration and be deleted from that file.
+ * Rebuilds the test database the same way a fresh deployment would: an empty schema, then the
+ * startup migrations in src/db.js (v1 is the baseline). Nothing is read from files.
  */
 export default async function globalSetup() {
   const dbName = applyTestEnv();
@@ -24,8 +17,8 @@ export default async function globalSetup() {
 
   const client = new pg.Client({ connectionString: url.toString() });
   await client.connect();
+  // An empty schema: migrations (v1 = baseline) build everything; nothing is read from files.
   await client.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-  await client.query(fs.readFileSync(path.join(__dirname, '../sql/schema_v2.sql'), 'utf8'));
   await client.end();
 
   const db = await import('../src/db.js');
@@ -35,7 +28,6 @@ export default async function globalSetup() {
 
   const drift = new pg.Client({ connectionString: url.toString() });
   await drift.connect();
-  await drift.query(fs.readFileSync(path.join(__dirname, 'known-drift.sql'), 'utf8'));
   // Faculty-directory ids must never coincide with user ids in tests, so any code or test that
   // mixes the two id spaces fails loudly instead of passing by accident.
   await drift.query('ALTER SEQUENCE faculties_id_seq RESTART WITH 500000');

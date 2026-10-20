@@ -229,3 +229,10 @@ commitment per slot). Open, needs a decision: FE-04 (session token in localStora
 | Student export | Includes class representatives (with a role column), excludes deactivated accounts |
 | Department/branch master list | Read-only in CRAS; written only by the ACL cron via `PUT /api/internal/departments` (migration v33: `acl_id`) |
 | Timetable times | Explicit AM/PM honoured; bare 01:00–07:59 keep the afternoon convention |
+
+## Round 2 (20 Oct 2026)
+| ID | Status | Change |
+|---|---|---|
+| ACL catalog | done | Six `cras.*` permissions granted only by the ACL; no role-based access anywhere (backend gates, service rules, frontend) |
+| OPS-19 | fixed | Seeding is one deterministic, idempotent entry point (`backend/seed`): real rooms + faculty directory as code, demo timetable for dev/test; no file reads, no randomness, never deletes or revives; migrations no longer read files (v1 baseline inline, v10 no longer seeds) |
+| NEW-R2-1 | fixed | The app requested the faculty list and transfers for every user on load; now each loader asks only for what the person's permissions allow (no 403 noise) |

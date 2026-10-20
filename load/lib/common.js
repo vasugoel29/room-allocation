@@ -30,18 +30,24 @@ export function appLoad(user, role) {
     const p = auth(user.token);
     const reqs = [
       ['GET', `${BASE}/health`, null, { ...p, tags: { name: 'health' } }],
-      ['GET', `${BASE}/auth/faculties`, null, { ...p, tags: { name: 'faculties' } }],
       ['GET', `${BASE}/departments`, null, { ...p, tags: { name: 'departments' } }],
       ['GET', `${BASE}/bookings/calendar?from=${calendarFrom()}&to=${calendarTo()}`, null, { ...p, tags: { name: 'calendar' } }],
       ['GET', `${BASE}/bookings/mine`, null, { ...p, tags: { name: 'bookings_mine' } }],
       ['GET', `${BASE}/availability`, null, { ...p, tags: { name: 'availability' } }],
-      ['GET', `${BASE}/transfers/incoming`, null, { ...p, tags: { name: 'transfers_in' } }],
-      ['GET', `${BASE}/transfers/outgoing`, null, { ...p, tags: { name: 'transfers_out' } }],
+
       ['GET', `${BASE}/rooms?building=5th%20Block`, null, { ...p, tags: { name: 'rooms' } }],
       role === 'FACULTY'
         ? ['GET', `${BASE}/timetable/faculty`, null, { ...p, tags: { name: 'timetable_faculty' } }]
         : ['GET', `${BASE}/timetable`, null, { ...p, tags: { name: 'timetable' } }],
     ];
+    // Like the app, only people who book or review load the faculty list and transfers.
+    if (role !== 'VIEWER') {
+      reqs.push(
+        ['GET', `${BASE}/auth/faculties`, null, { ...p, tags: { name: 'faculties' } }],
+        ['GET', `${BASE}/transfers/incoming`, null, { ...p, tags: { name: 'transfers_in' } }],
+        ['GET', `${BASE}/transfers/outgoing`, null, { ...p, tags: { name: 'transfers_out' } }],
+      );
+    }
     const res = http.batch(reqs);
     res.forEach((r, i) => check(r, ok(reqs[i][3].tags.name)));
     return res;
