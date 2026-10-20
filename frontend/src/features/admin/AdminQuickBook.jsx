@@ -2,6 +2,7 @@ import { Zap, User as UserIcon, Search, ChevronDown, Clock, MapPin } from 'lucid
 import { useState, useEffect } from 'react';
 import DatePickerDropdown from '../../components/ui/DatePickerDropdown';
 import MemberPicker from './MemberPicker';
+import { BOOKING_START_HOURS } from '../../../../shared/bookingRules.js';
 
 function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, submitting, onSubmit }) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(null); // room_id
@@ -66,7 +67,7 @@ function AdminQuickBook({ roomStatuses, users, quickBookForm, setQuickBookForm, 
                {isSlotOpen && (
                  <div className="absolute z-50 w-full mt-2 bg-surface-low border border-border/20 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 top-full ring-1 ring-border/10">
                    <div className="max-h-[200px] overflow-y-auto no-scrollbar py-1">
-                     {Array.from({length: 12}, (_, i) => i + 8).map(h => (
+                     {BOOKING_START_HOURS.map(h => (
                        <button
                          key={h}
                          type="button"

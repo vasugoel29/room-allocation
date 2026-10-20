@@ -1,4 +1,7 @@
-export const CAMPUS_TIME_ZONE = 'Asia/Kolkata';
+// Campus date rules live in /shared (the backend uses the same module).
+import { CAMPUS_TIME_ZONE, istDateTimeToUtc, addDaysToKey } from '../../../shared/time.js';
+
+export { CAMPUS_TIME_ZONE, istDateTimeToUtc, isDateKey, istToday, addDaysToKey } from '../../../shared/time.js';
 
 const dateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: CAMPUS_TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' });
 const timeFormatter = new Intl.DateTimeFormat('en-GB', { timeZone: CAMPUS_TIME_ZONE, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -14,18 +17,7 @@ export const getIstHour = (value) => Number(timeFormatter.formatToParts(new Date
 export const getIstTime = (value) => timeFormatter.format(new Date(value));
 export const getIstWeekday = (dateKey) => weekdayFormatter.format(new Date(istDateTimeToUtc(dateKey, 12)));
 
-// A selected calendar day and hour are campus-local values. Convert them to the
-// UTC instant used by the API and PostgreSQL timestamptz columns.
-export const istDateTimeToUtc = (dateKey, hour, minute = 0) => {
-  const [year, month, day] = dateKey.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day, Number(hour), Number(minute)) - (5.5 * 60 * 60 * 1000)).toISOString();
-};
-
 export const addMinutesToUtc = (utcValue, minutes) => new Date(new Date(utcValue).getTime() + minutes * 60 * 1000).toISOString();
-
-// Calendar-day arithmetic on "YYYY-MM-DD" keys (no time zone involved).
-export const addDaysToKey = (dateKey, days) =>
-  new Date(Date.parse(`${dateKey}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
 
 export const mondayOfKey = (dateKey) => {
   const weekday = new Date(`${dateKey}T00:00:00Z`).getUTCDay() || 7; // Sunday → 7

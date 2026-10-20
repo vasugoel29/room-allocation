@@ -61,7 +61,7 @@ describe('[PERF-06] verifySessionToken caching stays safe', () => {
 
   test('expiry is honoured for cached tokens', () => {
     const nowSpy = jest.spyOn(Date, 'now');
-    const token = jwt.sign({ sub: '7', exp: Math.floor(Date.now() / 1000) + 60 }, secret);
+    const token = jwt.sign({ sub: '7', typ: 'session', exp: Math.floor(Date.now() / 1000) + 60 }, secret);
     expect(verifySessionToken(token).userId).toBe(7);
     nowSpy.mockReturnValue(Date.now() + 120_000);
     expect(() => verifySessionToken(token)).toThrow();
@@ -69,7 +69,7 @@ describe('[PERF-06] verifySessionToken caching stays safe', () => {
   });
 
   test('rotating JWT_SECRET invalidates cached verifications', () => {
-    const token = jwt.sign({ sub: '9' }, secret, { expiresIn: '1h' });
+    const token = jwt.sign({ sub: '9', typ: 'session' }, secret, { expiresIn: '1h' });
     expect(verifySessionToken(token).userId).toBe(9);
     process.env.JWT_SECRET = 'rotated-secret-rotated-secret-123';
     expect(() => verifySessionToken(token)).toThrow();

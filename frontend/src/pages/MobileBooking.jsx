@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
 import { addMinutesToUtc, istDateTimeToUtc } from '../utils/timezone';
 import { booksDirect, P, can } from '../utils/permissions';
+import { BOOKING_START_HOURS } from '../../../shared/bookingRules.js';
 
 function MobileBooking({ onBack }) {
   const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
@@ -70,7 +71,7 @@ function MobileBooking({ onBack }) {
   };
 
   // Step 1: Date & Time logic
-  const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // final slot is 17:00–18:00
+  const HOURS = BOOKING_START_HOURS; // final slot is 19:00–20:00
 
   const getDayName = (date) => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][date.getDay()];
 

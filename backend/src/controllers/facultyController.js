@@ -1,6 +1,6 @@
 import { sendServerError } from '../utils/httpErrors.js';
 import logger from '../utils/logger.js';
-import cache from '../utils/cache.js';
+import { invalidateRoomCaches } from '../utils/cache.js';
 import * as bookingService from '../services/bookingService.js';
 import { isAdmin as hasAdmin } from '../auth/permissions.js';
 
@@ -26,7 +26,7 @@ export const approveBooking = async (req, res) => {
     return res.status(result.status).json({ error: result.error, ...(result.conflict ? { conflict: result.conflict } : {}) });
   }
 
-  cache.deletePattern('admin_status_.*');
+  invalidateRoomCaches();
 
   // The student is notified inside the approval transaction (notifications outbox).
   res.json({ message: 'Booking approved', booking: result.data });

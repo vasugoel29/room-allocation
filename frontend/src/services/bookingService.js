@@ -1,4 +1,4 @@
-import api from '../utils/api';
+import api, { readJson } from '../utils/api';
 
 /**
  * Service for Booking specific API calls
@@ -7,65 +7,43 @@ export const bookingService = {
   /** ACTIVE + PENDING bookings overlapping the IST days from..to (inclusive, at most 31 days). */
   getCalendar: async (from, to) => {
     const res = await api.get(`/bookings/calendar?${new URLSearchParams({ from, to })}`);
-    if (!res.ok) throw new Error('Failed to fetch the calendar');
-    return (await res.json()).data;
+    return (await readJson(res, 'Failed to fetch the calendar')).data;
   },
 
   /** The signed-in user's own bookings and the ones they supervise, any status. */
   getMine: async () => {
     const res = await api.get('/bookings/mine');
-    if (!res.ok) throw new Error('Failed to fetch your bookings');
-    return (await res.json()).data;
+    return (await readJson(res, 'Failed to fetch your bookings')).data;
   },
 
   createBooking: async (data) => {
     const res = await api.post('/bookings', data);
-    if (!res.ok) {
-      const err = await res.json();
-      const error = new Error(err.error || 'Booking creation failed');
-      error.conflict = err.conflict;
-      throw error;
-    }
-    return res.json();
+    return readJson(res, 'Booking creation failed'); // the error carries `conflict`
   },
 
   cancelBooking: async (id) => {
     const res = await api.patch(`/bookings/${id}/cancel`);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Cancellation failed');
-    }
-    return res.json();
+    return readJson(res, 'Cancellation failed');
   },
 
   getIncomingTransfers: async () => {
     const res = await api.get('/transfers/incoming');
-    if (!res.ok) throw new Error('Failed to fetch incoming transfers');
-    return res.json();
+    return readJson(res, 'Failed to fetch incoming transfers');
   },
 
   getOutgoingTransfers: async () => {
     const res = await api.get('/transfers/outgoing');
-    if (!res.ok) throw new Error('Failed to fetch outgoing transfers');
-    return res.json();
+    return readJson(res, 'Failed to fetch outgoing transfers');
   },
 
   requestTransfer: async (data) => {
     const res = await api.post('/transfers/request', data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Transfer request failed');
-    }
-    return res.json();
+    return readJson(res, 'Transfer request failed');
   },
 
   handleTransferAction: async (id, action) => {
     const res = await api.patch(`/transfers/${id}/${action}`);
-    if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `Failed to ${action} transfer`);
-    }
-    return res.json();
+    return readJson(res, `Failed to ${action} transfer`);
   }
 };
 

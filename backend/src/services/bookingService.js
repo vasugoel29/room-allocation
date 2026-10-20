@@ -5,10 +5,11 @@ import { bookingRepository } from '../repositories/bookingRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { timetableRepository } from '../repositories/timetableRepository.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
 import { canBookDirect, isAdmin } from '../auth/permissions.js';
 import { logActivity } from './loggerService.js';
-import { dateKeyToDays } from '../utils/timezone.js';
+import { dateKeyToDays, isDateKey } from '../utils/timezone.js';
 import {
   checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts,
   constraintConflict, dateInSameWeek, istDateTimeToUtc, DAYS,
@@ -98,20 +99,13 @@ export async function inTransaction(fn, attempts = 3) {
 /** When a reschedule booking becomes ACTIVE, the class it replaces is released for that date. */
 async function activateRescheduleRelease(client, booking, actorId) {
   if (!booking.reschedule_room_id || !booking.reschedule_date || booking.reschedule_hour == null) return;
-  await client.query(
-    `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, created_by)
-     VALUES ($1, $2, $3, $4, 'reschedule', $5, $6)`,
-    [booking.reschedule_room_id, booking.reschedule_date, booking.reschedule_hour, booking.reschedule_hour + 1, booking.id, actorId],
-  );
+  await timetableRepository.release({
+    roomId: booking.reschedule_room_id, date: booking.reschedule_date, startHour: booking.reschedule_hour,
+    endHour: booking.reschedule_hour + 1, sourceType: 'reschedule', sourceId: booking.id, by: actorId,
+  }, client);
 }
 
-async function deactivateReleasesFor(client, sourceType, sourceId) {
-  await client.query(
-    `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
-      WHERE source_type = $1 AND source_id = $2 AND is_active`,
-    [sourceType, sourceId],
-  );
-}
+const deactivateReleasesFor = (client, sourceType, sourceId) => timetableRepository.withdrawReleases(sourceType, sourceId, client);
 
 /** RESCHEDULE-type request: which timetabled class (room, date, hour) this booking replaces. */
 async function resolveRescheduleSource(client, reqData, dateKey, startHour) {
@@ -441,10 +435,10 @@ export const quickBookHandler = async (reqData, user) => {
       owner = target;
     }
 
-    const start = istDateTimeToUtc(String(date), hour);
-    if (new Date(new Date(start).getTime() + 5.5 * 3600000).toISOString().slice(0, 10) !== String(date)) {
+    if (!isDateKey(String(date))) {
       return { error: 'date is not a real calendar date', status: 400 };
     }
+    const start = istDateTimeToUtc(String(date), hour);
     const end = new Date(new Date(start).getTime() + hours * 3600000).toISOString();
     return createBooking(client, {
       room_id: room.id, start_time: start, end_time: end, purpose: purpose || 'Admin Quick Booking',

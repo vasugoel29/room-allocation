@@ -16,7 +16,9 @@ import { effectivePermissions, normalizeRole } from './permissions.js';
  * invalidating every token issued before.
  */
 
-const JWT_SECRET = () => process.env.JWT_SECRET || 'dev_secret_fallback_only_for_non_production';
+/** The signing secret (server.js refuses to start in production without JWT_SECRET). */
+export const jwtSecret = () => process.env.JWT_SECRET || 'dev_secret_fallback_only_for_non_production';
+const JWT_SECRET = jwtSecret;
 const SESSION_TTL = () => process.env.SESSION_TTL || '12h';
 const REFRESH_MS = () => Number(process.env.ACL_REFRESH_SECONDS || 900) * 1000;
 const MAX_STALE_MS = () => Number(process.env.ACL_MAX_STALE_SECONDS || 12 * 3600) * 1000;
@@ -51,13 +53,14 @@ const verifyKey = () => {
 const verified = new Map(); // token -> { secret, userId, sv, expMs }
 const MAX_VERIFIED = 20_000;
 
-/** Verifies a session token; returns { userId, sv }. Accepts legacy `{ id }` tokens (sv 0). */
+/** Verifies a session token (as issued by issueSessionToken); returns { userId, sv }. */
 export function verifySessionToken(token) {
   const secret = JWT_SECRET();
   const hit = verified.get(token);
   if (hit && hit.secret === secret && hit.expMs > Date.now()) return { userId: hit.userId, sv: hit.sv };
   const decoded = jwt.verify(token, verifyKey());
-  const userId = Number(decoded.sub ?? decoded.id);
+  if (decoded.typ !== 'session') throw new Error('not a session token');
+  const userId = Number(decoded.sub);
   if (!Number.isInteger(userId) || userId <= 0) throw new Error('token has no subject');
   const sv = Number(decoded.sv || 0);
   if (decoded.exp) {

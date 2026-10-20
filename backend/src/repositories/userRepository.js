@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import { timetableRepository } from './timetableRepository.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
 
 /**
@@ -112,11 +113,7 @@ export const userRepository = {
         }
         // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
         if (rows.length) {
-          await client.query(
-            `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
-              WHERE source_type = 'reschedule' AND source_id = ANY($1) AND is_active`,
-            [rows.map((r) => r.id)],
-          );
+          await timetableRepository.withdrawReleases('reschedule', rows.map((r) => r.id), client);
         }
       });
     }

@@ -1,5 +1,4 @@
-import jwt from 'jsonwebtoken';
-import { JWT_SECRET } from './auth.js';
+import { verifySessionToken } from '../auth/session.js';
 
 /**
  * Leaky-bucket rate limiter (in-memory, per process).
@@ -62,8 +61,7 @@ export function userOrIpKey(req) {
   const token = header?.startsWith('Bearer ') ? header.slice(7) : req.cookies?.token;
   if (token) {
     try {
-      const { sub, id } = jwt.verify(token, JWT_SECRET);
-      if (sub ?? id) return `u:${sub ?? id}`;
+      return `u:${verifySessionToken(token).userId}`;
     } catch {
       // fall through to IP
     }

@@ -1,12 +1,4 @@
-import api from '../utils/api';
-
-const json = async (res, message) => {
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || message);
-  }
-  return res.json();
-};
+import api, { readJson as json } from '../utils/api';
 
 /** In-app inbox (Phase 7). */
 export const notificationService = {

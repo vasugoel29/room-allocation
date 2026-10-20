@@ -1,0 +1,6 @@
+{
+  "name": "cras-shared",
+  "private": true,
+  "type": "module",
+  "description": "Rules shared by the backend and the frontend: timetable times, IST dates, booking hours. No dependencies."
+}

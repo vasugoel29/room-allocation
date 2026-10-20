@@ -21,6 +21,7 @@ import { toTitleCase, getShortDept } from '../utils/roleUtils';
 import { WeekView } from '../components/ui/WeekView';
 import CustomSelect from '../components/ui/CustomSelect';
 import { getIstDateKey, getIstHour, getIstWeekday } from '../utils/timezone';
+import { getHourFromTime } from '../../../shared/timetable.js';
 
 function AdminTimetable() {
   const [searchType, setSearchType] = useState('FACULTY'); // 'FACULTY' | 'SECTION'
@@ -124,9 +125,8 @@ function AdminTimetable() {
     const staticItems = (data.staticSlots || [])
       .filter(s => s.day_of_week === dayOfWeek)
       .map(s => {
-        const hour = parseInt((s.slot_time || '').split(':')[0].slice(-2));
-        let realHour = hour;
-        if (hour >= 1 && hour < 8) realHour += 12;
+        // The server stores each class's start minute (same rule as shared/timetable.js).
+        const realHour = s.start_min != null ? Math.floor(s.start_min / 60) : getHourFromTime(s.slot_time);
 
         const isOverridden = data.overrides?.some(o => 
           getIstDateKey(o.date) === targetDay && o.hour === realHour

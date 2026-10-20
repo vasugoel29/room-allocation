@@ -46,10 +46,10 @@ Every variable is listed with a comment in `backend/.env.example` and `frontend/
 ## 2. First deployment
 
 1. **Create the database** and a role that owns it. Take a backup of any existing data first (section 6).
-2. **Deploy the API** with the environment above. Start command: `npm ci && npm start` in `backend/` (Node 22.12+, pinned in `.nvmrc` and `engines`).
+2. **Deploy the API** with the environment above. Start command: `npm ci && npm start` in `backend/` (Node 22.12+, pinned in `.nvmrc` and `engines`). The API also imports the repo's `shared/` folder (dependency-free rules used by both apps), so deploy from a full checkout, not a copy of `backend/` alone.
    - On boot the API runs every pending migration in order, each in its own transaction, under a Postgres advisory lock. It only listens once they all succeed. If a migration fails, the process exits and nothing partial is committed. Read the log, fix, redeploy.
 3. **Check:** `GET /api/health` returns `{"status":"ok","db":"connected"}`. The log shows `Database connected and migrations synchronized` and either `Email transporter ready` or an SMTP error.
-4. **Deploy the frontend** on Vercel (root `frontend/`, build `npm run build`, output `dist`) with its env.
+4. **Deploy the frontend** on Vercel (root `frontend/`, build `npm run build`, output `dist`) with its env. Keep the project setting *Include files outside the root directory in the Build Step* on (the default): the app imports `../shared`.
 5. **Load reference data** (only on an empty database):
    - Rooms and the faculty directory: Admin → Uploads, or the ACL faculty sync.
    - Faculty timetable: Admin → Uploads → timetable CSV. A re-import replaces the previous one and keeps the old rows soft-deleted. The job result lists skipped rows and any faculty names not in the directory.

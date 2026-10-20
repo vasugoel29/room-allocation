@@ -2,6 +2,7 @@
  * Utility for Timetable and Booking logic
  */
 import { getIstDateKey, getIstHour, getIstTime } from './timezone';
+import { getHourFromTime, getSortableMinutes, formatTo24h } from '../../../shared/timetable.js';
 import { teaches } from '../utils/permissions';
 
 /**
@@ -19,58 +20,8 @@ export const getDayOfWeek = (dateInput) => {
   return days[d.getDay()];
 };
 
-/**
- * Timetable room names may carry a prefix ("R-6113" for room "6113"). Match the whole name or one
- * whole token of it — never a substring, or room "101" would be blocked by a class in "1101" (NEW-FE-1).
- */
-const sameRoomName = (scheduleName, roomName) =>
-  scheduleName === roomName || scheduleName.split(/[^a-z0-9]+/).includes(roomName);
-
-export const getHourFromTime = (timeStr) => {
-  if (!timeStr) return 0;
-  const startPart = timeStr.split('-')[0].trim();
-  const match = startPart.match(/(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?/i);
-  if (!match) return 0;
-  let hours = Number(match[1]);
-  const meridiem = match[3]?.[0]?.toLowerCase();
-
-  // An explicit AM/PM wins; bare times follow the source data's 12-hour convention (1-7 = PM).
-  if (meridiem === 'a') hours %= 12;
-  else if (meridiem === 'p') hours = (hours % 12) + 12;
-  else if (hours >= 1 && hours < 8) hours += 12;
-
-  return hours;
-};
-
-/**
- * Normalizes time strings (e.g., "09:00-10:00") into sortable minutes
- */
-export const getSortableMinutes = (timeStr) => {
-  if (!timeStr) return 0;
-  const startPart = timeStr.split('-')[0].trim();
-  const match = startPart.match(/(\d{1,2}):(\d{2})/);
-  if (!match) return 0;
-  let hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  
-  if (hours >= 1 && hours < 8) hours += 12;
-  return (hours * 60) + (minutes || 0);
-};
-
-/**
- * Converts "HH:MM-HH:MM" (12h source format) to 24h format for display
- */
-export const formatTo24h = (timeStr) => {
-  if (!timeStr) return '';
-  return timeStr.split('-').map(part => {
-    const match = part.trim().match(/(\d{1,2}):(\d{2})/);
-    if (!match) return part.trim();
-    let hours = Number(match[1]);
-    const minutes = Number(match[2]);
-    if (hours >= 1 && hours < 8) hours += 12;
-    return `${String(hours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
-  }).join(' - ');
-};
+// Timetable time rules live in /shared (the backend uses the same module).
+export { getHourFromTime, getSortableMinutes, formatTo24h } from '../../../shared/timetable.js';
 
 /**
  * Resolves the merged schedule for a specific user and date
@@ -213,82 +164,50 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
   });
 };
 
+const roomKey = (roomId, when, hour) => `${roomId}|${when}|${hour}`;
+const HOUR_MS = 3_600_000;
+
 /**
- * Comprehensive check for room availability across all sources
+ * Indexes the calendar feed (/availability) and bookings by room and hour, the way the server
+ * decides (bookingRules.checkRoomTimetable + checkBookingConflicts):
+ *  - an ACTIVE booking takes every hour it covers (PENDING requests don't block the room);
+ *  - a class or an admin block takes its weekday hour;
+ *  - a dated release (class cancelled or moved that date) frees that hour on that date.
  */
-export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], availability = [], timetableData = []) => {
-  if (!room) return false;
-
-  // 1. Base Schedule Status (Static Schedule vs Overrides)
-  // Check for override (date-specific or general day-name)
-  // SORT to ensure YYYY-MM-DD match comes before day-name match
-  const overrides = availability?.filter(a => {
-    const dbRoomName = (a.room_name || '').trim().toLowerCase();
-    const targetRoomName = (room.name || '').trim().toLowerCase();
-    
-    return (dbRoomName === targetRoomName || String(a.room_id) === String(room.id)) && 
-           (a.day === dateStr || a.day === dayName) && 
-           parseInt(a.hour) === hour;
-  }).sort((a, b) => {
-    // Priority: '2026-03-31' beats 'Tue'
-    if (a.day.includes('-') && !b.day.includes('-')) return -1;
-    if (!a.day.includes('-') && b.day.includes('-')) return 1;
-    return 0;
-  });
-  
-  const override = overrides?.[0];
-  
-  let baseAvailable = true;
-
-  if (override) {
-    baseAvailable = override.is_available === true;
-  } else {
-    // Check Static Academic Schedule across ANY department
-    const isOccupiedInSchedule = Array.isArray(timetableData) ? timetableData.some(entry => {
-      const daySchedule = entry.timetable?.[dayName] || [];
-      return daySchedule.some(sc => {
-        if (!sc.time || !sc.room) return false;
-        
-        const scRoomName = sc.room.trim().toLowerCase();
-        const targetRoomName = room.name.trim().toLowerCase();
-        
-        if (!sameRoomName(scRoomName, targetRoomName)) return false;
-        
-        const slotHour = getHourFromTime(sc.time);
-        return slotHour === hour;
-      });
-    }) : (typeof timetableData === 'object' ? (timetableData[dayName] || []).some(sc => {
-        if (!sc.time || !sc.room) return false;
-        const scRoomName = sc.room.trim().toLowerCase();
-        const targetRoomName = room.name.trim().toLowerCase();
-        if (!sameRoomName(scRoomName, targetRoomName)) return false;
-        const slotHour = getHourFromTime(sc.time);
-        return slotHour === hour;
-    }) : false);
-    
-    if (isOccupiedInSchedule) baseAvailable = false;
+export const buildRoomIndex = (bookings = [], availability = []) => {
+  const released = new Set();
+  const blocked = new Set();
+  const booked = new Map();
+  for (const a of Array.isArray(availability) ? availability : []) {
+    if (a?.room_id == null) continue;
+    (a.is_available === true ? released : blocked).add(roomKey(a.room_id, a.day, Number(a.hour)));
   }
-
-  // If even the base schedule says it's blocked, it's blocked.
-  if (!baseAvailable) return false;
-
-  // 2. Check Dynamic Bookings (Active/Pending)
-  const currentBooking = bookings?.some(b => {
+  for (const b of Array.isArray(bookings) ? bookings : []) {
     const status = (b.status || 'ACTIVE').toUpperCase();
-    if (status !== 'ACTIVE' && status !== 'PENDING' && status !== 'CONFIRMED') return false;
-    
-    // Use Local Date parts for consistency with UI
-    const bStart = new Date(b.start_time);
-    const bDateStr = getIstDateKey(bStart);
-    const bHour = getIstHour(bStart);
-    
-    return bDateStr === dateStr && bHour === hour && String(b.room_id) === String(room.id);
-  });
-
-  if (currentBooking) return false;
-
-  return true;
+    if (status !== 'ACTIVE' && status !== 'CONFIRMED') continue;
+    const start = new Date(b.start_time).getTime();
+    const end = b.end_time ? new Date(b.end_time).getTime() : start + HOUR_MS;
+    for (let t = start; t < end; t += HOUR_MS) {
+      const k = roomKey(b.room_id, getIstDateKey(t), getIstHour(t));
+      if (!booked.has(k)) booked.set(k, b);
+    }
+  }
+  return { released, blocked, booked };
 };
+
+/** The ACTIVE booking holding this room at that IST date and hour, if any. */
+export const bookingAt = (index, roomId, dateKey, hour) => index.booked.get(roomKey(roomId, dateKey, hour)) || null;
+
+/** Can this room be booked at that IST date (dayName = its weekday) and hour? */
+export const isRoomFreeIn = (index, room, dateKey, dayName, hour) => {
+  if (!room) return false;
+  if (index.booked.has(roomKey(room.id, dateKey, hour))) return false;
+  if (index.released.has(roomKey(room.id, dateKey, hour))) return true;
+  return !index.blocked.has(roomKey(room.id, dayName, hour)) && !index.blocked.has(roomKey(room.id, dateKey, hour));
+};
+
+export const isRoomReallyFree = (room, dateStr, dayName, hour, bookings = [], availability = []) =>
+  isRoomFreeIn(buildRoomIndex(bookings, availability), room, dateStr, dayName, hour);
 
 /**
  * Returns a conflicting class (if any) for a given slot and date

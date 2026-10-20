@@ -3,8 +3,9 @@ import { X, AlertTriangle, Clock, User, BookOpen } from 'lucide-react';
 import { formatTo24h, getClassConflict } from '../../utils/timetableLogic';
 import { roomService } from '../../services/roomService';
 import { booksDirect } from '../../utils/permissions';
+import { BOOKING_START_HOURS } from '../../../../shared/bookingRules.js';
 
-const BOOKING_HOURS = Array.from({ length: 10 }, (_, index) => index + 8); // 08:00–18:00 IST
+const BOOKING_HOURS = BOOKING_START_HOURS; // 08:00–20:00 IST (shared/bookingRules.js)
 
 function ConflictResolutionDialog({ conflict, onCancel, facultyId, facultyName, user, bookings = [], availability = [], timetableData = [] }) {
   const isFacultyBusy = conflict?.type === 'faculty_busy' || /selected faculty timetable/i.test(conflict?.label || '');

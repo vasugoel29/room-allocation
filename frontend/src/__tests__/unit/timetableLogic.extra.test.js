@@ -101,40 +101,32 @@ describe('getMergedSchedule', () => {
   });
 });
 
-describe('isRoomReallyFree', () => {
+describe('isRoomReallyFree (the server rule, from the /availability feed and bookings)', () => {
   const room = { id: 3, name: 'R-101' };
-  const ttArr = [{ timetable: { Tue: [{ time: '09:00-10:00', room: 'R-101' }] } }];
+  const cls = { room_id: 3, room_name: 'R-101', day: 'Tue', hour: 9, is_available: false, source: 'class' };
 
   it('false without a room', () => expect(isRoomReallyFree(null, TUE, 'Tue', 9)).toBe(false));
   it('free when nothing is scheduled', () => expect(isRoomReallyFree(room, TUE, 'Tue', 9)).toBe(true));
-  it('blocked by static timetable (array form and object form)', () => {
-    expect(isRoomReallyFree(room, TUE, 'Tue', 9, [], [], ttArr)).toBe(false);
-    expect(isRoomReallyFree(room, TUE, 'Tue', 9, [], [], { Tue: [{ time: '09:00-10:00', room: 'r-101' }] })).toBe(false);
-    expect(isRoomReallyFree(room, TUE, 'Tue', 10, [], [], ttArr)).toBe(true);
+  it('a class or admin block takes its weekday hour, matched by room id', () => {
+    expect(isRoomReallyFree(room, TUE, 'Tue', 9, [], [cls])).toBe(false);
+    expect(isRoomReallyFree(room, TUE, 'Tue', 10, [], [cls])).toBe(true);
+    expect(isRoomReallyFree({ id: 8, name: 'R-101' }, TUE, 'Tue', 9, [], [cls])).toBe(true); // another room of a similar name
   });
-  it('date-specific override beats weekday override', () => {
-    const av = [
-      { room_name: 'R-101', day: 'Tue', hour: 9, is_available: false },
-      { room_name: 'R-101', day: TUE, hour: 9, is_available: true },
-    ];
-    expect(isRoomReallyFree(room, TUE, 'Tue', 9, [], av, ttArr)).toBe(true);
-    expect(isRoomReallyFree(room, TUE, 'Tue', 9, [], [av[0]], [])).toBe(false);
+  it('a dated release frees the class hour on that date only', () => {
+    const release = { room_id: 3, day: TUE, hour: 9, is_available: true, source: 'release' };
+    expect(isRoomReallyFree(room, TUE, 'Tue', 9, [], [cls, release])).toBe(true);
+    expect(isRoomReallyFree(room, '2026-10-27', 'Tue', 9, [], [cls, release])).toBe(false);
   });
-  it('blocked by ACTIVE/PENDING/CONFIRMED booking on that IST date+hour, not by CANCELLED', () => {
-    const mk = (status) => [{ room_id: 3, start_time: at(TUE, 9), status }];
+  it('an ACTIVE booking takes every hour it covers; PENDING requests and cancelled bookings do not', () => {
+    const mk = (status, end) => [{ room_id: 3, start_time: at(TUE, 9), end_time: end, status }];
     expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk('ACTIVE'))).toBe(false);
-    expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk('pending'))).toBe(false);
-    expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk('CONFIRMED'))).toBe(false);
     expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk(undefined))).toBe(false);
+    expect(isRoomReallyFree(room, TUE, 'Tue', 10, mk('ACTIVE', at(TUE, 11)))).toBe(false);
+    expect(isRoomReallyFree(room, TUE, 'Tue', 11, mk('ACTIVE', at(TUE, 11)))).toBe(true);
+    expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk('PENDING'))).toBe(true);
     expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk('CANCELLED'))).toBe(true);
-    expect(isRoomReallyFree({ id: 4, name: 'R-102' }, TUE, 'Tue', 9, mk('ACTIVE'))).toBe(true);
-  });
-
-  // NEW-FE-1: static-schedule matching uses substring `includes`, so room "101" is reported busy
-  // whenever *any* room whose name contains "101" (e.g. "1101") has a class.
-  it('[NEW-FE-1] room "101" is not blocked by a class in room "1101"', () => {
-    const tt = [{ timetable: { Tue: [{ time: '09:00-10:00', room: '1101' }] } }];
-    expect(isRoomReallyFree({ id: 8, name: '101' }, TUE, 'Tue', 9, [], [], tt)).toBe(true);
+    // a release never frees a booked hour
+    expect(isRoomReallyFree(room, TUE, 'Tue', 9, mk('ACTIVE'), [cls, { room_id: 3, day: TUE, hour: 9, is_available: true }])).toBe(false);
   });
 });
 

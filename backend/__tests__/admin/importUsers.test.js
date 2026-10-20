@@ -39,8 +39,21 @@ describe('job lifecycle', () => {
       status: 'completed', message: 'Faculty directory updated: 1 added, 0 updated, 0 deactivated, 0 skipped',
       created: 1, updated: 0, deactivated: 0, skipped: [],
     });
+    // The status is a stored record (import_jobs): it can be read again, and survives a restart.
     const again = await request(app).get(`/api/admin/uploads/status/${post.body.jobId}`).set('Authorization', admin.auth);
-    expect(again.status).toBe(404);
+    expect(again.status).toBe(200);
+    expect(again.body).toEqual(job);
+    expect((await db.query('SELECT kind, status, created_by FROM import_jobs WHERE id = $1', [post.body.jobId])).rows[0])
+      .toEqual({ kind: 'faculty', status: 'completed', created_by: admin.user.id });
+  });
+
+  test('a job still "processing" long after it started is reported as interrupted', async () => {
+    const { rows: [j] } = await db.query(
+      "INSERT INTO import_jobs (id, kind, created_at) VALUES (gen_random_uuid(), 'timetable', NOW() - interval '1 hour') RETURNING id");
+    const res = await request(app).get(`/api/admin/uploads/status/${j.id}`).set('Authorization', admin.auth);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ status: 'failed', error: expect.stringMatching(/interrupted.*run it again/) });
+    expect((await request(app).get('/api/admin/uploads/status/not-a-uuid').set('Authorization', admin.auth)).status).toBe(404);
   });
 });
 

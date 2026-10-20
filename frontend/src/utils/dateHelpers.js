@@ -1,3 +1,6 @@
+import { BOOKING_RULES } from '../../../shared/bookingRules.js';
+
+const LAST_START_HOUR = BOOKING_RULES.CLOSE_HOUR - 1;
 /**
  * Smart date utility for room allocation logic.
  * Handles "Next Working Day" logic and standard date ranges.
@@ -12,8 +15,8 @@ export const getSmartTodayDate = (now = new Date()) => {
   if (day === 0) targetDate.setDate(now.getDate() + 1);
   // If Saturday (6), go to Monday
   else if (day === 6) targetDate.setDate(now.getDate() + 2);
-  // If after 6 PM, go to next working day
-  else if (hour >= 18) {
+  // Once the last bookable slot has started (19:00–20:00), go to the next working day
+  else if (hour >= LAST_START_HOUR) {
     // If Friday evening, go to Monday
     if (day === 5) targetDate.setDate(now.getDate() + 3);
     else targetDate.setDate(now.getDate() + 1);
@@ -24,7 +27,7 @@ export const getSmartTodayDate = (now = new Date()) => {
 
 export const getInitialBookingDateObject = (now = new Date()) => {
   const targetDate = getSmartTodayDate(now);
-  targetDate.setHours(8, 0, 0, 0);
+  targetDate.setHours(BOOKING_RULES.OPEN_HOUR, 0, 0, 0);
   return targetDate;
 };
 

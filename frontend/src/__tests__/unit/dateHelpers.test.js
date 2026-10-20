@@ -16,13 +16,13 @@ const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
 describe('dateHelpers.getSmartTodayDate (IST)', () => {
   it.each([
     ['Mon 10:00 stays today', ist(2026, 10, 19, 10), '2026-10-19'],
-    ['Mon 17:59 stays today', ist(2026, 10, 19, 17, 59), '2026-10-19'],
-    ['Mon 18:00 rolls to Tue', ist(2026, 10, 19, 18), '2026-10-20'],
+    ['Mon 18:59 stays today (19:00–20:00 is still bookable)', ist(2026, 10, 19, 18, 59), '2026-10-19'],
+    ['Mon 19:00 rolls to Tue', ist(2026, 10, 19, 19), '2026-10-20'],
     ['Thu 23:30 rolls to Fri', ist(2026, 10, 22, 23, 30), '2026-10-23'],
-    ['Fri 18:00 rolls to Mon', ist(2026, 10, 23, 18), '2026-10-26'],
+    ['Fri 19:00 rolls to Mon', ist(2026, 10, 23, 19), '2026-10-26'],
     ['Sat any time -> Mon', ist(2026, 10, 24, 9), '2026-10-26'],
     ['Sun any time -> Mon', ist(2026, 10, 25, 22), '2026-10-26'],
-    ['Fri 18:00 across month end', ist(2026, 10, 30, 19), '2026-11-02'],
+    ['Fri 19:00 across month end', ist(2026, 10, 30, 19), '2026-11-02'],
   ])('%s', (_l, now, expected) => {
     expect(key(getSmartTodayDate(now))).toBe(expected);
   });
@@ -54,8 +54,8 @@ describe('dateHelpers ranges (IST)', () => {
     expect(end.toISOString()).toBe('2026-10-21T18:29:59.999Z');
   });
 
-  it('getTodayRange after 18:00 is tomorrow', () => {
-    const { start } = getTodayRange(ist(2026, 10, 21, 18, 30));
+  it('getTodayRange once the last slot (19:00) has started is tomorrow', () => {
+    const { start } = getTodayRange(ist(2026, 10, 21, 19, 30));
     expect(key(start)).toBe('2026-10-22');
   });
 

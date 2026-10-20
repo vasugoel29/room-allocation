@@ -117,7 +117,7 @@ while (made < N.bookings) {
 }
 await db.end();
 
-const sign = (u) => jwt.sign({ id: u.id, email: u.email, role: u.role, name: u.name }, LOAD_JWT_SECRET, { expiresIn: '6h' });
+const sign = (u) => jwt.sign({ sub: String(u.id), sv: 0, typ: 'session' }, LOAD_JWT_SECRET, { expiresIn: '6h' });
 const out = {
   students: students.slice(0, 2000).map((u) => ({ id: u.id, email: u.email, token: sign(u) })),
   reps: reps.map((u) => ({ id: u.id, email: u.email, token: sign(u) })),

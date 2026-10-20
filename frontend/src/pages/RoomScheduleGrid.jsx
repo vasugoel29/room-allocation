@@ -9,9 +9,10 @@ import {
   AlertTriangle, Check, Loader, User, Clock, Trash2, X, Plus,
   Unlock, BookOpen, Mail, ShieldAlert, Info
 } from 'lucide-react';
+import { BOOKING_START_HOURS } from '../../../shared/bookingRules.js';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 8 AM to 5 PM start hours (last slot 17:00-18:00)
+const HOURS = BOOKING_START_HOURS; // 08:00–20:00 (shared/bookingRules.js)
 
 const getDatesOfWeek = (startDateStr) => {
   const dates = [];

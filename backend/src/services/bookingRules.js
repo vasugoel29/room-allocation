@@ -1,7 +1,8 @@
 import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { timetableRepository, sectionKey } from '../repositories/timetableRepository.js';
-import { parseSlotTime, timetableMinutes } from '../utils/timetableLogic.js';
+import { parseSlotTime, timetableMinutes, overlapsMinutes } from '../utils/timetableLogic.js';
+import { BOOKING_RULES } from '../../../shared/bookingRules.js';
 
 export { timetableMinutes };
 
@@ -19,12 +20,7 @@ export { timetableMinutes };
  * slip past these checks.
  */
 
-export const RULES = Object.freeze({
-  OPEN_HOUR: 8, // earliest start, IST
-  CLOSE_HOUR: 20, // latest end, IST
-  MAX_HOURS: 4,
-  WINDOW_DAYS: 7, // how far ahead non-admins may book
-});
+export const RULES = BOOKING_RULES; // shared/bookingRules.js: the calendar offers the same hours
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -107,7 +103,7 @@ export async function checkFaculty(facultyId, direct, client, { required = true 
   return { faculty };
 }
 
-const overlaps = (c, startMin, endMin) => c.start_min < endMin && startMin < c.end_min;
+const overlaps = (c, startMin, endMin) => overlapsMinutes(startMin, endMin, c);
 
 /** The room's own timetable: scheduled classes (by room id) and admin weekly blocks (BKG-01). */
 export async function checkRoomTimetable(client, room, t) {

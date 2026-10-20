@@ -2,9 +2,10 @@
 // src/middleware/validate.js (validateRequest) and src/utils/httpErrors.js.
 import jwt from 'jsonwebtoken';
 import { body, query } from 'express-validator';
-import { authenticate, requirePermission, JWT_SECRET } from '../../src/middleware/auth.js';
+import { authenticate, requirePermission } from '../../src/middleware/auth.js';
+import { jwtSecret } from '../../src/auth/session.js';
 import { validateRequest } from '../../src/middleware/validate.js';
-import { sendError, sendServerError } from '../../src/utils/httpErrors.js';
+import { sendServerError } from '../../src/utils/httpErrors.js';
 import { createFaculty, closeDb } from '../../test/helpers/factories.js';
 
 afterAll(closeDb);
@@ -25,14 +26,14 @@ function run(mw, req) {
 }
 
 describe('authenticate', () => {
-  test('uses the JWT_SECRET from the environment', () => {
-    expect(JWT_SECRET).toBe(process.env.JWT_SECRET);
+  test('uses the JWT_SECRET from the environment (one definition, auth/session.js)', () => {
+    expect(jwtSecret()).toBe(process.env.JWT_SECRET);
   });
 
   test('valid session token -> req.user is the principal loaded from the database', async () => {
     const { user } = await createFaculty();
     // Claims other than sub/sv are ignored: the role comes from the database, not the token.
-    const token = jwt.sign({ sub: String(user.id), sv: 0, role: 'ADMIN' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ sub: String(user.id), sv: 0, typ: 'session', role: 'ADMIN' }, process.env.JWT_SECRET, { expiresIn: '1h' });
     const req = { headers: { authorization: `Bearer ${token}` } };
     const out = run(authenticate, req);
     await out.ret;
@@ -44,7 +45,7 @@ describe('authenticate', () => {
   });
 
   test('token for a user that does not exist -> 401', async () => {
-    const token = jwt.sign({ sub: '99999999', sv: 0 }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ sub: '99999999', sv: 0, typ: 'session' }, process.env.JWT_SECRET, { expiresIn: '1h' });
     const req = { headers: { authorization: `Bearer ${token}` } };
     const out = run(authenticate, req);
     await out.ret;
@@ -71,6 +72,9 @@ describe('authenticate', () => {
     ['wrong secret', () => jwt.sign({ id: 1, role: 'ADMIN' }, 'some-other-secret')],
     ['expired', () => jwt.sign({ id: 1, role: 'ADMIN' }, process.env.JWT_SECRET, { expiresIn: -1 })],
     ['alg=none', () => jwt.sign({ id: 1, role: 'ADMIN' }, null, { algorithm: 'none' })],
+    // Pre-SSO tokens ({ id, role }) are no longer accepted, even with the right secret.
+    ['legacy { id } token', () => jwt.sign({ id: 1, role: 'ADMIN' }, process.env.JWT_SECRET, { expiresIn: '1h' })],
+    ['token of another kind', () => jwt.sign({ sub: '1', sv: 0 }, process.env.JWT_SECRET, { expiresIn: '1h' })],
   ])('%s -> 401 Invalid token', (_label, makeToken) => {
     const req = { headers: { authorization: `Bearer ${makeToken()}` } };
     const { res, nextCalled } = run(authenticate, req);
@@ -146,14 +150,6 @@ describe('validateRequest', () => {
 });
 
 describe('httpErrors', () => {
-  test('sendError sets status and { error } body', () => {
-    const res = mockRes();
-    const ret = sendError(res, 404, 'Room not found');
-    expect(ret).toBe(res);
-    expect(res.statusCode).toBe(404);
-    expect(res.body).toEqual({ error: 'Room not found' });
-  });
-
   test('sendServerError falls back to the default message when the error has none', () => {
     const res = mockRes();
     sendServerError(res, null, 'Failed to fetch branches');

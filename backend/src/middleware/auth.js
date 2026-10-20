@@ -1,15 +1,7 @@
 import { loadPrincipal, verifySessionToken, SessionError } from '../auth/session.js';
 import { hasAnyPermission } from '../auth/permissions.js';
 
-if (!process.env.JWT_SECRET) {
-  console.error('CRITICAL: JWT_SECRET environment variable is not set!');
-  if (process.env.NODE_ENV === 'production') {
-    process.exit(1);
-  }
-}
-export const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_fallback_only_for_non_production';
-// Note: In production, the app will exit if JWT_SECRET is missing.
-// For development, we keep a fallback to avoid blocking the team, but warn loudly.
+if (!process.env.JWT_SECRET) console.error('CRITICAL: JWT_SECRET is not set (server.js refuses to start in production without it).');
 
 /**
  * Verifies the session token and loads the principal (role, permissions, profile) from the

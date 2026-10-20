@@ -282,11 +282,7 @@ export const roomRepository = {
         }
         // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
         if (rows.length) {
-          await client.query(
-            `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
-              WHERE source_type = 'reschedule' AND source_id = ANY($1) AND is_active`,
-            [rows.map((r) => r.id)],
-          );
+          await timetableRepository.withdrawReleases('reschedule', rows.map((r) => r.id), client);
         }
       });
     }

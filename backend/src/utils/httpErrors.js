@@ -7,10 +7,6 @@ import logger from './logger.js';
 
 export const GENERIC_SERVER_ERROR = 'Something went wrong on our side. Please try again.';
 
-export const sendError = (res, status, message) => {
-  return res.status(status).json({ error: message });
-};
-
 // Postgres errors that mean "bad request", not "server broke". The client gets a plain message;
 // constraint/table/column names never leave the server.
 const PG_CLIENT_ERRORS = {

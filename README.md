@@ -12,6 +12,7 @@ room-all/
 │   ├── src/            # server.js; db.js holds the baseline schema and every migration
 │   ├── seed/           # deterministic seeder: rooms + faculty directory (+ demo timetable)
 │   └── package.json    # Modernized for "type": "module"
+├── shared/             # rules both apps import: timetable times, IST dates, booking hours (no deps)
 ├── frontend/           # React + Vite application (ESM)
 │   ├── src/            # App.jsx, components/, index.css
 │   └── package.json    # Vite & ESLint configuration

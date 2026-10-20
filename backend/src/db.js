@@ -1078,7 +1078,7 @@ const migrations = [
       await resolveIds('timetable_slots');
       await retired('timetable rows with an unreadable time, day or section', `
         UPDATE timetable_slots SET is_active = FALSE, deactivated_at = NOW()
-         WHERE is_active AND (start_min IS NULL OR end_min IS NULL OR end_min > 1440 OR day_of_week NOT IN ${WEEKDAYS}
+         WHERE is_active AND (start_min IS NULL OR end_min IS NULL OR end_min > 1440 OR end_min <= start_min OR day_of_week NOT IN ${WEEKDAYS}
                               OR semester IS NULL OR section IS NULL OR coalesce(department, '') = '')`);
       // Exact duplicates (same class, room and teacher) collapse to the oldest row.
       const SLOT_KEY = `department, semester, section, day_of_week, start_min, end_min, coalesce(batch, ''),
@@ -1111,7 +1111,7 @@ const migrations = [
       await resolveIds('faculty_timetable_slots', { room: false });
       await retired('faculty timetable slots with an unreadable time or day', `
         UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW()
-         WHERE is_active AND (start_min IS NULL OR end_min IS NULL OR end_min > 1440 OR day_of_week NOT IN ${WEEKDAYS})`);
+         WHERE is_active AND (start_min IS NULL OR end_min IS NULL OR end_min > 1440 OR end_min <= start_min OR day_of_week NOT IN ${WEEKDAYS})`);
       await addConstraint('faculty_timetable_slots', 'faculty_timetable_slots_faculty_id_fkey', 'FOREIGN KEY (faculty_id) REFERENCES faculties(id)');
       await addConstraint('faculty_timetable_slots', 'faculty_timetable_slots_active_valid', `CHECK (NOT is_active OR (
         day_of_week IN ${WEEKDAYS} AND start_min BETWEEN 0 AND 1439 AND end_min > start_min AND end_min <= 1440))`);
@@ -1249,6 +1249,24 @@ const migrations = [
         -- Notifications that are never emailed keep no rendered email.
         UPDATE notifications SET email_subject = NULL, email_html = NULL
          WHERE email_status = 'none' AND (email_subject IS NOT NULL OR email_html IS NOT NULL);
+      `);
+    }
+  },
+  {
+    version: 38,
+    name: 'Import jobs survive restarts (import_jobs table)',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS import_jobs (
+          id UUID PRIMARY KEY,
+          kind VARCHAR(32) NOT NULL CHECK (kind IN ('faculty', 'timetable')),
+          status VARCHAR(16) NOT NULL DEFAULT 'processing' CHECK (status IN ('processing', 'completed', 'failed')),
+          result JSONB NOT NULL DEFAULT '{}'::jsonb,
+          created_by INTEGER REFERENCES users(id) ON DELETE RESTRICT,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          finished_at TIMESTAMPTZ
+        );
+        CREATE INDEX IF NOT EXISTS idx_import_jobs_created ON import_jobs (created_at DESC);
       `);
     }
   }

@@ -1,8 +1,9 @@
 import React from 'react';
 import { Wind, Monitor } from 'lucide-react';
 import { booksDirect } from '../../utils/permissions';
+import { BOOKING_START_HOURS } from '../../../../shared/bookingRules.js';
 
-const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
+const HOURS = BOOKING_START_HOURS;
 
 function RescheduleDetails({ 
   rooms,

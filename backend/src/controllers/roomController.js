@@ -1,6 +1,6 @@
 import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
-import cache from '../utils/cache.js';
+import cache, { invalidateRoomCaches } from '../utils/cache.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { timetableRepository } from '../repositories/timetableRepository.js';
 import logger from '../utils/logger.js';
@@ -96,7 +96,7 @@ export const overrideRoomAvailability = async (req, res) => {
     const userId = req.user?.id; // Capture who is making the override
     await roomRepository.overrideAvailability(room_name, day, hour, is_available, userId);
     
-    cache.delete('room_availability_all');
+    invalidateRoomCaches();
     res.json({ status: 'Success', message: `Room ${room_name} availability updated` });
   } catch (err) {
     if (err.message === 'Room not found') return res.status(404).json({ error: 'Room not found' });
@@ -132,8 +132,7 @@ export const createRoom = async (req, res) => {
       description,
       student_access: student_access !== undefined ? student_access : true
     });
-    cache.delete('room_availability_all');
-    cache.deletePattern('admin_status_.*'); // BKG-16: the new room must appear in the status grid at once
+    invalidateRoomCaches();
     res.status(201).json(room);
   } catch (err) {
     logger.error('createRoom error', err);
@@ -165,8 +164,7 @@ export const updateRoom = async (req, res) => {
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
     }
-    cache.delete('room_availability_all');
-    cache.deletePattern('admin_status_.*');
+    invalidateRoomCaches();
     res.json(room);
   } catch (err) {
     logger.error('updateRoom error', err);
@@ -181,8 +179,7 @@ export const deleteRoom = async (req, res) => {
     if (!room) {
       return res.status(404).json({ error: 'Room not found' });
     }
-    cache.delete('room_availability_all');
-    cache.deletePattern('admin_status_.*');
+    invalidateRoomCaches();
     res.json({ status: 'Success', message: `Room ${room.name} deleted successfully` });
   } catch (err) {
     logger.error('deleteRoom error', err);

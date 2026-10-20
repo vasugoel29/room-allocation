@@ -1,3 +1,4 @@
+import { istDateTimeToUtc } from '../utils/timezone.js';
 import * as db from '../db.js';
 
 const BOOKING_SELECT = `
@@ -113,37 +114,51 @@ export const bookingRepository = {
     return result.rows[0];
   },
 
-  /**
-   * Check for room level conflicts
-   */
-  checkRoomConflict: async (roomId, startTime, endTime, client = db) => {
-    const result = await client.query(
-      `SELECT * FROM bookings 
-       WHERE room_id = $1 AND status = 'ACTIVE' 
-       AND tstzrange(start_time, end_time) && tstzrange($2::timestamptz, $3::timestamptz)`,
-      [roomId, startTime, endTime]
-    );
-    return result.rows;
-  },
+  /** Does this faculty member supervise an ACTIVE booking during that IST hour? */
+  facultySupervisesAt: async (facultyId, dateKey, hour, client = db) => (await client.query(
+    `SELECT 1 FROM bookings
+      WHERE faculty_id = $1 AND status = 'ACTIVE'
+        AND tstzrange(start_time, end_time) && tstzrange($2::timestamptz, $3::timestamptz) LIMIT 1`,
+    [facultyId, istDateTimeToUtc(dateKey, hour), istDateTimeToUtc(dateKey, hour + 1)],
+  )).rowCount > 0,
 
-  /**
-   * Check for user level conflicts
-   */
-  checkUserConflict: async (userId, startTime, endTime, client = db) => {
-    const result = await client.query(
-      `SELECT b.*, r.name as room_name 
+  /** Is this an ACTIVE/PENDING booking in that room covering that IST date and hour? */
+  openInRoomAt: async (bookingId, roomId, dateKey, hour, client = db) => (await client.query(
+    `SELECT 1 FROM bookings
+      WHERE id = $1 AND room_id = $2 AND status IN ('ACTIVE', 'PENDING')
+        AND tstzrange(start_time, end_time) && tstzrange($3::timestamptz, $4::timestamptz)`,
+    [bookingId, roomId, istDateTimeToUtc(dateKey, hour), istDateTimeToUtc(dateKey, hour + 1)],
+  )).rowCount > 0,
+
+  /** Soft-cancels a booking that is still open; history is kept. */
+  cancelIfOpen: async (id, client = db) => client.query(
+    `UPDATE bookings SET status = 'CANCELLED', cancelled_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND status IN ('ACTIVE', 'PENDING')`,
+    [id],
+  ),
+
+  /** ACTIVE bookings supervised by, or made by, someone of that (upper-cased) name. */
+  activeForFacultyName: async (upperName, client = db) => (await client.query(
+    `SELECT b.*, r.name AS room_name, u.name AS creator_name
        FROM bookings b
        JOIN rooms r ON b.room_id = r.id
-       WHERE b.created_by = $1 AND b.status = 'ACTIVE' 
-       AND tstzrange(b.start_time, b.end_time) && tstzrange($2::timestamptz, $3::timestamptz)`,
-      [userId, startTime, endTime]
-    );
-    return result.rows;
-  },
+       JOIN users u ON b.created_by = u.id
+       LEFT JOIN faculties f ON b.faculty_id = f.id
+      WHERE (UPPER(f.name) = $1 OR UPPER(u.name) = $1) AND b.status = 'ACTIVE'`,
+    [upperName],
+  )).rows,
 
-  /**
-   * Insert a new booking
-   */
+  /** ACTIVE bookings made by members of a section (ACL branch + semester + section). */
+  activeForSection: async ({ department, semester, section }, client = db) => (await client.query(
+    `SELECT b.*, r.name AS room_name, u.name AS creator_name, f.name AS faculty_name
+       FROM bookings b
+       JOIN rooms r ON b.room_id = r.id
+       JOIN users u ON b.created_by = u.id
+       LEFT JOIN faculties f ON b.faculty_id = f.id
+      WHERE UPPER(TRIM(u.branch)) = $1 AND u.semester = $2 AND u.section = $3 AND b.status = 'ACTIVE'`,
+    [department, semester, section],
+  )).rows,
+
   create: async (data, client = db) => {
     const { room_id, start_time, end_time, created_by, purpose, faculty_id, status,
       reschedule_room_id = null, reschedule_date = null, reschedule_hour = null } = data;

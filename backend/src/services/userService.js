@@ -1,4 +1,4 @@
-import cache from '../utils/cache.js';
+import { invalidateRoomCaches } from '../utils/cache.js';
 import * as db from '../db.js';
 import { invalidatePrincipal } from '../auth/session.js';
 import { userRepository } from '../repositories/userRepository.js';
@@ -35,8 +35,7 @@ export const deleteUser = async (id) => {
   if (user) {
     invalidatePrincipal(user.id);
     // Their upcoming bookings were cancelled, so cached room status/availability is stale.
-    cache.deletePattern('admin_status_.*');
-    cache.delete('room_availability_all');
+    invalidateRoomCaches();
   }
   return user;
 };

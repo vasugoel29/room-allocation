@@ -12,6 +12,7 @@ import BottomNav from './components/ui/BottomNav';
 import FloatingActions from './components/ui/FloatingActions';
 import NotificationBell from './components/ui/NotificationBell';
 import { P, can, canAny, canSeeCalendar, isAdmin } from './utils/permissions';
+import { BOOKING_RULES } from '../../shared/bookingRules.js';
 
 // Lazy-loaded pages for bundle splitting
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
@@ -344,7 +345,7 @@ function App() {
                       const now = new Date();
                       let targetDate = new Date(now);
                       let hour = now.getHours();
-                      if (hour < 8) hour = 8; else if (hour >= 18) { hour = 8; targetDate.setDate(targetDate.getDate() + 1); }
+                      if (hour < BOOKING_RULES.OPEN_HOUR) hour = BOOKING_RULES.OPEN_HOUR; else if (hour >= BOOKING_RULES.CLOSE_HOUR - 1) { hour = BOOKING_RULES.OPEN_HOUR; targetDate.setDate(targetDate.getDate() + 1); }
                       setSelectedSlot({ day: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][targetDate.getDay()], hour, date: targetDate });
                       setIsModalOpen(true);
                     }

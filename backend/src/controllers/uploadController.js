@@ -6,11 +6,10 @@ import { facultyRepository } from '../repositories/facultyRepository.js';
 import XLSX from 'xlsx-js-style';
 import logger from '../utils/logger.js';
 import { logActivity } from '../services/loggerService.js';
-import { randomUUID } from 'crypto';
+import { startJob, finishJob, failJob, getJob } from '../services/importJobs.js';
 
 // In-memory job store for async CSV uploads
 // Map<jobId, { status: 'processing'|'completed'|'failed', message?: string, error?: string }>
-const jobStore = new Map();
 
 // Simple custom CSV parser
 /**
@@ -352,25 +351,23 @@ const runFacultyImport = async (jobId, csvContent, userId) => {
         }, client);
       }
     });
-    jobStore.set(jobId, {
-      status: 'completed',
+    await finishJob(jobId, {
       message: `Faculty directory updated: ${counts.created} added, ${counts.updated} updated, ${counts.deactivated} deactivated, ${skipped.length} skipped`,
       ...counts,
       skipped,
     });
   } catch (err) {
     logger.error('Failed to import faculty CSV', err);
-    jobStore.set(jobId, { status: 'failed', error: 'Import failed' });
+    await failJob(jobId, 'Import failed');
   }
 };
 
 export const importFaculty = async (req, res) => {
   const csvContent = req.body.csvContent;
   if (!csvContent) return res.status(400).json({ error: 'Missing csvContent field' });
-  const jobId = randomUUID();
-  jobStore.set(jobId, { status: 'processing' });
+  const jobId = await startJob('faculty', req.user?.id);
   res.status(202).json({ jobId, status: 'processing' });
-  runFacultyImport(jobId, csvContent, req.user?.id);
+  runFacultyImport(jobId, csvContent, req.user?.id).catch((err) => logger.error('Faculty import job bookkeeping failed', err));
 };
 
 /**
@@ -428,8 +425,7 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
       }
     });
     invalidateRoomCaches();
-    jobStore.set(jobId, {
-      status: 'completed',
+    await finishJob(jobId, {
       message: `Imported ${slots.length} timetable records, ${skipped.length} skipped`
         + (unresolved.length ? `; ${unresolved.length} faculty name(s) not in the directory` : ''),
       skipped,
@@ -437,25 +433,25 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
     });
   } catch (err) {
     logger.error('Failed to import timetable CSV', err);
-    jobStore.set(jobId, { status: 'failed', error: err.message || 'Import failed' });
+    await failJob(jobId, err.message || 'Import failed');
   }
 };
 
 export const importTimetable = async (req, res) => {
   const csvContent = req.body.csvContent;
   if (!csvContent) return res.status(400).json({ error: 'Missing csvContent field' });
-  const jobId = randomUUID();
-  jobStore.set(jobId, { status: 'processing' });
+  const jobId = await startJob('timetable', req.user?.id);
   res.status(202).json({ jobId, status: 'processing' });
-  runTimetableImport(jobId, csvContent, req.user?.id);
+  runTimetableImport(jobId, csvContent, req.user?.id).catch((err) => logger.error('Timetable import job bookkeeping failed', err));
 };
 
-// Job status polling endpoint
-export const getJobStatus = (req, res) => {
-  const { jobId } = req.params;
-  const job = jobStore.get(jobId);
-  if (!job) return res.status(404).json({ error: 'Job not found' });
-  // Clean up completed/failed jobs after retrieval to avoid memory growth
-  if (job.status !== 'processing') jobStore.delete(jobId);
-  return res.json(job);
+// Job status polling endpoint (import_jobs; status survives restarts)
+export const getJobStatus = async (req, res) => {
+  try {
+    const job = await getJob(req.params.jobId);
+    if (!job) return res.status(404).json({ error: 'Job not found' });
+    return res.json(job);
+  } catch (err) {
+    sendServerError(res, err);
+  }
 };

@@ -1,4 +1,4 @@
-import api from '../utils/api';
+import api, { readJson } from '../utils/api';
 
 export const roomService = {
   getRooms: async (filters = {}) => {
@@ -11,35 +11,27 @@ export const roomService = {
       }
     });
     const res = await api.get(`/rooms?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch rooms');
-    return res.json();
+    return readJson(res, 'Failed to fetch rooms');
   },
 
   getAvailability: async () => {
     const res = await api.get('/availability');
-    if (!res.ok) throw new Error('Failed to fetch availability');
-    return res.json();
+    return readJson(res, 'Failed to fetch availability');
   },
 
   getHealth: async () => {
     const res = await api.get('/health');
-    if (!res.ok) throw new Error('Health check failed');
-    return res.json();
+    return readJson(res, 'Health check failed');
   },
 
   createAvailabilityOverride: async (data) => {
     const res = await api.post('/availability/override', data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Override creation failed');
-    }
-    return res.json();
+    return readJson(res, 'Override creation failed');
   },
 
   getMyAvailability: async () => {
     const res = await api.get('/availability/my');
-    if (!res.ok) throw new Error('Failed to fetch your cancellations');
-    return res.json();
+    return readJson(res, 'Failed to fetch your cancellations');
   },
 
   getTimetable: async (filters = {}) => {
@@ -52,53 +44,42 @@ export const roomService = {
       }
     });
     const res = await api.get(`/timetable?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch timetable');
-    return res.json();
+    return readJson(res, 'Failed to fetch timetable');
   },
 
   getFacultyTimetable: async () => {
     const res = await api.get('/timetable/faculty');
-    if (!res.ok) throw new Error('Failed to fetch faculty timetable');
-    return res.json();
+    return readJson(res, 'Failed to fetch faculty timetable');
   },
 
   checkFacultyAvailability: async (id, date, hour) => {
     const res = await api.get(`/timetable/faculty/check/${id}?date=${date}&hour=${hour}`);
-    if (!res.ok) throw new Error('Failed to check faculty availability');
-    return res.json();
+    return readJson(res, 'Failed to check faculty availability');
   },
 
   overrideFacultySlot: async (data) => {
     const res = await api.post('/timetable/faculty/override', data);
-    if (!res.ok) throw new Error('Failed to override faculty slot');
-    return res.json();
+    return readJson(res, 'Failed to override faculty slot');
   },
 
   getFacultyOverrides: async () => {
     const res = await api.get('/timetable/faculty/overrides');
-    if (!res.ok) throw new Error('Failed to fetch faculty overrides');
-    return res.json();
+    return readJson(res, 'Failed to fetch faculty overrides');
   },
 
   requestClassCancellation: async (data) => {
     const res = await api.post('/timetable/cancellation-requests', data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to request class cancellation');
-    }
-    return res.json();
+    return readJson(res, 'Failed to request class cancellation');
   },
 
   getRoomWeekSchedule: async (roomId, weekStart) => {
     const res = await api.get(`/rooms/${roomId}/week-schedule?weekStart=${weekStart}`);
-    if (!res.ok) throw new Error('Failed to fetch room week schedule');
-    return res.json();
+    return readJson(res, 'Failed to fetch room week schedule');
   },
 
   checkRoomConflict: async (roomId, date, startHour, endHour) => {
     const res = await api.get(`/rooms/${roomId}/conflict-check?date=${date}&startHour=${startHour}&endHour=${endHour}`);
-    if (!res.ok) throw new Error('Failed to check room conflicts');
-    return res.json();
+    return readJson(res, 'Failed to check room conflicts');
   }
 };
 

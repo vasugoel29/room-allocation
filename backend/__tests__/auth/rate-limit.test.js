@@ -129,12 +129,12 @@ describe('userOrIpKey', () => {
   const req = (headers = {}, extra = {}) => ({ headers, ip: '10.1.2.3', ...extra });
 
   test('valid Bearer JWT → keyed by user id', () => {
-    const token = jwt.sign({ id: 42, role: 'VIEWER' }, process.env.JWT_SECRET);
+    const token = jwt.sign({ sub: '42', sv: 0, typ: 'session' }, process.env.JWT_SECRET);
     expect(userOrIpKey(req({ authorization: `Bearer ${token}` }))).toBe('u:42');
   });
 
   test('valid token cookie → keyed by user id', () => {
-    const token = jwt.sign({ id: 7 }, process.env.JWT_SECRET);
+    const token = jwt.sign({ sub: '7', sv: 0, typ: 'session' }, process.env.JWT_SECRET);
     expect(userOrIpKey(req({}, { cookies: { token } }))).toBe('u:7');
   });
 
@@ -143,6 +143,7 @@ describe('userOrIpKey', () => {
     ['invalid token', { authorization: 'Bearer junk' }],
     ['wrong-secret token', { authorization: `Bearer ${jwt.sign({ id: 42 }, 'other')}` }],
     ['token without id', { authorization: `Bearer ${jwt.sign({ role: 'ADMIN' }, process.env.JWT_SECRET)}` }],
+    ['legacy { id } token', { authorization: `Bearer ${jwt.sign({ id: 42 }, process.env.JWT_SECRET)}` }],
   ])('%s → keyed by IP', (_n, headers) => {
     expect(userOrIpKey(req(headers))).toBe('ip:10.1.2.3');
   });

@@ -1,4 +1,4 @@
-import api from '../utils/api';
+import api, { readJson } from '../utils/api';
 
 /**
  * Service for Admin specific API calls
@@ -6,8 +6,7 @@ import api from '../utils/api';
 export const adminService = {
   getAdminData: async (startDate, endDate, page = 1, limit = 20) => {
     const res = await api.get(`/bookings/admin/all?start_date=${startDate}&end_date=${endDate}&page=${page}&limit=${limit}`);
-    if (!res.ok) throw new Error('Failed to fetch admin data');
-    const result = await res.json();
+    const result = await readJson(res, 'Failed to fetch admin data');
     return {
       bookings: result.data || result,
       bookingsMeta: result.meta || null,
@@ -16,33 +15,23 @@ export const adminService = {
 
   getUsers: async (page = 1, limit = 20, search = '', role = '') => {
     const res = await api.get(`/auth/users?page=${page}&limit=${limit}&search=${encodeURIComponent(search)}&role=${encodeURIComponent(role)}`);
-    if (!res.ok) throw new Error('Failed to fetch users');
-    return res.json();
+    return readJson(res, 'Failed to fetch users');
   },
 
   getRoomStatuses: async (date, slot) => {
     const res = await api.get(`/rooms/admin/status?date=${date}&slot=${slot}`);
-    if (!res.ok) throw new Error('Failed to fetch room statuses');
-    return res.json();
+    return readJson(res, 'Failed to fetch room statuses');
   },
 
   /** Soft delete: the person can no longer sign in and their upcoming bookings are cancelled. */
   deactivateUser: async (id) => {
     const res = await api.delete(`/auth/users/${id}`);
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Deactivation failed');
-    }
-    return res.json();
+    return readJson(res, 'Deactivation failed');
   },
 
   quickBook: async (data) => {
     const res = await api.post('/bookings/admin/quick', data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Quick booking failed');
-    }
-    return res.json();
+    return readJson(res, 'Quick booking failed');
   },
 
   exportCSV: async (type, params = {}) => {
@@ -57,14 +46,12 @@ export const adminService = {
 
   fetchAuditLogs: async (page = 1, search = '') => {
     const res = await api.get(`/admin/audit-logs?page=${encodeURIComponent(page)}&search=${encodeURIComponent(search)}`); // NEW-FE-2
-    if (!res.ok) throw new Error('Failed to fetch audit logs');
-    return res.json();
+    return readJson(res, 'Failed to fetch audit logs');
   },
 
   fetchAnalytics: async (days = 30) => {
     const res = await api.get(`/admin/analytics?days=${days}`);
-    if (!res.ok) throw new Error('Failed to fetch analytics');
-    return res.json();
+    return readJson(res, 'Failed to fetch analytics');
   },
 
   downloadTemplate: async (type) => {
@@ -82,38 +69,22 @@ export const adminService = {
 
   importCSV: async (type, csvContent) => {
     const res = await api.post(`/admin/uploads/import/${type}`, { csvContent });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Import failed');
-    }
-    return res.json();
+    return readJson(res, 'Import failed');
   },
 
   createRoom: async (data) => {
     const res = await api.post('/rooms', data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to create room');
-    }
-    return res.json();
+    return readJson(res, 'Failed to create room');
   },
 
   updateRoom: async (id, data) => {
     const res = await api.patch(`/rooms/${id}`, data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to update room');
-    }
-    return res.json();
+    return readJson(res, 'Failed to update room');
   },
 
   deleteRoom: async (id) => {
     const res = await api.delete(`/rooms/${id}`);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to delete room');
-    }
-    return res.json();
+    return readJson(res, 'Failed to delete room');
   },
 
 
@@ -137,35 +108,22 @@ export const adminService = {
     params.append('page', page);
     params.append('limit', limit);
     const res = await api.get(`/timetable/slots?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch timetable slots');
-    return res.json();
+    return readJson(res, 'Failed to fetch timetable slots');
   },
 
   createTimetableSlot: async (data) => {
     const res = await api.post('/timetable/slots', data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to create slot');
-    }
-    return res.json();
+    return readJson(res, 'Failed to create slot');
   },
 
   updateTimetableSlot: async (id, data) => {
     const res = await api.patch(`/timetable/slots/${id}`, data);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to update slot');
-    }
-    return res.json();
+    return readJson(res, 'Failed to update slot');
   },
 
   deleteTimetableSlot: async (id) => {
     const res = await api.delete(`/timetable/slots/${id}`);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to delete slot');
-    }
-    return res.json();
+    return readJson(res, 'Failed to delete slot');
   }
 };
 

@@ -57,6 +57,20 @@ export async function apiFetch(endpoint, options = {}) {
   }
 }
 
+/**
+ * The JSON body of a successful response. Otherwise throws an Error with the server's message
+ * (or `fallback`), carrying `status`, `conflict` and the error `body` for callers that need them.
+ */
+export async function readJson(res, fallback = 'Request failed') {
+  if (res.ok) return res.json();
+  const body = await res.json().catch(() => ({}));
+  const err = new Error(body.error || fallback);
+  err.status = res.status;
+  err.body = body;
+  if (body.conflict) err.conflict = body.conflict;
+  throw err;
+}
+
 export const api = {
   get: (endpoint) => apiFetch(endpoint, { method: 'GET' }),
   post: (endpoint, body) => apiFetch(endpoint, { 

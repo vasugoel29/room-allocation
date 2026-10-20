@@ -1,5 +1,5 @@
 import * as db from '../db.js';
-import cache from '../utils/cache.js';
+import { invalidateRoomCaches } from '../utils/cache.js';
 import { transferRepository } from '../repositories/transferRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
@@ -148,8 +148,7 @@ async function completeTransfer(client, t, booking, actorId) {
     userId: actorId, action: 'COMPLETE_TRANSFER', entityType: 'transfer', entityId: t.id,
     details: { booking_id: booking.id, from_user: booking.created_by, to_user: t.requested_by },
   }, client);
-  cache.deletePattern('admin_status_.*');
-  cache.delete('room_availability_all');
+  invalidateRoomCaches();
   return { status: 200, message: 'Transfer completed successfully' };
 }
 

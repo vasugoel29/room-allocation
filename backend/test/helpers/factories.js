@@ -7,14 +7,9 @@ import { istDateTimeToUtc, getIstParts } from '../../src/utils/timezone.js';
 let seq = 0;
 const uid = () => `${process.pid}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
-/** Legacy-shaped JWT ({ id, role, ... }) signed with the app secret; authenticate() still accepts it in tests. */
+/** A session token for `user`, shaped like the ones sign-in issues (identity only; access comes from the DB). */
 export function tokenFor(user, opts = {}) {
-  const { id, email, role, name, branch, year, semester, section, group_name } = user;
-  return jwt.sign(
-    { id, email, role, name, branch, year, semester, section, group_name },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h', ...opts },
-  );
+  return jwt.sign({ sub: String(user.id), sv: user.session_version || 0, typ: 'session' }, process.env.JWT_SECRET, { expiresIn: '1h', ...opts });
 }
 
 /**

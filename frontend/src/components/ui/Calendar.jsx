@@ -1,110 +1,27 @@
 import React, { useState, useEffect, useContext, useMemo } from 'react';
 import { Filter, Wind, Monitor, Clock } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
-import { getDayOfWeek, getHourFromTime } from '../../utils/timetableLogic';
-import { getIstDateKey, getIstHour } from '../../utils/timezone';
+import { getDayOfWeek, buildRoomIndex, isRoomFreeIn, bookingAt } from '../../utils/timetableLogic';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 08:00–18:00; final slot is 17:00–18:00
+const HOURS = BOOKING_START_HOURS; // 08:00–20:00, the hours the server accepts (shared/bookingRules.js)
 
 import PageSearch from './PageSearch';
 import { booksDirect } from '../../utils/permissions';
+import { BOOKING_START_HOURS } from '../../../../shared/bookingRules.js';
 
 function Calendar({ onSlotClick }) {
-  const { bookings, rooms, roomsError, fetchRooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, timetableData, user } = useContext(AppContext);
+  const { bookings, rooms, roomsError, fetchRooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, user } = useContext(AppContext);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  const occupiedScheduleSlots = useMemo(() => {
-    const set = new Set();
-    if (Array.isArray(timetableData)) {
-      timetableData.forEach(entry => {
-        Object.entries(entry.timetable || {}).forEach(([dayName, daySchedule]) => {
-          if (Array.isArray(daySchedule)) {
-            daySchedule.forEach(sc => {
-              if (sc.time && sc.room) {
-                const roomNameLower = sc.room.trim().toLowerCase();
-                const hour = getHourFromTime(sc.time);
-                set.add(`${roomNameLower}-${dayName}-${hour}`);
-              }
-            });
-          }
-        });
-      });
-    } else if (typeof timetableData === 'object' && timetableData !== null) {
-      Object.entries(timetableData).forEach(([dayName, daySchedule]) => {
-        if (Array.isArray(daySchedule)) {
-          daySchedule.forEach(sc => {
-            if (sc.time && sc.room) {
-              const roomNameLower = sc.room.trim().toLowerCase();
-              const hour = getHourFromTime(sc.time);
-              set.add(`${roomNameLower}-${dayName}-${hour}`);
-            }
-          });
-        }
-      });
-    }
-    return set;
-  }, [timetableData]);
-
-  const availabilityIndex = useMemo(() => {
-    const map = new Map();
-    if (Array.isArray(availability)) {
-      availability.forEach(a => {
-        const roomName = (a.room_name || '').trim().toLowerCase();
-        const key1 = `${roomName}-${a.day}-${a.hour}`;
-        const key2 = `${a.room_id}-${a.day}-${a.hour}`;
-        map.set(key1, a);
-        if (a.room_id) map.set(key2, a);
-      });
-    }
-    return map;
-  }, [availability]);
-
-  const bookingsIndex = useMemo(() => {
-    const map = new Map();
-    if (Array.isArray(bookings)) {
-      bookings.forEach(b => {
-        const status = (b.status || 'ACTIVE').toUpperCase();
-        if (status === 'ACTIVE' || status === 'CONFIRMED') {
-          const bStart = new Date(b.start_time);
-          const bDateStr = getIstDateKey(bStart);
-          const bHour = getIstHour(bStart);
-          map.set(`${b.room_id}-${bDateStr}-${bHour}`, b);
-        }
-      });
-    }
-    return map;
-  }, [bookings]);
-
-  const isRoomReallyFreeLocal = React.useCallback((room, dateStr, dayName, hour) => {
-    if (!room) return false;
-
-    const targetRoomName = (room.name || '').trim().toLowerCase();
-    const override = availabilityIndex.get(`${targetRoomName}-${dateStr}-${hour}`) ||
-                     availabilityIndex.get(`${room.id}-${dateStr}-${hour}`) ||
-                     availabilityIndex.get(`${targetRoomName}-${dayName}-${hour}`) ||
-                     availabilityIndex.get(`${room.id}-${dayName}-${hour}`);
-
-    let baseAvailable = true;
-
-    if (override) {
-      baseAvailable = override.is_available === true;
-    } else {
-      const isOccupiedInSchedule = occupiedScheduleSlots.has(`${targetRoomName}-${dayName}-${hour}`);
-      if (isOccupiedInSchedule) baseAvailable = false;
-    }
-
-    if (!baseAvailable) return false;
-
-    const currentBooking = bookingsIndex.has(`${room.id}-${dateStr}-${hour}`);
-    if (currentBooking) return false;
-
-    return true;
-  }, [availabilityIndex, occupiedScheduleSlots, bookingsIndex]);
+  // One index of the calendar feed and bookings; the same rule MobileBooking and the server use.
+  const roomIndex = useMemo(() => buildRoomIndex(bookings, availability), [bookings, availability]);
+  const isRoomReallyFreeLocal = React.useCallback(
+    (room, dateStr, dayName, hour) => isRoomFreeIn(roomIndex, room, dateStr, dayName, hour), [roomIndex]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -285,14 +202,14 @@ function Calendar({ onSlotClick }) {
                                   const isFree = isRoomReallyFreeLocal(room, dateStr, dayLabel, hour);
                                   if (isFree) return true;
 
-                                  const booking = bookingsIndex.get(`${room.id}-${dateStr}-${hour}`);
+                                  const booking = bookingAt(roomIndex, room.id, dateStr, hour);
                                   if (booking) return true;
 
                                   return false;
                                 })
                                 .sort((a, b) => {
-                                  const aBooked = bookingsIndex.has(`${a.id}-${dateStr}-${hour}`);
-                                  const bBooked = bookingsIndex.has(`${b.id}-${dateStr}-${hour}`);
+                                  const aBooked = Boolean(bookingAt(roomIndex, a.id, dateStr, hour));
+                                  const bBooked = Boolean(bookingAt(roomIndex, b.id, dateStr, hour));
                                   if (aBooked && !bBooked) return 1;
                                   if (!aBooked && bBooked) return -1;
 
@@ -308,7 +225,7 @@ function Calendar({ onSlotClick }) {
                               return (
                                 <>
                                   {displayedRooms.map(room => {
-                                    const booking = bookingsIndex.get(`${room.id}-${dateStr}-${hour}`);
+                                    const booking = bookingAt(roomIndex, room.id, dateStr, hour);
                                     if (booking) {
                                       return (
                                         <button

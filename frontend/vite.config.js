@@ -76,6 +76,8 @@ export default defineConfig({
   },
   server: {
     allowedHosts: true,
+    // /shared (rules the backend uses too) lives next to frontend/.
+    fs: { allow: ['..'] },
     proxy: {
       '/api': {
         target: 'http://localhost:4000',
