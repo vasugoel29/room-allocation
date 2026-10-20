@@ -20,7 +20,6 @@ const baseRoutes = () => [
   ['GET', '/api/health', { status: 'ok' }],
   ['GET', /\/api\/rooms\?/, [{ id: 1, name: 'R-1' }]],
   ['GET', '/api/auth/faculties', [{ id: 21, name: 'Prof Fay' }]],
-  ['GET', '/api/departments', [{ id: 1, name: 'IT' }]],
   ['GET', /\/api\/bookings\/calendar\?/, { data: [{ id: 100 }], meta: {} }],
   ['GET', '/api/bookings/mine', { data: [] }],
   ['GET', '/api/availability', []],
@@ -82,7 +81,7 @@ describe('AppProvider initial user', () => {
 });
 
 describe('AppProvider data loading per role', () => {
-  it('student/viewer (calendar + timetable only): rooms, departments, bookings, availability, own timetable — no faculty list or transfers', async () => {
+  it('student/viewer (calendar + timetable only): rooms, bookings, availability, own timetable — no faculty list or transfers', async () => {
     localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
     const f = installFetch(baseRoutes());
     mount();
@@ -91,7 +90,6 @@ describe('AppProvider data loading per role', () => {
     const u = urls(f);
     expect(u).toEqual(expect.arrayContaining([
       'GET /api/rooms?building=5th+Block',
-      'GET /api/departments',
       'GET /api/bookings/mine',
       'GET /api/availability',
       'GET /api/timetable?',

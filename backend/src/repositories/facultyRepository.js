@@ -35,26 +35,21 @@ export const facultyRepository = {
     return rows.map((r) => r.name);
   },
 
-  /**
-   * Insert or update an entry by email; reactivates a soft-deleted one. A department given only
-   * by name is linked to the matching active department (OPS-09).
-   */
-  upsert: async ({ name, email, department_id = null, department_name = null }, client = db) => {
+  /** Insert or update an entry by email; reactivates a soft-deleted one. Department is a label. */
+  upsert: async ({ name, email, department_name = null }, client = db) => {
     const { rows } = await client.query(
-      `INSERT INTO faculties (name, email, department_id, department_name, is_active, deactivated_at, updated_at)
-       VALUES ($1, lower($2),
-               COALESCE($3::int, (SELECT id FROM departments WHERE is_active AND lower(name) = lower($4::text) ORDER BY id LIMIT 1)),
-               $4, TRUE, NULL, NOW())
+      `INSERT INTO faculties (name, email, department_name, is_active, deactivated_at, updated_at)
+       VALUES ($1, lower($2), $3, TRUE, NULL, NOW())
        ON CONFLICT (lower(email)) DO UPDATE
          SET name = EXCLUDED.name,
-             department_id = COALESCE(EXCLUDED.department_id, faculties.department_id),
              department_name = COALESCE(EXCLUDED.department_name, faculties.department_name),
              is_active = TRUE, deactivated_at = NULL, updated_at = NOW()
        RETURNING *, (xmax = 0) AS inserted`,
-      [name, email, department_id, department_name],
+      [name, email, department_name],
     );
     return rows[0];
   },
+
 
   /** Soft delete. History keeps pointing at the entry. */
   deactivate: async (id, client = db) => {

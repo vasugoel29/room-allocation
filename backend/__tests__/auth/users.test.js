@@ -26,7 +26,7 @@ describe('GET /api/auth/users', () => {
     expect(res.body.meta.totalPages).toBe(Math.ceil(res.body.meta.total / 20));
     expect(res.body.data.length).toBeLessThanOrEqual(20);
     const row = res.body.data.find((u) => u.id === user.id);
-    expect(row).toMatchObject({ id: user.id, email: user.email, role: 'VIEWER', is_approved: true });
+    expect(row).toMatchObject({ id: user.id, email: user.email, role: 'VIEWER' });
     for (const u of res.body.data) {
       expect(u).not.toHaveProperty('password');
       expect(u).not.toHaveProperty('password_reset_token');
@@ -130,10 +130,9 @@ describe('DELETE /api/auth/users/:id', () => {
     expect((await getUser(user.id)).is_active).toBe(true);
   });
 
-  test('deleting a user keeps the row and its department reference', async () => {
-    const { rows: [dept] } = await db.query('SELECT id FROM departments WHERE is_active ORDER BY id LIMIT 1');
-    const { user } = await createViewer({ department_id: dept.id });
+  test('deleting a user keeps the row and its ACL department', async () => {
+    const { user } = await createViewer({ department_name: 'Department of Information Technology' });
     expect((await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth)).status).toBe(200);
-    expect((await getUser(user.id)).department_id).toBe(dept.id);
+    expect((await getUser(user.id)).department_name).toBe('Department of Information Technology');
   });
 });

@@ -1,23 +1,17 @@
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import * as db from '../../src/db.js';
 import { SUGGESTED_BUNDLES } from '../../src/auth/permissions.js';
 import { invalidatePrincipal } from '../../src/auth/session.js';
 import { istDateTimeToUtc, getIstParts } from '../../src/utils/timezone.js';
 
-// Sign-in is Google SSO + ACL only (migration v25 cleared stored passwords), but the column still
-// exists, so factory users keep a bcrypt hash: the "never leak a hash" checks stay meaningful.
-export const TEST_PASSWORD = 'Password@123';
-const PASSWORD_HASH = bcrypt.hashSync(TEST_PASSWORD, 4);
-
 let seq = 0;
 const uid = () => `${process.pid}${Date.now().toString(36)}${(seq++).toString(36)}`;
 
 /** Legacy-shaped JWT ({ id, role, ... }) signed with the app secret; authenticate() still accepts it in tests. */
 export function tokenFor(user, opts = {}) {
-  const { id, email, role, name, branch, year, semester, section, group_name, department_id } = user;
+  const { id, email, role, name, branch, year, semester, section, group_name } = user;
   return jwt.sign(
-    { id, email, role, name, branch, year, semester, section, group_name, department_id },
+    { id, email, role, name, branch, year, semester, section, group_name },
     process.env.JWT_SECRET,
     { expiresIn: '1h', ...opts },
   );
@@ -33,9 +27,7 @@ export async function createUser({ permissions, ...overrides } = {}) {
   const fields = {
     name: `Test ${role} ${uid()}`,
     email: `t.${role.toLowerCase()}.${uid()}@nsut.ac.in`,
-    password: PASSWORD_HASH,
     role,
-    is_approved: true,
     ...overrides,
   };
   const cols = Object.keys(fields);

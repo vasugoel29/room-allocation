@@ -116,15 +116,15 @@ export async function upsertUserFromAcl(access) {
       ({ rows: [user] } = await client.query(
         `UPDATE users SET acl_id = $1, name = $2, email = $3, role = $4, branch = $5, department_name = $6,
                 degree = $7, roll_no = $8, year = $9, semester = $10, section = $11, group_name = $12,
-                is_approved = true, updated_at = NOW()
+                updated_at = NOW()
           WHERE id = $13 RETURNING *`,
         [access.aclId, profile.name, profile.email, role, profile.branch, profile.department_name, profile.degree,
           profile.roll_no, profile.year, profile.semester, profile.section, profile.group_name, existing.rows[0].id],
       ));
     } else {
       ({ rows: [user] } = await client.query(
-        `INSERT INTO users (acl_id, name, email, password, role, branch, department_name, degree, roll_no, year, semester, section, group_name, is_approved)
-         VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, $8, $9, $10, $11, $12, true) RETURNING *`,
+        `INSERT INTO users (acl_id, name, email, role, branch, department_name, degree, roll_no, year, semester, section, group_name)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
         [access.aclId, profile.name, profile.email, role, profile.branch, profile.department_name, profile.degree,
           profile.roll_no, profile.year, profile.semester, profile.section, profile.group_name],
       ));
@@ -138,13 +138,13 @@ export async function upsertUserFromAcl(access) {
     );
 
     await client.query(
-      `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, allowed_scope, scopes_by_permission, academic, fetched_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+      `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, allowed_scope, scopes_by_permission, fetched_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        ON CONFLICT (user_id) DO UPDATE SET acl_id = EXCLUDED.acl_id, role = EXCLUDED.role, roles = EXCLUDED.roles,
          permissions = EXCLUDED.permissions, allowed_scope = EXCLUDED.allowed_scope,
-         scopes_by_permission = EXCLUDED.scopes_by_permission, academic = EXCLUDED.academic, fetched_at = NOW()`,
+         scopes_by_permission = EXCLUDED.scopes_by_permission, fetched_at = NOW()`,
       [user.id, access.aclId, role, JSON.stringify(access.roles), JSON.stringify(access.permissions),
-        JSON.stringify(access.allowedScope), JSON.stringify(access.scopesByPermission), JSON.stringify(a)],
+        JSON.stringify(access.allowedScope), JSON.stringify(access.scopesByPermission)],
     );
     invalidatePrincipal(user.id);
     return user;
@@ -153,12 +153,11 @@ export async function upsertUserFromAcl(access) {
 
 async function readRow(userId) {
   const { rows } = await db.query(
-    `SELECT u.*, d.name AS department_label, fac.id AS faculty_directory_id,
+    `SELECT u.*, fac.id AS faculty_directory_id,
             ua.role AS acl_role, ua.roles AS acl_roles, ua.permissions AS acl_permissions,
             ua.allowed_scope, ua.scopes_by_permission, ua.fetched_at AS acl_fetched_at
        FROM users u
        LEFT JOIN user_access ua ON ua.user_id = u.id
-       LEFT JOIN departments d ON d.id = u.department_id
        LEFT JOIN faculties fac ON fac.user_id = u.id AND fac.is_active
       WHERE u.id = $1`,
     [userId],
@@ -180,16 +179,13 @@ function toPrincipal(row) {
     allowed_scope: row.allowed_scope || {},
     scopes_by_permission: row.scopes_by_permission || {},
     branch: row.branch,
-    branch_id: row.branch_id,
     year: row.year,
     semester: row.semester,
     section: row.section,
     group_name: row.group_name,
     degree: row.degree,
     roll_no: row.roll_no,
-    department_id: row.department_id,
-    department_name: row.department_name || row.department_label || null,
-    is_approved: row.is_approved,
+    department_name: row.department_name || null,
     // This person's entry in the faculty directory (faculties.id), or null. Faculty references on
     // bookings, transfers and cancellation requests are directory ids, never user ids.
     faculty_id: row.faculty_directory_id || null,
@@ -263,13 +259,11 @@ export function publicProfile(p) {
     roles: p.roles,
     permissions: [...p.permissions],
     branch: p.branch,
-    branch_id: p.branch_id,
     year: p.year,
     semester: p.semester,
     section: p.section,
     group_name: p.group_name,
     degree: p.degree,
-    department_id: p.department_id,
     department_name: p.department_name,
     faculty_id: p.faculty_id,
   };

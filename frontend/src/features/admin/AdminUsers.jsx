@@ -8,7 +8,7 @@ const ROLE_BADGE = {
 };
 
 const academicLabel = (u) => [
-  u.branch_name || u.branch,
+  u.branch,
   u.year ? `Year ${u.year}` : null,
   u.section ? `Sec ${u.section}` : null,
 ].filter(Boolean).join(' • ');

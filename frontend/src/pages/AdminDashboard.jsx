@@ -12,7 +12,6 @@ import {
   Activity,
   TrendingUp,
   Home,
-  Layers,
   ChevronDown
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -41,11 +40,9 @@ import { useAdminData } from '../hooks/useAdminData';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { useAdminQuickBook } from '../hooks/useAdminQuickBook';
 
-// Rooms & Departments Components
+// Rooms components
 import AdminRooms from '../features/admin/AdminRooms';
 import AdminRoomModal from '../components/modals/AdminRoomModal';
-import AdminDepartments from '../features/admin/AdminDepartments';
-import AdminBranches from '../features/admin/AdminBranches';
 import { isAdmin } from '../utils/permissions';
 
 function AdminDashboard() {
@@ -67,23 +64,18 @@ function AdminDashboard() {
     updateQuickBookForm, handleQuickBookSubmit
   } = useAdminQuickBook(activeTab, fetchData);
 
-  // Rooms and Departments state
+  // Rooms state
   const [adminRooms, setAdminRooms] = useState([]);
-  const [adminDepartments, setAdminDepartments] = useState([]);
-  const [adminBranches, setAdminBranches] = useState([]);
   const [roomBuildingFilter, setRoomBuildingFilter] = useState('all');
   const [roomTypeFilter, setRoomTypeFilter] = useState('all');
 
   // Pagination Metas
   const [roomsMeta, setRoomsMeta] = useState({ page: 1, totalPages: 1 });
-  const [deptsMeta, setDeptsMeta] = useState({ page: 1, totalPages: 1 });
-  const [branchesMeta, setBranchesMeta] = useState({ page: 1, totalPages: 1 });
 
   // Room modal state
   const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState(null);
 
-  // Department modal state
 
   const fetchAdminRooms = async (page = roomsMeta.page) => {
     try {
@@ -99,28 +91,6 @@ function AdminDashboard() {
     } catch (err) {
       console.error(err);
       toast.error('Failed to fetch rooms');
-    }
-  };
-
-  const fetchAdminDepartments = async (page = deptsMeta.page) => {
-    try {
-      const data = await adminService.getDepartments({ page, limit: 10 });
-      setAdminDepartments(data.data || data);
-      if (data.meta) setDeptsMeta(data.meta);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to fetch departments');
-    }
-  };
-
-  const fetchAdminBranches = async (page = branchesMeta.page) => {
-    try {
-      const data = await adminService.getBranches({ page, limit: 10 });
-      setAdminBranches(data.data || data);
-      if (data.meta) setBranchesMeta(data.meta);
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to fetch branches');
     }
   };
 
@@ -156,14 +126,6 @@ function AdminDashboard() {
     }
   }, [roomBuildingFilter, roomTypeFilter, activeTab]);
 
-  useEffect(() => {
-    if (activeTab === 'departments') {
-      fetchAdminDepartments(1);
-    } else if (activeTab === 'branches') {
-      fetchAdminBranches(1);
-    }
-  }, [activeTab]);
-  
   // Confirmation modal state
   const [confirmConfig, setConfirmConfig] = useState({ 
     isOpen: false, title: '', message: '', action: null 
@@ -420,54 +382,6 @@ function AdminDashboard() {
                           >
                             Next
                           </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {activeTab === 'departments' && (
-                  <div className="flex-1 flex flex-col min-h-0">
-                    <AdminDepartments 
-                      departments={adminDepartments}
-                      searchTerm={searchTerm}
-                    />
-                    {deptsMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
-                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
-                          Page {deptsMeta.page} of {deptsMeta.totalPages}
-                        </p>
-                        <div className="flex gap-2">
-                          <button 
-                            disabled={deptsMeta.page <= 1}
-                            onClick={() => fetchAdminDepartments(deptsMeta.page - 1)}
-                            className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            Prev
-                          </button>
-                          <button 
-                            disabled={deptsMeta.page >= deptsMeta.totalPages}
-                            onClick={() => fetchAdminDepartments(deptsMeta.page + 1)}
-                            className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {activeTab === 'branches' && (
-                  <div className="flex-1 flex flex-col min-h-0">
-                    <AdminBranches
-                      branches={adminBranches}
-                      searchTerm={searchTerm}
-                    />
-                    {branchesMeta.totalPages > 1 && (
-                      <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
-                        <p className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Page {branchesMeta.page} of {branchesMeta.totalPages}</p>
-                        <div className="flex gap-2">
-                          <button disabled={branchesMeta.page <= 1} onClick={() => fetchAdminBranches(branchesMeta.page - 1)} className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30">Prev</button>
-                          <button disabled={branchesMeta.page >= branchesMeta.totalPages} onClick={() => fetchAdminBranches(branchesMeta.page + 1)} className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30">Next</button>
                         </div>
                       </div>
                     )}

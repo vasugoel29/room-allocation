@@ -88,9 +88,6 @@ const ROUTES = [
   { m: 'get', path: '/api/transfers/outgoing', gate: ANSWER },
   { m: 'patch', path: `/api/transfers/${X}/accept`, gate: ANSWER },
   { m: 'patch', path: `/api/transfers/${X}/reject`, gate: ANSWER },
-  // departmentRoutes / branchRoutes
-  { m: 'get', path: '/api/departments', gate: 'PUBLIC' },
-  { m: 'get', path: '/api/branches', gate: 'PUBLIC' },
   // adminRoutes
   { m: 'get', path: '/api/admin/export/bookings', gate: ADMIN },
   { m: 'get', path: '/api/admin/audit-logs', gate: ADMIN },
@@ -353,8 +350,6 @@ describe('SQL-injection probes', () => {
   for (const p of PAYLOADS) {
     const e = encodeURIComponent(p);
     probes.push(
-      ['VIEWER', `/api/departments?page=${e}&limit=${e}`],
-      ['VIEWER', `/api/branches?page=1&limit=${e}`],
       ['VIEWER', `/api/rooms?building=${e}&type=${e}`],
       ['VIEWER', `/api/timetable/autocomplete/faculty?query=${e}`],
       ['ADMIN', `/api/auth/users?page=${e}&limit=5`],

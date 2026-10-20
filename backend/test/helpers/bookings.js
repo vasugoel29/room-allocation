@@ -42,8 +42,14 @@ export const auditRows = async (entityId, action) =>
     action ? [entityId, action] : [entityId],
   )).rows;
 
+/** A booking's reschedule history, as recorded in the audit log (booking_history was dropped). */
 export const historyRows = async (bookingId) =>
-  (await db.query('SELECT * FROM booking_history WHERE booking_id = $1 ORDER BY id', [bookingId])).rows;
+  (await db.query(
+    `SELECT (details->'old'->>'room_id')::int AS previous_room_id, details->'old'->>'start_time' AS previous_start_time,
+            details->'old'->>'end_time' AS previous_end_time, user_id AS modified_by, 'RESCHEDULE' AS change_type
+       FROM audit_logs WHERE action = 'RESCHEDULE_BOOKING' AND entity_id = $1 ORDER BY id`,
+    [bookingId],
+  )).rows;
 
 /** Inserts a timetable_slots row (all text columns) and returns it. */
 export async function insertTimetableSlot(fields) {

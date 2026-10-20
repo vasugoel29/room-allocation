@@ -17,12 +17,10 @@ async function unseed() {
   
   try {
     await pool.query('DELETE FROM booking_transfers');
-    await pool.query('DELETE FROM booking_history');
     await pool.query('DELETE FROM bookings');
     await pool.query('DELETE FROM room_availability');
     await pool.query("DELETE FROM users WHERE role <> 'ADMIN'"); // Keep admins (roles are stored upper-case)
     await pool.query('DELETE FROM rooms');
-    await pool.query('DELETE FROM departments');
     
     console.log('Database successfully cleaned.');
   } catch (err) {

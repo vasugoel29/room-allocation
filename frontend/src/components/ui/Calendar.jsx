@@ -188,7 +188,7 @@ function Calendar({ onSlotClick }) {
       const matchesType = !filters.roomType || filters.roomType === 'all' || room.type === filters.roomType;
       return matchesSearch && matchesFloor && matchesSmart && matchesType;
     });
-  }, [rooms, filters.searchTerm, filters.floor, filters.smartRoom, filters.roomType, user]);
+  }, [rooms, filters.searchTerm, filters.floor, filters.smartRoom, filters.roomType, isStudent]);
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">

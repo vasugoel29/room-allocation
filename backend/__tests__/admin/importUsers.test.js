@@ -130,11 +130,10 @@ describe('faculty import (faculty directory)', () => {
     expect((await db.query("SELECT 1 FROM faculties WHERE name IN ('Bad Mail Prof', 'No Mail Prof')")).rowCount).toBe(0);
   });
 
-  test('[OPS-09] department_id is populated for imported faculty', async () => {
-    const dept = (await db.query('SELECT id, name FROM departments WHERE is_active ORDER BY id LIMIT 1')).rows[0];
+  test('[OPS-09] the department label is stored for imported faculty', async () => {
     const e = email('facdept');
-    await runImport(app, admin.auth, 'faculty', `name,email,department_name\nDept Prof,${e},${dept.name}\n`);
-    expect((await facultyByEmail(e)).department_id).toBe(dept.id);
+    await runImport(app, admin.auth, 'faculty', `name,email,department_name\nDept Prof,${e},Department of Physics\n`);
+    expect((await facultyByEmail(e)).department_name).toBe('Department of Physics');
   });
 
   // Previously the faculty import upserted into users and silently rewrote a student's name while

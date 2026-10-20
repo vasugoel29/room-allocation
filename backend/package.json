@@ -16,7 +16,6 @@
   },
   "dependencies": {
     "@sentry/node": "^10.42.0",
-    "bcrypt": "^6.0.0",
     "body-parser": "^2.2.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",

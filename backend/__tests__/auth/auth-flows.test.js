@@ -34,9 +34,8 @@ describe('GET /api/auth/faculties', () => {
   });
 
   test('people who book or review get the ACTIVE faculty directory (faculties.id), without sensitive fields', async () => {
-    const { rows: [dept] } = await db.query('SELECT id, name FROM departments WHERE is_active ORDER BY id LIMIT 1');
     const { user: facUser, faculty: linked } = await createFaculty();
-    await db.query('UPDATE faculties SET department_id = $1 WHERE id = $2', [dept.id, linked.id]);
+    await db.query('UPDATE faculties SET department_name = $1 WHERE id = $2', ['Department of Physics', linked.id]);
     const noAccount = await createFacultyEntry({ department_name: 'Directory Only Dept' });
     const inactive = await createFacultyEntry({ is_active: false });
     // The dropdown is for booking: a calendar-only viewer has no use for it.
@@ -50,7 +49,7 @@ describe('GET /api/auth/faculties', () => {
     expect(ids).not.toContain(inactive.id); // soft-deleted entries are hidden
     expect(ids).not.toContain(facUser.id); // ids are directory ids, never user ids
     expect(ids).not.toContain(viewer.id);
-    expect(res.body.find((f) => f.id === linked.id)).toEqual({ id: linked.id, name: linked.name, email: linked.email, department: dept.name });
+    expect(res.body.find((f) => f.id === linked.id)).toEqual({ id: linked.id, name: linked.name, email: linked.email, department: 'Department of Physics' });
     expect(res.body.find((f) => f.id === noAccount.id)).toMatchObject({ department: 'Directory Only Dept' });
     expect(JSON.stringify(res.body)).not.toMatch(/\$2[aby]\$/);
   });

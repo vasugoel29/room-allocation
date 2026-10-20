@@ -770,6 +770,11 @@ const migrations = [
     run: async (client) => {
       // CRAS no longer has passwords (sign-in is Google SSO + ACL), and the old ones were leaked.
       // Rows are kept; only the dead credentials are cleared.
+      // (Re-runnable: the columns themselves are dropped later, by v35.)
+      const { rows: [col] } = await client.query(
+        "SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password'",
+      );
+      if (!col) return;
       await client.query(`
         UPDATE users SET password = NULL, password_reset_token = NULL, password_reset_expires = NULL
          WHERE password IS NOT NULL OR password_reset_token IS NOT NULL OR password_reset_expires IS NOT NULL;
@@ -936,6 +941,9 @@ const migrations = [
     version: 33,
     name: 'Departments/branches are synced from the college ACL: acl_id keys and updated_at',
     run: async (client) => {
+      // (Re-runnable: both tables are dropped later, by v35.)
+      const { rows: [t] } = await client.query("SELECT to_regclass('public.departments') IS NOT NULL AS present");
+      if (!t.present) return;
       await client.query(`
         ALTER TABLE departments ADD COLUMN IF NOT EXISTS acl_id VARCHAR(100);
         ALTER TABLE departments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
@@ -970,6 +978,28 @@ const migrations = [
           ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
         `);
       }
+    }
+  },
+  {
+    version: 35,
+    name: 'ACL alignment: drop departments/branches and password-era leftovers',
+    run: async (client) => {
+      // Department and branch are ACL-provided attributes on users and faculty (decision
+      // 2026-10-20); CRAS keeps no master list. Passwords, approval and promotions belong to the
+      // ACL; booking_history duplicated audit_logs and was never read.
+      await client.query(`
+        ALTER TABLE users DROP COLUMN IF EXISTS department_id, DROP COLUMN IF EXISTS branch_id,
+          DROP COLUMN IF EXISTS department, DROP COLUMN IF EXISTS password,
+          DROP COLUMN IF EXISTS password_reset_token, DROP COLUMN IF EXISTS password_reset_expires,
+          DROP COLUMN IF EXISTS is_approved;
+        ALTER TABLE faculties DROP COLUMN IF EXISTS department_id;
+        ALTER TABLE user_access DROP COLUMN IF EXISTS academic;
+        ALTER TABLE bookings DROP COLUMN IF EXISTS is_semester_booking;
+        DROP TABLE IF EXISTS branches;
+        DROP TABLE IF EXISTS departments;
+        DROP TABLE IF EXISTS promotion_requests;
+        DROP TABLE IF EXISTS booking_history;
+      `);
     }
   }
 ];

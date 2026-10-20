@@ -9,7 +9,6 @@ import toast from 'react-hot-toast';
 export function useAdminUsers(activeTab, searchTerm = '') {
   const [users, setUsers] = useState([]);
   const [usersMeta, setUsersMeta] = useState({ page: 1, totalPages: 1 });
-  const [departments, setDepartments] = useState([]);
 
   const fetchUsers = async (page = usersMeta.page) => {
     try {
@@ -21,14 +20,6 @@ export function useAdminUsers(activeTab, searchTerm = '') {
     }
   };
 
-  const fetchDepartments = async () => {
-    try {
-      const data = await adminService.getDepartments();
-      setDepartments(data);
-    } catch (err) {
-      console.error('Failed to fetch departments', err);
-    }
-  };
 
   const handleDeactivateUser = async (id) => {
     try {
@@ -47,9 +38,5 @@ export function useAdminUsers(activeTab, searchTerm = '') {
     }
   }, [activeTab, searchTerm]);
 
-  useEffect(() => {
-    fetchDepartments();
-  }, []);
-
-  return { users, usersMeta, departments, fetchUsers, handleDeactivateUser };
+  return { users, usersMeta, fetchUsers, handleDeactivateUser };
 }

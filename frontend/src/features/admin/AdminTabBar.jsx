@@ -4,14 +4,12 @@ import {
   Calendar as CalendarIcon, 
   Users, 
   Home, 
-  Layers, 
   TrendingUp, 
   Activity, 
   Download, 
   Database,
   ChevronDown,
-  LayoutGrid,
-  GitBranch
+  LayoutGrid
 } from 'lucide-react';
 
 export const AdminTabBar = ({ activeTab, setActiveTab }) => {
@@ -25,8 +23,6 @@ export const AdminTabBar = ({ activeTab, setActiveTab }) => {
     
     { id: 'users', label: 'Users', icon: <Users size={16} />, category: 'Registry' },
     { id: 'rooms', label: 'Rooms', icon: <Home size={16} />, category: 'Registry' },
-    { id: 'departments', label: 'Departments', icon: <Layers size={16} />, category: 'Registry' },
-    { id: 'branches', label: 'Branches', icon: <GitBranch size={16} />, category: 'Registry' },
     
     { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={16} />, category: 'System' },
     { id: 'audit', label: 'Audit Log', icon: <Activity size={16} />, category: 'System' },

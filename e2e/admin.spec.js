@@ -14,8 +14,6 @@ const TABS = [
   ['room-grid', /room schedule grid/i],
   ['users', /users directory/i],
   ['rooms', /rooms management/i],
-  ['departments', /departments management/i],
-  ['branches', /branches management/i],
   ['analytics', /room analytics/i],
   ['audit', /system audit log/i],
   ['uploads', /bulk uploads/i],
@@ -125,28 +123,6 @@ test.describe('Admin console', () => {
     const res = await request.post(`${API_URL}/auth/dev-login`, { data: { email: doomed.email } });
     expect(res.status()).toBe(403);
     expect((await res.json()).token).toBeUndefined();
-  });
-
-  // The college ACL owns the department/branch master list (synced via PUT /api/internal/departments);
-  // CRAS shows it read-only.
-  test('Departments and Branches are read-only lists managed by the ACL', async ({ page, request, seed }) => {
-    const admin = await seed.user({ role: 'ADMIN' });
-    const dept = await seed.one('INSERT INTO departments (name) VALUES ($1) RETURNING *', [`${firstSortingName()} Synced Dept`]);
-    const branch = await seed.one('INSERT INTO branches (name, short_code, department_id) VALUES ($1, $2, $3) RETURNING *',
-      [`${firstSortingName()} Synced Branch`, 'SB', dept.id]);
-
-    await signIn(page, request, admin, '/admin?tab=departments');
-    await expect(page.getByText('Managed by the college ACL')).toBeVisible();
-    await expect(page.getByRole('button', { name: /add dept/i })).toHaveCount(0);
-    const row = page.locator('tr').filter({ hasText: dept.name });
-    await expect(row).toBeVisible();
-    await expect(row.getByRole('button')).toHaveCount(0);
-
-    await signIn(page, request, admin, '/admin?tab=branches');
-    await expect(page.getByText('Managed by the college ACL')).toBeVisible();
-    await expect(page.getByRole('button', { name: /add branch/i })).toHaveCount(0);
-    await expect(page.locator('tr').filter({ hasText: branch.name })).toContainText('SB');
-    await expect(page.getByRole('button', { name: `Edit ${branch.name}` })).toHaveCount(0);
   });
 
   test('Bookings: lists today\'s booking and cancels it; export downloads a CSV', async ({ page, request, seed }) => {

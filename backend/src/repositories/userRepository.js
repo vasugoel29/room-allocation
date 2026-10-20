@@ -6,14 +6,12 @@ import { notify, bookingFacts } from '../notifications/notify.js';
  */
 export const userRepository = {
   /**
-   * Find a user by ID with department info
+   * Find a user by ID (department and branch are ACL attributes on the row)
    */
   findById: async (id, client = db) => {
     const query = `
-      SELECT u.*, COALESCE(u.department_name, d.name) AS department_name, COALESCE(b.name, u.branch) AS branch_name, b.short_code AS branch_code
-      FROM users u 
-      LEFT JOIN departments d ON u.department_id = d.id 
-      LEFT JOIN branches b ON u.branch_id = b.id
+      SELECT u.*
+      FROM users u
       WHERE u.id = $1
     `;
     const result = await client.query(query, [id]);
@@ -21,14 +19,12 @@ export const userRepository = {
   },
 
   /**
-   * Find a user by email with department info
+   * Find a user by email
    */
   findByEmail: async (email, client = db) => {
     const query = `
-      SELECT u.*, COALESCE(u.department_name, d.name) AS department_name, COALESCE(b.name, u.branch) AS branch_name, b.short_code AS branch_code
-      FROM users u 
-      LEFT JOIN departments d ON u.department_id = d.id 
-      LEFT JOIN branches b ON u.branch_id = b.id
+      SELECT u.*
+      FROM users u
       WHERE u.email = $1 AND u.is_active
     `;
     const result = await client.query(query, [email]);
@@ -37,12 +33,9 @@ export const userRepository = {
 
   findAll: async (limit, offset, search = '', role = '') => {
     let query = `
-      SELECT u.id, u.name, u.email, u.role, u.branch, u.branch_id, u.year, u.semester, u.section,
-             u.group_name, u.is_approved, u.created_at,
-             COALESCE(u.department_name, d.name) AS department_name, COALESCE(b.name, u.branch) AS branch_name, b.short_code AS branch_code
+      SELECT u.id, u.name, u.email, u.role, u.branch, u.year, u.semester, u.section,
+             u.group_name, u.created_at, u.department_name
       FROM users u
-      LEFT JOIN departments d ON u.department_id = d.id
-      LEFT JOIN branches b ON u.branch_id = b.id
       WHERE u.is_active
     `;
     const params = [];
@@ -137,9 +130,8 @@ export const userRepository = {
     // The faculty directory is CRAS data (faculties table); ids here are faculties.id, which is
     // what bookings.faculty_id references. Soft-deleted entries are hidden.
     const { rows } = await db.query(`
-      SELECT f.id, f.name, f.email, COALESCE(f.department_name, d.name, 'General') as department
+      SELECT f.id, f.name, f.email, COALESCE(f.department_name, 'General') AS department
       FROM faculties f
-      LEFT JOIN departments d ON f.department_id = d.id
       WHERE f.is_active
       ORDER BY f.name ASC
     `);

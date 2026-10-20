@@ -26,7 +26,6 @@ export class Seed {
       name: `E2E ${role.replace('_', ' ')} ${uid()}`,
       email: `e2e.${role.toLowerCase()}.${uid()}@nsut.ac.in`,
       role,
-      is_approved: true,
       ...overrides,
     };
     const cols = Object.keys(fields);

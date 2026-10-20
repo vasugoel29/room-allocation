@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useSearchDebounce } from '../../hooks/useSearchDebounce';
 import { useWindowSize } from '../../hooks/useWindowSize';
-import { useDepartments } from '../../hooks/useDepartments';
 import { useAdminUsers } from '../../hooks/useAdminUsers';
 import { useAdminData } from '../../hooks/useAdminData';
 import { useAdminQuickBook } from '../../hooks/useAdminQuickBook';
@@ -59,30 +58,15 @@ describe('useWindowSize', () => {
   });
 });
 
-describe('useDepartments', () => {
-  it('loads array data and ignores non-array payloads', async () => {
-    installFetch([['GET', /\/api\/departments/, [{ id: 1, name: 'IT' }]]]);
-    const { result } = renderHook(() => useDepartments());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.departments).toEqual([{ id: 1, name: 'IT' }]);
-
-    installFetch([['GET', /\/api\/departments/, { error: 'x' }]]);
-    const r2 = renderHook(() => useDepartments());
-    await waitFor(() => expect(r2.result.current.loading).toBe(false));
-    expect(r2.result.current.departments).toEqual([]);
-  });
-});
-
 describe('useAdminUsers', () => {
   it('fetches users only on users/quick tabs; deactivate DELETEs, toasts and refetches', async () => {
     const f = installFetch([
       ['GET', /\/api\/auth\/users\?/, { data: [{ id: 5 }], meta: { page: 1, totalPages: 2 } }],
-      ['GET', /\/api\/departments/, []],
       ['DELETE', '/api/auth/users/5', { id: 5 }],
       ['DELETE', '/api/auth/users/6', () => jsonResponse({ error: 'You cannot deactivate yourself' }, 400)],
     ]);
     const { result, rerender } = renderHook(({ tab }) => useAdminUsers(tab), { initialProps: { tab: 'overview' } });
-    await waitFor(() => expect(f).toHaveBeenCalled());
+    await act(async () => {});
     expect(fetchCalls(f).some(([, u]) => u.includes('/auth/users'))).toBe(false);
     rerender({ tab: 'users' });
     await waitFor(() => expect(result.current.users).toEqual([{ id: 5 }]));

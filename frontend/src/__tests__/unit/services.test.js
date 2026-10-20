@@ -118,7 +118,6 @@ describe('roomService', () => {
   it.each([
     ['getAvailability', () => roomService.getAvailability(), 'GET', '/api/availability'],
     ['getHealth', () => roomService.getHealth(), 'GET', '/api/health'],
-    ['getDepartments', () => roomService.getDepartments(), 'GET', '/api/departments'],
     ['getMyAvailability', () => roomService.getMyAvailability(), 'GET', '/api/availability/my'],
     ['getTimetable', () => roomService.getTimetable({ semester: [3, 5] }), 'GET', '/api/timetable?semester=3&semester=5'],
     ['getFacultyTimetable', () => roomService.getFacultyTimetable(), 'GET', '/api/timetable/faculty'],
@@ -164,8 +163,6 @@ describe('adminService', () => {
   it.each([
     ['getUsers', () => adminService.getUsers(3), 'GET', '/api/auth/users?page=3&limit=20&search=&role=', undefined],
     ['getRoomStatuses', () => adminService.getRoomStatuses('2026-10-20', 9), 'GET', '/api/rooms/admin/status?date=2026-10-20&slot=9', undefined],
-    ['getDepartments', () => adminService.getDepartments({ q: 'IT', x: null }), 'GET', '/api/departments?q=IT', undefined],
-    ['getBranches', () => adminService.getBranches({ department_id: 2 }), 'GET', '/api/branches?department_id=2', undefined],
     ['deactivateUser', () => adminService.deactivateUser(5), 'DELETE', '/api/auth/users/5', undefined],
     ['quickBook', () => adminService.quickBook({ room_name: 'R', date: 'D', slot: 9 }), 'POST', '/api/bookings/admin/quick', { room_name: 'R', date: 'D', slot: 9 }],
     ['fetchAuditLogs', () => adminService.fetchAuditLogs(2, 'x'), 'GET', '/api/admin/audit-logs?page=2&search=x', undefined],

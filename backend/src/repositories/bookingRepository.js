@@ -2,7 +2,7 @@ import * as db from '../db.js';
 
 const BOOKING_SELECT = `
   SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
-         u.branch, u.year, u.section, d.name as department_name,
+         u.branch, u.year, u.section, u.department_name,
          f.name as faculty_name,
          CASE 
            WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
@@ -25,7 +25,6 @@ const BOOKING_SELECT = `
   JOIN rooms r ON b.room_id = r.id
   JOIN users u ON b.created_by = u.id
   LEFT JOIN faculties f ON b.faculty_id = f.id
-  LEFT JOIN departments d ON u.department_id = d.id
 `;
 
 /**
@@ -166,18 +165,6 @@ export const bookingRepository = {
     const query = `UPDATE bookings SET status = $1, updated_at = NOW()${status === 'CANCELLED' ? ', cancelled_at = NOW()' : ''} WHERE id = $2 RETURNING *`;
     const result = await client.query(query, [status, id]);
     return result.rows[0];
-  },
-
-  /**
-   * Create history entry for reschedule
-   */
-  createHistory: async (data, client = db) => {
-    const { booking_id, previous_start_time, previous_end_time, previous_room_id, modified_by, change_type } = data;
-    const query = `
-      INSERT INTO booking_history (booking_id, previous_start_time, previous_end_time, previous_room_id, modified_by, change_type) 
-      VALUES ($1, $2, $3, $4, $5, $6)`;
-    const values = [booking_id, previous_start_time, previous_end_time, previous_room_id, modified_by, change_type];
-    return client.query(query, values);
   },
 
   /**

@@ -22,7 +22,7 @@ export const AdminFilterBar = ({
           ? 'Users Directory'
           : `${activeTab} Management`;
 
-  const showSearch = ['bookings', 'users', 'rooms', 'departments', 'branches'].includes(activeTab);
+  const showSearch = ['bookings', 'users', 'rooms'].includes(activeTab);
 
   return (
     <div className="p-4 sm:p-6 border-b border-border/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-low/60 backdrop-blur-sm shrink-0">
@@ -84,9 +84,6 @@ export const AdminFilterBar = ({
           </button>
         )}
 
-        {(activeTab === 'departments' || activeTab === 'branches') && (
-          <span className="text-[11px] font-bold text-text-secondary">Managed by the college ACL</span>
-        )}
       </div>
     </div>
   );

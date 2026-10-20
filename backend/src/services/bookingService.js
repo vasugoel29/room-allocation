@@ -300,14 +300,6 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   });
   if (conflict) return conflict;
 
-  await bookingRepository.createHistory({
-    booking_id: bookingId,
-    previous_start_time: booking.start_time,
-    previous_end_time: booking.end_time,
-    previous_room_id: booking.room_id,
-    modified_by: user.id,
-    change_type: 'RESCHEDULE',
-  }, client);
   let updated = await bookingRepository.updateBooking(bookingId, { start_time: t.start, end_time: t.end, room_id: room.id }, client);
   // A student's approved booking that moves needs its faculty to approve the new slot (NEW-P4-2).
   const moved = t.start !== new Date(booking.start_time).toISOString() || t.end !== new Date(booking.end_time).toISOString() || room.id !== booking.room_id;
@@ -331,7 +323,8 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
     action: 'RESCHEDULE_BOOKING',
     entityType: 'booking',
     entityId: bookingId,
-    details: { old: { start_time: booking.start_time, room_id: booking.room_id }, new: { start_time: t.start, room_id: room.id } },
+    // The audit log is the booking's change history (previous and new time and room).
+    details: { old: { start_time: booking.start_time, end_time: booking.end_time, room_id: booking.room_id }, new: { start_time: t.start, end_time: t.end, room_id: room.id }, by: byAdmin ? 'admin' : 'owner' },
   }, client);
   return { data: updated, status: 200 };
 };

@@ -29,7 +29,7 @@ afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 const DIRECTORY = [
   { id: 1, name: 'Ada Admin', email: 'admin@nsut.ac.in', role: 'ADMIN' },
   { id: 21, name: 'Prof Fay', email: 'fay@nsut.ac.in', role: 'FACULTY', department_name: 'Information Technology' },
-  { id: 12, name: 'Rita Rep', email: 'rep@nsut.ac.in', role: 'STUDENT_REP', branch_name: 'IT', year: 3, section: 2, department_name: 'Information Technology' },
+  { id: 12, name: 'Rita Rep', email: 'rep@nsut.ac.in', role: 'STUDENT_REP', branch: 'IT', year: 3, section: 2, department_name: 'Information Technology' },
 ];
 
 describe('Admin Users tab (read-only directory mirror)', () => {
@@ -37,7 +37,6 @@ describe('Admin Users tab (read-only directory mirror)', () => {
     const f = installFetch([
       ['GET', /\/api\/auth\/users\?/, { data: DIRECTORY, meta: { page: 1, totalPages: 1 } }],
       ['GET', /\/api\/bookings\/admin\/all/, { data: [], meta: { page: 1, totalPages: 1 } }],
-      ['GET', /\/api\/departments/, []],
       ['DELETE', /\/api\/auth\/users\/\d+$/, { id: 12 }],
     ]);
     renderWithContext(<AdminDashboard />, { route: '/admin?tab=users', ctx: { user: USERS.ADMIN } });
@@ -101,7 +100,6 @@ describe('Admin Users tab (read-only directory mirror)', () => {
     installFetch([
       ['GET', /\/api\/auth\/users\?/, { data: [{ ...DIRECTORY[2], is_active: false }], meta: { page: 1, totalPages: 1 } }],
       ['GET', /\/api\/bookings\/admin\/all/, { data: [] }],
-      ['GET', /\/api\/departments/, []],
     ]);
     renderWithContext(<AdminDashboard />, { route: '/admin?tab=users', ctx: { user: USERS.ADMIN } });
     const row = await waitFor(() => desktopRow('Rita Rep'));

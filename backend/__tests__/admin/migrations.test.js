@@ -3,7 +3,7 @@
 // database must both succeed without double-applying anything.
 // Simulated with two child processes importing db.js against a throwaway database that this
 // file creates and drops itself (roomdb_test_admin_mig). Bounded: each child is killed after 45s.
-// Also covers migration v25 (stored passwords / reset tokens cleared) on the reference database.
+// Also covers migrations v25/v35 (passwords cleared, then legacy columns and tables dropped).
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
@@ -94,37 +94,32 @@ test('[OPS-02] two instances migrating a fresh database concurrently both succee
   expect([a.ok, b.ok]).toEqual([true, true]);
 }, 60000);
 
-describe('migration v25 (Google SSO only: clear stored password hashes and reset tokens)', () => {
-  const credentials = (c, email) => c.query(
-    'SELECT name, role, password, password_reset_token, password_reset_expires FROM users WHERE email = $1', [email],
-  ).then((r) => r.rows[0]);
-
-  test('is recorded in the suite database', async () => {
-    const { rows } = await db.query('SELECT version, name FROM schema_migrations WHERE version = 25');
-    expect(rows).toEqual([{ version: 25, name: 'Google SSO only: clear stored password hashes and reset tokens' }]);
+describe('migrations v25 + v35 (no passwords: cleared, then the columns dropped)', () => {
+  test('are recorded in the suite database', async () => {
+    const { rows } = await db.query('SELECT version FROM schema_migrations WHERE version IN (25, 35) ORDER BY version');
+    expect(rows.map((r) => r.version)).toEqual([25, 35]);
   });
 
-  test('a legacy account that had a password before migrating ends with no password; the row is kept', async () => {
-    const row = await withClient(refUrl, (c) => credentials(c, 'legacy.v25@nsut.ac.in'));
-    expect(row).toEqual({ name: 'Legacy User', role: 'VIEWER', password: null, password_reset_token: null, password_reset_expires: null });
-  });
-
-  test('re-applying v25 clears a password hash and a pending reset token, and touches nothing else', async () => {
-    const email = 'reset.v25@nsut.ac.in';
+  test('a legacy account that had a password keeps its row; no password, reset or approval columns remain', async () => {
     await withClient(refUrl, async (c) => {
-      await c.query(
-        `INSERT INTO users (name, email, password, role, password_reset_token, password_reset_expires)
-         VALUES ('Pending Reset', $1, '$2b$04$somehash', 'FACULTY', 'deadbeef', NOW() + interval '1 hour')`, [email]);
-      // runMigrations applies everything above MAX(version), so dropping v25 and every later row
-      // re-runs v25 (and the idempotent v26/v27 after it).
-      await c.query('DELETE FROM schema_migrations WHERE version >= 25');
+      expect((await c.query("SELECT name, role FROM users WHERE email = 'legacy.v25@nsut.ac.in'")).rows[0])
+        .toEqual({ name: 'Legacy User', role: 'VIEWER' });
+      const { rows } = await c.query(
+        `SELECT column_name FROM information_schema.columns WHERE table_name = 'users'
+            AND column_name IN ('password', 'password_reset_token', 'password_reset_expires', 'is_approved', 'department_id', 'branch_id')`,
+      );
+      expect(rows).toEqual([]);
+      for (const t of ['departments', 'branches', 'promotion_requests', 'booking_history']) {
+        expect((await c.query('SELECT to_regclass($1) AS t', [`public.${t}`])).rows[0].t).toBeNull();
+      }
     });
+  });
+
+  test('re-running v25 onward on a migrated database is a no-op that succeeds', async () => {
+    await withClient(refUrl, (c) => c.query('DELETE FROM schema_migrations WHERE version >= 25'));
     const run = await migrateInChild(refUrl);
     expect(run).toMatchObject({ ok: true, error: null });
     await withClient(refUrl, async (c) => {
-      expect(await credentials(c, email)).toEqual({ name: 'Pending Reset', role: 'FACULTY', password: null, password_reset_token: null, password_reset_expires: null });
-      expect((await c.query('SELECT count(*)::int AS n FROM users WHERE password IS NOT NULL OR password_reset_token IS NOT NULL')).rows[0].n).toBe(0);
-      expect((await c.query('SELECT max(version)::int AS v FROM schema_migrations')).rows[0].v).toBeGreaterThanOrEqual(27);
       expect(Number((await c.query('SELECT count(*) FROM schema_migrations')).rows[0].count)).toBe(expectedVersions);
     });
   }, 60000);

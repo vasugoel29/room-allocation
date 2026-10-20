@@ -32,7 +32,7 @@ async function seeded({ owner, hour = 10, hours = 1, status = 'ACTIVE', room, fa
 const iso = (d) => new Date(d).toISOString();
 
 describe('PATCH /api/bookings/:id (reschedule)', () => {
-  test('owner moves booking to a new time: 200, DB updated, booking_history + audit rows written', async () => {
+  test('owner moves booking to a new time: 200, DB updated, history (audit) row written', async () => {
     const { owner, room, booking, slot } = await seeded({ hour: 10 });
     const target = futureSlot({ hour: 14 });
     const res = await patch(owner.auth, booking.id, { start_time: target.start, end_time: target.end });

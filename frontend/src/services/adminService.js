@@ -26,28 +26,6 @@ export const adminService = {
     return res.json();
   },
 
-  getDepartments: async (filters = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) {
-        params.append(key, value);
-      }
-    });
-    const res = await api.get(`/departments?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch departments');
-    return res.json();
-  },
-
-  getBranches: async (filters = {}) => {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) params.append(key, value);
-    });
-    const res = await api.get(`/branches?${params.toString()}`);
-    if (!res.ok) throw new Error('Failed to fetch branches');
-    return res.json();
-  },
-
   /** Soft delete: the person can no longer sign in and their upcoming bookings are cancelled. */
   deactivateUser: async (id) => {
     const res = await api.delete(`/auth/users/${id}`);

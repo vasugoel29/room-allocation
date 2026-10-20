@@ -8,6 +8,8 @@ import {
   futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
+import { historyRows } from '../../test/helpers/bookings.js';
+
 afterAll(closeDb);
 
 let n = 0;
@@ -332,7 +334,7 @@ describe('Room CRUD (admin)', () => {
     expect((await st(elsewhere.id)).status).toBe('ACTIVE');
   });
 
-  test('[BKG-14] deleting a room that appears in booking_history (after a reschedule) does not 500', async () => {
+  test('[BKG-14] deleting a room that appears in a booking\'s history (after a reschedule) does not 500', async () => {
     const oldRoom = await createRoom();
     const newRoom = await createRoom();
     const owner = await createRep();
@@ -340,12 +342,12 @@ describe('Room CRUD (admin)', () => {
     const b = await insertBooking({ room_id: oldRoom.id, created_by: owner.user.id, start_time: slot.start, end_time: slot.end });
     const moved = await request(app).patch(`/api/bookings/${b.id}`).set('Authorization', owner.auth).send({ room_id: newRoom.id });
     expect(moved.status).toBe(200);
-    expect((await db.query('SELECT previous_room_id FROM booking_history WHERE booking_id = $1', [b.id])).rows[0].previous_room_id).toBe(oldRoom.id);
+    expect((await historyRows(b.id))[0].previous_room_id).toBe(oldRoom.id);
 
     const res = await request(app).delete(`/api/rooms/${oldRoom.id}`).set('Authorization', admin.auth);
     expect(res.status).toBe(200);
     // History and the moved booking are untouched.
-    expect((await db.query('SELECT previous_room_id FROM booking_history WHERE booking_id = $1', [b.id])).rows[0].previous_room_id).toBe(oldRoom.id);
+    expect((await historyRows(b.id))[0].previous_room_id).toBe(oldRoom.id);
     expect((await db.query('SELECT room_id, status FROM bookings WHERE id = $1', [b.id])).rows[0]).toEqual({ room_id: newRoom.id, status: 'ACTIVE' });
   });
 });

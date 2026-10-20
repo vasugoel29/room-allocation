@@ -51,10 +51,10 @@ async function bulkUsers(role, n) {
       const j = off + i;
       params.push(`Load ${role} ${j}`, `load.${role.toLowerCase()}.${j}@nsut.ac.in`, role);
       const b = params.length - 2;
-      vals.push(`($${b}, $${b + 1}, $${b + 2}, true)`);
+      vals.push(`($${b}, $${b + 1}, $${b + 2})`);
     }
     const { rows } = await db.query(
-      `INSERT INTO users (name, email, role, is_approved) VALUES ${vals.join(',')} RETURNING id, name, email, role`,
+      `INSERT INTO users (name, email, role) VALUES ${vals.join(',')} RETURNING id, name, email, role`,
       params,
     );
     ids.push(...rows);

@@ -28,7 +28,6 @@ export const AppProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
   const [viewMode, setViewMode] = useState('day'); // 'week' | 'day'
   const [deferredPrompt, setDeferredPrompt] = useState(null);
-  const [departments, setDepartments] = useState([]);
   const [timetableData, setTimetableData] = useState({});
   const [facultyTimetableData, setFacultyTimetableData] = useState({});
   const [facultyOverrides, setFacultyOverrides] = useState([]);
@@ -111,15 +110,6 @@ export const AppProvider = ({ children }) => {
     }
   }, [user]);
 
-  const fetchDepartments = useCallback(async () => {
-    try {
-      const data = await roomService.getDepartments();
-      setDepartments(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error('Fetch departments failed', err);
-    }
-  }, []);
-
   const seesCalendar = canSeeCalendar(user);
   const fetchRooms = useCallback(async () => {
     if (!seesCalendar) return;
@@ -201,14 +191,13 @@ export const AppProvider = ({ children }) => {
     return Promise.all([
       fetchRooms(),
       fetchFaculties(),
-      fetchDepartments(),
       fetchBookings(),
       fetchAvailability(),
       fetchTransfers(),
       fetchTimetable(),
       fetchFacultyOverrides()
     ]);
-  }, [user, fetchRooms, fetchFaculties, fetchDepartments, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
+  }, [user, fetchRooms, fetchFaculties, fetchBookings, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -219,13 +208,12 @@ export const AppProvider = ({ children }) => {
     if (!user) return;
     return Promise.all([
       fetchFaculties(),
-      fetchDepartments(),
       fetchAvailability(),
       fetchTransfers(),
       fetchTimetable(),
       fetchFacultyOverrides()
     ]);
-  }, [user, fetchFaculties, fetchDepartments, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
+  }, [user, fetchFaculties, fetchAvailability, fetchTransfers, fetchTimetable, fetchFacultyOverrides]);
 
   // Load global data exactly once on user login/change
   useEffect(() => {
@@ -304,7 +292,6 @@ export const AppProvider = ({ children }) => {
     pendingTransferCount,
     bookings,
     availability,
-    departments,
     filters,
     setFilters,
     theme,
@@ -318,7 +305,6 @@ export const AppProvider = ({ children }) => {
     backendError,
     fetchRooms,
     fetchFaculties,
-    fetchDepartments,
     fetchBookings,
     fetchAvailability,
     timetableData,
@@ -340,7 +326,6 @@ export const AppProvider = ({ children }) => {
     pendingTransferCount,
     bookings,
     availability,
-    departments,
     filters,
     theme,
     viewMode,
@@ -350,7 +335,6 @@ export const AppProvider = ({ children }) => {
     backendError,
     fetchRooms,
     fetchFaculties,
-    fetchDepartments,
     fetchBookings,
     fetchAvailability,
     timetableData,

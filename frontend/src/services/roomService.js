@@ -36,12 +36,6 @@ export const roomService = {
     return res.json();
   },
 
-  getDepartments: async () => {
-    const res = await api.get('/departments');
-    if (!res.ok) throw new Error('Failed to fetch departments');
-    return res.json();
-  },
-
   getMyAvailability: async () => {
     const res = await api.get('/availability/my');
     if (!res.ok) throw new Error('Failed to fetch your cancellations');

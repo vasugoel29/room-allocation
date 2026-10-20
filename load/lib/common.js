@@ -30,7 +30,6 @@ export function appLoad(user, role) {
     const p = auth(user.token);
     const reqs = [
       ['GET', `${BASE}/health`, null, { ...p, tags: { name: 'health' } }],
-      ['GET', `${BASE}/departments`, null, { ...p, tags: { name: 'departments' } }],
       ['GET', `${BASE}/bookings/calendar?from=${calendarFrom()}&to=${calendarTo()}`, null, { ...p, tags: { name: 'calendar' } }],
       ['GET', `${BASE}/bookings/mine`, null, { ...p, tags: { name: 'bookings_mine' } }],
       ['GET', `${BASE}/availability`, null, { ...p, tags: { name: 'availability' } }],
