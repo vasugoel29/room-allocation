@@ -80,13 +80,7 @@ const ROUTES = [
   { m: 'patch', path: `/api/transfers/${X}/reject`, min: 'VIEWER' },
   // departmentRoutes / branchRoutes
   { m: 'get', path: '/api/departments', min: 'PUBLIC' },
-  { m: 'post', path: '/api/departments', min: 'ADMIN', body: {} },
-  { m: 'patch', path: `/api/departments/${X}`, min: 'ADMIN', body: {} },
-  { m: 'delete', path: `/api/departments/${X}`, min: 'ADMIN' },
   { m: 'get', path: '/api/branches', min: 'PUBLIC' },
-  { m: 'post', path: '/api/branches', min: 'ADMIN', body: {} },
-  { m: 'patch', path: `/api/branches/${X}`, min: 'ADMIN', body: {} },
-  { m: 'delete', path: `/api/branches/${X}`, min: 'ADMIN' },
   // adminRoutes
   { m: 'get', path: '/api/admin/export/bookings', min: 'ADMIN' },
   { m: 'get', path: '/api/admin/audit-logs', min: 'ADMIN' },

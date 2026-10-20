@@ -218,3 +218,14 @@ commitment per slot). Open, needs a decision: FE-04 (session token in localStora
 | OPS-13 | H | fixed | Email failures were silent (fire-and-forget after commit; missing SMTP only warned). Now: transactional outbox, worker with retries/backoff and a terminal `failed` state; production refuses to start without SMTP unless `EMAIL_DELIVERY=off` |
 | NEW-P7-1 | L | fixed | An admin withdrawing their own transfer request was recorded as REJECTED (role took precedence over being the requester), so the owner was never told it was withdrawn |
 | FE-04 | M | closed (decision) | Bearer token stays in localStorage (frontend and API on different domains); mitigated by a strict CSP in `frontend/vercel.json` (pinned by a test) and server-side revocation |
+
+## Product decisions applied (20 Oct 2026)
+| Item | Change |
+|---|---|
+| Faculty "cancel my class" | Built: records the override, releases the room for that date/hour only, faculty no longer "busy" then; restorable; 404 if they don't teach then |
+| Admin reschedule | Admins can move anyone's booking under the owner's rules; owner notified (`booking_moved`) |
+| Bookings export | A date-only start/end covers the whole IST day |
+| Analytics | "Last N days" counts up to now only |
+| Student export | Includes class representatives (with a role column), excludes deactivated accounts |
+| Department/branch master list | Read-only in CRAS; written only by the ACL cron via `PUT /api/internal/departments` (migration v33: `acl_id`) |
+| Timetable times | Explicit AM/PM honoured; bare 01:00–07:59 keep the afternoon convention |

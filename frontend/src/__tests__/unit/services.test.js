@@ -57,6 +57,12 @@ describe('authService', () => {
     expect(last()).toEqual({ method: 'GET', url: '/api/auth/me', body: undefined });
   });
 
+  it('no department/branch editing in CRAS (the college ACL owns the master list)', () => {
+    for (const fn of ['createDepartment', 'updateDepartment', 'deleteDepartment', 'createBranch', 'updateBranch', 'deleteBranch']) {
+      expect(adminService[fn]).toBeUndefined();
+    }
+  });
+
   it('no local-account functions remain (accounts live in the college ACL)', () => {
     for (const fn of ['login', 'signup', 'forgotPassword', 'resetPassword', 'verifyStudent', 'createUser', 'updateUser']) {
       expect(authService[fn]).toBeUndefined();
@@ -168,10 +174,6 @@ describe('adminService', () => {
     ['createRoom', () => adminService.createRoom({ name: 'R' }), 'POST', '/api/rooms', { name: 'R' }],
     ['updateRoom', () => adminService.updateRoom(2, { name: 'R' }), 'PATCH', '/api/rooms/2', { name: 'R' }],
     ['deleteRoom', () => adminService.deleteRoom(2), 'DELETE', '/api/rooms/2', undefined],
-    ['createDepartment', () => adminService.createDepartment('IT'), 'POST', '/api/departments', { name: 'IT' }],
-    ['updateDepartment', () => adminService.updateDepartment(1, 'CS'), 'PATCH', '/api/departments/1', { name: 'CS' }],
-    ['deleteDepartment', () => adminService.deleteDepartment(1), 'DELETE', '/api/departments/1', undefined],
-    ['createBranch', () => adminService.createBranch({ n: 1 }), 'POST', '/api/branches', { n: 1 }],
     ['pollJobStatus', () => adminService.pollJobStatus('j1'), 'GET', '/api/admin/uploads/status/j1', undefined],
     ['listTimetableSlots', () => adminService.listTimetableSlots({ faculty_name: 'Dr X', day_of_week: 'Mon' }), 'GET', '/api/timetable/slots?faculty_name=Dr+X&day_of_week=Mon&page=1&limit=50', undefined],
     ['createTimetableSlot', () => adminService.createTimetableSlot({ a: 1 }), 'POST', '/api/timetable/slots', { a: 1 }],

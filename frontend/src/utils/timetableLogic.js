@@ -28,13 +28,16 @@ const sameRoomName = (scheduleName, roomName) =>
 export const getHourFromTime = (timeStr) => {
   if (!timeStr) return 0;
   const startPart = timeStr.split('-')[0].trim();
-  const match = startPart.match(/(\d{1,2}):(\d{2})/);
+  const match = startPart.match(/(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?/i);
   if (!match) return 0;
   let hours = Number(match[1]);
-  
-  // Heuristic for 12-hour data in the source JSON: 1-7 likely PM, 8-12 likely AM/Noon
-  if (hours >= 1 && hours < 8) hours += 12;
-  
+  const meridiem = match[3]?.[0]?.toLowerCase();
+
+  // An explicit AM/PM wins; bare times follow the source data's 12-hour convention (1-7 = PM).
+  if (meridiem === 'a') hours %= 12;
+  else if (meridiem === 'p') hours = (hours % 12) + 12;
+  else if (hours >= 1 && hours < 8) hours += 12;
+
   return hours;
 };
 

@@ -127,65 +127,26 @@ test.describe('Admin console', () => {
     expect((await res.json()).token).toBeUndefined();
   });
 
-  test('Departments: create, rename and delete', async ({ page, request, seed }) => {
+  // The college ACL owns the department/branch master list (synced via PUT /api/internal/departments);
+  // CRAS shows it read-only.
+  test('Departments and Branches are read-only lists managed by the ACL', async ({ page, request, seed }) => {
     const admin = await seed.user({ role: 'ADMIN' });
-    const name = `${firstSortingName()} Dept`;
+    const dept = await seed.one('INSERT INTO departments (name) VALUES ($1) RETURNING *', [`${firstSortingName()} Synced Dept`]);
+    const branch = await seed.one('INSERT INTO branches (name, short_code, department_id) VALUES ($1, $2, $3) RETURNING *',
+      [`${firstSortingName()} Synced Branch`, 'SB', dept.id]);
+
     await signIn(page, request, admin, '/admin?tab=departments');
+    await expect(page.getByText('Managed by the college ACL')).toBeVisible();
+    await expect(page.getByRole('button', { name: /add dept/i })).toHaveCount(0);
+    const row = page.locator('tr').filter({ hasText: dept.name });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole('button')).toHaveCount(0);
 
-    await page.getByRole('button', { name: /add dept/i }).click();
-    await modal(page, 'New Dept').getByPlaceholder('e.g. Department of CSE').fill(name);
-    await page.getByRole('button', { name: /create department/i }).click();
-    await expect(toast(page, /department created successfully/i)).toBeVisible();
-    const dept = await seed.one('SELECT * FROM departments WHERE name = $1', [name]);
-    expect(dept).toBeTruthy();
-
-    const row = page.locator('tr').filter({ hasText: name });
-    await row.getByRole('button').first().click();
-    const renamed = `${name} Renamed`;
-    await expect(modal(page, 'Edit Dept').getByPlaceholder('e.g. Department of CSE')).toHaveValue(name);
-    await modal(page, 'Edit Dept').getByPlaceholder('e.g. Department of CSE').fill(renamed);
-    await page.getByRole('button', { name: /save changes/i }).click();
-    await expect(toast(page, /department updated successfully/i)).toBeVisible();
-    expect((await seed.one('SELECT name FROM departments WHERE id = $1', [dept.id])).name).toBe(renamed);
-
-    const renamedRow = page.locator('tr').filter({ hasText: renamed });
-    await renamedRow.getByRole('button').last().click();
-    await dialog(page, /delete department/i).getByRole('button', { name: /delete department/i }).click();
-    await expect(toast(page, /department deleted successfully/i)).toBeVisible();
-    await expect(renamedRow).toHaveCount(0);
-    expect(await seed.one('SELECT is_active FROM departments WHERE id = $1', [dept.id])).toEqual({ is_active: false }); // soft delete
-  });
-
-  test('Branches: create, edit and delete', async ({ page, request, seed }) => {
-    const admin = await seed.user({ role: 'ADMIN' });
-    const dept = await seed.one('INSERT INTO departments (name) VALUES ($1) RETURNING *', [`${firstSortingName()} Branch Dept`]);
-    const name = `${firstSortingName()} Branch`;
     await signIn(page, request, admin, '/admin?tab=branches');
-
-    await page.getByRole('button', { name: /add branch/i }).click();
-    const m = modal(page, 'New Branch');
-    await m.getByPlaceholder('e.g. Information Technology').fill(name);
-    await m.getByPlaceholder('e.g. IT').fill('zz');
-    await m.locator('select').selectOption({ label: dept.name });
-    await m.getByRole('button', { name: /create branch/i }).click();
-    await expect(toast(page, /branch created successfully/i)).toBeVisible();
-    const branch = await seed.one('SELECT * FROM branches WHERE name = $1', [name]);
-    expect(branch).toMatchObject({ short_code: 'ZZ', department_id: dept.id });
-
-    await page.getByRole('button', { name: `Edit ${name}` }).click();
-    // the modal copies the branch into its form in an effect; wait for it before typing
-    await expect(modal(page, 'Edit Branch').getByPlaceholder('e.g. Information Technology')).toHaveValue(name);
-    await modal(page, 'Edit Branch').getByPlaceholder('e.g. IT').fill('ZY');
-    await page.getByRole('button', { name: /save changes/i }).click();
-    await expect(toast(page, /branch updated successfully/i)).toBeVisible();
-    expect((await seed.one('SELECT short_code FROM branches WHERE id = $1', [branch.id])).short_code).toBe('ZY');
-
-    await page.getByRole('button', { name: `Delete ${name}` }).click();
-    await dialog(page, /delete branch/i).getByRole('button', { name: /delete branch/i }).click();
-    await expect(toast(page, /branch deleted successfully/i)).toBeVisible();
-    expect(await seed.one('SELECT is_active FROM branches WHERE id = $1', [branch.id])).toEqual({ is_active: false }); // soft delete
-    await seed.db.query('DELETE FROM branches WHERE id = $1', [branch.id]);
-    await seed.db.query('DELETE FROM departments WHERE id = $1', [dept.id]);
+    await expect(page.getByText('Managed by the college ACL')).toBeVisible();
+    await expect(page.getByRole('button', { name: /add branch/i })).toHaveCount(0);
+    await expect(page.locator('tr').filter({ hasText: branch.name })).toContainText('SB');
+    await expect(page.getByRole('button', { name: `Edit ${branch.name}` })).toHaveCount(0);
   });
 
   test('Bookings: lists today\'s booking and cancels it; export downloads a CSV', async ({ page, request, seed }) => {

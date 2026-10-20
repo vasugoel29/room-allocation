@@ -4,6 +4,8 @@ import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import cache from '../utils/cache.js';
 import { notify } from '../notifications/notify.js';
+import { slotOverlaps } from '../services/bookingRules.js';
+import { logActivity } from '../services/loggerService.js';
 
 function toTitleCase(str) {
   if (!str) return '';
@@ -187,20 +189,86 @@ export async function checkFacultyAvailability(req, res) {
     }
 }
 
-export async function overrideFacultySlot(req, res) {
-    try {
-        res.json({ message: 'Slot updated successfully' });
-    } catch (err) {
-        sendServerError(res, err);
-    }
+/** The names a faculty member's classes are filed under: their account name and directory name. */
+async function facultyNames(user) {
+  const { rows } = await db.query('SELECT name FROM faculties WHERE user_id = $1 AND is_active', [user.id]);
+  return [...new Set([user.name, ...rows.map((r) => r.name)].filter(Boolean).map((n) => n.trim().toUpperCase()))];
 }
 
+const istToday = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
+
+/**
+ * POST /api/timetable/faculty/override { date, hour, is_cancelled = true }
+ * A faculty member cancels (or restores) one of their own timetabled classes for one date. The
+ * class's room is released for that date and hour only, so it shows as free and can be booked;
+ * timetables drop the class for that day. Refused unless they teach at that time.
+ */
+export async function overrideFacultySlot(req, res) {
+  const { date, hour } = req.body;
+  const cancel = req.body.is_cancelled !== false;
+  if (date < istToday()) return res.status(400).json({ error: 'Classes in the past cannot be changed.' });
+  try {
+    const names = await facultyNames(req.user);
+    const day = new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
+    const { rows: slots } = await db.query(
+      `SELECT t.slot_time, t.faculty_name, r.id AS room_id FROM timetable_slots t
+         LEFT JOIN rooms r ON r.is_active AND lower(r.name) = lower(t.room_name)
+        WHERE UPPER(TRIM(t.faculty_name)) = ANY($1) AND t.day_of_week = $2
+       UNION ALL
+       SELECT f.slot_time, f.faculty_name, f.room_id FROM faculty_timetable_slots f
+        WHERE f.is_active AND f.is_occupied AND UPPER(TRIM(f.faculty_name)) = ANY($1) AND f.day_of_week = $2`,
+      [names, day],
+    );
+    const slot = slots.find((s) => slotOverlaps(s.slot_time, hour * 60, hour * 60 + 60));
+    if (!slot) return res.status(404).json({ error: 'You have no class at that time.' });
+
+    const override = await db.runInTransaction(async (client) => {
+      const { rows: [o] } = await client.query(
+        `INSERT INTO faculty_slot_overrides (faculty_name, date, hour, is_cancelled)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (faculty_name, date, hour) DO UPDATE SET is_cancelled = EXCLUDED.is_cancelled
+         RETURNING id, faculty_name, date::text AS date, hour, is_cancelled`,
+        [slot.faculty_name, date, hour, cancel],
+      );
+      // Withdraw any earlier release for this override, then release again if cancelled.
+      await client.query(
+        `UPDATE room_slot_releases SET is_active = FALSE, deactivated_at = NOW()
+          WHERE source_type = 'faculty_override' AND source_id = $1 AND is_active`, [o.id],
+      );
+      if (cancel && slot.room_id) {
+        await client.query(
+          `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, created_by)
+           VALUES ($1, $2, $3, $4, 'faculty_override', $5, $6)`,
+          [slot.room_id, date, hour, hour + 1, o.id, req.user.id],
+        );
+      }
+      await logActivity({
+        userId: req.user.id, action: cancel ? 'CANCEL_OWN_CLASS' : 'RESTORE_OWN_CLASS', entityType: 'faculty_override',
+        entityId: o.id, details: { date, hour, room_id: slot.room_id ?? null },
+      }, client);
+      return o;
+    });
+    cache.delete('room_availability_all');
+    cache.deletePattern('admin_status_.*');
+    res.json({ message: cancel ? 'Class cancelled for that date; the room is free.' : 'Class restored.', override });
+  } catch (err) {
+    sendServerError(res, err, 'Failed to update the class.');
+  }
+}
+
+/** GET /api/timetable/faculty/overrides — this faculty member's cancelled classes (last 30 days on). */
 export async function getFacultyOverrides(req, res) {
-    try {
-        res.json([]);
-    } catch (err) {
-        sendServerError(res, err);
-    }
+  try {
+    const { rows } = await db.query(
+      `SELECT id, faculty_name, date::text AS date, hour, is_cancelled FROM faculty_slot_overrides
+        WHERE UPPER(TRIM(faculty_name)) = ANY($1) AND date >= CURRENT_DATE - 30 AND is_cancelled
+        ORDER BY date, hour`,
+      [await facultyNames(req.user)],
+    );
+    res.json(rows);
+  } catch (err) {
+    sendServerError(res, err);
+  }
 }
 
 /** Template data for a class-cancellation request (IST date and the one-hour slot). */

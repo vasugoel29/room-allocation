@@ -45,9 +45,7 @@ import { useAdminQuickBook } from '../hooks/useAdminQuickBook';
 import AdminRooms from '../features/admin/AdminRooms';
 import AdminRoomModal from '../components/modals/AdminRoomModal';
 import AdminDepartments from '../features/admin/AdminDepartments';
-import AdminDepartmentModal from '../components/modals/AdminDepartmentModal';
 import AdminBranches from '../features/admin/AdminBranches';
-import AdminBranchModal from '../components/modals/AdminBranchModal';
 
 function AdminDashboard() {
   const { user } = useContext(AppContext);
@@ -61,7 +59,7 @@ function AdminDashboard() {
   const [filterRange, setFilterRange] = useState('day'); // 'day' | 'week'
   
   const { bookings, bookingsMeta, loading, fetchData } = useAdminData(filterRange);
-  const { users, usersMeta, departments, fetchUsers, handleDeactivateUser } = useAdminUsers(activeTab, searchTerm);
+  const { users, usersMeta, fetchUsers, handleDeactivateUser } = useAdminUsers(activeTab, searchTerm);
   
   const { 
     quickBookForm, roomStatuses, submitting, 
@@ -85,10 +83,6 @@ function AdminDashboard() {
   const [editingRoom, setEditingRoom] = useState(null);
 
   // Department modal state
-  const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
-  const [editingDept, setEditingDept] = useState(null);
-  const [isBranchModalOpen, setIsBranchModalOpen] = useState(false);
-  const [editingBranch, setEditingBranch] = useState(null);
 
   const fetchAdminRooms = async (page = roomsMeta.page) => {
     try {
@@ -154,55 +148,6 @@ function AdminDashboard() {
     setIsRoomModalOpen(true);
   };
 
-  const deleteDepartment = (id) => {
-    setConfirmConfig({
-      isOpen: true,
-      title: 'Delete Department',
-      message: 'Are you sure you want to delete this department?',
-      confirmText: 'Delete Department',
-      confirmType: 'danger',
-      action: async () => {
-        try {
-          await adminService.deleteDepartment(id);
-          toast.success('Department deleted successfully');
-          fetchAdminDepartments(deptsMeta.page);
-        } catch (err) {
-          console.error(err);
-          toast.error(err.message || 'Failed to delete department');
-        }
-      }
-    });
-  };
-
-  const openDeptModal = (dept = null) => {
-    setEditingDept(dept);
-    setIsDeptModalOpen(true);
-  };
-
-  const deleteBranch = (id) => {
-    setConfirmConfig({
-      isOpen: true,
-      title: 'Delete Branch',
-      message: 'Are you sure you want to delete this branch? It will no longer be offered; existing users and history keep their branch.',
-      confirmText: 'Delete Branch',
-      confirmType: 'danger',
-      action: async () => {
-        try {
-          await adminService.deleteBranch(id);
-          toast.success('Branch deleted successfully');
-          fetchAdminBranches(branchesMeta.page);
-        } catch (err) {
-          console.error(err);
-          toast.error(err.message || 'Failed to delete branch');
-        }
-      }
-    });
-  };
-
-  const openBranchModal = (branch = null) => {
-    setEditingBranch(branch);
-    setIsBranchModalOpen(true);
-  };
 
   useEffect(() => {
     if (activeTab === 'rooms') {
@@ -313,8 +258,6 @@ function AdminDashboard() {
             setFilterRange={setFilterRange}
             exportCSV={exportCSV}
             openRoomModal={openRoomModal}
-            openDeptModal={openDeptModal}
-            openBranchModal={openBranchModal}
           />
 
           {/* Active section body content */}
@@ -486,8 +429,6 @@ function AdminDashboard() {
                     <AdminDepartments 
                       departments={adminDepartments}
                       searchTerm={searchTerm}
-                      onEdit={openDeptModal}
-                      onDelete={deleteDepartment}
                     />
                     {deptsMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
@@ -519,8 +460,6 @@ function AdminDashboard() {
                     <AdminBranches
                       branches={adminBranches}
                       searchTerm={searchTerm}
-                      onEdit={openBranchModal}
-                      onDelete={deleteBranch}
                     />
                     {branchesMeta.totalPages > 1 && (
                       <div className="p-4 bg-surface-low border-t border-border/20 flex items-center justify-between">
@@ -569,20 +508,6 @@ function AdminDashboard() {
         onClose={() => setIsRoomModalOpen(false)}
         editingRoom={editingRoom}
         fetchRooms={fetchAdminRooms}
-      />
-      
-      <AdminDepartmentModal 
-        isOpen={isDeptModalOpen}
-        onClose={() => setIsDeptModalOpen(false)}
-        editingDept={editingDept}
-        fetchDepts={fetchAdminDepartments}
-      />
-      <AdminBranchModal
-        isOpen={isBranchModalOpen}
-        onClose={() => setIsBranchModalOpen(false)}
-        editingBranch={editingBranch}
-        departments={departments}
-        fetchBranches={fetchAdminBranches}
       />
       
       <ConfirmModal 

@@ -1,15 +1,9 @@
 import express from 'express';
-import { createBranch, deleteBranch, getBranches, updateBranch } from '../controllers/branchController.js';
-import { authenticate, requirePermission } from '../middleware/auth.js';
-import { PERMISSIONS as P } from '../auth/permissions.js';
-import { idParam } from '../middleware/validators.js';
+import { getBranches } from '../controllers/branchController.js';
 
+// Read-only: the college ACL owns this master list and writes it through PUT /api/internal/departments.
 const router = express.Router();
-router.param('id', idParam);
 
 router.get('/', getBranches);
-router.post('/', authenticate, requirePermission(P.DIRECTORY_MANAGE), createBranch);
-router.patch('/:id', authenticate, requirePermission(P.DIRECTORY_MANAGE), updateBranch);
-router.delete('/:id', authenticate, requirePermission(P.DIRECTORY_MANAGE), deleteBranch);
 
 export default router;

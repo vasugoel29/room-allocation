@@ -262,7 +262,9 @@ export const cancelBookingHandler = async (bookingId, user) => {
 export const rescheduleBooking = async (client, bookingId, data, user) => {
   const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [bookingId]);
   if (!booking) return { error: 'Booking not found', status: 404 };
-  if (booking.created_by !== user.id) return { error: 'Not authorized', status: 403 };
+  // The owner, or an admin on their behalf (decision 2026-10-20). The owner's own commitments still apply.
+  const byAdmin = booking.created_by !== user.id;
+  if (byAdmin && user.role !== 'ADMIN') return { error: 'Not authorized', status: 403 };
   if (!['ACTIVE', 'PENDING'].includes(booking.status)) return { error: `A ${String(booking.status).toLowerCase()} booking can't be moved`, status: 409 };
   if (new Date(booking.start_time).getTime() <= Date.now()) return { error: 'Bookings that have started cannot be moved', status: 400 };
 
@@ -282,13 +284,15 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   if (roomErr) return roomErr;
   const faculty = booking.faculty_id ? await facultyRepository.findActiveById(booking.faculty_id, client) : null;
 
-  const profile = { ...(await userRepository.findById(user.id, client)), role: user.role };
+  const ownerRow = await userRepository.findById(booking.created_by, client);
+  const profile = byAdmin ? ownerRow : { ...ownerRow, role: user.role };
+  const ownerFacultyId = byAdmin ? null : (user.faculty_id ?? null);
   const roomTimetable = await checkRoomTimetable(client, room, t);
   if (roomTimetable) return roomTimetable;
   const people = await checkPeopleTimetables(client, profile, faculty, t);
   if (people) return people;
   const conflict = await checkBookingConflicts(client, {
-    roomId: room.id, personId: user.id, personFacultyId: user.faculty_id ?? null, faculty, t, excludeId: booking.id,
+    roomId: room.id, personId: booking.created_by, personFacultyId: ownerFacultyId, faculty, t, excludeId: booking.id,
   });
   if (conflict) return conflict;
 
@@ -303,11 +307,15 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   let updated = await bookingRepository.updateBooking(bookingId, { start_time: t.start, end_time: t.end, room_id: room.id }, client);
   // A student's approved booking that moves needs its faculty to approve the new slot (NEW-P4-2).
   const moved = t.start !== new Date(booking.start_time).toISOString() || t.end !== new Date(booking.end_time).toISOString() || room.id !== booking.room_id;
-  if (moved && !isStaff(user.role) && booking.faculty_id && booking.status === 'ACTIVE') {
+  if (moved && !byAdmin && !isStaff(user.role) && booking.faculty_id && booking.status === 'ACTIVE') {
     updated = await bookingRepository.updateStatus(bookingId, 'PENDING', client);
     await deactivateReleasesFor(client, 'reschedule', booking.id);
   }
-  if (moved && booking.faculty_id && !isStaff(user.role)) {
+  if (moved && byAdmin) {
+    const facts = await bookingFacts(client, booking.id);
+    await notify(client, [{ userId: booking.created_by }], 'booking_moved', { ...facts.data, by: user.name || 'An administrator' },
+      { actorId: user.id, entityType: 'booking', entityId: booking.id });
+  } else if (moved && booking.faculty_id && !isStaff(user.role)) {
     const facts = await bookingFacts(client, booking.id);
     await notify(client, [{ facultyId: booking.faculty_id }],
       booking.status === 'ACTIVE' ? 'booking_rescheduled' : 'booking_requested',

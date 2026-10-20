@@ -179,11 +179,32 @@ describe('PATCH /api/bookings/:id (reschedule)', () => {
     expect(await historyRows(booking.id)).toHaveLength(0);
   });
 
-  // QUESTION: admins can cancel anyone's booking but cannot reschedule it (owner-only). Intended?
-  test('ADMIN cannot reschedule a booking they do not own (current behaviour: 403)', async () => {
+  // Decision 2026-10-20: admins may move anyone's booking. The owner's commitments still apply and
+  // the owner is notified; an admin's move doesn't send an approved booking back for re-approval.
+  test('ADMIN moves someone else\'s booking: 200, status kept, owner notified', async () => {
+    const fac = await createFaculty();
+    const { owner, booking } = await seeded({ faculty_id: fac.faculty.id });
+    const target = await createRoom();
+    const admin = await createAdmin();
+    const res = await patch(admin.auth, booking.id, { room_id: target.id });
+    expect(res.status).toBe(200);
+    expect(await getBooking(booking.id)).toMatchObject({ room_id: target.id, status: 'ACTIVE', created_by: owner.user.id });
+    const { rows } = await db.query('SELECT type, body FROM notifications WHERE user_id = $1', [owner.user.id]);
+    expect(rows).toEqual([expect.objectContaining({ type: 'booking_moved' })]);
+    expect(rows[0].body).toContain(target.name);
+  });
+
+  test('ADMIN move still respects the owner\'s other bookings (409)', async () => {
+    const { owner, booking } = await seeded({ hour: 10 });
+    const busy = futureSlot({ hour: 15 });
+    await insertBooking({ room_id: (await createRoom()).id, created_by: owner.user.id, start_time: busy.start });
+    const res = await patch((await createAdmin()).auth, booking.id, { start_time: busy.start, end_time: busy.end });
+    expect(res.status).toBe(409);
+  });
+
+  test('a non-admin who isn\'t the owner → 403', async () => {
     const { booking } = await seeded();
-    const res = await patch((await createAdmin()).auth, booking.id, { room_id: (await createRoom()).id });
-    expect(res.status).toBe(403);
+    expect((await patch((await createRep()).auth, booking.id, { room_id: booking.room_id })).status).toBe(403);
   });
 
   test('VIEWER → 403 Forbidden (role gate); no token → 401', async () => {

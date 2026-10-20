@@ -55,16 +55,16 @@ describe('XLSX exports', () => {
     expect(res.headers['content-type']).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(res.headers['content-disposition']).toBe('attachment; filename=students_export.xlsx');
     const rows = sheetRows(res.body);
-    expect(Object.keys(rows[0])).toEqual(['name', 'email', 'branch', 'year', 'section', 'degree', 'department_name', 'roll_no']);
+    expect(Object.keys(rows[0])).toEqual(['name', 'email', 'role', 'branch', 'year', 'section', 'degree', 'department_name', 'roll_no']);
     expect(rows.find((r) => r.email === student.user.email)).toEqual({
-      name: student.user.name, email: student.user.email, branch: 'CSE', year: 2, section: 3, degree: 'B.Tech',
+      name: student.user.name, email: student.user.email, role: 'VIEWER', branch: 'CSE', year: 2, section: 3, degree: 'B.Tech',
       department_name: 'Department Of Computer Science (CSE)', roll_no: student.user.roll_no,
     });
     const emails = rows.map((r) => r.email);
     expect(emails).not.toContain(prof.user.email);
     expect(emails).not.toContain(admin.user.email);
-    // QUESTION: class representatives (STUDENT_REP) are students too but are left out of the export.
-    expect(emails).not.toContain(rep.user.email);
+    // Class representatives are students too (decision 2026-10-20).
+    expect(rows.find((r) => r.email === rep.user.email)).toMatchObject({ role: 'STUDENT_REP' });
     expect(res.body.toString('latin1')).not.toContain('$2b$');
 
     const [audit] = await auditRowsSince(since, 'EXPORT_STUDENTS_XLSX');

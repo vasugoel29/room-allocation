@@ -893,6 +893,20 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_notifications_outbox ON notifications (email_next_at) WHERE email_status IN ('pending', 'sending');
       `);
     }
+  },
+  {
+    version: 33,
+    name: 'Departments/branches are synced from the college ACL: acl_id keys and updated_at',
+    run: async (client) => {
+      await client.query(`
+        ALTER TABLE departments ADD COLUMN IF NOT EXISTS acl_id VARCHAR(100);
+        ALTER TABLE departments ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+        CREATE UNIQUE INDEX IF NOT EXISTS departments_acl_id_key ON departments (acl_id) WHERE acl_id IS NOT NULL;
+        ALTER TABLE branches ADD COLUMN IF NOT EXISTS acl_id VARCHAR(100);
+        ALTER TABLE branches ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+        CREATE UNIQUE INDEX IF NOT EXISTS branches_acl_id_key ON branches (acl_id) WHERE acl_id IS NOT NULL;
+      `);
+    }
   }
 ];
 

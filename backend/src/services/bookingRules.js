@@ -28,12 +28,18 @@ export const isStaff = (role) => role === 'ADMIN' || role === 'FACULTY';
 
 const bad = (error, status = 400, extra = {}) => ({ error, status, ...extra });
 
-/** Minutes since IST midnight for an "HH:MM" timetable string (12-hour data: 1–7 means PM). */
+/**
+ * Minutes since IST midnight for a timetable time. An explicit AM/PM is honoured ("07:30 AM",
+ * "2:00 pm"); bare times follow the source data's 12-hour convention, where 01:00–07:59 means PM.
+ */
 export function timetableMinutes(hhmm) {
-  const m = String(hhmm || '').trim().match(/(\d{1,2}):(\d{2})/);
+  const m = String(hhmm || '').trim().match(/(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?/i);
   if (!m) return null;
   let h = Number(m[1]);
-  if (h >= 1 && h < 8) h += 12;
+  const meridiem = m[3]?.[0]?.toLowerCase();
+  if (meridiem === 'a') h = h % 12;
+  else if (meridiem === 'p') h = (h % 12) + 12;
+  else if (h >= 1 && h < 8) h += 12;
   return h * 60 + Number(m[2]);
 }
 
@@ -196,7 +202,14 @@ async function facultyTimetableHit(client, facultyName, t) {
       WHERE is_active AND is_occupied AND UPPER(faculty_name) = UPPER($1) AND day_of_week = $2`,
     [facultyName, t.day],
   );
-  return rows.find((r) => slotOverlaps(r.slot_time, t.startMin, t.endMin)) || null;
+  // Classes the faculty member cancelled for this date don't count.
+  const { rows: cancelled } = await client.query(
+    `SELECT hour FROM faculty_slot_overrides WHERE UPPER(faculty_name) = UPPER($1) AND date = $2::date AND is_cancelled`,
+    [facultyName, t.dateKey],
+  );
+  const off = new Set(cancelled.map((c) => c.hour));
+  return rows.find((r) => slotOverlaps(r.slot_time, t.startMin, t.endMin)
+    && !off.has(Math.floor(timetableMinutes(String(r.slot_time).split('-')[0]) / 60))) || null;
 }
 
 /**

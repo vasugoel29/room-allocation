@@ -100,6 +100,12 @@ export const TEMPLATES = {
     rows: [['Student', d.studentName], ...slotRows(d), d.reason ? ['Reason', d.reason] : ['Cancelled by', d.by]],
     link: '/faculty',
   }),
+  booking_moved: (d) => make({
+    title: `Your booking was moved — room ${d.roomName}`,
+    body: `${d.by} moved your booking to room ${d.roomName} on ${when(d)}.`,
+    rows: [...slotRows(d), ['Moved by', d.by]],
+    link: '/bookings',
+  }),
   booking_created_for_you: (d) => make({
     title: `Room ${d.roomName} booked for you`,
     body: `${d.by} booked room ${d.roomName} for you on ${when(d)}.`,

@@ -19,21 +19,3 @@ export const getDepartments = async (filters = {}) => {
   }
   return departmentRepository.findAll();
 };
-
-export const createDepartment = async (name) => {
-  return departmentRepository.upsert(name);
-};
-
-export const ensureDepartment = async (name) => {
-  if (!name) return null;
-  const dept = await departmentRepository.upsert(name);
-  return dept.id;
-};
-
-export const updateDepartment = async (id, name) => {
-  return departmentRepository.update(id, name);
-};
-
-export const deleteDepartment = async (id) => {
-  return departmentRepository.delete(id);
-};

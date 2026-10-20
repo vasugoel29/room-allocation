@@ -24,32 +24,5 @@ export const departmentRepository = {
       total: parseInt(countRes.rows[0].count),
       departments: dataRes.rows
     };
-  },
-
-  /**
-   * Upsert a department by name
-   */
-  upsert: async (name, client = db) => {
-    const query = 'INSERT INTO departments (name) VALUES ($1) ON CONFLICT (name) WHERE is_active DO UPDATE SET name = EXCLUDED.name RETURNING *';
-    const result = await client.query(query, [name]);
-    return result.rows[0];
-  },
-
-  /**
-   * Update department name
-   */
-  update: async (id, name, client = db) => {
-    const query = 'UPDATE departments SET name = $1 WHERE id = $2 AND is_active RETURNING *';
-    const result = await client.query(query, [name, id]);
-    return result.rows[0];
-  },
-
-  /**
-   * Soft-delete a department (rows are never removed; see the soft-delete rule).
-   */
-  delete: async (id, client = db) => {
-    const query = 'UPDATE departments SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1 AND is_active RETURNING *';
-    const result = await client.query(query, [id]);
-    return result.rows[0];
   }
 };

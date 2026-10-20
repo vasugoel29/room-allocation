@@ -11,7 +11,3 @@ export const getBranches = async (filters = {}) => {
     meta: { total, page, limit, totalPages: Math.ceil(total / limit) }
   };
 };
-
-export const createBranch = (branch) => branchRepository.create(branch);
-export const updateBranch = (id, branch) => branchRepository.update(id, branch);
-export const deleteBranch = (id) => branchRepository.delete(id);

@@ -25,35 +25,5 @@ export const branchRepository = {
       `, [limit, offset])
     ]);
     return { total: Number(countResult.rows[0].count), branches: dataResult.rows };
-  },
-
-  create: async ({ name, short_code, department_id }, client = db) => {
-    const result = await client.query(
-      `INSERT INTO branches (name, short_code, department_id)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [name, short_code, department_id]
-    );
-    return result.rows[0];
-  },
-
-  update: async (id, { name, short_code, department_id }, client = db) => {
-    const result = await client.query(
-      `UPDATE branches
-       SET name = $1, short_code = $2, department_id = $3
-       WHERE id = $4 AND is_active
-       RETURNING *`,
-      [name, short_code, department_id, id]
-    );
-    return result.rows[0];
-  },
-
-  /** Soft delete: the row stays so users and history keep their branch reference. */
-  delete: async (id, client = db) => {
-    const result = await client.query(
-      'UPDATE branches SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1 AND is_active RETURNING *',
-      [id],
-    );
-    return result.rows[0];
   }
 };

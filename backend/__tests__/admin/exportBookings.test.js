@@ -109,13 +109,17 @@ describe('GET /api/admin/export/bookings', () => {
     expect(open).not.toContain(mid.id);
   });
 
-  // QUESTION: a date-only end_date ("2031-01-09") means midnight UTC, so bookings later that day
-  // are excluded. Admins picking a calendar day probably expect the whole (IST) day.
-  test('date-only end_date is treated as midnight UTC (excludes bookings later that day)', async () => {
+  // Decision 2026-10-20: a date-only start/end date covers that whole IST day.
+  test('date-only dates cover the whole IST day (early and late bookings included, next day excluded)', async () => {
     const day = '2031-01-09';
-    const b = await bookingOn(day, 4);
+    const at = (start, end) => insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: start, end_time: end });
+    const early = await at('2031-01-08T19:00:00Z', '2031-01-08T20:00:00Z'); // 00:30–01:30 IST on the 9th
+    const late = await at('2031-01-09T17:00:00Z', '2031-01-09T18:00:00Z'); // 22:30–23:30 IST on the 9th
+    const next = await at('2031-01-09T19:00:00Z', '2031-01-09T20:00:00Z'); // 00:30 IST on the 10th
     const res = await exportCsv({ start_date: day, end_date: day });
-    expect(parseCsv(res.text).slice(1).map((r) => Number(r[0]))).not.toContain(b.id);
+    const ids = parseCsv(res.text).slice(1).map((r) => Number(r[0]));
+    expect(ids).toEqual(expect.arrayContaining([early.id, late.id]));
+    expect(ids).not.toContain(next.id);
   });
 
   test('double quotes, commas and newlines in purpose/user name are quoted and round-trip', async () => {

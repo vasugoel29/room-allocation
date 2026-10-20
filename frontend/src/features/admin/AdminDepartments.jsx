@@ -1,7 +1,8 @@
 import React from 'react';
-import { Edit, Trash2, Layers } from 'lucide-react';
+import { Layers } from 'lucide-react';
 
-function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
+// Read-only: the college ACL owns departments (synced into CRAS); nothing is edited here.
+function AdminDepartments({ departments, searchTerm }) {
   const filteredDepts = departments.filter(dept => 
     dept.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -28,10 +29,6 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
                 <span className="text-lg font-black text-text-primary leading-tight font-display capitalize">{item.name}</span>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button onClick={() => onEdit(item)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary rounded-xl font-bold border border-border text-xs capitalize tracking-wider"><Edit size={14} /> Edit</button>
-              <button onClick={() => onDelete(item.id)} className="flex-1 flex items-center justify-center gap-2 py-3 bg-bg-secondary text-red-500 rounded-xl font-bold border border-border text-xs capitalize tracking-wider"><Trash2 size={14} /> Delete</button>
-            </div>
           </div>
         ))}
       </div>
@@ -41,7 +38,6 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
         <thead>
           <tr className="border-b border-border/50 bg-bg-secondary/50">
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display">Department Name</th>
-            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50 font-display text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30">
@@ -53,22 +49,6 @@ function AdminDepartments({ departments, searchTerm, onEdit, onDelete }) {
                     <Layers size={14} className="text-primary" />
                   </div>
                   <span className="text-sm font-black text-text-primary font-display capitalize">{item.name}</span>
-                </div>
-              </td>
-              <td className="px-6 py-4 text-right">
-                <div className="flex justify-end gap-2">
-                  <button 
-                    onClick={() => onEdit(item)}
-                    className="p-2 bg-bg-primary border border-border text-text-secondary rounded-lg hover:text-accent hover:border-accent/50 transition-all shadow-sm"
-                  >
-                    <Edit size={14} />
-                  </button>
-                  <button 
-                    onClick={() => onDelete(item.id)}
-                    className="p-2 bg-bg-primary border border-border text-text-secondary rounded-lg hover:text-red-500 hover:border-red-500/50 transition-all shadow-sm"
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
               </td>
             </tr>

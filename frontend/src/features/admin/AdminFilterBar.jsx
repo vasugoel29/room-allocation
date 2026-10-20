@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Download, Home, Layers, GitBranch } from 'lucide-react';
+import { Search, Download, Home } from 'lucide-react';
 
 export const AdminFilterBar = ({
   activeTab,
@@ -9,8 +9,6 @@ export const AdminFilterBar = ({
   setFilterRange,
   exportCSV,
   openRoomModal,
-  openDeptModal,
-  openBranchModal
 }) => {
   if (activeTab === 'timetable') return null;
 
@@ -86,21 +84,8 @@ export const AdminFilterBar = ({
           </button>
         )}
 
-        {activeTab === 'departments' && (
-          <button 
-            onClick={() => openDeptModal()}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient"
-          >
-            <Layers size={14} />
-            Add Dept
-          </button>
-        )}
-
-        {activeTab === 'branches' && (
-          <button onClick={() => openBranchModal()} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 transition-all active:scale-95 shadow-ambient">
-            <GitBranch size={14} />
-            Add Branch
-          </button>
+        {(activeTab === 'departments' || activeTab === 'branches') && (
+          <span className="text-[11px] font-bold text-text-secondary">Managed by the college ACL</span>
         )}
       </div>
     </div>

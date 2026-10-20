@@ -2,7 +2,7 @@ import express from 'express';
 import * as timetableController from '../controllers/timetableController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
-import { idParam, validate, dateKey, hour } from '../middleware/validators.js';
+import { idParam, validate, dateKey, hour, bool } from '../middleware/validators.js';
 
 const router = express.Router();
 router.param('id', idParam);
@@ -12,7 +12,9 @@ router.get('/autocomplete/faculty', authenticate, timetableController.autocomple
 router.post('/upload', authenticate, requirePermission(P.TIMETABLE_MANAGE), timetableController.uploadTimetable);
 router.get('/faculty', authenticate, requirePermission(P.TIMETABLE_FACULTY), timetableController.getFacultyTimetable);
 router.get('/faculty/check/:id', authenticate, validate(dateKey('date'), hour('hour')), timetableController.checkFacultyAvailability);
-router.post('/faculty/override', authenticate, requirePermission(P.TIMETABLE_FACULTY), timetableController.overrideFacultySlot);
+router.post('/faculty/override', authenticate, requirePermission(P.TIMETABLE_FACULTY),
+  validate(dateKey('date', { location: 'body' }), hour('hour', { location: 'body' }), bool('is_cancelled', { optional: true })),
+  timetableController.overrideFacultySlot);
 router.get('/faculty/overrides', authenticate, requirePermission(P.TIMETABLE_FACULTY), timetableController.getFacultyOverrides);
 router.get('/cancellation-requests/pending', authenticate, requirePermission(P.CANCELLATION_REVIEW), timetableController.getPendingCancellationRequests);
 router.patch('/cancellation-requests/:id/:action', authenticate, requirePermission(P.CANCELLATION_REVIEW), timetableController.reviewCancellationRequest);

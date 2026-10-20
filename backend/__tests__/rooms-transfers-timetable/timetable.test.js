@@ -8,6 +8,8 @@ import {
   futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
+import { insertTimetableSlot } from '../../test/helpers/bookings.js';
+
 afterAll(closeDb);
 
 let n = 0;
@@ -251,26 +253,75 @@ describe('GET /api/timetable/faculty/check/:id', () => {
   });
 });
 
-// ─── Faculty override stubs ──────────────────────────────────────────────────
-describe('faculty override endpoints (stubs)', () => {
-  // QUESTION: POST /faculty/override reports success but persists nothing, and GET /faculty/overrides
-  // is hard-coded to []. Should these be implemented (faculty_slot_overrides table exists) or removed?
-  test('POST /faculty/override returns success but writes nothing; GET /faculty/overrides is always []', async () => {
-    const before = Number((await db.query('SELECT COUNT(*) FROM faculty_slot_overrides')).rows[0].count);
-    const res = await request(app).post('/api/timetable/faculty/override').set('Authorization', faculty.auth)
-      .send({ date: '2030-01-07', hour: 10, is_cancelled: true });
+// ─── Faculty "cancel my class" (override) ─────────────────────────────────────
+describe('faculty cancels their own class for one date', () => {
+  const override = (auth, body) => request(app).post('/api/timetable/faculty/override').set('Authorization', auth).send(body);
+  const list = (auth) => request(app).get('/api/timetable/faculty/overrides').set('Authorization', auth);
+
+  async function teaching(dayShort = 'Wed', hour = 11) {
+    const fac = await createFaculty();
+    const room = await createRoom();
+    const slot = futureSlot({ hour, day: dayShort, minLeadHours: 0 });
+    const pad = (h) => String(h > 12 ? h - 12 : h).padStart(2, '0');
+    await insertTimetableSlot({
+      department: `OVR ${tag()}`, semester: 3, section: 1, day_of_week: dayShort,
+      slot_time: `${pad(hour)}:00-${pad(hour + 1)}:00`, room_name: room.name, faculty_name: fac.user.name, subject_name: 'Networks',
+    });
+    return { fac, room, slot };
+  }
+
+  test('cancel → recorded, listed, and the room is released for that date and hour only', async () => {
+    const { fac, room, slot } = await teaching('Wed', 11);
+    const res = await override(fac.auth, { date: slot.dateKey, hour: 11 });
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ message: 'Slot updated successfully' });
-    expect(Number((await db.query('SELECT COUNT(*) FROM faculty_slot_overrides')).rows[0].count)).toBe(before);
-    const list = await request(app).get('/api/timetable/faculty/overrides').set('Authorization', faculty.auth);
-    expect(list.status).toBe(200);
-    expect(list.body).toEqual([]);
+    expect(res.body.override).toMatchObject({ date: slot.dateKey, hour: 11, is_cancelled: true });
+    expect((await list(fac.auth)).body).toEqual([expect.objectContaining({ date: slot.dateKey, hour: 11, is_cancelled: true })]);
+    const { rows } = await db.query(
+      `SELECT release_date::text AS d, start_hour, end_hour FROM room_slot_releases WHERE room_id = $1 AND is_active`, [room.id],
+    );
+    expect(rows).toEqual([{ d: slot.dateKey, start_hour: 11, end_hour: 12 }]);
+    // The room can now be booked at that hour on that date (a staff booking, so no approval step).
+    const booked = await request(app).post('/api/bookings').set('Authorization', (await createFaculty()).auth)
+      .send({ room_id: room.id, start_time: slot.start, end_time: slot.end, purpose: 'Using the freed room' });
+    expect(booked.status).toBe(201);
   });
 
-  test('stubs still require FACULTY', async () => {
+  test('the faculty member is no longer "busy" at that hour for approvals', async () => {
+    const { fac, slot } = await teaching('Thu', 14);
+    const rep2 = await createRep();
+    const other = await createRoom();
+    const before = await request(app).post('/api/bookings').set('Authorization', rep2.auth)
+      .send({ room_id: other.id, start_time: slot.start, end_time: slot.end, purpose: 'x', faculty_id: fac.faculty.id });
+    expect(before.status).toBe(409);
+    expect(before.body.conflict).toEqual({ type: 'faculty_busy' });
+    await override(fac.auth, { date: slot.dateKey, hour: 14 });
+    const after = await request(app).post('/api/bookings').set('Authorization', rep2.auth)
+      .send({ room_id: other.id, start_time: slot.start, end_time: slot.end, purpose: 'x', faculty_id: fac.faculty.id });
+    expect(after.status).toBe(201);
+  });
+
+  test('restoring (is_cancelled=false) withdraws the release', async () => {
+    const { fac, room, slot } = await teaching('Tue', 10);
+    await override(fac.auth, { date: slot.dateKey, hour: 10 });
+    const res = await override(fac.auth, { date: slot.dateKey, hour: 10, is_cancelled: false });
+    expect(res.status).toBe(200);
+    expect((await list(fac.auth)).body).toEqual([]);
+    expect((await db.query('SELECT 1 FROM room_slot_releases WHERE room_id = $1 AND is_active', [room.id])).rowCount).toBe(0);
+  });
+
+  test('refused when they have no class then (404), in the past (400), or with bad input (400)', async () => {
+    const { fac, slot } = await teaching('Mon', 9);
+    expect((await override(fac.auth, { date: slot.dateKey, hour: 15 })).status).toBe(404);
+    expect((await override((await createFaculty()).auth, { date: slot.dateKey, hour: 9 })).status).toBe(404);
+    expect((await override(fac.auth, { date: '2024-01-08', hour: 9 })).status).toBe(400);
+    expect((await override(fac.auth, { date: '2030-02-30', hour: 9 })).status).toBe(400);
+    expect((await override(fac.auth, { date: slot.dateKey, hour: 30 })).status).toBe(400);
+  });
+
+  test('requires FACULTY', async () => {
     expect((await request(app).post('/api/timetable/faculty/override')).status).toBe(401);
-    expect((await request(app).post('/api/timetable/faculty/override').set('Authorization', rep.auth).send({})).status).toBe(403);
-    expect((await request(app).get('/api/timetable/faculty/overrides').set('Authorization', rep.auth)).status).toBe(403);
+    expect((await override(rep.auth, {})).status).toBe(403);
+    expect((await list(rep.auth)).status).toBe(403);
   });
 });
 

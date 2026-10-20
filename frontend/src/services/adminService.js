@@ -138,50 +138,7 @@ export const adminService = {
     return res.json();
   },
 
-  createDepartment: async (name) => {
-    const res = await api.post('/departments', { name });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to create department');
-    }
-    return res.json();
-  },
 
-  updateDepartment: async (id, name) => {
-    const res = await api.patch(`/departments/${id}`, { name });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to update department');
-    }
-    return res.json();
-  },
-
-  deleteDepartment: async (id) => {
-    const res = await api.delete(`/departments/${id}`);
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || 'Failed to delete department');
-    }
-    return res.json();
-  },
-
-  createBranch: async (data) => {
-    const res = await api.post('/branches', data);
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed to create branch');
-    return res.json();
-  },
-
-  updateBranch: async (id, data) => {
-    const res = await api.patch(`/branches/${id}`, data);
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed to update branch');
-    return res.json();
-  },
-
-  deleteBranch: async (id) => {
-    const res = await api.delete(`/branches/${id}`);
-    if (!res.ok) throw new Error((await res.json()).error || 'Failed to delete branch');
-    return res.json();
-  },
 
   // Async upload job polling
   pollJobStatus: async (jobId) => {

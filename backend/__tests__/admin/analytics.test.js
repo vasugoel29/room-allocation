@@ -75,14 +75,14 @@ test('numbers reflect seeded ACTIVE bookings only, within the day window', async
   expect(weekRoom).toEqual({ name: room.name, booking_count: String(expected) });
 });
 
-// QUESTION: "last N days" analytics include every future booking too (there is no upper bound on
-// start_time), so utilisation for the past month is inflated by next week's bookings.
-test('future ACTIVE bookings are counted in the "last N days" totals (current behaviour)', async () => {
+// Decision 2026-10-20: "last N days" runs from N days ago up to now; future bookings don't count.
+test('future ACTIVE bookings are not counted in the "last N days" totals', async () => {
   const before = await analytics({ days: 1 });
   const room = await createRoom();
   await insertBooking({ room_id: room.id, created_by: booker.user.id, start_time: new Date(Date.now() + 200 * 86400_000).toISOString() });
   const after = await analytics({ days: 1 });
-  expect(Number(after.body.summary.booking_count) - Number(before.body.summary.booking_count)).toBe(1);
+  expect(Number(after.body.summary.booking_count) - Number(before.body.summary.booking_count)).toBe(0);
+  expect(after.body.topRooms.map((r) => r.name)).not.toContain(room.name);
 });
 
 // dailyTrends uses DATE_TRUNC('day', start_time) in the DB session time zone (UTC), while
