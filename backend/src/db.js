@@ -1166,6 +1166,91 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_room_slot_releases_source ON room_slot_releases (source_type, source_id) WHERE is_active;
       `);
     }
+  },
+  {
+    version: 37,
+    name: 'Integrity: status/role/type checks, NOT NULL keys, RESTRICT foreign keys, index hygiene',
+    run: async (client) => {
+      // Re-runnable. A rule that existing rows break is added NOT VALID (new writes are checked) and
+      // logged, so a deploy never fails on old data; nothing is rewritten or removed.
+      const has = async (name) => (await client.query('SELECT 1 FROM pg_constraint WHERE conname = $1', [name])).rowCount > 0;
+      const check = async (table, name, expr) => {
+        if (await has(name)) return;
+        const { rows: [{ n }] } = await client.query(`SELECT count(*)::int AS n FROM ${table} WHERE NOT (${expr})`);
+        if (n) logger.warn(`Migration v37: ${n} ${table} row(s) break ${name}; added NOT VALID`);
+        await client.query(`ALTER TABLE ${table} ADD CONSTRAINT ${name} CHECK (${expr})${n ? ' NOT VALID' : ''}`);
+      };
+      const notNull = async (table, column) => {
+        const { rows: [{ n }] } = await client.query(`SELECT count(*)::int AS n FROM ${table} WHERE ${column} IS NULL`);
+        if (n) logger.warn(`Migration v37: ${n} ${table}.${column} NULL(s); column left nullable`);
+        else await client.query(`ALTER TABLE ${table} ALTER COLUMN ${column} SET NOT NULL`);
+      };
+      const ROLES = "('VIEWER', 'STUDENT_REP', 'FACULTY', 'ADMIN')";
+
+      await check('bookings', 'bookings_status_check', "status IN ('ACTIVE', 'PENDING', 'CANCELLED', 'REJECTED')");
+      await check('booking_transfers', 'booking_transfers_status_check',
+        "status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED', 'CANCELLED')");
+      await check('users', 'users_role_check', `role IN ${ROLES}`);
+      await check('user_access', 'user_access_role_check', `role IN ${ROLES}`);
+      await check('rooms', 'rooms_type_check', "type IS NULL OR type IN ('Lecture Room', 'Lab', 'Auditorium', 'Committee Room')");
+      await client.query("UPDATE users SET role = 'VIEWER' WHERE role IS NULL; ALTER TABLE users ALTER COLUMN role SET DEFAULT 'VIEWER'");
+      for (const [table, column] of [['users', 'role'], ['bookings', 'room_id'], ['bookings', 'created_by'], ['bookings', 'status'],
+        ['booking_transfers', 'booking_id'], ['booking_transfers', 'owner_id'], ['booking_transfers', 'requested_by'],
+        ['booking_transfers', 'status']]) {
+        await notNull(table, column);
+      }
+
+      // Rows are soft-deleted, never removed: a hard delete of a referenced row must fail loudly
+      // instead of cascading through bookings and history (or quietly nulling who did what).
+      const { rows: fks } = await client.query(`
+        SELECT conrelid::regclass::text AS tbl, conname, pg_get_constraintdef(oid) AS def
+          FROM pg_constraint WHERE contype = 'f' AND connamespace = 'public'::regnamespace AND confdeltype IN ('c', 'n')`);
+      for (const fk of fks) {
+        await client.query(`ALTER TABLE ${fk.tbl} DROP CONSTRAINT ${fk.conname},
+          ADD CONSTRAINT ${fk.conname} ${fk.def.replace(/ ON DELETE (CASCADE|SET NULL)/, ' ON DELETE RESTRICT')}`);
+      }
+
+      // ACL revocation keeps the snapshot (marked revoked) instead of deleting it.
+      await client.query('ALTER TABLE user_access ADD COLUMN IF NOT EXISTS revoked_at TIMESTAMPTZ');
+
+      // Room names are unique among active rooms regardless of case (the seeder and the timetable
+      // match them case-insensitively).
+      const { rows: [dup] } = await client.query(
+        'SELECT lower(name) AS name FROM rooms WHERE is_active GROUP BY lower(name) HAVING count(*) > 1 LIMIT 1');
+      if (dup) logger.warn(`Migration v37: active rooms share the name "${dup.name}" in different case; kept the exact-case unique index`);
+      else {
+        await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS rooms_name_lower_active_key ON rooms (lower(name)) WHERE is_active;
+          DROP INDEX IF EXISTS rooms_name_active_key;
+        `);
+      }
+
+      await client.query(`
+        -- Duplicates of a unique index, or of the case-insensitive one.
+        DROP INDEX IF EXISTS idx_availability_room_day_hour;
+        ALTER TABLE faculties DROP CONSTRAINT IF EXISTS faculties_email_key;
+        DROP INDEX IF EXISTS faculties_email_key;
+        -- Booleans with two values: never chosen by the planner.
+        DROP INDEX IF EXISTS idx_rooms_active, idx_users_active, idx_faculties_active, idx_faculty_timetable_slots_active;
+        -- Exact-name index no query uses (searches are ILIKE or upper(trim()), and matching is by id).
+        DROP INDEX IF EXISTS idx_faculty_tt_name;
+        DROP INDEX IF EXISTS idx_timetable_slots_faculty;
+        CREATE INDEX IF NOT EXISTS idx_timetable_slots_faculty_name ON timetable_slots (upper(trim(faculty_name))) WHERE is_active;
+        -- The exclusion indexes serve ACTIVE/PENDING lookups; only "PENDING requests for this room
+        -- and time" (approval rejects the losers) needs its own, measured on the load database:
+        -- 0.29 ms → 0.015 ms, and 600 kB of full-table GiST indexes go.
+        CREATE INDEX IF NOT EXISTS idx_bookings_room_pending ON bookings USING gist (room_id, tstzrange(start_time, end_time))
+          WHERE status = 'PENDING';
+        DROP INDEX IF EXISTS idx_bookings_range_gist, idx_bookings_user_range;
+        -- Transfer inboxes: by owner, by requester (newest first), by the faculty asked to approve.
+        CREATE INDEX IF NOT EXISTS idx_transfers_owner ON booking_transfers (owner_id);
+        CREATE INDEX IF NOT EXISTS idx_transfers_requested_by ON booking_transfers (requested_by, created_at DESC);
+        CREATE INDEX IF NOT EXISTS idx_transfers_target_faculty ON booking_transfers (target_faculty_id) WHERE target_faculty_id IS NOT NULL;
+        -- Notifications that are never emailed keep no rendered email.
+        UPDATE notifications SET email_subject = NULL, email_html = NULL
+         WHERE email_status = 'none' AND (email_subject IS NOT NULL OR email_html IS NOT NULL);
+      `);
+    }
   }
 ];
 

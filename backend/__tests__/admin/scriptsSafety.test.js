@@ -15,18 +15,14 @@ test('unseed.js is detected as destructive (sanity check for the scan below)', (
   expect(DESTRUCTIVE).toContain('unseed.js');
 });
 
-test('unseed.js deletes users with a role filter (it is meant to keep admins)', () => {
-  expect(read('unseed.js')).toMatch(/DELETE FROM users WHERE role\s*(!=|<>)/i);
-});
-
-// Roles are stored upper-case ('ADMIN'); `role != 'admin'` matches every row, admins included.
-test("[OPS-01] unseed.js preserves admins using the stored upper-case role ('ADMIN')", () => {
+// Foreign keys are RESTRICT (rows are only soft-deleted), so the dev reset recreates the schema
+// and re-applies the migrations instead of deleting table by table. People come back on their
+// next ACL sign-in.
+test('unseed.js resets the schema and re-applies migrations; it deletes no rows one table at a time', () => {
   const src = read('unseed.js');
-  const m = src.match(/DELETE FROM users WHERE ([^'"`]*?role[^)]*?)['"`]\)/i) || src.match(/DELETE FROM users WHERE (.*)$/im);
-  expect(m).not.toBeNull();
-  const clause = m[1];
-  expect(clause).toMatch(/'ADMIN'/);
-  expect(clause).not.toMatch(/'admin'/);
+  expect(src).toMatch(/DROP SCHEMA public CASCADE; CREATE SCHEMA public;/);
+  expect(src).toMatch(/connectAndMigrate\(\)/);
+  expect(src).not.toMatch(/DELETE FROM/i);
 });
 
 // Destructive scripts call the shared guard (scripts/lib/guard.js), which is checked below.

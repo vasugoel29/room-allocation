@@ -49,7 +49,7 @@ const bookingUpcomingActive = (booking) =>
 
 /** Does this user's ACL snapshot let them book without approval (i.e. staff)? */
 async function ownerBooksDirect(client, userId) {
-  const { rows: [r] } = await client.query('SELECT permissions FROM user_access WHERE user_id = $1', [userId]);
+  const { rows: [r] } = await client.query('SELECT permissions FROM user_access WHERE user_id = $1 AND revoked_at IS NULL', [userId]);
   return effectivePermissions(r?.permissions || []).has(P.BOOKINGS_DIRECT);
 }
 

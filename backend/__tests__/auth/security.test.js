@@ -328,6 +328,8 @@ describe('JWT handling', () => {
 
   test('[SEC-09] token of a deleted user is rejected', async () => {
     const { user, auth } = await createViewer();
+    // (The app only soft-deletes; this removes the row outright to prove a token can't outlive it.)
+    await db.query('DELETE FROM user_access WHERE user_id = $1; ', [user.id]);
     await db.query('DELETE FROM users WHERE id = $1', [user.id]);
     expect((await get(ANY, auth)).status).toBe(401);
   });

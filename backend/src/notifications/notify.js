@@ -20,6 +20,8 @@ export async function notify(client, recipients, type, data, { actorId = null, e
     const key = target.userId != null ? `u${target.userId}` : `e${String(target.email).toLowerCase()}`;
     if (seen.has(key)) continue;
     seen.add(key);
+    // Only a notification that will be emailed keeps the rendered email.
+    const emailed = Boolean(target.email) && process.env.EMAIL_DELIVERY !== 'off';
     const { rows: [row] } = await client.query(
       `INSERT INTO notifications
          (user_id, email, type, title, body, link, entity_type, entity_id,
@@ -27,7 +29,7 @@ export async function notify(client, recipients, type, data, { actorId = null, e
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::varchar, $10, $11, CASE WHEN $9::varchar = 'pending' THEN NOW() END)
        RETURNING id, user_id, email, type, email_status`,
       [target.userId, target.email, type, content.title, content.body, content.link, entityType, entityId,
-        target.email && process.env.EMAIL_DELIVERY !== 'off' ? 'pending' : 'none', content.subject, content.html],
+        emailed ? 'pending' : 'none', emailed ? content.subject : null, emailed ? content.html : null],
     );
     created.push(row);
   }

@@ -142,7 +142,7 @@ export async function upsertUserFromAcl(access) {
        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
        ON CONFLICT (user_id) DO UPDATE SET acl_id = EXCLUDED.acl_id, role = EXCLUDED.role, roles = EXCLUDED.roles,
          permissions = EXCLUDED.permissions, allowed_scope = EXCLUDED.allowed_scope,
-         scopes_by_permission = EXCLUDED.scopes_by_permission, fetched_at = NOW()`,
+         scopes_by_permission = EXCLUDED.scopes_by_permission, fetched_at = NOW(), revoked_at = NULL`,
       [user.id, access.aclId, role, JSON.stringify(access.roles), JSON.stringify(access.permissions),
         JSON.stringify(access.allowedScope), JSON.stringify(access.scopesByPermission)],
     );
@@ -157,7 +157,7 @@ async function readRow(userId) {
             ua.role AS acl_role, ua.roles AS acl_roles, ua.permissions AS acl_permissions,
             ua.allowed_scope, ua.scopes_by_permission, ua.fetched_at AS acl_fetched_at
        FROM users u
-       LEFT JOIN user_access ua ON ua.user_id = u.id
+       LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
        LEFT JOIN faculties fac ON fac.user_id = u.id AND fac.is_active
       WHERE u.id = $1`,
     [userId],
@@ -202,7 +202,8 @@ async function refreshFromAcl(row) {
   } catch (err) {
     if (err instanceof AclError && (err.code === 'not_found' || err.code === 'inactive')) {
       logger.warn(`ACL revoked access for user ${row.id}: ${err.code}`);
-      await db.query('DELETE FROM user_access WHERE user_id = $1', [row.id]);
+      // The snapshot is kept as a record, marked revoked: it no longer grants anything.
+      await db.query('UPDATE user_access SET revoked_at = NOW() WHERE user_id = $1 AND revoked_at IS NULL', [row.id]);
       return null;
     }
     const age = Date.now() - new Date(row.acl_fetched_at).getTime();

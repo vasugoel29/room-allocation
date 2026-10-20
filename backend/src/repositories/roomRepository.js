@@ -2,6 +2,9 @@ import * as db from '../db.js';
 import { timetableRepository } from './timetableRepository.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
 
+/** The room types CRAS knows (rooms_type_check). Committee Rooms and Auditoriums are restricted. */
+export const ROOM_TYPES = Object.freeze(['Lecture Room', 'Lab', 'Auditorium', 'Committee Room']);
+
 /**
  * Repository for Room-related database operations
  */

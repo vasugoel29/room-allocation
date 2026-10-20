@@ -81,7 +81,7 @@ describe('faculty import (faculty directory)', () => {
       [`FI-${uniq()}`.slice(0, 32), 'Test Block', 'Lecture Room'])).rows[0];
     const { rows: [booking] } = await db.query(
       `INSERT INTO bookings (room_id, created_by, start_time, end_time, purpose, status, faculty_id)
-       VALUES ($1, $2, NOW() - interval '3 days', NOW() - interval '3 days' + interval '1 hour', 'hist', 'COMPLETED', $3) RETURNING id`,
+       VALUES ($1, $2, NOW() - interval '3 days', NOW() - interval '3 days' + interval '1 hour', 'hist', 'ACTIVE', $3) RETURNING id`,
       [room.id, admin.user.id, before.id]);
 
     const { job } = await runImport(app, admin.auth, 'faculty', `name,email,department_name,status\nLeaving Prof,${e},,inactive\n`);

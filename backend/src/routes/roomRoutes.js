@@ -3,7 +3,8 @@ import { body } from 'express-validator';
 import { getRooms, getAvailability, getAdminRoomStatus, overrideRoomAvailability, getMyOverrides, createRoom, updateRoom, deleteRoom, getRoomWeekSchedule, checkRoomConflict } from '../controllers/roomController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
-import { idParam, validate, dateKey, hour, positiveInt, text, bool, pagination, WEEKDAYS } from '../middleware/validators.js';
+import { idParam, validate, dateKey, hour, positiveInt, text, bool, pagination, oneOf, WEEKDAYS } from '../middleware/validators.js';
+import { ROOM_TYPES } from '../repositories/roomRepository.js';
 import { isDateKey } from '../utils/timezone.js';
 
 const SEE_ROOMS = [P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
@@ -17,13 +18,13 @@ const roomFields = [
   positiveInt('capacity', { optional: true, max: 10_000 }),
   body('floor').optional({ values: 'null' }).isInt({ min: -5, max: 200 }).withMessage('floor must be a whole number'),
   text('building', { optional: true, max: 100 }),
-  text('type', { optional: true, max: 100 }),
+  oneOf('type', ROOM_TYPES, { optional: true }),
   body('description').optional({ values: 'null' }).isString().isLength({ max: 1000 }).withMessage('description must be at most 1000 characters'),
 ];
 
 router.get('/rooms', authenticate, requirePermission(...SEE_ROOMS), validate(pagination({ max: 500 })), getRooms);
 router.post('/rooms', authenticate, requirePermission(P.ADMIN), validate(roomFields), createRoom);
-router.patch('/rooms/:id', authenticate, requirePermission(P.ADMIN), updateRoom);
+router.patch('/rooms/:id', authenticate, requirePermission(P.ADMIN), validate([oneOf('type', ROOM_TYPES, { optional: true })]), updateRoom);
 router.delete('/rooms/:id', authenticate, requirePermission(P.ADMIN), deleteRoom);
 router.get('/availability', authenticate, requirePermission(...SEE_ROOMS), getAvailability);
 router.get('/availability/my', authenticate, requirePermission(P.ADMIN), getMyOverrides);

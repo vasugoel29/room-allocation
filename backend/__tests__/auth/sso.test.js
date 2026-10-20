@@ -249,13 +249,22 @@ describe('sessions follow the ACL', () => {
     expect(after.body.user.role).toBe('STUDENT_REP');
   });
 
-  test('removal from the ACL ends the session at the next refresh', async () => {
+  test('removal from the ACL ends the session at the next refresh; the snapshot is kept, marked revoked, and a re-grant clears it', async () => {
     const email = uniqEmail('gone');
     mockAcl.set(email, aclEntry(email));
-    const { token } = (await devLogin(email)).body;
+    const { token, user } = (await devLogin(email)).body;
     mockAcl.delete(email);
     process.env.ACL_REFRESH_SECONDS = '0';
     expect((await me(token)).status).toBe(401);
+    const snapshot = async () => (await db.query('SELECT permissions, revoked_at FROM user_access WHERE user_id = $1', [user.id])).rows[0];
+    expect(await snapshot()).toMatchObject({ permissions: ['cras.calendar', 'cras.timetable', 'cras.bookings'], revoked_at: expect.any(Date) });
+
+    delete process.env.ACL_REFRESH_SECONDS;
+    mockAcl.set(email, aclEntry(email));
+    const again = await devLogin(email);
+    expect(again.status).toBe(200);
+    expect((await me(again.body.token)).status).toBe(200);
+    expect((await snapshot()).revoked_at).toBeNull();
   });
 
   test('deactivation in the ACL ends the session at the next refresh', async () => {

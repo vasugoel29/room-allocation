@@ -154,8 +154,8 @@ describe('POST /api/bookings — authN / authZ', () => {
     expect(rows).toHaveLength(0);
   });
 
-  test('unknown role in token → 403', async () => {
-    const u = await createUser({ role: 'SUPERUSER' });
+  test('a role with no permissions granted → 403 (the role itself grants nothing)', async () => {
+    const u = await createUser({ role: 'STUDENT_REP', permissions: [] });
     const room = await createRoom();
     const res = await post(u.auth, body(room, futureSlot({ hour: 10 })));
     expect(res.status).toBe(403);
