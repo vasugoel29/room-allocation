@@ -10,6 +10,8 @@
  *   nothing. Rows an admin deactivated are left deactivated (reported, never revived). Nothing is
  *   ever deleted. Users are never seeded: people appear when the college ACL validates them.
  */
+import { fileURLToPath } from 'url';
+import path from 'path';
 import '../src/config/env.js';
 import * as db from '../src/db.js';
 import { facultyRepository } from '../src/repositories/facultyRepository.js';
@@ -84,7 +86,7 @@ async function main() {
   await db.pool.end();
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   main().catch(async (err) => {
     console.error('Seeding failed:', err.message);
     process.exitCode = 1;

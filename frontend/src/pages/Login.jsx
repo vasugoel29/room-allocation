@@ -136,28 +136,32 @@ const Login = () => {
 
         {/* Pure Google SSO Action */}
         <div className="space-y-4 pt-2">
-          {/* Official GIS Button container if rendered */}
-          <div ref={googleBtnRef} className="flex justify-center" />
+          {loading && (
+            <div className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 border border-gray-300 py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm">
+              <Loader2 size={18} className="animate-spin text-primary-accent" />
+              <span className="text-text-primary text-xs font-bold">Verifying institutional access...</span>
+            </div>
+          )}
 
-          {/* Standard Primary Google SSO Button */}
-          <button
-            type="button"
-            onClick={handleDirectGoogleSSO}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-[0.98] disabled:opacity-60 cursor-pointer"
-          >
-            {loading ? (
-              <>
-                <Loader2 size={18} className="animate-spin text-primary-accent" />
-                <span className="text-text-primary text-xs font-bold">Verifying institutional access...</span>
-              </>
-            ) : (
-              <>
+          {/* Official GIS Button container when client ID is configured */}
+          {googleClientId ? (
+            <div
+              ref={googleBtnRef}
+              className={`flex justify-center min-h-[44px] ${loading ? 'hidden' : ''}`}
+            />
+          ) : (
+            /* Fallback button when client ID is missing */
+            !loading && (
+              <button
+                type="button"
+                onClick={handleDirectGoogleSSO}
+                className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              >
                 <GoogleIcon />
                 <span>Sign in with Google</span>
-              </>
-            )}
-          </button>
+              </button>
+            )
+          )}
         </div>
 
         {devLoginEnabled && (

@@ -52,6 +52,7 @@ describe('Login', () => {
   });
 
   it('[ACL-01] without a Google client id, the button explains the problem and calls no API (no hardcoded fallback)', async () => {
+    vi.stubEnv('VITE_GOOGLE_CLIENT_ID', '');
     const f = installFetch([]);
     const user = userEvent.setup();
     renderWithContext(<Login />, { ctx: { user: null } });

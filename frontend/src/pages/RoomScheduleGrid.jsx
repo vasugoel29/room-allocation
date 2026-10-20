@@ -6,7 +6,8 @@ import { toast } from 'react-hot-toast';
 import { getIstDateKey, getIstHour } from '../utils/timezone';
 import { 
   LayoutGrid, Calendar, ChevronLeft, ChevronRight, Search, 
-  AlertTriangle, Check, Loader, User, Clock, Trash2, X, Plus
+  AlertTriangle, Check, Loader, User, Clock, Trash2, X, Plus,
+  Unlock, BookOpen, Mail, ShieldAlert, Info
 } from 'lucide-react';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -140,6 +141,8 @@ const RoomScheduleGrid = () => {
     return { type: 'free' };
   };
 
+  const [actionLoading, setActionLoading] = useState(false);
+
   // Check conflicts before booking
   const checkConflicts = async (date, startHour, endHour) => {
     if (!selectedRoomId) return;
@@ -157,8 +160,70 @@ const RoomScheduleGrid = () => {
   const handleCellClick = (dateStr, hour) => {
     setBookingPurpose('');
     setConflictData({ hasConflict: false, conflicts: [] });
-    setDrawer({ date: dateStr, startHour: hour, endHour: hour + 1 });
+    setDrawer({ type: 'create', date: dateStr, startHour: hour, endHour: hour + 1 });
     checkConflicts(dateStr, hour, hour + 1);
+  };
+
+  const handleTimetableClick = (dateStr, hour, dayName, isTimetable) => {
+    setBookingPurpose('');
+    setDrawer({
+      type: 'timetable',
+      date: dateStr,
+      dayName,
+      startHour: hour,
+      endHour: hour + 1,
+      timetable: isTimetable
+    });
+  };
+
+  const handleBookingClick = (dateStr, hour, activeBooking) => {
+    setDrawer({
+      type: 'booking',
+      date: dateStr,
+      startHour: hour,
+      endHour: hour + 1,
+      booking: activeBooking
+    });
+  };
+
+  // Lift recurring block for this room & slot
+  const handleLiftBlock = async () => {
+    if (!selectedRoom?.name || !drawer) return;
+    if (!window.confirm(`Lift recurring block for Room ${selectedRoom.name} on ${drawer.dayName} at ${String(drawer.startHour).padStart(2, '0')}:00? This will make the slot available for bookings.`)) return;
+    
+    setActionLoading(true);
+    try {
+      await roomService.createAvailabilityOverride({
+        room_name: selectedRoom.name,
+        day: drawer.dayName.substring(0, 3),
+        hour: drawer.startHour,
+        is_available: true
+      });
+      toast.success(`Slot ${String(drawer.startHour).padStart(2, '0')}:00 freed up for Room ${selectedRoom.name}`);
+      setDrawer(null);
+      fetchSchedule();
+    } catch (err) {
+      toast.error(err.message || 'Failed to lift block');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Cancel an active booking
+  const handleCancelActiveBooking = async (bookingId) => {
+    if (!bookingId) return;
+    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
+    setActionLoading(true);
+    try {
+      await bookingService.cancelBooking(bookingId);
+      toast.success('Booking cancelled successfully');
+      setDrawer(null);
+      fetchSchedule();
+    } catch (err) {
+      toast.error(err.message || 'Failed to cancel booking');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   // Resolve timetable conflict
@@ -195,7 +260,7 @@ const RoomScheduleGrid = () => {
     }
   };
 
-  // Submit quick booking
+  // Submit quick booking (free slot)
   const handleCreateBooking = async (e) => {
     e.preventDefault();
     if (!bookingPurpose.trim()) {
@@ -218,6 +283,33 @@ const RoomScheduleGrid = () => {
       fetchSchedule();
     } catch (err) {
       toast.error(err.message || 'Booking creation failed');
+    } finally {
+      setSubmittingBooking(false);
+    }
+  };
+
+  // Override timetable slot with an admin quick book
+  const handleOverrideBooking = async (e) => {
+    e.preventDefault();
+    if (!bookingPurpose.trim()) {
+      toast.error('Booking purpose is required to override');
+      return;
+    }
+    setSubmittingBooking(true);
+    try {
+      await adminService.quickBook({
+        room_name: selectedRoom?.name,
+        date: drawer.date,
+        slot: drawer.startHour,
+        hours: Math.max(1, drawer.endHour - drawer.startHour),
+        purpose: bookingPurpose
+      });
+
+      toast.success('Admin override booking created successfully!');
+      setDrawer(null);
+      fetchSchedule();
+    } catch (err) {
+      toast.error(err.message || 'Override booking failed');
     } finally {
       setSubmittingBooking(false);
     }
@@ -362,7 +454,8 @@ const RoomScheduleGrid = () => {
                         return (
                           <div 
                             key={hour} 
-                            className="bg-primary/10 border border-primary/20 rounded-2xl p-2 flex flex-col justify-between group relative overflow-hidden"
+                            onClick={() => handleTimetableClick(dateStr, hour, dayName, status.isTimetable)}
+                            className="bg-primary/10 hover:bg-primary/20 border border-primary/20 hover:border-primary/50 rounded-2xl p-2 flex flex-col justify-between group relative overflow-hidden cursor-pointer transition-all active:scale-95 hover:shadow-lg hover:shadow-primary/5"
                             title={`${status.isTimetable.faculty || 'Timetable'}: ${status.isTimetable.subject || 'Scheduled Class'}`}
                           >
                             <span className="text-[9px] capitalize font-bold tracking-tight text-primary leading-tight truncate">
@@ -379,7 +472,8 @@ const RoomScheduleGrid = () => {
                         return (
                           <div 
                             key={hour} 
-                            className="bg-secondary/15 border border-secondary/25 rounded-2xl p-2 flex flex-col justify-between group relative overflow-hidden"
+                            onClick={() => handleBookingClick(dateStr, hour, status.activeBooking)}
+                            className="bg-secondary/15 hover:bg-secondary/25 border border-secondary/25 hover:border-secondary/50 rounded-2xl p-2 flex flex-col justify-between group relative overflow-hidden cursor-pointer transition-all active:scale-95 hover:shadow-lg hover:shadow-secondary/5"
                             title={`Booked by ${status.activeBooking.bookerName}: ${status.activeBooking.purpose}`}
                           >
                             <span className="text-[9px] capitalize font-bold tracking-tight text-secondary leading-tight truncate">
@@ -438,12 +532,29 @@ const RoomScheduleGrid = () => {
 
       {/* Sidebar Drawer */}
       {drawer && (
-        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-shift-low border-l border-border/20 shadow-2xl flex flex-col p-6 animate-in slide-in-from-right duration-300">
+        <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-shift-low border-l border-border/20 shadow-2xl flex flex-col p-6 animate-in slide-in-from-right duration-300 overflow-y-auto">
+          
+          {/* Drawer Top Header */}
           <div className="flex items-center justify-between pb-4 border-b border-border/10">
             <div>
-              <h3 className="text-lg font-extrabold text-white capitalize tracking-tight font-display">Create Booking</h3>
-              <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-40 mt-0.5">
-                Room {selectedRoom?.name}
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-extrabold text-white capitalize tracking-tight font-display">
+                  {drawer.type === 'booking' ? 'Booking Details' : drawer.type === 'timetable' ? 'Scheduled Slot Details' : 'Create Booking'}
+                </h3>
+                {drawer.type === 'booking' && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    ACTIVE
+                  </span>
+                )}
+                {drawer.type === 'timetable' && (
+                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                    WEEKLY
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-text-secondary capitalize tracking-widest font-bold opacity-50 mt-0.5">
+                Room {selectedRoom?.name} {selectedRoom?.building ? `• ${selectedRoom.building}` : ''}
               </p>
             </div>
             <button onClick={() => setDrawer(null)} className="p-2 rounded-xl hover:bg-surface-mid text-text-secondary hover:text-white transition-colors">
@@ -451,111 +562,302 @@ const RoomScheduleGrid = () => {
             </button>
           </div>
 
-          <form onSubmit={handleCreateBooking} className="flex-1 flex flex-col justify-between py-6 space-y-6">
-            <div className="space-y-6">
-              {/* Timing info */}
-              <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-3">
-                <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
-                  <Calendar size={14} className="text-secondary" />
-                  <span>Date: <strong className="text-white">{drawer.date}</strong></span>
+          {/* DRAWER BODY: 1. ACTIVE BOOKING */}
+          {drawer.type === 'booking' && (
+            <div className="flex-1 flex flex-col justify-between py-6 space-y-6">
+              <div className="space-y-4">
+                {/* Timing Card */}
+                <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-3">
+                  <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
+                    <Calendar size={14} className="text-secondary" />
+                    <span>Date: <strong className="text-white">{drawer.date}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
+                    <Clock size={14} className="text-secondary" />
+                    <span>Slot: <strong className="text-white">{String(drawer.startHour).padStart(2, '0')}:00 - {String(drawer.endHour).padStart(2, '0')}:00</strong></span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
-                  <Clock size={14} className="text-secondary" />
-                  <span>Slot: <strong className="text-white">{String(drawer.startHour).padStart(2, '0')}:00 - {String(drawer.endHour).padStart(2, '0')}:00</strong></span>
+
+                {/* Booker Card */}
+                <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-3">
+                  <span className="text-[10px] capitalize tracking-widest font-extrabold text-text-secondary block">
+                    Reserved By
+                  </span>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary font-bold text-xs">
+                      <User size={15} />
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-xs font-bold text-white block">
+                        {drawer.booking?.bookerName || 'Unknown Booker'}
+                      </span>
+                      <span className="text-[10px] text-text-secondary flex items-center gap-1.5">
+                        <Mail size={11} className="opacity-60" />
+                        {drawer.booking?.bookerEmail || 'No email provided'}
+                      </span>
+                    </div>
+                  </div>
+                  {drawer.booking?.bookerRole && (
+                    <div className="pt-2 border-t border-border/5 flex items-center justify-between text-[10px]">
+                      <span className="text-text-secondary">Role</span>
+                      <span className="font-bold text-primary px-2 py-0.5 bg-primary/10 rounded-md">
+                        {drawer.booking.bookerRole}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Purpose Card */}
+                <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-1.5">
+                  <span className="text-[10px] capitalize tracking-widest font-extrabold text-text-secondary block">
+                    Booking Purpose
+                  </span>
+                  <p className="text-sm text-text-primary font-medium">
+                    {drawer.booking?.purpose || 'No purpose specified'}
+                  </p>
                 </div>
               </div>
 
-              {/* Conflict Panel */}
-              <div className="space-y-2">
-                <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">Availability Status</label>
-                {conflictChecking ? (
-                  <div className="flex items-center gap-2 text-xs text-text-secondary">
-                    <Loader size={14} className="animate-spin text-primary" />
-                    Checking for conflicts...
+              {/* Booking Actions */}
+              <div className="pt-4 border-t border-border/10 space-y-3">
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={() => handleCancelActiveBooking(drawer.booking?.id)}
+                  className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? (
+                    <>
+                      <Loader size={14} className="animate-spin" /> Cancelling...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={14} /> Cancel Booking
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* DRAWER BODY: 2. TIMETABLE SLOT */}
+          {drawer.type === 'timetable' && (
+            <div className="flex-1 flex flex-col justify-between py-6 space-y-6">
+              <div className="space-y-4">
+                {/* Timing Card */}
+                <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-3">
+                  <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
+                    <Calendar size={14} className="text-primary" />
+                    <span>Day: <strong className="text-white">{drawer.dayName}</strong> ({drawer.date})</span>
                   </div>
-                ) : conflictData.hasConflict ? (
-                  <div className="space-y-3">
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
-                      <AlertTriangle className="text-red-400 shrink-0 mt-0.5" size={16} />
-                      <div className="space-y-1">
-                        <span className="text-xs font-bold text-red-400 block capitalize">Conflict Detected!</span>
-                        <p className="text-[11px] text-text-secondary leading-normal">
-                          This slot overlaps with existing schedules. Resolve below to unlock booking.
-                        </p>
+                  <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
+                    <Clock size={14} className="text-primary" />
+                    <span>Slot: <strong className="text-white">{String(drawer.startHour).padStart(2, '0')}:00 - {String(drawer.endHour).padStart(2, '0')}:00</strong></span>
+                  </div>
+                </div>
+
+                {/* Class / Timetable Info */}
+                <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-3">
+                  <span className="text-[10px] capitalize tracking-widest font-extrabold text-text-secondary block">
+                    Schedule Details
+                  </span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <BookOpen size={14} className="text-primary shrink-0" />
+                      <span className="text-xs font-bold text-white">
+                        {drawer.timetable?.subject || 'Scheduled Class / Weekly Timetable Block'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-text-secondary pl-5.5">
+                      <User size={12} className="opacity-60 shrink-0" />
+                      <span>{drawer.timetable?.faculty || 'Campus Academic Timetable'}</span>
+                    </div>
+                    {drawer.timetable?.semester && (
+                      <div className="pt-2 border-t border-border/5 text-[10px] text-text-secondary pl-5.5">
+                        Semester: <strong className="text-white">{drawer.timetable.semester}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Override Options Panel */}
+                <div className="bg-surface-mid/20 rounded-2xl p-4 border border-border/10 space-y-4">
+                  <div className="flex items-start gap-2.5">
+                    <Info size={15} className="text-text-secondary shrink-0 mt-0.5" />
+                    <p className="text-[11px] text-text-secondary leading-relaxed">
+                      This is a recurring weekly timetable block. You can either lift this block to free the room or book over it directly.
+                    </p>
+                  </div>
+
+                  {/* Lift Block Button */}
+                  <button
+                    type="button"
+                    disabled={actionLoading || submittingBooking}
+                    onClick={handleLiftBlock}
+                    className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    {actionLoading ? (
+                      <>
+                        <Loader size={14} className="animate-spin" /> Freeing Slot...
+                      </>
+                    ) : (
+                      <>
+                        <Unlock size={14} /> Lift / Free Up This Weekly Slot
+                      </>
+                    )}
+                  </button>
+
+                  <div className="relative py-1 flex items-center justify-center">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-border/10" />
+                    </div>
+                    <span className="relative bg-shift-low px-2 text-[9px] uppercase tracking-widest font-extrabold text-text-secondary opacity-50">
+                      OR OVERRIDE & BOOK
+                    </span>
+                  </div>
+
+                  {/* Quick Override Booking Form */}
+                  <form onSubmit={handleOverrideBooking} className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">
+                        Override Purpose *
+                      </label>
+                      <input
+                        value={bookingPurpose}
+                        onChange={e => setBookingPurpose(e.target.value)}
+                        placeholder="e.g. Special Exam, Emergency Session..."
+                        className="w-full bg-surface-mid border border-border/15 rounded-xl px-4 py-2.5 text-xs text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors"
+                        required
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={actionLoading || submittingBooking}
+                      className="w-full bg-primary hover:opacity-90 text-white px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest active:scale-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      {submittingBooking ? (
+                        <>
+                          <Loader size={14} className="animate-spin" /> Overriding & Booking...
+                        </>
+                      ) : (
+                        'Book Over Timetable Slot'
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DRAWER BODY: 3. CREATE BOOKING (FREE / CONFLICT CELL) */}
+          {drawer.type === 'create' && (
+            <form onSubmit={handleCreateBooking} className="flex-1 flex flex-col justify-between py-6 space-y-6">
+              <div className="space-y-6">
+                {/* Timing info */}
+                <div className="bg-surface-mid/30 rounded-2xl p-4 border border-border/5 space-y-3">
+                  <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
+                    <Calendar size={14} className="text-secondary" />
+                    <span>Date: <strong className="text-white">{drawer.date}</strong></span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-text-secondary font-medium">
+                    <Clock size={14} className="text-secondary" />
+                    <span>Slot: <strong className="text-white">{String(drawer.startHour).padStart(2, '0')}:00 - {String(drawer.endHour).padStart(2, '0')}:00</strong></span>
+                  </div>
+                </div>
+
+                {/* Conflict Panel */}
+                <div className="space-y-2">
+                  <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">Availability Status</label>
+                  {conflictChecking ? (
+                    <div className="flex items-center gap-2 text-xs text-text-secondary">
+                      <Loader size={14} className="animate-spin text-primary" />
+                      Checking for conflicts...
+                    </div>
+                  ) : conflictData.hasConflict ? (
+                    <div className="space-y-3">
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex items-start gap-3">
+                        <AlertTriangle className="text-red-400 shrink-0 mt-0.5" size={16} />
+                        <div className="space-y-1">
+                          <span className="text-xs font-bold text-red-400 block capitalize">Conflict Detected!</span>
+                          <p className="text-[11px] text-text-secondary leading-normal">
+                            This slot overlaps with existing schedules. Resolve below to unlock booking.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {conflictData.conflicts.map((conflict, i) => (
+                          <div key={i} className="bg-surface-mid/50 border border-border/10 rounded-xl p-3 flex items-center justify-between gap-3">
+                            <div className="space-y-0.5">
+                              <span className="text-[9px] capitalize font-extrabold tracking-wider text-text-secondary px-1.5 py-0.5 bg-shift-high rounded block w-fit mb-1">
+                                {conflict.type}
+                              </span>
+                              <span className="text-xs font-bold text-text-primary block">
+                                {conflict.type === 'timetable' ? conflict.subject : conflict.purpose}
+                              </span>
+                              <span className="text-[10px] text-text-secondary block">
+                                {conflict.type === 'timetable' ? conflict.faculty : `By ${conflict.booker}`}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => conflict.type === 'timetable' ? resolveTimetableConflict(conflict.slotId) : resolveBookingConflict(conflict.bookingId)}
+                              className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-xl transition-colors shrink-0"
+                              title="Resolve conflict"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
                       </div>
                     </div>
-
-                    <div className="space-y-2">
-                      {conflictData.conflicts.map((conflict, i) => (
-                        <div key={i} className="bg-surface-mid/50 border border-border/10 rounded-xl p-3 flex items-center justify-between gap-3">
-                          <div className="space-y-0.5">
-                            <span className="text-[9px] capitalize font-extrabold tracking-wider text-text-secondary px-1.5 py-0.5 bg-shift-high rounded block w-fit mb-1">
-                              {conflict.type}
-                            </span>
-                            <span className="text-xs font-bold text-text-primary block">
-                              {conflict.type === 'timetable' ? conflict.subject : conflict.purpose}
-                            </span>
-                            <span className="text-[10px] text-text-secondary block">
-                              {conflict.type === 'timetable' ? conflict.faculty : `By ${conflict.booker}`}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => conflict.type === 'timetable' ? resolveTimetableConflict(conflict.slotId) : resolveBookingConflict(conflict.bookingId)}
-                            className="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-xl transition-colors shrink-0"
-                            title="Resolve conflict"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
+                  ) : (
+                    <div className="bg-green-400/10 border border-green-400/20 rounded-2xl p-4 flex items-center gap-3">
+                      <Check className="text-green-400" size={16} />
+                      <span className="text-xs font-bold text-green-400 capitalize">Slot is free &amp; available</span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="bg-green-400/10 border border-green-400/20 rounded-2xl p-4 flex items-center gap-3">
-                    <Check className="text-green-400" size={16} />
-                    <span className="text-xs font-bold text-green-400 capitalize">Slot is free &amp; available</span>
-                  </div>
-                )}
+                  )}
+                </div>
+
+                {/* Purpose Input */}
+                <div className="space-y-1.5">
+                  <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">Booking Purpose *</label>
+                  <input
+                    value={bookingPurpose}
+                    onChange={e => setBookingPurpose(e.target.value)}
+                    placeholder="e.g. Guest Lecture, Lab practice..."
+                    className="w-full bg-surface-mid border border-border/15 rounded-xl px-4 py-3 text-sm text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors"
+                    required
+                  />
+                </div>
               </div>
 
-              {/* Purpose Input */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] capitalize tracking-widest font-extrabold text-text-secondary">Booking Purpose *</label>
-                <input
-                  value={bookingPurpose}
-                  onChange={e => setBookingPurpose(e.target.value)}
-                  placeholder="e.g. Guest Lecture, Lab practice..."
-                  className="w-full bg-surface-mid border border-border/15 rounded-xl px-4 py-3 text-sm text-text-primary font-medium focus:outline-none focus:border-primary/50 transition-colors"
-                  required
-                />
+              {/* Form Actions */}
+              <div className="flex gap-3 pt-4 border-t border-border/10">
+                <button 
+                  type="button" 
+                  onClick={() => setDrawer(null)}
+                  className="flex-1 bg-surface-mid text-text-secondary px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-surface-mid/75 transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={conflictData.hasConflict || conflictChecking || submittingBooking}
+                  className="flex-1 bg-primary disabled:opacity-30 disabled:pointer-events-none text-white px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  {submittingBooking ? (
+                    <>
+                      <Loader size={14} className="animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    'Confirm Booking'
+                  )}
+                </button>
               </div>
-            </div>
+            </form>
+          )}
 
-            {/* Form Actions */}
-            <div className="flex gap-3 pt-4 border-t border-border/10">
-              <button 
-                type="button" 
-                onClick={() => setDrawer(null)}
-                className="flex-1 bg-surface-mid text-text-secondary px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:bg-surface-mid/75 transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                type="submit"
-                disabled={conflictData.hasConflict || conflictChecking || submittingBooking}
-                className="flex-1 bg-primary disabled:opacity-30 disabled:pointer-events-none text-white px-4 py-3.5 rounded-xl font-extrabold text-[10px] capitalize tracking-widest hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                {submittingBooking ? (
-                  <>
-                    <Loader size={14} className="animate-spin" /> Submitting...
-                  </>
-                ) : (
-                  'Confirm Booking'
-                )}
-              </button>
-            </div>
-          </form>
         </div>
       )}
 
