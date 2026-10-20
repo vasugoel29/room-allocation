@@ -78,8 +78,10 @@ describe('Login', () => {
     expect(localStorage.getItem('token')).toBe('dev');
   });
 
-  // FE-04: the (now 12-hour) session token is still kept in localStorage, readable by any XSS.
-  it.fails('[FE-04] does not persist the session token in localStorage', async () => {
+  // FE-04 — closed by decision (2026-10-20): frontend (Vercel) and API are on different domains, so the
+  // 12-hour bearer token stays in localStorage; the mitigation is the strict CSP in vercel.json
+  // (no inline or third-party scripts beyond Google sign-in) plus server-side revocation.
+  it('[FE-04] keeps the 12-hour bearer token for the API (different domains; protected by CSP)', async () => {
     vi.stubEnv('VITE_DEV_LOGIN', 'true');
     installFetch([['POST', '/api/auth/dev-login', { token: 'tk', user: USERS.VIEWER }]]);
     const user = userEvent.setup();
@@ -87,6 +89,6 @@ describe('Login', () => {
     await user.type(screen.getByLabelText(/developer sign-in \(local only\)/i), 'viewer@nsut.ac.in');
     await user.click(screen.getByRole('button', { name: /dev sign in/i }));
     await waitFor(() => expect(ctx.setUser).toHaveBeenCalled());
-    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('token')).toBe('tk');
   });
 });

@@ -858,6 +858,41 @@ const migrations = [
          WHERE user_id IS NULL AND is_available = FALSE AND day IN ('Mon','Tue','Wed','Thu','Fri','Sat','Sun');
       `);
     }
+  },
+  {
+    version: 32,
+    name: 'Notifications: in-app inbox + email outbox (written in the same transaction as the change)',
+    run: async (client) => {
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          id               BIGSERIAL PRIMARY KEY,
+          user_id          INTEGER REFERENCES users(id) ON DELETE SET NULL,
+          email            VARCHAR(255),
+          type             VARCHAR(50) NOT NULL,
+          title            TEXT NOT NULL,
+          body             TEXT NOT NULL,
+          link             TEXT,
+          entity_type      VARCHAR(30),
+          entity_id        INTEGER,
+          read_at          TIMESTAMPTZ,
+          is_active        BOOLEAN NOT NULL DEFAULT TRUE,
+          deactivated_at   TIMESTAMPTZ,
+          email_status     VARCHAR(12) NOT NULL DEFAULT 'none'
+                           CHECK (email_status IN ('none', 'pending', 'sending', 'sent', 'failed', 'logged')),
+          email_subject    TEXT,
+          email_html       TEXT,
+          email_attempts   INTEGER NOT NULL DEFAULT 0,
+          email_next_at    TIMESTAMPTZ,
+          email_last_error TEXT,
+          email_sent_at    TIMESTAMPTZ,
+          created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          CHECK (user_id IS NOT NULL OR email IS NOT NULL)
+        );
+        CREATE INDEX IF NOT EXISTS idx_notifications_inbox ON notifications (user_id, created_at DESC) WHERE is_active;
+        CREATE INDEX IF NOT EXISTS idx_notifications_inbox_email ON notifications (lower(email), created_at DESC) WHERE is_active AND user_id IS NULL;
+        CREATE INDEX IF NOT EXISTS idx_notifications_outbox ON notifications (email_next_at) WHERE email_status IN ('pending', 'sending');
+      `);
+    }
   }
 ];
 

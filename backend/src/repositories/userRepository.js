@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import { notify, bookingFacts } from '../notifications/notify.js';
 
 /**
  * Repository for User-related database operations
@@ -108,6 +109,14 @@ export const userRepository = {
           RETURNING id`,
         [id],
       ).then(async ({ rows }) => {
+        // Their supervising faculty learns why the booking disappeared (the booker can't sign in any more).
+        for (const { id: bookingId } of rows) {
+          const facts = await bookingFacts(client, bookingId);
+          if (!facts.booking.faculty_id) continue;
+          await notify(client, [{ facultyId: facts.booking.faculty_id }], 'supervised_booking_cancelled',
+            { ...facts.data, studentName: facts.data.ownerName, by: 'An administrator', reason: 'the booker\'s account was deactivated' },
+            { entityType: 'booking', entityId: bookingId });
+        }
         // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
         if (rows.length) {
           await client.query(

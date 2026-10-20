@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import { notify, bookingFacts } from '../notifications/notify.js';
 
 /**
  * Repository for Room-related database operations
@@ -255,6 +256,14 @@ export const roomRepository = {
           RETURNING id`,
         [id],
       ).then(async ({ rows }) => {
+        // Tell the bookers and their faculty why (notifications outbox, same transaction).
+        for (const { id: bookingId } of rows) {
+          const facts = await bookingFacts(client, bookingId);
+          const data = { ...facts.data, studentName: facts.data.ownerName, by: 'An administrator', reason: `room ${result.rows[0].name} was removed` };
+          const meta = { entityType: 'booking', entityId: bookingId };
+          await notify(client, [{ userId: facts.booking.created_by }], 'booking_cancelled', data, meta);
+          if (facts.booking.faculty_id) await notify(client, [{ facultyId: facts.booking.faculty_id }], 'supervised_booking_cancelled', data, meta);
+        }
         // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
         if (rows.length) {
           await client.query(

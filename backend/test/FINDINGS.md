@@ -211,3 +211,10 @@ commitment per slot). Open, needs a decision: FE-04 (session token in localStora
 | NEW-P6-1 | M | fixed | Shared validators: malformed ids, dates, hours, booleans and pagination are 400s with a message, never 500s; every `/:id` route has one guard |
 | NEW-P6-2 | L | fixed | Jest run-in-band flake ("Maximum call stack size exceeded" in jest-util): a disabled `Sentry.init` still wrote the SDK's global carrier, which Jest re-wrapped per test file. Sentry is no longer initialised when disabled |
 | NEW-P6-3 | info | — | Stress (2,000 req/s offered): one Node process serves ~500–620 req/s, then sheds load with client timeouts (3.6%); no server errors, no integrity violations. Docker Desktop's proxy wedged under the 2,000-connection stress and needed a restart (local harness only) |
+
+## Phase 7 (notifications)
+| ID | Sev | Status | Finding |
+|---|---|---|---|
+| OPS-13 | H | fixed | Email failures were silent (fire-and-forget after commit; missing SMTP only warned). Now: transactional outbox, worker with retries/backoff and a terminal `failed` state; production refuses to start without SMTP unless `EMAIL_DELIVERY=off` |
+| NEW-P7-1 | L | fixed | An admin withdrawing their own transfer request was recorded as REJECTED (role took precedence over being the requester), so the owner was never told it was withdrawn |
+| FE-04 | M | closed (decision) | Bearer token stays in localStorage (frontend and API on different domains); mitigated by a strict CSP in `frontend/vercel.json` (pinned by a test) and server-side revocation |

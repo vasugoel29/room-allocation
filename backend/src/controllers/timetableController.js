@@ -3,6 +3,7 @@ import * as db from '../db.js';
 import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import cache from '../utils/cache.js';
+import { notify } from '../notifications/notify.js';
 
 function toTitleCase(str) {
   if (!str) return '';
@@ -202,6 +203,21 @@ export async function getFacultyOverrides(req, res) {
     }
 }
 
+/** Template data for a class-cancellation request (IST date and the one-hour slot). */
+function classFacts(request, extra) {
+  const pad = (h) => String(h).padStart(2, '0');
+  // pg parses DATE as local midnight: read the local parts, not toISOString (which can shift a day).
+  const d = request.class_date;
+  const dateKey = d instanceof Date ? `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` : String(d).slice(0, 10);
+  return {
+    subject: request.subject_name || 'the class',
+    roomName: request.room_name,
+    date: dateKey,
+    time: `${pad(request.hour)}:00 – ${pad(request.hour + 1)}:00`,
+    ...extra,
+  };
+}
+
 export async function createCancellationRequest(req, res) {
   try {
     const { room_name, subject_name, date, hour, faculty_name, booking_id } = req.body;
@@ -236,12 +252,19 @@ export async function createCancellationRequest(req, res) {
       return res.status(404).json({ error: 'The class faculty could not be found, so approval cannot be requested.' });
     }
 
-    const result = await db.query(`
-      INSERT INTO class_cancellation_requests
-        (requested_by, faculty_id, room_name, subject_name, class_date, hour, booking_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `, [req.user.id, facultyResult.rows[0].id, room_name, subject_name || null, date, Number(hour), booking_id || null]);
+    const result = await db.runInTransaction(async (client) => {
+      const inserted = await client.query(`
+        INSERT INTO class_cancellation_requests
+          (requested_by, faculty_id, room_name, subject_name, class_date, hour, booking_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `, [req.user.id, facultyResult.rows[0].id, room_name, subject_name || null, date, Number(hour), booking_id || null]);
+      const request = inserted.rows[0];
+      await notify(client, [{ facultyId: request.faculty_id }], 'class_cancellation_requested',
+        classFacts(request, { requesterName: req.user.name || 'A student' }),
+        { actorId: req.user.id, entityType: 'class_cancellation', entityId: request.id });
+      return inserted;
+    });
 
     res.status(201).json({ message: 'Cancellation request sent to the faculty member for approval.', request: result.rows[0] });
   } catch (err) {
@@ -307,6 +330,9 @@ export async function reviewCancellationRequest(req, res) {
         SET status = $1, reviewed_at = NOW()
         WHERE id = $2
       `, [approved ? 'APPROVED' : 'REJECTED', request.id]);
+      await notify(client, [{ userId: request.requested_by }], 'class_cancellation_decided',
+        classFacts(request, { approved, by: req.user.name || 'Faculty' }),
+        { actorId: req.user.id, entityType: 'class_cancellation', entityId: request.id });
       return request;
     });
 

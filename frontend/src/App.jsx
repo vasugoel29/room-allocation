@@ -10,6 +10,7 @@ import { useWindowSize } from './hooks/useWindowSize';
 import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, Moon, LayoutGrid, Maximize2, Shield, ShieldAlert, MessageSquare, Search, GraduationCap, User, Clock } from 'lucide-react';
 import BottomNav from './components/ui/BottomNav';
 import FloatingActions from './components/ui/FloatingActions';
+import NotificationBell from './components/ui/NotificationBell';
 
 // Lazy-loaded pages for bundle splitting
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
@@ -308,7 +309,8 @@ function App() {
               </aside>
 
               <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
-                <header className="flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
+                {/* relative z-40: backdrop-blur makes the header a stacking context; keep the inbox panel above the page. */}
+                <header className="relative z-40 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"><Menu size={24} /></button>
                     <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight capitalize font-display">
@@ -316,6 +318,7 @@ function App() {
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">
+                    <NotificationBell />
                     <ThemeToggle theme={theme} setTheme={setTheme} className="lg:hidden" />
                     {location.pathname === '/calendar' && (
                       <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">

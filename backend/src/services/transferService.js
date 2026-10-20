@@ -6,6 +6,7 @@ import { facultyRepository } from '../repositories/facultyRepository.js';
 import { logActivity } from './loggerService.js';
 import { checkTimes, checkPeopleTimetables, checkBookingConflicts, isStaff } from './bookingRules.js';
 import { inTransaction } from './bookingService.js';
+import { notify, bookingFacts, personName } from '../notifications/notify.js';
 
 /**
  * Booking transfers: a student asks for someone else's upcoming booking.
@@ -34,6 +35,13 @@ async function lockTransfer(client, transferId) {
   const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [t.booking_id]);
   return { t, booking };
 }
+
+/** Template data for a transfer: the booking's room/time plus who asked and who owns it. */
+async function transferFacts(client, t) {
+  const facts = await bookingFacts(client, t.booking_id);
+  return { ...facts?.data, requesterName: await personName(client, t.requested_by) };
+}
+const meta = (t, actorId) => ({ actorId, entityType: 'transfer', entityId: t.id });
 
 const bookingUpcomingActive = (booking) =>
   booking && booking.status === 'ACTIVE' && new Date(booking.start_time).getTime() > Date.now();
@@ -71,6 +79,7 @@ export const requestTransfer = async (reqData, userId, userRole) => {
     await logActivity({
       userId, action: 'REQUEST_TRANSFER', entityType: 'transfer', entityId: created.id, details: { booking_id },
     }, client);
+    await notify(client, [{ userId: booking.created_by }], 'transfer_requested', await transferFacts(client, created), meta(created, userId));
     return { data: created, status: 201 };
   });
 };
@@ -84,14 +93,20 @@ export const getOutgoingRequests = async (userId) => {
 };
 
 /** Final step: re-validate and move the booking to the requester. */
+async function closeUnavailable(client, t, actorId, reason) {
+  await transferRepository.updateStatus(t.id, 'REJECTED', client);
+  await notify(client, [{ userId: t.requested_by }], 'transfer_rejected',
+    { ...(await transferFacts(client, t)), by: 'CRAS', reason }, meta(t, actorId));
+}
+
 async function completeTransfer(client, t, booking, actorId) {
   if (!bookingUpcomingActive(booking)) {
-    await transferRepository.updateStatus(t.id, 'REJECTED', client);
+    await closeUnavailable(client, t, actorId, 'the booking is no longer available');
     return fail('This booking is no longer available for transfer.', 409, { conflict: { type: 'booking_unavailable' }, commit: true });
   }
   const requester = await userRepository.findById(t.requested_by, client);
   if (!requester || requester.is_active === false) {
-    await transferRepository.updateStatus(t.id, 'REJECTED', client);
+    await closeUnavailable(client, t, actorId, 'the requester can no longer receive it');
     return fail('The requester can no longer receive this booking.', 409, { commit: true });
   }
   const faculty = t.target_faculty_id ? await facultyRepository.findById(t.target_faculty_id, client) : null;
@@ -104,15 +119,23 @@ async function completeTransfer(client, t, booking, actorId) {
   });
   if (conflict) return conflict;
 
+  const facts = await transferFacts(client, t);
   await client.query(
     `UPDATE bookings SET created_by = $1, faculty_id = $2, purpose = COALESCE($3, purpose), updated_at = NOW() WHERE id = $4`,
     [t.requested_by, t.target_faculty_id ?? null, t.new_purpose || null, booking.id],
   );
   await transferRepository.updateStatus(t.id, 'ACCEPTED', client);
-  await client.query(
-    `UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW() WHERE booking_id = $1 AND id <> $2 AND status = ANY($3)`,
+  const { rows: losers } = await client.query(
+    `UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW() WHERE booking_id = $1 AND id <> $2 AND status = ANY($3)
+     RETURNING id, booking_id, requested_by`,
     [booking.id, t.id, OPEN],
   );
+  await notify(client, [{ userId: t.requested_by }], 'transfer_completed', facts, meta(t, actorId));
+  await notify(client, [{ userId: booking.created_by }], 'transfer_completed_owner', facts, meta(t, actorId));
+  for (const other of losers) {
+    await notify(client, [{ userId: other.requested_by }], 'transfer_rejected',
+      { ...facts, by: 'CRAS', reason: 'the booking went to another request' }, meta(other, actorId));
+  }
   await logActivity({
     userId: actorId, action: 'COMPLETE_TRANSFER', entityType: 'transfer', entityId: t.id,
     details: { booking_id: booking.id, from_user: booking.created_by, to_user: t.requested_by },
@@ -129,7 +152,7 @@ export const acceptTransfer = async (transferId, userId, userRole, facultyId = n
     const { t, booking } = locked;
     if (!OPEN.includes(t.status)) return fail(`This transfer is already ${t.status.toLowerCase()}.`, 409);
     if (!bookingUpcomingActive(booking)) {
-      await transferRepository.updateStatus(t.id, 'REJECTED', client);
+      await closeUnavailable(client, t, userId, 'the booking is no longer available');
       return fail('This booking is no longer available for transfer.', 409, { conflict: { type: 'booking_unavailable' }, commit: true });
     }
 
@@ -139,6 +162,11 @@ export const acceptTransfer = async (transferId, userId, userRole, facultyId = n
       if (next === 'ACCEPTED') return completeTransfer(client, t, booking, userId);
       await transferRepository.updateStatus(t.id, next, client);
       await logActivity({ userId, action, entityType: 'transfer', entityId: t.id, details: { booking_id: t.booking_id, step: next } }, client);
+      // The next approver: the owner's faculty, then the requester's.
+      const facts = { ...(await transferFacts(client, t)), ownerName: (await bookingFacts(client, t.booking_id))?.data.ownerName };
+      const approver = next === 'REP2_ACCEPTED' ? ownerFaculty : t.target_faculty_id;
+      if (approver) await notify(client, [{ facultyId: approver }], 'transfer_needs_approval', facts, meta(t, userId));
+      await notify(client, [{ userId: t.requested_by }], 'transfer_progress', { ...facts, by: await personName(client, userId) }, meta(t, userId));
       return { status: 200, message };
     };
 
@@ -174,8 +202,15 @@ export const rejectTransfer = async (transferId, userId, userRole, facultyId = n
       userRole === 'ADMIN';
     if (!isAuthorized) return fail('Not authorized to reject this transfer', 403);
 
-    const status = isRequester && userRole !== 'ADMIN' ? 'CANCELLED' : 'REJECTED';
+    // The requester closing their own request is a withdrawal, whatever their role.
+    const status = isRequester ? 'CANCELLED' : 'REJECTED';
     await transferRepository.updateStatus(t.id, status, client);
+    const facts = await transferFacts(client, t);
+    if (status === 'CANCELLED') {
+      if (booking) await notify(client, [{ userId: booking.created_by }], 'transfer_withdrawn', facts, meta(t, userId));
+    } else {
+      await notify(client, [{ userId: t.requested_by }], 'transfer_rejected', { ...facts, by: await personName(client, userId) }, meta(t, userId));
+    }
     await logActivity({
       userId, action: status === 'CANCELLED' ? 'WITHDRAW_TRANSFER' : 'REJECT_TRANSFER', entityType: 'transfer', entityId: t.id,
       details: { booking_id: t.booking_id },

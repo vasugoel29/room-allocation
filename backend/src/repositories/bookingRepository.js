@@ -214,7 +214,8 @@ export const bookingRepository = {
     const query = `
       UPDATE bookings SET status = 'REJECTED', updated_at = NOW() 
       WHERE room_id = $1 AND status = 'PENDING' AND id != $2
-      AND tstzrange(start_time, end_time) && tstzrange($3::timestamptz, $4::timestamptz)`;
+      AND tstzrange(start_time, end_time) && tstzrange($3::timestamptz, $4::timestamptz)
+      RETURNING id, created_by`;
     return client.query(query, [roomId, approvedId, startTime, endTime]);
   }
 };

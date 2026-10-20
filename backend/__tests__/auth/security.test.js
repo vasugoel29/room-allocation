@@ -53,6 +53,12 @@ const ROUTES = [
   { m: 'post', path: '/api/availability/override', min: 'ADMIN', body: {} },
   { m: 'get', path: `/api/rooms/${X}/week-schedule`, min: 'ADMIN' },
   { m: 'get', path: `/api/rooms/${X}/conflict-check`, min: 'ADMIN' },
+  // notificationRoutes (scoped to the caller: every role may use its own inbox)
+  { m: 'get', path: '/api/notifications', min: 'VIEWER' },
+  { m: 'get', path: '/api/notifications/unread-count', min: 'VIEWER' },
+  { m: 'post', path: '/api/notifications/read-all', min: 'VIEWER' },
+  { m: 'patch', path: `/api/notifications/${X}/read`, min: 'VIEWER' },
+  { m: 'delete', path: `/api/notifications/${X}`, min: 'VIEWER' },
   // bookingRoutes
   { m: 'get', path: '/api/bookings', min: 'VIEWER' },
   { m: 'get', path: '/api/bookings/calendar?from=2030-01-07&to=2030-01-07', min: 'VIEWER' },

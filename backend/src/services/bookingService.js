@@ -5,9 +5,9 @@ import { bookingRepository } from '../repositories/bookingRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
-import { notifyFacultyNewRequest, notifyBookingCancelled } from '../utils/emailService.js';
+import { notify, bookingFacts, personName } from '../notifications/notify.js';
 import { logActivity } from './loggerService.js';
-import { formatIstRange, dateKeyToDays } from '../utils/timezone.js';
+import { dateKeyToDays } from '../utils/timezone.js';
 import {
   checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts,
   constraintConflict, dateInSameWeek, istDateTimeToUtc, isStaff, DAYS,
@@ -178,6 +178,15 @@ export const createBooking = async (client, reqData, owner, actor = owner, { req
     details: { room_id: room.id, start_time: t.start, end_time: t.end, on_behalf_of: owner.id !== actor.id ? owner.id : undefined },
   }, client);
 
+  const facts = await bookingFacts(client, booking.id);
+  const meta = { actorId: actor.id, entityType: 'booking', entityId: booking.id };
+  if (status === 'PENDING') {
+    await notify(client, [{ facultyId: fac.faculty.id }], 'booking_requested', { ...facts.data, studentName: facts.data.ownerName }, meta);
+  }
+  if (owner.id !== actor.id) {
+    await notify(client, [{ userId: owner.id }], 'booking_created_for_you', { ...facts.data, by: actor.name || 'An administrator' }, meta);
+  }
+
   return { data: booking, status: 201, faculty: fac.faculty, room };
 };
 
@@ -187,18 +196,6 @@ export const createBookingHandler = async (reqData, user) => {
 
   invalidateRoomCaches();
   logger.info('Booking created', { booking_id: result.data.id, user_id: user.id, room_id: result.data.room_id });
-
-  if (result.faculty?.email && result.data.status === 'PENDING') {
-    const { date, time } = formatIstRange(result.data.start_time, result.data.end_time);
-    notifyFacultyNewRequest({
-      facultyName: result.faculty.name,
-      facultyEmail: result.faculty.email,
-      studentName: user.name || 'A student',
-      roomName: result.room?.name || result.data.room_id,
-      date,
-      time,
-    }).catch((err) => logger.error('Faculty notification failed', err));
-  }
   return { data: result.data, status: 201 };
 };
 
@@ -207,7 +204,7 @@ export const createBookingHandler = async (reqData, user) => {
  * bookings can be cancelled; open transfer requests on it are closed and any class release it
  * created is withdrawn.
  */
-export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFacultyId = null) => {
+export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFacultyId = null, { reason = null } = {}) => {
   const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [bookingId]);
   if (!booking) return { error: 'Booking not found', status: 404 };
   const isCreator = String(booking.created_by) === String(userId);
@@ -234,6 +231,17 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFac
     details: { previous_status: booking.status, by: isCreator ? 'creator' : isAssignedFaculty ? 'faculty' : 'admin' },
   }, client);
 
+  const facts = await bookingFacts(client, booking.id);
+  const meta = { actorId: userId, entityType: 'booking', entityId: booking.id };
+  const by = await personName(client, userId);
+  await notify(client, [{ userId: booking.created_by }], 'booking_cancelled', { ...facts.data, by, reason }, meta);
+  if (booking.faculty_id) {
+    // The supervising faculty hears about a request that is withdrawn or an approved booking that is cancelled.
+    await notify(client, [{ facultyId: booking.faculty_id }],
+      booking.status === 'PENDING' ? 'booking_request_withdrawn' : 'supervised_booking_cancelled',
+      { ...facts.data, studentName: facts.data.ownerName, by, reason }, meta);
+  }
+
   return { status: 200, booking };
 };
 
@@ -244,27 +252,6 @@ export const cancelBookingHandler = async (bookingId, user) => {
 
   invalidateRoomCaches();
   logger.info('Booking cancelled', { booking_id: bookingId, user_id: user.id });
-
-  const booking = result.booking;
-  if (booking && String(booking.created_by) !== String(user.id)) {
-    try {
-      const creator = await userRepository.findById(booking.created_by);
-      const room = await roomRepository.findById(booking.room_id);
-      if (creator?.email) {
-        const { date, time } = formatIstRange(booking.start_time, booking.end_time);
-        notifyBookingCancelled({
-          userEmail: creator.email,
-          userName: creator.name,
-          roomName: room?.name || booking.room_id,
-          date,
-          time,
-          cancelledBy: user.name || undefined,
-        }).catch((err) => logger.error('Cancellation notification failed', err));
-      }
-    } catch (notifErr) {
-      logger.error('Failed to send cancellation notification (non-blocking)', notifErr);
-    }
-  }
   return { status: 200 };
 };
 
@@ -319,6 +306,12 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   if (moved && !isStaff(user.role) && booking.faculty_id && booking.status === 'ACTIVE') {
     updated = await bookingRepository.updateStatus(bookingId, 'PENDING', client);
     await deactivateReleasesFor(client, 'reschedule', booking.id);
+  }
+  if (moved && booking.faculty_id && !isStaff(user.role)) {
+    const facts = await bookingFacts(client, booking.id);
+    await notify(client, [{ facultyId: booking.faculty_id }],
+      booking.status === 'ACTIVE' ? 'booking_rescheduled' : 'booking_requested',
+      { ...facts.data, studentName: facts.data.ownerName }, { actorId: user.id, entityType: 'booking', entityId: booking.id });
   }
 
   await logActivity({
@@ -379,7 +372,17 @@ export const approveBooking = async (client, id, actor, isAdmin) => {
     entityId: id,
     details: { approved_by: isAdmin ? 'ADMIN' : 'FACULTY' },
   }, client);
-  await bookingRepository.rejectConflicts(booking.room_id, id, booking.start_time, booking.end_time, client);
+  const { rows: overlapping } = await bookingRepository.rejectConflicts(booking.room_id, id, booking.start_time, booking.end_time, client);
+
+  const by = await personName(client, actor.id, 'Faculty');
+  const facts = await bookingFacts(client, id);
+  await notify(client, [{ userId: booking.created_by }], 'booking_approved', { ...facts.data, by },
+    { actorId: actor.id, entityType: 'booking', entityId: id });
+  for (const other of overlapping) {
+    const f = await bookingFacts(client, other.id);
+    await notify(client, [{ userId: other.created_by }], 'booking_rejected', { ...f.data, by: `${by} (the room was given to another request)` },
+      { actorId: actor.id, entityType: 'booking', entityId: other.id });
+  }
 
   return { data: approved, status: 200 };
 };
@@ -398,6 +401,9 @@ export const rejectBooking = async (id, actor, isAdmin) => {
       entityId: id,
       details: { rejected_by: isAdmin ? 'ADMIN' : 'FACULTY' },
     }, client);
+    const facts = await bookingFacts(client, id);
+    await notify(client, [{ userId: booking.created_by }], 'booking_rejected',
+      { ...facts.data, by: await personName(client, actor.id, 'Faculty') }, { actorId: actor.id, entityType: 'booking', entityId: id });
     return { status: 200 };
   });
 };

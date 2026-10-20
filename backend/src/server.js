@@ -16,6 +16,13 @@ import * as Sentry from "@sentry/node";
 import * as db from './db.js';
 
 
+// OPS-13: production must be able to send email, or notifications silently go nowhere.
+// EMAIL_DELIVERY=off is the explicit, logged opt-out (in-app notifications still work).
+if (process.env.NODE_ENV === 'production' && !emailConfigured() && process.env.EMAIL_DELIVERY !== 'off') {
+  console.error('FATAL ERROR: SMTP_USER / SMTP_PASS are not set. Configure SMTP, or set EMAIL_DELIVERY=off to run without email.');
+  process.exit(1);
+}
+
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   console.error('FATAL ERROR: JWT_SECRET is not defined in production environment.');
   process.exit(1);
@@ -48,6 +55,9 @@ import departmentRoutes from './routes/departmentRoutes.js';
 import branchRoutes from './routes/branchRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
+import notificationRoutes from './routes/notificationRoutes.js';
+import { startEmailWorker, stopEmailWorker } from './notifications/emailWorker.js';
+import { emailConfigured, verifyEmailTransport } from './utils/emailService.js';
 
 const app = express();
 app.set('trust proxy', 1);
@@ -192,6 +202,7 @@ app.use('/api/departments', departmentRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/timetable', timetableRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // The Sentry error handler must be registered before any other error middleware and after all controllers
 if (sentryEnabled) Sentry.setupExpressErrorHandler(app);
@@ -228,6 +239,12 @@ if (process.env.NODE_ENV !== 'test') {
         process.exit(1);
       });
 
+      // Email outbox worker (one per instance; claims rows with SKIP LOCKED).
+      if (process.env.EMAIL_DELIVERY !== 'off') {
+        verifyEmailTransport();
+        startEmailWorker();
+      }
+
       server.keepAliveTimeout = Number(process.env.KEEP_ALIVE_TIMEOUT_MS) || 65_000;
       server.headersTimeout = server.keepAliveTimeout + 1_000;
 
@@ -236,6 +253,7 @@ if (process.env.NODE_ENV !== 'test') {
       const shutdown = (signal) => {
         if (shuttingDown) return;
         shuttingDown = true;
+        stopEmailWorker();
         console.warn(`${signal} received: draining connections`);
         const force = setTimeout(() => {
           console.error('Shutdown timed out; exiting');

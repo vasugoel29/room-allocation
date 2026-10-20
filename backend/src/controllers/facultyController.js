@@ -1,13 +1,7 @@
-import { formatIstRange } from '../utils/timezone.js';
 import { sendServerError } from '../utils/httpErrors.js';
-import * as db from '../db.js';
 import logger from '../utils/logger.js';
 import cache from '../utils/cache.js';
 import * as bookingService from '../services/bookingService.js';
-import { userRepository } from '../repositories/userRepository.js';
-import { roomRepository } from '../repositories/roomRepository.js';
-import { bookingRepository } from '../repositories/bookingRepository.js';
-import { notifyStudentBookingStatus } from '../utils/emailService.js';
 
 export const getPendingRequests = async (req, res) => {
   // Requests are addressed to the faculty-directory entry linked to this account.
@@ -33,28 +27,7 @@ export const approveBooking = async (req, res) => {
 
   cache.deletePattern('admin_status_.*');
 
-  // PROD-02: Notify student their booking was approved
-  try {
-    const fullBooking = await bookingRepository.findById(id);
-    if (fullBooking) {
-      const student = await userRepository.findById(fullBooking.created_by);
-      const room = await roomRepository.findById(fullBooking.room_id);
-      if (student?.email) {
-        const { date: dateStr, time } = formatIstRange(fullBooking.start_time, fullBooking.end_time);
-        notifyStudentBookingStatus({
-          studentEmail: student.email,
-          studentName: student.name,
-          roomName: room?.name || fullBooking.room_id,
-          date: dateStr,
-          time,
-          status: 'APPROVED'
-        }).catch(err => logger.error('Approval notification failed', err));
-      }
-    }
-  } catch (notifErr) {
-    logger.error('Failed to send approval notification (non-blocking)', notifErr);
-  }
-
+  // The student is notified inside the approval transaction (notifications outbox).
   res.json({ message: 'Booking approved', booking: result.data });
 };
 
@@ -65,28 +38,6 @@ export const rejectBooking = async (req, res) => {
   try {
     const result = await bookingService.rejectBooking(id, req.user, isAdmin);
     if (result.error) return res.status(result.status).json({ error: result.error });
-
-    // PROD-02: Notify student their booking was rejected
-    try {
-      const fullBooking = await bookingRepository.findById(id);
-      if (fullBooking) {
-        const student = await userRepository.findById(fullBooking.created_by);
-        const room = await roomRepository.findById(fullBooking.room_id);
-        if (student?.email) {
-          const { date: dateStr, time } = formatIstRange(fullBooking.start_time, fullBooking.end_time);
-          notifyStudentBookingStatus({
-            studentEmail: student.email,
-            studentName: student.name,
-            roomName: room?.name || fullBooking.room_id,
-            date: dateStr,
-            time,
-            status: 'REJECTED'
-          }).catch(err => logger.error('Rejection notification failed', err));
-        }
-      }
-    } catch (notifErr) {
-      logger.error('Failed to send rejection notification (non-blocking)', notifErr);
-    }
 
     res.json({ message: 'Booking rejected' });
   } catch (err) {
