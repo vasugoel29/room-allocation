@@ -102,6 +102,7 @@ const ROUTES = [
   { m: 'get', path: '/api/admin/uploads/status/no-such-job', gate: ADMIN },
   // timetableRoutes
   { m: 'get', path: '/api/timetable/search', gate: ADMIN },
+  { m: 'get', path: '/api/timetable/branches', gate: ADMIN },
   { m: 'get', path: '/api/timetable/autocomplete/faculty', gate: [P.TIMETABLE, P.BOOKINGS, P.ADMIN] },
   { m: 'post', path: '/api/timetable/upload', gate: ADMIN, body: {} },
   { m: 'get', path: '/api/timetable/faculty', gate: [P.TIMETABLE, P.FACULTY_PORTAL] },

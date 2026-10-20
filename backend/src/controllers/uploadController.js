@@ -1,6 +1,7 @@
-import { getHourFromTime } from '../utils/timetableLogic.js';
+import { normalizeDay, parseSlotTime } from '../utils/timetableLogic.js';
 import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
+import { invalidateRoomCaches } from '../utils/cache.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import XLSX from 'xlsx-js-style';
 import logger from '../utils/logger.js';
@@ -372,55 +373,68 @@ export const importFaculty = async (req, res) => {
   runFacultyImport(jobId, csvContent, req.user?.id);
 };
 
+/**
+ * Faculty timetable CSV → faculty_timetable_slots. An import replaces the active faculty timetable
+ * (previous slots are soft-deleted). Rows are matched to the faculty directory by name; a slot
+ * blocks its room (room_id) and its teacher (faculty_id) directly — nothing is copied into
+ * room_availability. Unreadable rows are skipped and names CRAS doesn't know are reported.
+ */
 const runTimetableImport = async (jobId, csvContent, userId) => {
   try {
     const rows = parseCSV(csvContent);
+    const skipped = [];
+    const slots = [];
+    rows.forEach((row, i) => {
+      const line = i + 2; // header is line 1
+      const name = (row.faculty_name || '').trim();
+      const day = normalizeDay(row.day_of_week);
+      const time = parseSlotTime(row.slot_time);
+      if (!name) return skipped.push({ line, reason: 'missing faculty_name' });
+      if (!day) return skipped.push({ line, reason: 'day_of_week must be a weekday (Mon–Sun)' });
+      if (!time) return skipped.push({ line, reason: 'slot_time must look like 09:00-10:00' });
+      const roomId = row.room_id && /^\d+$/.test(String(row.room_id).trim()) ? Number(row.room_id) : null;
+      slots.push({
+        name, semester: row.semester || '', day, slotTime: String(row.slot_time).trim(), ...time,
+        content: row.content || '', isOccupied: row.is_occupied === 'true' || row.is_occupied === '1', roomId,
+      });
+    });
+
+    let unresolved = [];
     await db.runInTransaction(async (client) => {
+      const names = [...new Set(slots.map((s) => s.name.toUpperCase()))];
+      const ids = new Map((await client.query(
+        `SELECT DISTINCT ON (upper(trim(name))) upper(trim(name)) AS k, id FROM faculties
+          WHERE upper(trim(name)) = ANY($1) ORDER BY upper(trim(name)), is_active DESC, id`, [names],
+      )).rows.map((r) => [r.k, r.id]));
+      unresolved = [...new Set(slots.filter((s) => !ids.has(s.name.toUpperCase())).map((s) => s.name))].sort();
+
       // A timetable import replaces the active timetable; previous slots are soft-deleted, never removed.
       await client.query('UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE is_active');
-      // ...and so are the room blocks the previous import derived from them; manual overrides stay (OPS-05).
-      await client.query(`UPDATE room_availability SET is_active = FALSE, deactivated_at = NOW()
-                           WHERE source = 'timetable_import' AND is_active`);
-      
-      const chunkSize = 500;
-      for (let i = 0; i < rows.length; i += chunkSize) {
-        const chunk = rows.slice(i, i + chunkSize);
-        const values = [];
-        const placeholders = [];
-        let idx = 1;
-        
-        for (const row of chunk) {
-          if (!row.faculty_name) continue;
-          const isOccupied = row.is_occupied === 'true' || row.is_occupied === '1';
-          const roomId = row.room_id && !isNaN(parseInt(row.room_id)) ? parseInt(row.room_id) : null;
-          placeholders.push(`($${idx},$${idx+1},$${idx+2},$${idx+3},$${idx+4},$${idx+5},$${idx+6})`);
-          values.push(row.faculty_name, row.semester || '', row.day_of_week || '', row.slot_time || '', row.content || '', isOccupied, roomId);
-          idx += 7;
-
-          // Sync with room_availability: if a room is assigned, mark it as unavailable for that day/hour
-          if (roomId && row.day_of_week && row.slot_time) {
-            if (/(\d{1,2}):(\d{2})/.test(row.slot_time)) {
-              // Same 12-hour convention as everywhere else: 01:00–07:59 are afternoon hours (OPS-05).
-              const startHour = getHourFromTime(row.slot_time);
-              await client.query(`
-                INSERT INTO room_availability (room_id, day, hour, is_available, source)
-                VALUES ($1, $2, $3, FALSE, 'timetable_import')
-                ON CONFLICT (room_id, day, hour) DO UPDATE
-                  SET is_available = FALSE, source = 'timetable_import', is_active = TRUE, deactivated_at = NULL
-              `, [roomId, row.day_of_week, startHour]);
-            }
-          }
-        }
-        if (placeholders.length > 0) {
-          await client.query(`
-            INSERT INTO faculty_timetable_slots (faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id)
-            VALUES ${placeholders.join(',')}
-          `, values);
-        }
+      const COLS = ['faculty_name', 'faculty_id', 'semester', 'day_of_week', 'slot_time', 'start_min', 'end_min', 'content', 'is_occupied', 'room_id'];
+      for (let i = 0; i < slots.length; i += 500) {
+        const chunk = slots.slice(i, i + 500);
+        const placeholders = chunk.map((_, r) => `(${COLS.map((__, c) => `$${r * COLS.length + c + 1}`).join(',')})`);
+        await client.query(
+          `INSERT INTO faculty_timetable_slots (${COLS.join(', ')}) VALUES ${placeholders.join(',')}`,
+          chunk.flatMap((s) => [s.name, ids.get(s.name.toUpperCase()) ?? null, s.semester, s.day, s.slotTime,
+            s.startMin, s.endMin, s.content, s.isOccupied, s.roomId]),
+        );
       }
-      if (userId) await logActivity({ userId, action: 'IMPORT_TIMETABLE_CSV', entityType: 'upload', details: { recordCount: rows.length } }, client);
+      if (userId) {
+        await logActivity({
+          userId, action: 'IMPORT_TIMETABLE_CSV', entityType: 'upload',
+          details: { recordCount: rows.length, imported: slots.length, skipped: skipped.length, unresolved: unresolved.length },
+        }, client);
+      }
     });
-    jobStore.set(jobId, { status: 'completed', message: `Successfully imported ${rows.length} timetable records` });
+    invalidateRoomCaches();
+    jobStore.set(jobId, {
+      status: 'completed',
+      message: `Imported ${slots.length} timetable records, ${skipped.length} skipped`
+        + (unresolved.length ? `; ${unresolved.length} faculty name(s) not in the directory` : ''),
+      skipped,
+      unresolved,
+    });
   } catch (err) {
     logger.error('Failed to import timetable CSV', err);
     jobStore.set(jobId, { status: 'failed', error: err.message || 'Import failed' });

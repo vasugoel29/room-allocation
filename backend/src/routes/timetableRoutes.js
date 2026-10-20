@@ -8,6 +8,7 @@ const router = express.Router();
 router.param('id', idParam);
 
 router.get('/search', authenticate, requirePermission(P.ADMIN), timetableController.searchTimetable);
+router.get('/branches', authenticate, requirePermission(P.ADMIN), timetableController.listBranches);
 router.get('/autocomplete/faculty', authenticate, requirePermission(P.TIMETABLE, P.BOOKINGS, P.ADMIN), timetableController.autocompleteFaculty);
 router.post('/upload', authenticate, requirePermission(P.ADMIN), timetableController.uploadTimetable);
 router.get('/faculty', authenticate, requirePermission(P.TIMETABLE, P.FACULTY_PORTAL), timetableController.getFacultyTimetable);

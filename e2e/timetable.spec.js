@@ -9,9 +9,11 @@ async function seedSectionClass(seed) {
   const dateKey = smartTodayKey();
   const subject = `Distributed Systems ${tag()}`;
   const slot = await seed.one(
-    `INSERT INTO timetable_slots (department, degree, section, year, semester, day_of_week, slot_time, subject_code, subject_name, room_name, type, faculty_name)
-     VALUES ($1,'B.Tech.','1','2026-27','3',$2,'09:00-10:00','E2E101',$3,$4,'Lecture',$5) RETURNING *`,
-    [dept, DOW_SHORT[istDow(dateKey)], subject, room.name, faculty.name],
+    // As the timetable import stores it: branch upper-cased, minutes, room and faculty by id.
+    `INSERT INTO timetable_slots (department, section, semester, day_of_week, slot_time, start_min, end_min, subject_code,
+                                  subject_name, room_name, room_id, faculty_name, faculty_id, batch)
+     VALUES ($1, 1, 3, $2, '09:00-10:00', 540, 600, 'E2E101', $3, $4, $5, $6, $7, 'Lecture') RETURNING *`,
+    [dept.toUpperCase(), DOW_SHORT[istDow(dateKey)], subject, room.name, room.id, faculty.name, faculty.faculty_id],
   );
   return { dept, faculty, room, rep, dateKey, subject, slot };
 }
@@ -32,7 +34,7 @@ test.describe('Timetable & class cancellation', () => {
     await expect(toast(page, /cancellation request sent/i)).toBeVisible();
 
     const req = await seed.one('SELECT *, class_date::text AS class_day FROM class_cancellation_requests WHERE requested_by = $1', [rep.id]);
-    expect(req).toMatchObject({ status: 'PENDING', faculty_id: faculty.faculty_id, room_name: room.name, subject_name: subject, hour: 9, booking_id: null });
+    expect(req).toMatchObject({ status: 'PENDING', faculty_id: faculty.faculty_id, room_id: room.id, subject_name: subject, hour: 9, booking_id: null });
     expect(req.class_day).toBe(dateKey);
 
     // A duplicate request is refused
@@ -47,9 +49,9 @@ test.describe('Timetable & class cancellation', () => {
     // (NEW-P5-4).
     const { faculty, room, rep, dateKey, subject } = await seedSectionClass(seed);
     const req = await seed.one(
-      `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_name, subject_name, class_date, hour)
+      `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_id, subject_name, class_date, hour)
        VALUES ($1,$2,$3,$4,$5,9) RETURNING *`,
-      [rep.id, faculty.faculty_id, room.name, subject, dateKey],
+      [rep.id, faculty.faculty_id, room.id, subject, dateKey],
     );
 
     await signIn(page, request, faculty, '/faculty');
@@ -75,9 +77,9 @@ test.describe('Timetable & class cancellation', () => {
   test('faculty rejects a class cancellation -> REJECTED, class stays', async ({ page, request, seed }) => {
     const { faculty, room, rep, dateKey, subject } = await seedSectionClass(seed);
     const req = await seed.one(
-      `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_name, subject_name, class_date, hour)
+      `INSERT INTO class_cancellation_requests (requested_by, faculty_id, room_id, subject_name, class_date, hour)
        VALUES ($1,$2,$3,$4,$5,9) RETURNING *`,
-      [rep.id, faculty.faculty_id, room.name, subject, dateKey],
+      [rep.id, faculty.faculty_id, room.id, subject, dateKey],
     );
 
     await signIn(page, request, faculty, '/faculty');

@@ -5,7 +5,7 @@ import request from 'supertest';
 import XLSX from 'xlsx-js-style';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
-import { createAdmin, createRoom, closeDb } from '../../test/helpers/factories.js';
+import { createAdmin, createRoom, createFacultyEntry, closeDb } from '../../test/helpers/factories.js';
 import { uniq, runImport, binaryParser } from './helpers.js';
 
 const HEADER = 'faculty_name,semester,day_of_week,slot_time,content,is_occupied,room_id';
@@ -17,8 +17,10 @@ beforeAll(async () => {
 afterAll(closeDb);
 
 const slots = async () => (await db.query('SELECT faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id FROM faculty_timetable_slots WHERE is_active ORDER BY id')).rows;
-// Active blocks only: a re-import soft-deletes the blocks it no longer contains.
-const availability = async (roomId) => (await db.query('SELECT day, hour, is_available FROM room_availability WHERE room_id = $1 AND is_active ORDER BY day, hour', [roomId])).rows;
+// What the calendar shows for a room: hours taken by classes (from the timetables) and admin blocks.
+const calendar = async (roomId) => (await request(app).get('/api/availability').set('Authorization', admin.auth)).body
+  .filter((r) => r.room_id === roomId).map(({ day, hour, source }) => ({ day, hour, source }));
+const derivedRows = async (roomId) => Number((await db.query('SELECT count(*) FROM room_availability WHERE room_id = $1', [roomId])).rows[0].count);
 
 const exportTimetable = (view) => request(app)
   .get('/api/admin/uploads/export/timetable')
@@ -27,9 +29,9 @@ const exportTimetable = (view) => request(app)
   .buffer(true)
   .parse(binaryParser);
 
-test('imports slots, replaces the previous timetable, and blocks the assigned room for that day/hour', async () => {
+test('imports slots, replaces the previous timetable; an occupied slot blocks its room through the timetable itself', async () => {
   const room = await createRoom();
-  const prof = `Prof Import ${uniq()}`;
+  const prof = (await createFacultyEntry({ name: `Prof Import ${uniq()}` })).name;
   const oldProf = `Old Prof ${uniq()}`;
   await runImport(app, admin.auth, 'timetable', `${HEADER}\n${oldProf},2,Tue,10:00-11:00,Old,true,\n`);
   const { rows: [oldSlot] } = await db.query('SELECT id FROM faculty_timetable_slots WHERE faculty_name = $1 AND is_active', [oldProf]);
@@ -44,14 +46,20 @@ test('imports slots, replaces the previous timetable, and blocks the assigned ro
   ].join('\n');
   const { post, job } = await runImport(app, admin.auth, 'timetable', csv);
   expect(post.status).toBe(202);
-  expect(job).toEqual({ status: 'completed', message: 'Successfully imported 4 timetable records' });
+  expect(job).toEqual({
+    status: 'completed', message: 'Imported 3 timetable records, 1 skipped',
+    skipped: [{ line: 5, reason: 'missing faculty_name' }], unresolved: [],
+  });
 
   expect(await slots()).toEqual([
     { faculty_name: prof, semester: '4', day_of_week: 'Mon', slot_time: '09:00-10:00', content: 'CS201 Data Structures', is_occupied: true, room_id: room.id },
     { faculty_name: prof, semester: '4', day_of_week: 'Wed', slot_time: '11:00-12:00', content: 'CS202 Lab', is_occupied: true, room_id: null },
     { faculty_name: prof, semester: '6', day_of_week: 'Thu', slot_time: '12:00-13:00', content: 'Free', is_occupied: false, room_id: null },
   ]);
-  expect(await availability(room.id)).toEqual([{ day: 'Mon', hour: 9, is_available: false }]);
+  const { rows: linked } = await db.query('SELECT DISTINCT faculty_id FROM faculty_timetable_slots WHERE faculty_name = $1 AND is_active', [prof]);
+  expect(linked).toEqual([{ faculty_id: expect.any(Number) }]);
+  expect(await calendar(room.id)).toEqual([{ day: 'Mon', hour: 9, source: 'class' }]);
+  expect(await derivedRows(room.id)).toBe(0); // nothing is copied into room_availability
 
   // The previous timetable is soft-deleted, not removed.
   const { rows: [old] } = await db.query('SELECT * FROM faculty_timetable_slots WHERE id = $1', [oldSlot.id]);
@@ -63,7 +71,20 @@ test('imports slots, replaces the previous timetable, and blocks the assigned ro
   expect(JSON.stringify(list.body)).not.toContain(oldProf);
 
   const audit = await db.query("SELECT details FROM audit_logs WHERE action = 'IMPORT_TIMETABLE_CSV' AND user_id = $1 ORDER BY id DESC LIMIT 1", [admin.user.id]);
-  expect(audit.rows[0].details).toEqual({ recordCount: 4 });
+  expect(audit.rows[0].details).toEqual({ recordCount: 4, imported: 3, skipped: 1, unresolved: 0 });
+});
+
+test('unreadable days and times are skipped with the reason; names outside the faculty directory are reported', async () => {
+  const stranger = `Prof Unknown ${uniq()}`;
+  const csv = [HEADER, `${stranger},4,Mon,09:00-10:00,A,true,`, `${stranger},4,Funday,09:00-10:00,B,true,`, `${stranger},4,Tue,nine,C,true,`].join('\n');
+  const { job } = await runImport(app, admin.auth, 'timetable', csv);
+  expect(job).toMatchObject({
+    status: 'completed',
+    skipped: [{ line: 3, reason: 'day_of_week must be a weekday (Mon–Sun)' }, { line: 4, reason: 'slot_time must look like 09:00-10:00' }],
+    unresolved: [stranger],
+  });
+  expect(job.message).toMatch(/1 faculty name\(s\) not in the directory/);
+  expect((await slots()).map((r) => r.content)).toEqual(['A']);
 });
 
 test('a failing import (unknown room_id) rolls back and keeps the existing timetable', async () => {
@@ -77,22 +98,24 @@ test('a failing import (unknown room_id) rolls back and keeps the existing timet
   expect(await slots()).toEqual(before);
 });
 
-test('[OPS-05] 12-hour afternoon slot times ("02:00-03:00") block the room at 14:00, not 02:00', async () => {
+test('[OPS-05] 12-hour afternoon slot times ("02:00-03:00") block the room at 14:00, not 02:00; a 2-hour slot blocks both hours', async () => {
   const room = await createRoom();
-  const { job } = await runImport(app, admin.auth, 'timetable', `${HEADER}\nProf PM ${uniq()},4,Tue,02:00-03:00,Afternoon class,true,${room.id}\n`);
+  const csv = [HEADER, `Prof PM ${uniq()},4,Tue,02:00-03:00,Afternoon class,true,${room.id}`, `Prof PM ${uniq()},4,Wed,09:00-11:00,Lab,true,${room.id}`].join('\n');
+  const { job } = await runImport(app, admin.auth, 'timetable', csv);
   expect(job.status).toBe('completed');
-  expect(await availability(room.id)).toEqual([{ day: 'Tue', hour: 14, is_available: false }]);
+  expect(await calendar(room.id)).toEqual([
+    { day: 'Tue', hour: 14, source: 'class' }, { day: 'Wed', hour: 9, source: 'class' }, { day: 'Wed', hour: 10, source: 'class' },
+  ]);
 });
 
-test('[OPS-05] re-importing a timetable clears room blocks that the new timetable no longer contains', async () => {
+test('[OPS-05] re-importing a timetable frees rooms the new timetable no longer uses', async () => {
   const room = await createRoom();
   await runImport(app, admin.auth, 'timetable', `${HEADER}\nProf Moving ${uniq()},4,Mon,10:00-11:00,Old slot,true,${room.id}\n`);
-  expect(await availability(room.id)).toEqual([{ day: 'Mon', hour: 10, is_available: false }]);
+  expect(await calendar(room.id)).toEqual([{ day: 'Mon', hour: 10, source: 'class' }]);
 
   const { job } = await runImport(app, admin.auth, 'timetable', `${HEADER}\nProf Moving ${uniq()},4,Mon,10:00-11:00,Now unassigned,true,\n`);
   expect(job.status).toBe('completed');
-  const stillBlocked = (await availability(room.id)).filter((r) => r.is_available === false);
-  expect(stillBlocked).toEqual([]);
+  expect(await calendar(room.id)).toEqual([]);
 });
 
 describe('GET /api/admin/uploads/export/timetable', () => {

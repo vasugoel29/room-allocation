@@ -21,8 +21,9 @@ const snapshot = async () => {
     [FACULTIES.map((f) => f.email)],
   )).rows;
   const slots = (await db.query(
-    `SELECT department, semester, section, day_of_week, slot_time, subject_code, room_name, faculty_name
-       FROM timetable_slots WHERE subject_code = ANY($1) ORDER BY 1, 2, 3, 4, 5, 6`, [DEMO_TIMETABLE.map((s) => s.subject_code)],
+    `SELECT department, semester, section, day_of_week, slot_time, start_min, end_min, subject_code, room_name, faculty_name,
+            room_id, faculty_id, is_active
+       FROM timetable_slots WHERE subject_code = ANY($1) ORDER BY 1, 2, 3, 4, 6, 8, 9`, [DEMO_TIMETABLE.map((s) => s.subject_code)],
   )).rows;
   return crypto.createHash('sha256').update(JSON.stringify({ rooms, faculties, slots })).digest('hex');
 };
@@ -32,12 +33,16 @@ describe('seed', () => {
     const first = await seed({ demoTimetable: true });
     expect(first.rooms.created + first.rooms.updated + first.rooms.unchanged + first.rooms.deactivated_kept).toBe(ROOMS.length);
     expect(first.faculties.created + first.faculties.updated + first.faculties.unchanged + first.faculties.deactivated_kept).toBe(FACULTIES.length);
+    // The demo timetable names only seeded rooms and faculty: every class is linked by id.
+    expect(first.demoTimetable).toMatchObject({ sections: 2, rejected: [], unresolved: { rooms: [], faculty: [] } });
     const after1 = await snapshot();
 
     const second = await seed({ demoTimetable: true });
     expect(second.rooms).toEqual({ created: 0, updated: 0, unchanged: ROOMS.length - first.rooms.deactivated_kept, deactivated_kept: first.rooms.deactivated_kept });
     expect(second.faculties).toMatchObject({ created: 0, updated: 0 });
-    expect(second.demoTimetable).toEqual({ inserted: 0, skipped: DEMO_TIMETABLE.length });
+    expect(second.demoTimetable).toEqual({
+      sections: 2, inserted: 0, unchanged: DEMO_TIMETABLE.length, deactivated: 0, rejected: [], unresolved: { rooms: [], faculty: [] },
+    });
     expect(await snapshot()).toBe(after1);
   });
 

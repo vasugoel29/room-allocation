@@ -25,7 +25,8 @@ import { getIstDateKey, getIstHour, getIstWeekday } from '../utils/timezone';
 function AdminTimetable() {
   const [searchType, setSearchType] = useState('FACULTY'); // 'FACULTY' | 'SECTION'
   const [facultyName, setFacultyName] = useState('');
-  const [dept, setDept] = useState('IT');
+  const [dept, setDept] = useState('');
+  const [branches, setBranches] = useState([]);
   const [semester, setSemester] = useState('6');
   const [section, setSection] = useState('1');
   const [selectedDay, setSelectedDay] = useState(getIstDateKey(new Date()));
@@ -36,6 +37,18 @@ function AdminTimetable() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Branches as the ACL names them, from the imported section timetables.
+  useEffect(() => {
+    if (searchType !== 'SECTION' || branches.length) return;
+    api.get('/timetable/branches')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((list) => {
+        setBranches(Array.isArray(list) ? list : []);
+        if (Array.isArray(list) && list.length) setDept((d) => d || list[0]);
+      })
+      .catch(() => setBranches([]));
+  }, [searchType, branches.length]);
 
   useEffect(() => {
     if (searchType !== 'FACULTY' || !facultyName.trim()) {
@@ -73,6 +86,11 @@ function AdminTimetable() {
         params.append('name', targetName);
       }
       else {
+        if (!dept) {
+          toast.error('No section timetable has been imported yet');
+          setLoading(false);
+          return;
+        }
         params.append('department', dept);
         params.append('semester', String(semester));
         params.append('section', section);
@@ -251,11 +269,7 @@ function AdminTimetable() {
                 <CustomSelect 
                   value={dept} 
                   onChange={setDept}
-                  options={[
-                    { value: 'IT', label: 'IT' },
-                    { value: 'CS', label: 'CS' },
-                    { value: 'ECE', label: 'ECE' }
-                  ]}
+                  options={branches.map((b) => ({ value: b, label: getShortDept(b) }))}
                   buttonClassName="w-full bg-bg-primary/50 border border-border rounded-2xl p-4 text-sm font-bold focus:outline-none focus:border-primary text-text-primary flex items-center justify-between text-left"
                 />
               </div>

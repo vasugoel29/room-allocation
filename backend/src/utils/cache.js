@@ -65,3 +65,9 @@ class SimpleCache {
 
 const cache = new SimpleCache(30); // 30s default TTL for rapid UI updates
 export default cache;
+
+/** After any write that changes what a room shows (rooms, blocks, timetables, bookings, releases). */
+export function invalidateRoomCaches() {
+  cache.delete('room_availability_all');
+  cache.deletePattern('admin_status_.*');
+}

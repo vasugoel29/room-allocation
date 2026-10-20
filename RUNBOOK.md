@@ -52,7 +52,8 @@ Every variable is listed with a comment in `backend/.env.example` and `frontend/
 4. **Deploy the frontend** on Vercel (root `frontend/`, build `npm run build`, output `dist`) with its env.
 5. **Load reference data** (only on an empty database):
    - Rooms and the faculty directory: Admin → Uploads, or the ACL faculty sync.
-   - Timetable: Admin → Uploads → timetable CSV. A re-import replaces the previous one and keeps the old rows soft-deleted.
+   - Faculty timetable: Admin → Uploads → timetable CSV. A re-import replaces the previous one and keeps the old rows soft-deleted. The job result lists skipped rows and any faculty names not in the directory.
+   - Section timetables (every semester): `POST /api/timetable/upload { slots: [...] }`. Each section is keyed by the ACL `branch` exactly as the ACL sends it, plus semester and section. An import replaces the classes of the sections it contains. The response lists rejected rows and the room and faculty names CRAS doesn't know (`unresolved`). Those classes are still shown, but they block no CRAS room or faculty member until the name is fixed in the source or the room or person is added. A re-import then links them.
    - Students and staff are not imported: each person appears on their first Google sign-in, with role and section from the ACL.
 6. **Smoke test** with real accounts:
    - A rep requests a booking; the faculty member sees the bell and approves; the rep sees the result.

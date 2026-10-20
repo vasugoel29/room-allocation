@@ -2,6 +2,7 @@ import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import cache from '../utils/cache.js';
 import { roomRepository } from '../repositories/roomRepository.js';
+import { timetableRepository } from '../repositories/timetableRepository.js';
 import logger from '../utils/logger.js';
 import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 import { canBookDirect } from '../auth/permissions.js';
@@ -207,25 +208,13 @@ export const getRoomWeekSchedule = async (req, res) => {
     const start = new Date(istDateTimeToUtc(weekStart, 0));
     const end = new Date(start.getTime() + (7 * 24 * 60 * 60 * 1000) - 1);
 
-    const [roomResult, availResult, ttResult, bookingsResult] = await Promise.all([
+    const [roomResult, classes, blocks, bookingsResult] = await Promise.all([
       // Room details
       db.query('SELECT id, name, floor, building, capacity, type, has_ac, has_projector FROM rooms WHERE id = $1', [id]),
-
-      // Timetable blocks from room_availability (recurring weekly occupancy)
-      db.query(`
-        SELECT ra.day, ra.hour, ra.is_available
-        FROM room_availability ra
-        WHERE ra.room_id = $1 AND ra.is_available = FALSE AND ra.is_active
-        ORDER BY ra.day, ra.hour
-      `, [id]),
-
-      // Rich detail from faculty_timetable_slots where room_id is set
-      db.query(`
-        SELECT day_of_week, slot_time, faculty_name, content, semester
-        FROM faculty_timetable_slots
-        WHERE room_id = $1 AND is_active
-        ORDER BY day_of_week, slot_time
-      `, [id]),
+      // Weekly classes in this room (section timetables and faculty slots, by room id)
+      timetableRepository.roomClasses(id),
+      // Admin weekly blocks
+      db.query('SELECT day, hour FROM room_availability WHERE room_id = $1 AND is_active ORDER BY day, hour', [id]),
 
       // Active bookings within this week
       db.query(`
@@ -243,28 +232,19 @@ export const getRoomWeekSchedule = async (req, res) => {
 
     if (!roomResult.rows[0]) return res.status(404).json({ error: 'Room not found' });
 
-    // Build a lookup map: day → hour → timetable slot detail
-    const ttMap = {};
-    for (const row of ttResult.rows) {
-      const key = `${row.day_of_week}`;
-      if (!ttMap[key]) ttMap[key] = {};
-      // parse start hour from slot_time like "09:00-10:00" or "T309:00-10:00"
-      const match = row.slot_time.match(/(\d{1,2}):(\d{2})/);
-      if (match) {
-        let hour = parseInt(match[1]);
-        if (hour < 8) {
-          hour += 12;
-        }
-        ttMap[key][hour] = { faculty: row.faculty_name, subject: row.content, semester: row.semester };
+    // One block per taken hour: classes carry their detail, admin blocks none.
+    const timetableBlocks = [];
+    const seen = new Set();
+    for (const c of classes) {
+      for (let h = Math.floor(c.start_min / 60); h * 60 < c.end_min; h++) {
+        if (seen.has(`${c.day_of_week}|${h}`)) continue;
+        seen.add(`${c.day_of_week}|${h}`);
+        timetableBlocks.push({ day: c.day_of_week, hour: h, faculty: c.faculty_name, subject: c.subject_name, semester: c.semester });
       }
     }
-
-    // Enrich availability blocks with timetable detail
-    const timetableBlocks = availResult.rows.map(row => ({
-      day: row.day,
-      hour: row.hour,
-      ...(ttMap[row.day]?.[row.hour] || {})
-    }));
+    for (const b of blocks.rows) {
+      if (!seen.has(`${b.day}|${b.hour}`)) timetableBlocks.push({ day: b.day, hour: b.hour });
+    }
 
     // Normalise bookings to {date, startHour, endHour, ...}
     const bookings = bookingsResult.rows.map(b => {
@@ -324,40 +304,29 @@ export const checkRoomConflict = async (req, res) => {
       const hours = [];
       for (let h = sh; h < eh; h++) hours.push(h);
 
-      if (hours.length > 0) {
-        const availResult = await db.query(`
-          SELECT ra.hour, ra.is_available
-          FROM room_availability ra
-          WHERE ra.room_id = $1 AND ra.day = $2 AND ra.hour = ANY($3) AND ra.is_available = FALSE AND ra.is_active
-        `, [id, dayShort, hours]);
-
-        if (availResult.rows.length > 0) {
-          const ttResult = await db.query(`
-            SELECT id, faculty_name, content, slot_time
-            FROM faculty_timetable_slots
-            WHERE room_id = $1 AND day_of_week = $2 AND is_active
-          `, [id, dayShort]);
-
-          for (const row of availResult.rows) {
-            const detail = ttResult.rows.find(s => {
-              const match = s.slot_time.match(/(\d{1,2}):(\d{2})/);
-              if (match) {
-                let h = parseInt(match[1]);
-                if (h < 8) h += 12;
-                return h === row.hour;
-              }
-              return false;
-            });
-
-            conflicts.push({
-              type: 'timetable',
-              hour: row.hour,
-              slotId: detail?.id || null,
-              faculty: detail?.faculty_name || 'Unknown faculty',
-              subject: detail?.content || 'Scheduled class',
-              resolution: 'Remove the timetable slot for this room and hour first.'
-            });
-          }
+      // Classes and admin blocks in those hours, unless released for this date (the booking rule).
+      const [classes, blocked] = await Promise.all([
+        timetableRepository.roomClasses(id, dayShort),
+        timetableRepository.blockedHours(id, dayShort),
+      ]);
+      for (const h of hours) {
+        if (await timetableRepository.isReleased(id, date, h, h + 1)) continue;
+        const cls = classes.find((c) => c.start_min < h * 60 + 60 && h * 60 < c.end_min);
+        if (cls) {
+          conflicts.push({
+            type: 'timetable',
+            hour: h,
+            // Only faculty slots can be removed from the Room Grid; section classes come from the import.
+            slotId: cls.kind === 'faculty' ? cls.id : null,
+            faculty: cls.faculty_name || 'Unknown faculty',
+            subject: cls.subject_name || 'Scheduled class',
+            resolution: cls.kind === 'faculty'
+              ? 'Remove the timetable slot for this room and hour first.'
+              : 'This is a section class from the timetable import; cancel it for this date or re-import the timetable.',
+          });
+        } else if (blocked.includes(h)) {
+          conflicts.push({ type: 'timetable', hour: h, slotId: null, faculty: null, subject: 'Blocked by an admin',
+            resolution: 'Lift the weekly block for this room and hour first.' });
         }
       }
 

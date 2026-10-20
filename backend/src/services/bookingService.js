@@ -1,6 +1,6 @@
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
-import cache from '../utils/cache.js';
+import { invalidateRoomCaches } from '../utils/cache.js';
 import { bookingRepository } from '../repositories/bookingRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
@@ -94,11 +94,6 @@ export async function inTransaction(fn, attempts = 3) {
     }
   }
 }
-
-const invalidateRoomCaches = () => {
-  cache.deletePattern('admin_status_.*');
-  cache.delete('room_availability_all');
-};
 
 /** When a reschedule booking becomes ACTIVE, the class it replaces is released for that date. */
 async function activateRescheduleRelease(client, booking, actorId) {

@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import { timetableRepository } from './timetableRepository.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
 
 /**
@@ -33,15 +34,24 @@ export const roomRepository = {
   },
 
   /**
-   * Upsert room availability
+   * Set an admin weekly block on a room-hour (isAvailable = false) or lift it (true: the block is
+   * soft-deleted). room_availability holds blocks only; classes come from the timetables.
    */
   upsertAvailability: async (roomId, day, hour, isAvailable, userId = null, client = db) => {
-    const query = `
-      INSERT INTO room_availability (room_id, day, hour, is_available, user_id, source)
-      VALUES ($1, $2, $3, $4, $5, 'manual')
-      ON CONFLICT (room_id, day, hour) DO UPDATE
-        SET is_available = $4, user_id = $5, source = 'manual', is_active = TRUE, deactivated_at = NULL`;
-    return client.query(query, [roomId, day, hour, isAvailable, userId]);
+    if (isAvailable) {
+      return client.query(
+        `UPDATE room_availability SET is_active = FALSE, deactivated_at = NOW(), user_id = $4
+          WHERE room_id = $1 AND day = $2 AND hour = $3 AND is_active`,
+        [roomId, day, hour, userId],
+      );
+    }
+    return client.query(
+      `INSERT INTO room_availability (room_id, day, hour, is_available, user_id, source)
+       VALUES ($1, $2, $3, FALSE, $4, 'manual')
+       ON CONFLICT (room_id, day, hour) DO UPDATE
+         SET is_available = FALSE, user_id = $4, source = 'manual', is_active = TRUE, deactivated_at = NULL`,
+      [roomId, day, hour, userId],
+    );
   },
 
   /**
@@ -162,31 +172,34 @@ export const roomRepository = {
   },
 
   /**
-   * Get all room availability entries
-   */
-  /**
-   * Weekly / dated overrides plus dated releases (approved class cancellations, reschedules) as
-   * one `{ room_id, room_name, day, hour, is_available }` list. Releases come last so they win over
-   * a block on the same date and hour, as they do server-side (checkRoomTimetable) — NEW-P5-4.
+   * The calendar feed, as one `{ room_id, room_name, day, hour, is_available }` list:
+   *  - weekly class hours from the timetables (by room id) — the same classes the booking check uses;
+   *  - admin weekly blocks;
+   *  - dated releases (approved class cancellations, reschedules), last, so they win over a block or
+   *    class on that date and hour, as they do server-side (checkRoomTimetable) — NEW-P5-4.
    */
   getAllAvailability: async () => {
-    const result = await db.query(`
-      SELECT ra.id, ra.room_id, ra.day, ra.hour, ra.is_available, ra.user_id, ra.created_at,
-             r.name AS room_name, 'override' AS source
-        FROM room_availability ra
-        JOIN rooms r ON ra.room_id = r.id
-       WHERE r.is_active AND ra.is_active
-      UNION ALL
-      SELECT NULL, rel.room_id, rel.release_date::text, h, TRUE, rel.created_by, rel.created_at,
-             r.name, 'release'
-        FROM room_slot_releases rel
-        JOIN rooms r ON r.id = rel.room_id
-       CROSS JOIN LATERAL generate_series(rel.start_hour, rel.end_hour - 1) AS h
-       WHERE rel.is_active AND r.is_active
-         AND rel.release_date >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date - 7
-      ORDER BY source, room_id, day, hour
-    `);
-    return result.rows;
+    const [classes, rest] = await Promise.all([
+      timetableRepository.weeklyClassHours(),
+      db.query(`
+        SELECT ra.room_id, r.name AS room_name, ra.day, ra.hour, FALSE AS is_available, ra.user_id, 'block' AS source
+          FROM room_availability ra
+          JOIN rooms r ON ra.room_id = r.id
+         WHERE r.is_active AND ra.is_active
+        UNION ALL
+        SELECT rel.room_id, r.name, rel.release_date::text, h, TRUE, rel.created_by, 'release'
+          FROM room_slot_releases rel
+          JOIN rooms r ON r.id = rel.room_id
+         CROSS JOIN LATERAL generate_series(rel.start_hour, rel.end_hour - 1) AS h
+         WHERE rel.is_active AND r.is_active
+           AND rel.release_date >= (NOW() AT TIME ZONE 'Asia/Kolkata')::date - 7
+        ORDER BY source, room_id, day, hour
+      `),
+    ]);
+    const classRows = classes.map((c) => ({ ...c, is_available: false, user_id: null, source: 'class' }));
+    const blocks = rest.rows.filter((r) => r.source === 'block');
+    const releases = rest.rows.filter((r) => r.source === 'release');
+    return [...classRows, ...blocks, ...releases];
   },
 
   /**

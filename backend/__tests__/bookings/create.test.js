@@ -6,7 +6,7 @@ import {
   futureSlot, pastSlot, tokenFor, approverId, closeDb,
 } from '../../test/helpers/factories.js';
 import {
-  uniq, plusHours, ist, pastWeekdaySlot, farWeekdaySlot, getBooking, auditRows, insertTimetableSlot, waitFor, insertRelease,
+  uniq, plusHours, ist, pastWeekdaySlot, farWeekdaySlot, getBooking, auditRows, insertTimetableSlot, insertFacultySlot, waitFor, insertRelease,
 } from '../../test/helpers/bookings.js';
 import { getIstParts } from '../../src/utils/timezone.js';
 import { importSectionSlots } from '../../src/services/timetableImport.js';
@@ -345,11 +345,12 @@ describe('POST /api/bookings — conflicts', () => {
     await db.runInTransaction((client) => importSectionSlots(client, DEMO_TIMETABLE));
     const { rows: [tt] } = await db.query(`
       SELECT * FROM timetable_slots
-      WHERE slot_time = '10:00-11:00' AND department = 'INFORMATION TECHNOLOGY'
-        AND section ~ '^[0-9]+$' AND semester ~ '^[0-9]+$' AND day_of_week IN ('Mon','Tue','Wed','Thu','Fri')
+      WHERE is_active AND slot_time = '10:00-11:00' AND department = 'INFORMATION TECHNOLOGY'
+        AND day_of_week IN ('Mon','Tue','Wed','Thu','Fri')
       ORDER BY id LIMIT 1`);
     expect(tt).toBeDefined();
-    const rep = await createRep({ branch: 'IT', semester: Number(tt.semester), section: Number(tt.section) });
+    // The section key is the ACL branch as sent (any case) + semester + section.
+    const rep = await createRep({ branch: 'Information Technology', semester: tt.semester, section: tt.section });
     const room = await createRoom();
     const slot = futureSlot({ hour: 10, day: tt.day_of_week, minLeadHours: 0 });
 
@@ -359,7 +360,7 @@ describe('POST /api/bookings — conflicts', () => {
     // A section can have several rows in one hour (e.g. lab batches); the app reports one of them.
     const { rows: candidates } = await db.query(
       `SELECT subject_name, faculty_name, room_name FROM timetable_slots
-       WHERE slot_time = '10:00-11:00' AND department = $1 AND semester = $2 AND section = $3 AND day_of_week = $4`,
+       WHERE is_active AND slot_time = '10:00-11:00' AND department = $1 AND semester = $2 AND section = $3 AND day_of_week = $4`,
       [tt.department, tt.semester, tt.section, tt.day_of_week],
     );
     expect(res.body.conflict).toMatchObject({ type: 'timetable', label: 'your section timetable', day: tt.day_of_week, time: '10:00-11:00' });
@@ -397,9 +398,7 @@ describe('POST /api/bookings — conflicts', () => {
 
   test('selected faculty busy (faculty_timetable_slots) → 409 faculty_busy', async () => {
     const fac = await createFaculty({ name: uniq('Prof Busy ') });
-    await db.query(
-      `INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content, is_occupied)
-       VALUES ($1, 'Mon', '10:00-11:00', 'Lecture', true)`, [fac.user.name.toLowerCase()]);
+    await insertFacultySlot({ faculty_name: fac.user.name.toLowerCase(), day_of_week: 'Mon', slot_time: '10:00-11:00', content: 'Lecture', is_occupied: true });
     const rep = await createRep();
     const room = await createRoom();
     const res = await post(rep.auth, body(room, futureSlot({ hour: 10, day: 'Mon', minLeadHours: 0 }), { faculty_id: fac.faculty.id }));
@@ -408,9 +407,7 @@ describe('POST /api/bookings — conflicts', () => {
 
     // Unoccupied faculty slot does not block
     const fac2 = await createFaculty({ name: uniq('Prof Free ') });
-    await db.query(
-      `INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content, is_occupied)
-       VALUES ($1, 'Mon', '10:00-11:00', '', false)`, [fac2.user.name]);
+    await insertFacultySlot({ faculty_name: fac2.user.name, day_of_week: 'Mon', slot_time: '10:00-11:00', content: '', is_occupied: false });
     const ok = await post((await createRep()).auth, body(await createRoom(), futureSlot({ hour: 10, day: 'Mon', minLeadHours: 0 }), { faculty_id: fac2.faculty.id }));
     expect(ok.status).toBe(201);
     expect(ok.body.status).toBe('PENDING');
@@ -637,9 +634,7 @@ describe('POST /api/bookings — room timetable releases', () => {
 
   test('an occupied staff timetable slot held in the room (faculty_timetable_slots.room_id) blocks it', async () => {
     const room = await createRoom();
-    await db.query(
-      `INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content, is_occupied, room_id)
-       VALUES ($1, 'Thu', '15:00-16:00', 'Staff lab', true, $2)`, [uniq('Prof Lab '), room.id]);
+    await insertFacultySlot({ faculty_name: uniq('Prof Lab '), day_of_week: 'Thu', slot_time: '15:00-16:00', content: 'Staff lab', room_id: room.id });
     const slot = futureSlot({ hour: 15, day: 'Thu', minLeadHours: 0 });
     const res = await post((await createFaculty()).auth, body(room, slot));
     expect(res.status).toBe(409);

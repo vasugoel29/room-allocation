@@ -8,7 +8,7 @@ import {
   futureSlot, closeDb,
 } from '../../test/helpers/factories.js';
 
-import { historyRows } from '../../test/helpers/bookings.js';
+import { historyRows, insertTimetableSlot, insertFacultySlot, insertRelease } from '../../test/helpers/bookings.js';
 
 afterAll(closeDb);
 
@@ -289,10 +289,7 @@ describe('Room CRUD (admin)', () => {
 
   test('delete keeps faculty timetable slots pointing at the room (room_id is not nulled)', async () => {
     const room = await createRoom();
-    const { rows: [slot] } = await db.query(
-      "INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, room_id) VALUES ('RTT Prof', 'Mon', '09:00-10:00', $1) RETURNING id",
-      [room.id],
-    );
+    const slot = await insertFacultySlot({ faculty_name: 'RTT Prof', room_id: room.id });
     expect((await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth)).status).toBe(200);
     const { rows } = await db.query('SELECT room_id, is_active FROM faculty_timetable_slots WHERE id = $1', [slot.id]);
     expect(rows[0]).toEqual({ room_id: room.id, is_active: true });
@@ -409,25 +406,50 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(availRows(after.body, room.id)).toEqual([expect.objectContaining({ day: 'Mon', hour: 9, is_available: false })]);
   });
 
-  test('override is an upsert on (room, day, hour) and matches room name case-insensitively', async () => {
+  test('lifting a block (is_available=true) soft-deletes it; matches the room name case-insensitively; re-blocking revives it', async () => {
     const room = await createRoom();
     await override(admin.auth, { room_name: room.name, day: 'Wed', hour: 14, is_available: false });
     const res = await override(admin.auth, { room_name: room.name.toLowerCase(), day: 'Wed', hour: 14, is_available: true });
     expect(res.status).toBe(200);
-    const { rows } = await db.query('SELECT is_available FROM room_availability WHERE room_id = $1', [room.id]);
-    expect(rows).toEqual([{ is_available: true }]);
-    const after = await request(app).get('/api/availability').set('Authorization', rep.auth);
-    expect(availRows(after.body, room.id)).toEqual([expect.objectContaining({ is_available: true })]);
+    const rows = async () => (await db.query('SELECT is_available, is_active, deactivated_at IS NOT NULL AS lifted FROM room_availability WHERE room_id = $1', [room.id])).rows;
+    expect(await rows()).toEqual([{ is_available: false, is_active: false, lifted: true }]);
+    expect(availRows((await request(app).get('/api/availability').set('Authorization', rep.auth)).body, room.id)).toEqual([]);
+    await override(admin.auth, { room_name: room.name, day: 'Wed', hour: 14, is_available: false });
+    expect(await rows()).toEqual([{ is_available: false, is_active: true, lifted: false }]);
   });
 
-  test('[NEW-P5-4] active dated releases are reported per hour, after overrides; inactive and old ones are not', async () => {
+  test('the database keeps room_availability to weekly blocks: no active "free" rows, no dated rows', async () => {
+    const room = await createRoom();
+    for (const [day, free] of [['Mon', true], ['2030-01-07', false]]) {
+      await expect(db.query('INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, 9, $3)', [room.id, day, free]))
+        .rejects.toMatchObject({ constraint: 'room_availability_active_block' });
+    }
+  });
+
+  test('classes block the calendar straight from the timetables, by room id (the rule the booking check uses)', async () => {
+    const room = await createRoom();
+    const dept = `CAL-${tag()}`;
+    await insertTimetableSlot({ department: dept, day_of_week: 'Mon', slot_time: '09:00-11:00', room_name: room.name.toLowerCase(), subject_name: 'Two hours' });
+    await insertTimetableSlot({ department: dept, day_of_week: 'Tue', slot_time: '10:30-11:30', room_id: room.id, subject_name: 'Half past' });
+    await insertTimetableSlot({ department: dept, day_of_week: 'Wed', slot_time: '09:00-10:00', room_id: room.id, is_active: false, subject_name: 'Old' });
+    await insertFacultySlot({ faculty_name: 'Cal Prof', day_of_week: 'Thu', slot_time: '02:00-03:00', room_id: room.id, is_occupied: true });
+    await insertFacultySlot({ faculty_name: 'Cal Prof', day_of_week: 'Fri', slot_time: '02:00-03:00', room_id: room.id, is_occupied: false });
+    await override(admin.auth, { room_name: room.name, day: 'Sat', hour: 9, is_available: false }); // busts the cache
+    const res = await request(app).get('/api/availability').set('Authorization', viewer.auth);
+    const mine = availRows(res.body, room.id).map(({ day: d, hour, is_available, source }) => [d, hour, is_available, source]);
+    expect(mine).toEqual([
+      ['Mon', 9, false, 'class'], ['Mon', 10, false, 'class'], ['Thu', 14, false, 'class'],
+      ['Tue', 10, false, 'class'], ['Tue', 11, false, 'class'], ['Sat', 9, false, 'block'],
+    ]);
+  });
+
+  test('[NEW-P5-4] active dated releases are reported per hour, after blocks; inactive and old ones are not', async () => {
     const room = await createRoom();
     const istToday = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
     const day = (n) => new Date(Date.parse(`${istToday}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
     const ins = (date, from, to, active = true) => db.query(
       `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, is_active)
-       VALUES ($1, $2, $3, $4, 'test', $5)`, [room.id, date, from, to, active]);
-    await db.query("INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1, $2, 10, false)", [room.id, day(2)]);
+       VALUES ($1, $2, $3, $4, 'cancellation_request', $5)`, [room.id, date, from, to, active]);
     await ins(day(2), 10, 12);
     await ins(day(3), 9, 10, false); // withdrawn
     await ins(day(-30), 9, 10); // long past
@@ -435,8 +457,7 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     const res = await request(app).get('/api/availability').set('Authorization', viewer.auth);
     const mine = availRows(res.body, room.id).map(({ day: d, hour, is_available, source }) => ({ d, hour, is_available, source }));
     expect(mine).toEqual([
-      { d: day(2), hour: 10, is_available: false, source: 'override' },
-      { d: 'Fri', hour: 15, is_available: false, source: 'override' },
+      { d: 'Fri', hour: 15, is_available: false, source: 'block' },
       { d: day(2), hour: 10, is_available: true, source: 'release' },
       { d: day(2), hour: 11, is_available: true, source: 'release' },
     ]);
@@ -649,18 +670,13 @@ describe('GET /api/rooms/:id/week-schedule', () => {
     expect(nf.status).toBe(404);
   });
 
-  test('returns room, timetable blocks enriched from faculty slots (12h → 24h), and only ACTIVE bookings of that IST week', async () => {
+  test('returns room, one block per hour taken by a class (12h → 24h) or an admin block, and only ACTIVE bookings of that IST week', async () => {
     const room = await createRoom({ capacity: 77 });
     const owner = await createRep();
-    await db.query(
-      "INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1,'Mon',10,false), ($1,'Tue',14,false), ($1,'Wed',9,true)",
-      [room.id],
-    );
-    await db.query(
-      `INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content, semester, room_id)
-       VALUES ('RTT Prof A','Mon','10:00-11:00','Maths','3',$1), ('RTT Prof B','Tue','02:00-03:00','Physics','5',$1)`,
-      [room.id],
-    );
+    await db.query("INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1,'Wed',9,false), ($1,'Mon',10,false)", [room.id]);
+    await insertFacultySlot({ faculty_name: 'RTT Prof A', day_of_week: 'Mon', slot_time: '10:00-11:00', content: 'Maths', semester: '3', room_id: room.id });
+    await insertFacultySlot({ faculty_name: 'RTT Prof B', day_of_week: 'Tue', slot_time: '02:00-03:00', content: 'Physics', semester: '5', room_id: room.id });
+    await insertTimetableSlot({ department: `WS-${tag()}`, semester: 4, day_of_week: 'Thu', slot_time: '09:00-11:00', room_id: room.id, subject_name: 'Lab', faculty_name: 'RTT Prof C' });
     const slot = futureSlot({ hour: 10 });
     const active = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: slot.start, end_time: slot.end, purpose: 'In week' });
     const cancelled = futureSlot({ hour: 12 });
@@ -670,10 +686,13 @@ describe('GET /api/rooms/:id/week-schedule', () => {
     const res = await sched(admin.auth, room.id, { weekStart });
     expect(res.status).toBe(200);
     expect(res.body.room).toMatchObject({ id: room.id, name: room.name, capacity: 77 });
-    const blocks = [...res.body.timetableBlocks].sort((a, b) => a.day.localeCompare(b.day));
+    const blocks = [...res.body.timetableBlocks].sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour);
     expect(blocks).toEqual([
       { day: 'Mon', hour: 10, faculty: 'RTT Prof A', subject: 'Maths', semester: '3' },
+      { day: 'Thu', hour: 9, faculty: 'RTT Prof C', subject: 'Lab', semester: '4' },
+      { day: 'Thu', hour: 10, faculty: 'RTT Prof C', subject: 'Lab', semester: '4' },
       { day: 'Tue', hour: 14, faculty: 'RTT Prof B', subject: 'Physics', semester: '5' },
+      { day: 'Wed', hour: 9 },
     ]);
     expect(res.body.bookings).toEqual([expect.objectContaining({
       id: active.id, date: slot.dateKey, startHour: 10, endHour: 11, purpose: 'In week', status: 'ACTIVE',
@@ -716,15 +735,11 @@ describe('GET /api/rooms/:id/conflict-check', () => {
 
   // [BKG-13] conflict-check builds its window with server-local `new Date(y, m, d, h)`; the suite
   // runs with TZ=UTC like production, where the window is 5.5h off and the clashing booking is missed.
-  test('[BKG-13] reports timetable (room_availability) and ACTIVE booking conflicts with resolution hints', async () => {
+  test('[BKG-13] reports timetable and ACTIVE booking conflicts with resolution hints', async () => {
     const room = await createRoom();
     const owner = await createRep();
     const slot = futureSlot({ hour: 10 });
-    await db.query('INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1,$2,11,false), ($1,$2,9,true)', [room.id, slot.day]);
-    const { rows: [fts] } = await db.query(
-      "INSERT INTO faculty_timetable_slots (faculty_name, day_of_week, slot_time, content, room_id) VALUES ('RTT Prof C',$2,'11:00-12:00','Chem',$1) RETURNING id",
-      [room.id, slot.day],
-    );
+    const fts = await insertFacultySlot({ faculty_name: 'RTT Prof C', day_of_week: slot.day, slot_time: '11:00-12:00', content: 'Chem', room_id: room.id });
     const b = await insertBooking({ room_id: room.id, created_by: owner.user.id, start_time: slot.start, end_time: slot.end, purpose: 'Clash' });
     const cancelled = futureSlot({ hour: 9 });
     if (cancelled.dateKey === slot.dateKey) {
@@ -748,11 +763,18 @@ describe('GET /api/rooms/:id/conflict-check', () => {
     expect(clear.body).toEqual({ hasConflict: false, conflicts: [] });
   });
 
-  test('timetable block without a matching faculty slot falls back to generic labels', async () => {
+  test('an admin weekly block and a section class are reported; a class released for that date is not', async () => {
     const room = await createRoom();
     const slot = futureSlot({ hour: 10 });
     await db.query('INSERT INTO room_availability (room_id, day, hour, is_available) VALUES ($1,$2,10,false)', [room.id, slot.day]);
-    const res = await check(admin.auth, room.id, { date: slot.dateKey, startHour: 10, endHour: 11 });
-    expect(res.body.conflicts).toEqual([expect.objectContaining({ type: 'timetable', hour: 10, slotId: null, faculty: 'Unknown faculty', subject: 'Scheduled class' })]);
+    await insertTimetableSlot({ department: `CC-${tag()}`, day_of_week: slot.day, slot_time: '11:00-01:00', room_id: room.id, subject_name: 'Physics', faculty_name: 'RTT Prof D' });
+    await insertRelease({ room_id: room.id, release_date: slot.dateKey, start_hour: 12 });
+    const res = await check(admin.auth, room.id, { date: slot.dateKey, startHour: 10, endHour: 13 });
+    expect(res.body.conflicts).toEqual([
+      { type: 'timetable', hour: 10, slotId: null, faculty: null, subject: 'Blocked by an admin', resolution: 'Lift the weekly block for this room and hour first.' },
+      { type: 'timetable', hour: 11, slotId: null, faculty: 'RTT Prof D', subject: 'Physics',
+        resolution: 'This is a section class from the timetable import; cancel it for this date or re-import the timetable.' },
+    ]);
   });
 });
+

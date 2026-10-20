@@ -1,10 +1,12 @@
 import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
-import { getDayOfWeek, getHourFromTime } from '../utils/timetableLogic.js';
+import { getDayOfWeek, normalizeDay, parseSlotTime } from '../utils/timetableLogic.js';
 import { roomRepository } from '../repositories/roomRepository.js';
-import cache from '../utils/cache.js';
+import { timetableRepository, sectionKey } from '../repositories/timetableRepository.js';
+import { invalidateRoomCaches } from '../utils/cache.js';
+import { istDateTimeToUtc } from '../utils/timezone.js';
 import { notify } from '../notifications/notify.js';
-import { slotOverlaps } from '../services/bookingRules.js';
+import { facultyClassAt } from '../services/bookingRules.js';
 import { logActivity } from '../services/loggerService.js';
 import { importSectionSlots } from '../services/timetableImport.js';
 
@@ -15,38 +17,8 @@ function toTitleCase(str) {
 
 export async function getTimetable(req, res) {
   try {
-    const { user } = req;
-    if (!user) return res.status(401).json({ error: 'Unauthorized' });
-
-    const dept = user.branch || user.department_name;
-    // The ACL's semester only (no guessing from the year).
-    const semester = user.semester;
-    
-    // Mapping from short codes to full names in timetable_slots
-    const deptMapping = {
-      'IT': 'INFORMATION TECHNOLOGY',
-      'CS': 'COMPUTER SCIENCE AND ENGINEERING',
-      'ICE': 'INSTRUMENTATION AND CONTROL ENGINEERING',
-      'ECE': 'ELECTRONICS AND COMMUNICATION ENGINEERING',
-      'ME': 'MECHANICAL ENGINEERING',
-      'MPAE': 'MANUFACTURING PROCESS AND AUTOMATION ENGINEERING',
-      'EE': 'ELECTRICAL ENGINEERING',
-      'BT': 'BIOTECHNOLOGY'
-    };
-
-    const mappedDept = deptMapping[dept?.toUpperCase()] || dept;
-
-    const results = await db.query(
-      'SELECT * FROM timetable_slots WHERE (UPPER(department) = $1 OR UPPER(department) = $2) AND semester::TEXT = $3::TEXT AND section::TEXT = $4::TEXT',
-      [
-        dept?.toUpperCase(),
-        mappedDept?.toUpperCase(),
-        semester,
-        user.section
-      ]
-    );
-
-    res.json(results.rows);
+    // The student's section, as the ACL sends it: branch + semester + section (exact match).
+    res.json(await timetableRepository.sectionClasses(sectionKey(req.user)));
   } catch (err) {
     sendServerError(res, err);
   }
@@ -56,110 +28,80 @@ export async function getTimetable(req, res) {
 export async function uploadTimetable(req, res) {
   try {
     const { slots } = req.body;
-    if (!Array.isArray(slots)) return res.status(400).json({ error: 'Invalid data format' });
-    const { inserted, skipped } = await db.runInTransaction((client) => importSectionSlots(client, slots));
-    res.json({ message: 'Timetable uploaded successfully', inserted, skipped });
+    if (!Array.isArray(slots) || !slots.length) return res.status(400).json({ error: 'slots must be a non-empty array' });
+    const result = await db.runInTransaction(async (client) => {
+      const r = await importSectionSlots(client, slots);
+      await logActivity({
+        userId: req.user.id, action: 'IMPORT_SECTION_TIMETABLE', entityType: 'timetable',
+        details: { ...r, rejected: r.rejected.length, unresolved: { rooms: r.unresolved.rooms.length, faculty: r.unresolved.faculty.length } },
+      }, client);
+      return r;
+    });
+    invalidateRoomCaches();
+    res.json({ message: `Timetable imported for ${result.sections} section(s)`, ...result });
   } catch (err) {
     sendServerError(res, err);
   }
 }
 
 export async function getFacultyTimetable(req, res) {
-    try {
-      const { user } = req;
-      const { day } = req.query; // Optional: Mon, Tue, etc.
-      
-      let query = `
-        SELECT fts.*, r.name AS room_name 
-        FROM faculty_timetable_slots fts
-        LEFT JOIN rooms r ON r.id = fts.room_id
-        WHERE UPPER(fts.faculty_name) = $1 AND fts.is_active
-      `;
-      const params = [user.name.toUpperCase()];
-      
-      if (day) {
-        query += ' AND fts.day_of_week = $2';
-        params.push(day);
-      }
-  
-      const result = await db.query(query, params);
-      
-      // Group by day for easier frontend consumption
-      const grouped = result.rows.reduce((acc, slot) => {
-        const d = slot.day_of_week;
-        if (!acc[d]) acc[d] = [];
-        acc[d].push(slot);
-        return acc;
-      }, {});
-  
-      res.json(grouped);
-    } catch (err) {
-      sendServerError(res, err);
-    }
+  try {
+    const day = req.query.day ? normalizeDay(req.query.day) : null;
+    const facultyId = req.user.faculty_id ?? null;
+    const { rows } = facultyId == null ? { rows: [] } : await db.query(
+      `SELECT fts.*, r.name AS room_name
+         FROM faculty_timetable_slots fts LEFT JOIN rooms r ON r.id = fts.room_id
+        WHERE fts.faculty_id = $1 AND fts.is_active AND ($2::text IS NULL OR fts.day_of_week = $2)
+        ORDER BY fts.day_of_week, fts.start_min`,
+      [facultyId, day],
+    );
+    // Grouped by day for the Faculty Portal.
+    const grouped = rows.reduce((acc, slot) => {
+      (acc[slot.day_of_week] ||= []).push(slot);
+      return acc;
+    }, {});
+    res.json(grouped);
+  } catch (err) {
+    sendServerError(res, err);
+  }
 }
 
+const isDateKey = (d) => /^\d{4}-\d{2}-\d{2}$/.test(String(d)) && new Date(`${d}T00:00:00Z`).toISOString().slice(0, 10) === String(d);
+
+/** GET /api/timetable/faculty/check/:id?date&hour — is this faculty member free for that hour? */
 export async function checkFacultyAvailability(req, res) {
-    try {
-        const { id } = req.params; // Faculty ID
-        const { date, hour } = req.query; // Date (YYYY-MM-DD), Hour (0-23)
-
-        // `id` is a faculty-directory id (what the faculty picker returns).
-        const faculty = await db.query('SELECT name FROM faculties WHERE id = $1 AND is_active', [id]);
-        if (faculty.rows.length === 0) return res.status(404).json({ error: 'Faculty not found' });
-        
-        const facultyName = faculty.rows[0].name.toUpperCase();
-        const dayName = getDayOfWeek(date);
-
-        // 1. Check Static Schedule (Check both student class slots and faculty specific slots)
-        const staticRes = await db.query(`
-            SELECT slot_time FROM timetable_slots 
-            WHERE UPPER(faculty_name) = $1 AND day_of_week = $2
-        `, [facultyName, dayName]);
-
-        const facultyStaticRes = await db.query(`
-            SELECT slot_time FROM faculty_timetable_slots 
-            WHERE is_active AND is_occupied = true AND UPPER(faculty_name) = $1 AND day_of_week = $2
-        `, [facultyName, dayName]);
-
-        const combinedSlots = [...staticRes.rows, ...facultyStaticRes.rows];
-
-        const staticSlot = combinedSlots.find((slot) => {
-            const [startTime, endTime] = String(slot.slot_time || '').split('-');
-            const startHour = getHourFromTime(startTime);
-            const endHour = getHourFromTime(endTime || startTime);
-            return Number(hour) >= startHour && Number(hour) < endHour;
-        });
-        const isOccupiedStatic = Boolean(staticSlot);
-
-        // 2. Check Dynamic Bookings (Active)
-        const bookingRes = await db.query(`
-            SELECT * FROM bookings 
-            WHERE faculty_id = $1
-              AND (start_time AT TIME ZONE 'Asia/Kolkata')::date = $2::date
-              AND EXTRACT(HOUR FROM start_time AT TIME ZONE 'Asia/Kolkata') = $3
-              AND status = 'ACTIVE'
-        `, [id, date, hour]);
-
-        const isOccupiedDynamic = bookingRes.rows.length > 0;
-
-        // Final Verdict: Occupied if Static OR Dynamic (overrides bypassed)
-        const isOccupied = isOccupiedStatic || isOccupiedDynamic;
-        res.json({
-            isOccupied,
-            reason: isOccupied ? (isOccupiedDynamic ? 'Dynamic Booking' : 'Static Class') : null,
-            // Do not expose a faculty member's timetable or booking details.
-            details: null
-        });
-
-    } catch (err) {
-        sendServerError(res, err);
+  try {
+    const { id } = req.params;
+    const { date } = req.query;
+    const hour = Number(req.query.hour);
+    if (!isDateKey(date) || !Number.isInteger(hour) || hour < 0 || hour > 23) {
+      return res.status(400).json({ error: 'date (YYYY-MM-DD) and hour (0-23) are required' });
     }
-}
+    // `id` is a faculty-directory id (what the faculty picker returns).
+    const faculty = await db.query('SELECT id FROM faculties WHERE id = $1 AND is_active', [id]);
+    if (faculty.rows.length === 0) return res.status(404).json({ error: 'Faculty not found' });
 
-/** The names a faculty member's classes are filed under: their account name and directory name. */
-async function facultyNames(user) {
-  const { rows } = await db.query('SELECT name FROM faculties WHERE user_id = $1 AND is_active', [user.id]);
-  return [...new Set([user.name, ...rows.map((r) => r.name)].filter(Boolean).map((n) => n.trim().toUpperCase()))];
+    // The same rule the booking check applies: their classes (minus ones they cancelled that date)...
+    const t = { day: getDayOfWeek(date), dateKey: date, startMin: hour * 60, endMin: hour * 60 + 60 };
+    const isOccupiedStatic = Boolean(await facultyClassAt(db, Number(id), t));
+    // ...and bookings they supervise.
+    const bookingRes = await db.query(`
+      SELECT 1 FROM bookings
+       WHERE faculty_id = $1 AND status = 'ACTIVE'
+         AND tstzrange(start_time, end_time) && tstzrange($2::timestamptz, $3::timestamptz) LIMIT 1
+    `, [id, istDateTimeToUtc(date, hour), istDateTimeToUtc(date, hour + 1)]);
+    const isOccupiedDynamic = bookingRes.rowCount > 0;
+
+    const isOccupied = isOccupiedStatic || isOccupiedDynamic;
+    res.json({
+      isOccupied,
+      reason: isOccupied ? (isOccupiedDynamic ? 'Dynamic Booking' : 'Static Class') : null,
+      // Do not expose a faculty member's timetable or booking details.
+      details: null,
+    });
+  } catch (err) {
+    sendServerError(res, err);
+  }
 }
 
 const istToday = () => new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
@@ -175,27 +117,18 @@ export async function overrideFacultySlot(req, res) {
   const cancel = req.body.is_cancelled !== false;
   if (date < istToday()) return res.status(400).json({ error: 'Classes in the past cannot be changed.' });
   try {
-    const names = await facultyNames(req.user);
-    const day = new Date(`${date}T00:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' });
-    const { rows: slots } = await db.query(
-      `SELECT t.slot_time, t.faculty_name, r.id AS room_id FROM timetable_slots t
-         LEFT JOIN rooms r ON r.is_active AND lower(r.name) = lower(t.room_name)
-        WHERE UPPER(TRIM(t.faculty_name)) = ANY($1) AND t.day_of_week = $2
-       UNION ALL
-       SELECT f.slot_time, f.faculty_name, f.room_id FROM faculty_timetable_slots f
-        WHERE f.is_active AND f.is_occupied AND UPPER(TRIM(f.faculty_name)) = ANY($1) AND f.day_of_week = $2`,
-      [names, day],
-    );
-    const slot = slots.find((s) => slotOverlaps(s.slot_time, hour * 60, hour * 60 + 60));
+    const facultyId = req.user.faculty_id ?? null;
+    const classes = facultyId == null ? [] : await timetableRepository.facultyClasses(facultyId, getDayOfWeek(date));
+    const slot = classes.find((c) => c.start_min < hour * 60 + 60 && hour * 60 < c.end_min);
     if (!slot) return res.status(404).json({ error: 'You have no class at that time.' });
 
     const override = await db.runInTransaction(async (client) => {
       const { rows: [o] } = await client.query(
-        `INSERT INTO faculty_slot_overrides (faculty_name, date, hour, is_cancelled)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (faculty_name, date, hour) DO UPDATE SET is_cancelled = EXCLUDED.is_cancelled
-         RETURNING id, faculty_name, date::text AS date, hour, is_cancelled`,
-        [slot.faculty_name, date, hour, cancel],
+        `INSERT INTO faculty_slot_overrides (faculty_id, date, hour, is_cancelled, created_by)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (faculty_id, date, hour) DO UPDATE SET is_cancelled = EXCLUDED.is_cancelled, created_by = EXCLUDED.created_by
+         RETURNING id, faculty_id, date::text AS date, hour, is_cancelled`,
+        [facultyId, date, hour, cancel, req.user.id],
       );
       // Withdraw any earlier release for this override, then release again if cancelled.
       await client.query(
@@ -215,8 +148,7 @@ export async function overrideFacultySlot(req, res) {
       }, client);
       return o;
     });
-    cache.delete('room_availability_all');
-    cache.deletePattern('admin_status_.*');
+    invalidateRoomCaches();
     res.json({ message: cancel ? 'Class cancelled for that date; the room is free.' : 'Class restored.', override });
   } catch (err) {
     sendServerError(res, err, 'Failed to update the class.');
@@ -227,10 +159,10 @@ export async function overrideFacultySlot(req, res) {
 export async function getFacultyOverrides(req, res) {
   try {
     const { rows } = await db.query(
-      `SELECT id, faculty_name, date::text AS date, hour, is_cancelled FROM faculty_slot_overrides
-        WHERE UPPER(TRIM(faculty_name)) = ANY($1) AND date >= CURRENT_DATE - 30 AND is_cancelled
+      `SELECT id, faculty_id, date::text AS date, hour, is_cancelled FROM faculty_slot_overrides
+        WHERE faculty_id = $1 AND date >= CURRENT_DATE - 30 AND is_cancelled
         ORDER BY date, hour`,
-      [await facultyNames(req.user)],
+      [req.user.faculty_id ?? -1],
     );
     res.json(rows);
   } catch (err) {
@@ -290,18 +222,18 @@ export async function createCancellationRequest(req, res) {
     const result = await db.runInTransaction(async (client) => {
       const inserted = await client.query(`
         INSERT INTO class_cancellation_requests
-          (requested_by, faculty_id, room_name, subject_name, class_date, hour, booking_id)
+          (requested_by, faculty_id, room_id, subject_name, class_date, hour, booking_id)
         VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
-      `, [req.user.id, facultyResult.rows[0].id, room_name, subject_name || null, date, Number(hour), booking_id || null]);
-      const request = inserted.rows[0];
+      `, [req.user.id, facultyResult.rows[0].id, room.id, subject_name || null, date, Number(hour), booking_id || null]);
+      const request = { ...inserted.rows[0], room_name: room.name };
       await notify(client, [{ facultyId: request.faculty_id }], 'class_cancellation_requested',
         classFacts(request, { requesterName: req.user.name || 'A student' }),
         { actorId: req.user.id, entityType: 'class_cancellation', entityId: request.id });
-      return inserted;
+      return request;
     });
 
-    res.status(201).json({ message: 'Cancellation request sent to the faculty member for approval.', request: result.rows[0] });
+    res.status(201).json({ message: 'Cancellation request sent to the faculty member for approval.', request: result });
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'A cancellation request for this class is already awaiting faculty approval.' });
@@ -313,9 +245,10 @@ export async function createCancellationRequest(req, res) {
 export async function getPendingCancellationRequests(req, res) {
   try {
     const result = await db.query(`
-      SELECT c.*, u.name AS user_name
+      SELECT c.*, COALESCE(r.name, c.room_name) AS room_name, u.name AS user_name
       FROM class_cancellation_requests c
       JOIN users u ON u.id = c.requested_by
+      LEFT JOIN rooms r ON r.id = c.room_id
       WHERE c.faculty_id = $1 AND c.status = 'PENDING'
       ORDER BY c.created_at DESC
     `, [req.user.faculty_id ?? -1]);
@@ -332,9 +265,10 @@ export async function reviewCancellationRequest(req, res) {
   try {
     const result = await db.runInTransaction(async (client) => {
       const requestResult = await client.query(`
-        SELECT * FROM class_cancellation_requests
-        WHERE id = $1 AND faculty_id = $2 AND status = 'PENDING'
-        FOR UPDATE
+        SELECT c.*, COALESCE(r.name, c.room_name) AS room_name, r.is_active AS room_active
+          FROM class_cancellation_requests c LEFT JOIN rooms r ON r.id = c.room_id
+         WHERE c.id = $1 AND c.faculty_id = $2 AND c.status = 'PENDING'
+         FOR UPDATE OF c
       `, [req.params.id, req.user.faculty_id ?? -1]);
       const request = requestResult.rows[0];
       if (!request) return null;
@@ -348,23 +282,22 @@ export async function reviewCancellationRequest(req, res) {
             [request.booking_id],
           );
         } else {
-          const room = await roomRepository.findByName(request.room_name, client);
-          if (!room) return { notFoundRoom: true };
+          if (!request.room_id || !request.room_active) return { notFoundRoom: true };
           // The timetabled class doesn't happen on this one date: release that hour for that date
           // only, instead of changing the room's weekly availability (BKG-05).
           await client.query(
             `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, created_by)
-             SELECT $1, class_date, hour, hour + 1, 'cancellation_request', id, $2 FROM class_cancellation_requests WHERE id = $3`,
-            [room.id, req.user.id, request.id],
+             SELECT room_id, class_date, hour, hour + 1, 'cancellation_request', id, $1 FROM class_cancellation_requests WHERE id = $2`,
+            [req.user.id, request.id],
           );
         }
       }
 
       await client.query(`
         UPDATE class_cancellation_requests
-        SET status = $1, reviewed_at = NOW()
+        SET status = $1, reviewed_at = NOW(), reviewed_by = $3
         WHERE id = $2
-      `, [approved ? 'APPROVED' : 'REJECTED', request.id]);
+      `, [approved ? 'APPROVED' : 'REJECTED', request.id, req.user.id]);
       await notify(client, [{ userId: request.requested_by }], 'class_cancellation_decided',
         classFacts(request, { approved, by: req.user.name || 'Faculty' }),
         { actorId: req.user.id, entityType: 'class_cancellation', entityId: request.id });
@@ -373,11 +306,20 @@ export async function reviewCancellationRequest(req, res) {
 
     if (!result) return res.status(404).json({ error: 'Cancellation request was not found or has already been reviewed.' });
     if (result.notFoundRoom) return res.status(409).json({ error: 'The room for this class no longer exists.' });
-    cache.delete('room_availability_all');
-    cache.deletePattern('admin_status_.*');
+    invalidateRoomCaches();
     res.json({ message: approved ? 'Cancellation approved; the room is now available.' : 'Cancellation request rejected.' });
   } catch (err) {
     sendServerError(res, err, 'Failed to review cancellation request.');
+  }
+}
+
+/** GET /api/timetable/branches — the branches (ACL values) that have an active section timetable. */
+export async function listBranches(req, res) {
+  try {
+    const { rows } = await db.query('SELECT DISTINCT department FROM timetable_slots WHERE is_active ORDER BY department');
+    res.json(rows.map((r) => r.department));
+  } catch (err) {
+    sendServerError(res, err);
   }
 }
 
@@ -395,12 +337,14 @@ export async function searchTimetable(req, res) {
       }
 
       if (type === 'FACULTY') {
-        const facultyName = name.toUpperCase();
-        
-        // 1. Static Schedule from Timetable Slots
+        const facultyName = name.trim().toUpperCase();
+
+        // 1. Classes filed under that name, or linked to a directory entry of that name
         const staticRes = await db.query(`
           SELECT * FROM timetable_slots
-          WHERE UPPER(faculty_name) = $1
+          WHERE is_active AND (UPPER(TRIM(faculty_name)) = $1
+                OR faculty_id IN (SELECT id FROM faculties WHERE UPPER(TRIM(name)) = $1))
+          ORDER BY day_of_week, start_min
         `, [facultyName]);
 
         // 2. Dynamic Digital Bookings
@@ -420,50 +364,30 @@ export async function searchTimetable(req, res) {
           staticSlots: staticRes.rows,
           dynamicBookings: bookingRes.rows
         });
-      } 
-      
-      if (type === 'SECTION') {
-        // Normalize department for search
-        const deptUpper = department.toUpperCase();
-        
-        // 1. Static Timetable Slots
-        // USE ::TEXT to ensure comparison with character varying columns
-        const staticRes = await db.query(`
-          SELECT * FROM timetable_slots
-          WHERE (UPPER(department) = $1 OR UPPER(department) = $2)
-          AND semester::TEXT = $3::TEXT
-          AND section::TEXT = $4::TEXT
-        `, [
-          deptUpper, 
-          department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
-          semester, 
-          section
-        ]);
+      }
 
-        // 2. Dynamic Bookings for this section
+      if (type === 'SECTION') {
+        // The ACL section key: branch + semester + section, matched exactly.
+        const key = sectionKey({ branch: department, semester, section });
+        if (!key) return res.status(400).json({ error: 'semester and section must be numbers' });
+
+        const staticSlots = await timetableRepository.sectionClasses(key);
         const bookingRes = await db.query(`
           SELECT b.*, r.name as room_name, u.name as creator_name, f.name as faculty_name
           FROM bookings b
           JOIN rooms r ON b.room_id = r.id
           JOIN users u ON b.created_by = u.id
           LEFT JOIN faculties f ON b.faculty_id = f.id
-          WHERE (UPPER(u.branch) = $1 OR UPPER(u.branch) = $2 OR UPPER(u.department_name) = $1 OR UPPER(u.department_name) = $2)
-          AND u.semester::TEXT = $3::TEXT
-          AND u.section::TEXT = $4::TEXT
+          WHERE UPPER(TRIM(u.branch)) = $1 AND u.semester = $2 AND u.section = $3
           AND b.status = 'ACTIVE'
-        `, [
-          deptUpper,
-          department === 'IT' ? 'INFORMATION TECHNOLOGY' : (department === 'CS' ? 'COMPUTER SCIENCE AND ENGINEERING' : deptUpper), 
-          semester, 
-          section
-        ]);
+        `, [key.department, key.semester, key.section]);
 
         return res.json({
           type: 'SECTION',
-          department: deptUpper,
-          semester,
-          section,
-          staticSlots: staticRes.rows,
+          department: key.department,
+          semester: key.semester,
+          section: key.section,
+          staticSlots,
           dynamicBookings: bookingRes.rows
         });
       }
@@ -487,7 +411,7 @@ export async function autocompleteFaculty(req, res) {
       SELECT MAX(name) AS name FROM (
         SELECT name FROM faculties WHERE is_active AND name ILIKE $1
         UNION
-        SELECT DISTINCT faculty_name AS name FROM timetable_slots WHERE faculty_name ILIKE $1
+        SELECT DISTINCT faculty_name AS name FROM timetable_slots WHERE is_active AND faculty_name ILIKE $1
       ) AS combined
       WHERE name IS NOT NULL AND name != ''
       GROUP BY UPPER(name)
@@ -522,13 +446,13 @@ export async function listSlots(req, res) {
 
     const [dataResult, countResult] = await Promise.all([
       db.query(`
-        SELECT fts.id, fts.faculty_name, fts.semester, fts.day_of_week,
-               fts.slot_time, fts.content, fts.is_occupied,
+        SELECT fts.id, fts.faculty_name, fts.faculty_id, fts.semester, fts.day_of_week,
+               fts.slot_time, fts.start_min, fts.end_min, fts.content, fts.is_occupied,
                fts.room_id, r.name AS room_name, fts.created_at
         FROM faculty_timetable_slots fts
         LEFT JOIN rooms r ON r.id = fts.room_id
         ${where}
-        ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
+        ORDER BY fts.faculty_name, fts.day_of_week, fts.start_min
         LIMIT $${idx} OFFSET $${idx + 1}
       `, [...values, limit, offset]),
       db.query(`SELECT COUNT(*) FROM faculty_timetable_slots fts ${where}`, values)
@@ -543,17 +467,47 @@ export async function listSlots(req, res) {
   }
 }
 
+const SLOT_RETURNING = 'id, faculty_name, faculty_id, semester, day_of_week, slot_time, start_min, end_min, content, is_occupied, room_id, created_at';
+
+/**
+ * Validates the fields of a faculty timetable slot that are present. The faculty member must be in
+ * the directory (classes are matched by faculty_id), the day a weekday and the time readable.
+ */
+async function slotFields(body) {
+  const out = {};
+  if (body.faculty_name !== undefined) {
+    const { rows: [f] } = await db.query(
+      'SELECT id, name FROM faculties WHERE is_active AND UPPER(TRIM(name)) = UPPER(TRIM($1)) ORDER BY id LIMIT 1', [body.faculty_name],
+    );
+    if (!f) return { error: `${body.faculty_name} is not in the faculty directory` };
+    Object.assign(out, { faculty_name: f.name, faculty_id: f.id });
+  }
+  if (body.day_of_week !== undefined) {
+    out.day_of_week = normalizeDay(body.day_of_week);
+    if (!out.day_of_week) return { error: 'day_of_week must be a weekday (Mon–Sun)' };
+  }
+  if (body.slot_time !== undefined) {
+    const t = parseSlotTime(body.slot_time);
+    if (!t) return { error: 'slot_time must look like 09:00-10:00' };
+    Object.assign(out, { slot_time: String(body.slot_time).trim(), start_min: t.startMin, end_min: t.endMin });
+  }
+  return { fields: out };
+}
+
 export async function createSlot(req, res) {
   try {
-    const { faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id } = req.body;
-    if (!faculty_name || !day_of_week || !slot_time) {
+    const { semester, content, is_occupied, room_id } = req.body;
+    if (!req.body.faculty_name || !req.body.day_of_week || !req.body.slot_time) {
       return res.status(400).json({ error: 'faculty_name, day_of_week, and slot_time are required' });
     }
+    const { fields: f, error } = await slotFields(req.body);
+    if (error) return res.status(400).json({ error });
     const result = await db.query(`
-      INSERT INTO faculty_timetable_slots (faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id, created_at
-    `, [faculty_name, semester || '', day_of_week, slot_time, content || '', is_occupied ?? false, room_id ?? null]);
+      INSERT INTO faculty_timetable_slots (faculty_name, faculty_id, semester, day_of_week, slot_time, start_min, end_min, content, is_occupied, room_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      RETURNING ${SLOT_RETURNING}
+    `, [f.faculty_name, f.faculty_id, semester || '', f.day_of_week, f.slot_time, f.start_min, f.end_min, content || '', is_occupied ?? false, room_id ?? null]);
+    invalidateRoomCaches();
     res.status(201).json(result.rows[0]);
   } catch (err) {
     sendServerError(res, err);
@@ -563,23 +517,30 @@ export async function createSlot(req, res) {
 export async function updateSlot(req, res) {
   try {
     const { id } = req.params;
-    const { faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id } = req.body;
+    const { semester, content, is_occupied, room_id } = req.body;
+    const { fields: f, error } = await slotFields(req.body);
+    if (error) return res.status(400).json({ error });
 
     const result = await db.query(`
       UPDATE faculty_timetable_slots
       SET faculty_name = COALESCE($1, faculty_name),
-          semester     = COALESCE($2, semester),
-          day_of_week  = COALESCE($3, day_of_week),
-          slot_time    = COALESCE($4, slot_time),
-          content      = COALESCE($5, content),
-          is_occupied  = COALESCE($6, is_occupied),
+          faculty_id   = COALESCE($2, faculty_id),
+          semester     = COALESCE($3, semester),
+          day_of_week  = COALESCE($4, day_of_week),
+          slot_time    = COALESCE($5, slot_time),
+          start_min    = COALESCE($6, start_min),
+          end_min      = COALESCE($7, end_min),
+          content      = COALESCE($8, content),
+          is_occupied  = COALESCE($9, is_occupied),
           -- room_id changes only when sent; an explicit null unassigns the room (OPS-12)
-          room_id      = CASE WHEN $9::boolean THEN $7 ELSE room_id END
-      WHERE id = $8 AND is_active
-      RETURNING id, faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id
-    `, [faculty_name, semester, day_of_week, slot_time, content, is_occupied, room_id ?? null, id, Object.hasOwn(req.body, 'room_id')]);
+          room_id      = CASE WHEN $12::boolean THEN $10 ELSE room_id END
+      WHERE id = $11 AND is_active
+      RETURNING ${SLOT_RETURNING}
+    `, [f.faculty_name, f.faculty_id, semester, f.day_of_week, f.slot_time, f.start_min, f.end_min, content, is_occupied,
+      room_id ?? null, id, Object.hasOwn(req.body, 'room_id')]);
 
     if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
+    invalidateRoomCaches();
     res.json(result.rows[0]);
   } catch (err) {
     sendServerError(res, err);
@@ -595,6 +556,7 @@ export async function deleteSlot(req, res) {
       [id],
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Slot not found' });
+    invalidateRoomCaches();
     res.json({ success: true });
   } catch (err) {
     sendServerError(res, err);

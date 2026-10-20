@@ -1,6 +1,7 @@
 // Shared helpers for the bookings-area tests (backend/__tests__/bookings/).
 import * as db from '../../src/db.js';
 import { istDateTimeToUtc, getIstParts } from '../../src/utils/timezone.js';
+import { parseSlotTime } from '../../src/utils/timetableLogic.js';
 
 let seq = 0;
 export const uniq = (p = 'x') => `${p}${process.pid}${Date.now().toString(36)}${(seq++).toString(36)}`;
@@ -51,18 +52,44 @@ export const historyRows = async (bookingId) =>
     [bookingId],
   )).rows;
 
-/** Inserts a timetable_slots row (all text columns) and returns it. */
-export async function insertTimetableSlot(fields) {
+const idByName = async (table, name, fold = 'lower') => (name ? (await db.query(
+  `SELECT id FROM ${table} WHERE ${fold}(trim(name)) = ${fold}(trim($1)) ORDER BY is_active DESC, id LIMIT 1`, [name],
+)).rows[0]?.id ?? null : null);
+
+async function insertRow(table, fields) {
   const cols = Object.keys(fields);
   const { rows } = await db.query(
-    `INSERT INTO timetable_slots (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
-    cols.map((c) => (fields[c] == null ? null : String(fields[c]))),
+    `INSERT INTO ${table} (${cols.join(', ')}) VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`,
+    cols.map((c) => fields[c]),
   );
   return rows[0];
 }
 
+/**
+ * Inserts a section-timetable class the way the import stores it: branch upper-cased, integer
+ * semester/section, start/end minutes from slot_time, room and faculty linked by name.
+ */
+export async function insertTimetableSlot(fields) {
+  const f = { semester: 1, section: 1, day_of_week: 'Mon', slot_time: '09:00-10:00', ...fields };
+  f.department = String(f.department || 'TEST BRANCH').trim().toUpperCase();
+  const t = parseSlotTime(f.slot_time);
+  if (t && f.start_min === undefined) Object.assign(f, { start_min: t.startMin, end_min: t.endMin });
+  if (f.room_id === undefined) f.room_id = await idByName('rooms', f.room_name);
+  if (f.faculty_id === undefined) f.faculty_id = await idByName('faculties', f.faculty_name, 'upper');
+  return insertRow('timetable_slots', f);
+}
+
+/** Inserts a faculty timetable slot (minutes from slot_time, faculty linked by name). */
+export async function insertFacultySlot(fields) {
+  const f = { day_of_week: 'Mon', slot_time: '09:00-10:00', is_occupied: true, ...fields };
+  const t = parseSlotTime(f.slot_time);
+  if (t && f.start_min === undefined) Object.assign(f, { start_min: t.startMin, end_min: t.endMin });
+  if (f.faculty_id === undefined) f.faculty_id = await idByName('faculties', f.faculty_name, 'upper');
+  return insertRow('faculty_timetable_slots', f);
+}
+
 /** Inserts a room_slot_releases row (a timetabled class in `room_id` that does not happen on `release_date`). */
-export async function insertRelease({ room_id, release_date, start_hour, end_hour = start_hour + 1, is_active = true, source_type = 'test', source_id = null }) {
+export async function insertRelease({ room_id, release_date, start_hour, end_hour = start_hour + 1, is_active = true, source_type = 'cancellation_request', source_id = null }) {
   const { rows } = await db.query(
     `INSERT INTO room_slot_releases (room_id, release_date, start_hour, end_hour, source_type, source_id, is_active)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,

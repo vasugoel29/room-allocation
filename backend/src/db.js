@@ -1001,6 +1001,171 @@ const migrations = [
         DROP TABLE IF EXISTS booking_history;
       `);
     }
+  },
+  {
+    version: 36,
+    name: 'Timetable normalisation: section keys, minutes, room/faculty ids, soft delete; one availability model',
+    run: async (client) => {
+      // Re-runnable: every step checks what is already there.
+      const colType = async (table, col) => (await client.query(
+        'SELECT data_type FROM information_schema.columns WHERE table_name = $1 AND column_name = $2', [table, col],
+      )).rows[0]?.data_type;
+      const addConstraint = async (table, name, def) => {
+        const { rowCount } = await client.query('SELECT 1 FROM pg_constraint WHERE conname = $1', [name]);
+        if (!rowCount) await client.query(`ALTER TABLE ${table} ADD CONSTRAINT ${name} ${def}`);
+      };
+      const retired = async (label, sql) => {
+        const { rowCount } = await client.query(sql);
+        if (rowCount) logger.warn(`Migration v36: ${rowCount} ${label} soft-deleted`);
+      };
+      const WEEKDAYS = "('Mon','Tue','Wed','Thu','Fri','Sat','Sun')";
+
+      // The timetable time rule (utils/timetableLogic.js timetableMinutes), in SQL for the backfill.
+      await client.query(String.raw`
+        CREATE OR REPLACE FUNCTION pg_temp.tt_minutes(t text) RETURNS integer LANGUAGE sql IMMUTABLE AS $f$
+          SELECT CASE WHEN m IS NULL THEN NULL ELSE
+            (CASE lower(left(m[3], 1))
+               WHEN 'a' THEN m[1]::int % 12
+               WHEN 'p' THEN m[1]::int % 12 + 12
+               ELSE CASE WHEN m[1]::int BETWEEN 1 AND 7 THEN m[1]::int + 12 ELSE m[1]::int END
+             END) * 60 + m[2]::int END
+          FROM regexp_match(trim(coalesce(t, '')), '(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?', 'i') AS m
+        $f$;
+      `);
+      const backfillMinutes = (table) => client.query(`
+        UPDATE ${table} SET start_min = pg_temp.tt_minutes(split_part(slot_time, '-', 1)),
+                            end_min = pg_temp.tt_minutes(NULLIF(split_part(slot_time, '-', 2), ''))
+         WHERE start_min IS NULL;
+        UPDATE ${table} SET end_min = end_min + 720 WHERE end_min <= start_min;
+      `);
+      const resolveIds = async (table, { room = true } = {}) => {
+        if (room) {
+          await client.query(`
+            UPDATE ${table} t SET room_id = (SELECT r.id FROM rooms r WHERE lower(trim(r.name)) = lower(trim(t.room_name))
+                                                ORDER BY r.is_active DESC, r.id LIMIT 1)
+             WHERE t.room_id IS NULL AND coalesce(trim(t.room_name), '') <> ''`);
+        }
+        await client.query(`
+          UPDATE ${table} t SET faculty_id = (SELECT f.id FROM faculties f WHERE upper(trim(f.name)) = upper(trim(t.faculty_name))
+                                                 ORDER BY f.is_active DESC, f.id LIMIT 1)
+           WHERE t.faculty_id IS NULL AND coalesce(trim(t.faculty_name), '') <> ''`);
+      };
+
+      // ── Section timetable ──────────────────────────────────────────────────────────────────
+      // Section key = the ACL branch (stored upper-case) + integer semester + integer section.
+      // room_name/faculty_name stay as the source labels (many rooms are outside CRAS); matching
+      // uses room_id/faculty_id. year/degree/specialization/type were never read.
+      await client.query(`
+        ALTER TABLE timetable_slots
+          ADD COLUMN IF NOT EXISTS start_min INTEGER, ADD COLUMN IF NOT EXISTS end_min INTEGER,
+          ADD COLUMN IF NOT EXISTS room_id INTEGER, ADD COLUMN IF NOT EXISTS faculty_id INTEGER,
+          ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE,
+          ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ;
+        DROP INDEX IF EXISTS idx_timetable_slots_section;
+      `);
+      if (await colType('timetable_slots', 'semester') !== 'integer') {
+        await client.query(String.raw`
+          ALTER TABLE timetable_slots
+            ALTER COLUMN semester TYPE INTEGER USING CASE WHEN trim(semester) ~ '^\d{1,2}$' THEN trim(semester)::int END,
+            ALTER COLUMN section TYPE INTEGER USING CASE WHEN trim(section) ~ '^\d{1,2}$' THEN trim(section)::int END`);
+      }
+      await client.query(`
+        ALTER TABLE timetable_slots DROP COLUMN IF EXISTS year, DROP COLUMN IF EXISTS degree,
+          DROP COLUMN IF EXISTS specialization, DROP COLUMN IF EXISTS type;
+        UPDATE timetable_slots SET department = upper(trim(department)) WHERE department IS DISTINCT FROM upper(trim(department));
+      `);
+      await backfillMinutes('timetable_slots');
+      await resolveIds('timetable_slots');
+      await retired('timetable rows with an unreadable time, day or section', `
+        UPDATE timetable_slots SET is_active = FALSE, deactivated_at = NOW()
+         WHERE is_active AND (start_min IS NULL OR end_min IS NULL OR end_min > 1440 OR day_of_week NOT IN ${WEEKDAYS}
+                              OR semester IS NULL OR section IS NULL OR coalesce(department, '') = '')`);
+      // Exact duplicates (same class, room and teacher) collapse to the oldest row.
+      const SLOT_KEY = `department, semester, section, day_of_week, start_min, end_min, coalesce(batch, ''),
+        coalesce(subject_code, ''), coalesce(subject_name, ''), lower(coalesce(room_name, '')), upper(coalesce(faculty_name, ''))`;
+      await retired('duplicate timetable rows', `
+        UPDATE timetable_slots SET is_active = FALSE, deactivated_at = NOW()
+         WHERE id IN (SELECT id FROM (SELECT id, row_number() OVER (PARTITION BY ${SLOT_KEY} ORDER BY id) AS n
+                                        FROM timetable_slots WHERE is_active) d WHERE n > 1)`);
+      await addConstraint('timetable_slots', 'timetable_slots_room_id_fkey', 'FOREIGN KEY (room_id) REFERENCES rooms(id)');
+      await addConstraint('timetable_slots', 'timetable_slots_faculty_id_fkey', 'FOREIGN KEY (faculty_id) REFERENCES faculties(id)');
+      await addConstraint('timetable_slots', 'timetable_slots_active_valid', `CHECK (NOT is_active OR (
+        day_of_week IN ${WEEKDAYS} AND semester IS NOT NULL AND section IS NOT NULL AND department <> ''
+        AND start_min BETWEEN 0 AND 1439 AND end_min > start_min AND end_min <= 1440))`);
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS timetable_slots_active_key ON timetable_slots (${SLOT_KEY}) WHERE is_active;
+        CREATE INDEX IF NOT EXISTS idx_timetable_slots_section ON timetable_slots (department, semester, section, day_of_week) WHERE is_active;
+        CREATE INDEX IF NOT EXISTS idx_timetable_slots_room ON timetable_slots (room_id, day_of_week) WHERE is_active;
+        CREATE INDEX IF NOT EXISTS idx_timetable_slots_faculty_id ON timetable_slots (faculty_id, day_of_week) WHERE is_active;
+      `);
+
+      // ── Faculty timetable slots ────────────────────────────────────────────────────────────
+      await client.query(`
+        ALTER TABLE faculty_timetable_slots
+          ADD COLUMN IF NOT EXISTS faculty_id INTEGER, ADD COLUMN IF NOT EXISTS start_min INTEGER,
+          ADD COLUMN IF NOT EXISTS end_min INTEGER;
+        DROP INDEX IF EXISTS idx_faculty_tt_day;
+        DROP INDEX IF EXISTS idx_faculty_tt_room;
+      `);
+      await backfillMinutes('faculty_timetable_slots');
+      await resolveIds('faculty_timetable_slots', { room: false });
+      await retired('faculty timetable slots with an unreadable time or day', `
+        UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW()
+         WHERE is_active AND (start_min IS NULL OR end_min IS NULL OR end_min > 1440 OR day_of_week NOT IN ${WEEKDAYS})`);
+      await addConstraint('faculty_timetable_slots', 'faculty_timetable_slots_faculty_id_fkey', 'FOREIGN KEY (faculty_id) REFERENCES faculties(id)');
+      await addConstraint('faculty_timetable_slots', 'faculty_timetable_slots_active_valid', `CHECK (NOT is_active OR (
+        day_of_week IN ${WEEKDAYS} AND start_min BETWEEN 0 AND 1439 AND end_min > start_min AND end_min <= 1440))`);
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_faculty_tt_faculty ON faculty_timetable_slots (faculty_id, day_of_week) WHERE is_active;
+        CREATE INDEX IF NOT EXISTS idx_faculty_tt_room_day ON faculty_timetable_slots (room_id, day_of_week) WHERE is_active;
+      `);
+
+      // ── A faculty member's own-class cancellations: keyed by the directory entry ───────────
+      await client.query(`
+        ALTER TABLE faculty_slot_overrides
+          ADD COLUMN IF NOT EXISTS faculty_id INTEGER, ADD COLUMN IF NOT EXISTS created_by INTEGER,
+          ALTER COLUMN faculty_name DROP NOT NULL;
+        ALTER TABLE faculty_slot_overrides DROP CONSTRAINT IF EXISTS faculty_slot_overrides_faculty_name_date_hour_key;
+      `);
+      await resolveIds('faculty_slot_overrides', { room: false });
+      await addConstraint('faculty_slot_overrides', 'faculty_slot_overrides_faculty_id_fkey', 'FOREIGN KEY (faculty_id) REFERENCES faculties(id)');
+      await addConstraint('faculty_slot_overrides', 'faculty_slot_overrides_created_by_fkey', 'FOREIGN KEY (created_by) REFERENCES users(id)');
+      await client.query(`
+        CREATE UNIQUE INDEX IF NOT EXISTS faculty_slot_overrides_key ON faculty_slot_overrides (faculty_id, date, hour);
+      `);
+
+      // ── Class-cancellation requests: the room by id, and who reviewed ──────────────────────
+      await client.query(`
+        ALTER TABLE class_cancellation_requests
+          ADD COLUMN IF NOT EXISTS room_id INTEGER, ADD COLUMN IF NOT EXISTS reviewed_by INTEGER,
+          ALTER COLUMN room_name DROP NOT NULL;
+        UPDATE class_cancellation_requests c SET room_id = (SELECT r.id FROM rooms r WHERE lower(trim(r.name)) = lower(trim(c.room_name))
+                                                              ORDER BY r.is_active DESC, r.id LIMIT 1)
+         WHERE c.room_id IS NULL AND c.room_name IS NOT NULL;
+        DROP INDEX IF EXISTS idx_pending_cancellation_request;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_pending_cancellation_request
+          ON class_cancellation_requests (faculty_id, room_id, class_date, hour) WHERE status = 'PENDING';
+      `);
+      await addConstraint('class_cancellation_requests', 'class_cancellation_requests_room_id_fkey', 'FOREIGN KEY (room_id) REFERENCES rooms(id)');
+      await addConstraint('class_cancellation_requests', 'class_cancellation_requests_reviewed_by_fkey', 'FOREIGN KEY (reviewed_by) REFERENCES users(id)');
+
+      // ── One availability model ─────────────────────────────────────────────────────────────
+      // Classes block rooms straight from the timetables (by room_id), on the calendar and in the
+      // booking check alike. room_availability holds admin weekly blocks only; dated exceptions are
+      // room_slot_releases. Retired (decision 2026-10-20): rows derived from an old occupancy
+      // snapshot by the former seeder ('timetable_import'), and "free" rows, which only ever
+      // meant "no block here".
+      await retired('derived or "free" weekly availability rows', `
+        UPDATE room_availability SET is_active = FALSE, deactivated_at = NOW()
+         WHERE is_active AND (source = 'timetable_import' OR is_available)`);
+      await addConstraint('room_availability', 'room_availability_active_block',
+        `CHECK (NOT is_active OR (NOT is_available AND day IN ${WEEKDAYS} AND hour BETWEEN 0 AND 23))`);
+      await addConstraint('room_slot_releases', 'room_slot_releases_source_type_check',
+        "CHECK (source_type IN ('faculty_override', 'cancellation_request', 'reschedule'))");
+      await client.query(`
+        CREATE INDEX IF NOT EXISTS idx_room_slot_releases_source ON room_slot_releases (source_type, source_id) WHERE is_active;
+      `);
+    }
   }
 ];
 

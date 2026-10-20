@@ -17,6 +17,41 @@ export const getDayOfWeek = (dateInput) => {
   return days[d.getDay()];
 };
 
+export const WEEKDAYS = Object.freeze(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+
+/** "monday", "MON", "Mon" → "Mon"; anything else → null. */
+export const normalizeDay = (day) => {
+  const d = String(day || '').trim().slice(0, 3).toLowerCase();
+  return WEEKDAYS.find((w) => w.toLowerCase() === d) || null;
+};
+
+/**
+ * Minutes since IST midnight for a timetable time. An explicit AM/PM is honoured ("07:30 AM",
+ * "2:00 pm"); bare times follow the source data's 12-hour convention, where 01:00–07:59 means PM.
+ * Migration v36 backfills timetable start/end minutes with the same rule in SQL.
+ */
+export function timetableMinutes(hhmm) {
+  const m = String(hhmm || '').trim().match(/(\d{1,2}):(\d{2})\s*([ap]\.?m\.?)?/i);
+  if (!m) return null;
+  let h = Number(m[1]);
+  const meridiem = m[3]?.[0]?.toLowerCase();
+  if (meridiem === 'a') h = h % 12;
+  else if (meridiem === 'p') h = (h % 12) + 12;
+  else if (h >= 1 && h < 8) h += 12;
+  return h * 60 + Number(m[2]);
+}
+
+/** "HH:MM-HH:MM" → { startMin, endMin } (an end at or before the start is read as 12h later), or null. */
+export function parseSlotTime(slotTime) {
+  const [a, b] = String(slotTime || '').split('-');
+  const startMin = timetableMinutes(a);
+  let endMin = timetableMinutes(b);
+  if (startMin == null || endMin == null) return null;
+  if (endMin <= startMin) endMin += 12 * 60; // e.g. "12:00-01:00"
+  if (endMin > 24 * 60) return null;
+  return { startMin, endMin };
+}
+
 export const getHourFromTime = (timeStr) => {
   if (!timeStr) return 0;
   const startPart = timeStr.split('-')[0].trim();
