@@ -14,6 +14,10 @@ PORT=4200
 mkdir -p load/results
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
+# Seeded tokens expire after 6 h; reusing stale ones turns every request into a 401.
+if [[ $SEED == 0 && -n "$(find load/.data/tokens.json -mmin +300 2>/dev/null)" ]]; then
+  echo "load tokens are older than 5 h; reseeding"; SEED=1
+fi
 [[ $SEED == 1 ]] && node load/seed.mjs
 
 if ss -ltn | grep -q ":$PORT "; then echo "port $PORT already in use — stop that process first"; exit 1; fi
