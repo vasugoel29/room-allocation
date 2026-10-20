@@ -10,6 +10,7 @@ import { logActivity } from './services/loggerService.js';
 import { redactForAudit } from './utils/redact.js';
 import { verifySessionToken } from './auth/session.js';
 import { invalidateShared } from './utils/sharedCache.js';
+import { CATALOG, SUGGESTED_BUNDLES } from './auth/permissions.js';
 
 import { apiLimiter } from './middleware/leakyBucket.js';
 import * as Sentry from "@sentry/node";
@@ -160,6 +161,9 @@ app.use('/api', apiLimiter);
 const PORT = process.env.PORT || 4000;
 
 app.get('/', (req, res) => res.json({ status: 'ok', version: '1.2 (Refactored)' }));
+
+// The permission catalog CRAS checks (names to configure verbatim in the college ACL).
+app.get('/api/permissions/catalog', (req, res) => res.json({ permissions: CATALOG, suggested_bundles: SUGGESTED_BUNDLES }));
 
 // Universal mutation audit log. The actor is the verified session's user (null when anonymous —
 // never a stand-in id); request bodies are redacted and summarised (SEC-14).

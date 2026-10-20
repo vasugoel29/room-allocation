@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, AlertTriangle, Clock, User, BookOpen } from 'lucide-react';
 import { formatTo24h, getClassConflict } from '../../utils/timetableLogic';
 import { roomService } from '../../services/roomService';
+import { booksDirect } from '../../utils/permissions';
 
 const BOOKING_HOURS = Array.from({ length: 10 }, (_, index) => index + 8); // 08:00–18:00 IST
 
@@ -21,7 +22,7 @@ function ConflictResolutionDialog({ conflict, onCancel, facultyId, facultyName, 
         if (slot.isOccupied) return false;
         
         // 2. Student section must be free (if student role)
-        const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+        const isStudent = !booksDirect(user);
         if (isStudent) {
           const hasClash = getClassConflict(user, conflict.date, slot.hour, bookings, availability, timetableData);
           if (hasClash) return false;

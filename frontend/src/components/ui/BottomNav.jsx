@@ -1,10 +1,11 @@
 import { Plus } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { canBook, isAdmin as isAdminUser } from '../../utils/permissions';
 
 const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
   const navigate = useNavigate();
-  const isViewer = user?.role === 'VIEWER';
-  const isAdmin = user?.role === 'ADMIN';
+  const isViewer = !canBook(user);
+  const isAdmin = isAdminUser(user);
   const useFourCol = isViewer || isAdmin;
 
   const getRoute = (id) => {
@@ -52,7 +53,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                   <>
                     <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''} relative`}>
                       <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                      {(id === 'history' || id === 'bookings') && user?.role !== 'ADMIN' && pendingTransferCount > 0 && ( /* NEW-FE-3 */
+                      {(id === 'history' || id === 'bookings') && !isAdmin && pendingTransferCount > 0 && ( /* NEW-FE-3 */
                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[7px] font-black border-2 border-surface-low animate-pulse">
                           {pendingTransferCount}
                         </span>

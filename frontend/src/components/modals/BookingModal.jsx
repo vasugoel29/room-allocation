@@ -11,6 +11,7 @@ import BookingTypeSelector from "../../features/booking/BookingTypeSelector";
 import RescheduleDetails from "../../features/booking/RescheduleDetails";
 import FacultySelector from "../../features/booking/FacultySelector";
 import ConflictResolutionDialog from "./ConflictResolutionDialog";
+import { P, can, canBook, booksDirect, isAdmin } from '../../utils/permissions';
 
 function BookingModal({ slot, onClose, onSuccess }) {
   const {
@@ -111,7 +112,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
   };
 
   const handleCancel = async () => {
-    if (user?.role === "VIEWER") return;
+    if (!canBook(user) && !can(user, P.FACULTY_PORTAL)) return;
     const booking = getRoomBooking(selectedRoom);
     if (!booking) return;
 
@@ -127,11 +128,12 @@ function BookingModal({ slot, onClose, onSuccess }) {
     }
   };
 
-  const isStudent = user?.role !== "ADMIN" && user?.role !== "FACULTY";
+  // Needs approval and can't use restricted rooms unless the ACL grants cras.bookings.direct.
+  const isStudent = !booksDirect(user);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (user?.role === "VIEWER") return;
+    if (!canBook(user)) return;
     if (!selectedRoom) return setError("Please select a room");
     if (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium')) {
       return setError("Committee Rooms and Auditoriums can only be booked by Faculty or Admin.");
@@ -279,8 +281,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
           const existingBooking = selectedRoom ? getRoomBooking(selectedRoom) : null;
           const canCancel = existingBooking && (
             String(existingBooking.created_by) === String(user?.id) ||
-            user?.role === 'ADMIN' ||
-            user?.role === 'FACULTY'
+            isAdmin(user) ||
+            (user?.faculty_id != null && String(existingBooking.faculty_id) === String(user.faculty_id))
           );
           const formattedDate = slot.date
             ? new Date(slot.date).toLocaleDateString("en-US", {
@@ -331,8 +333,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
           const existingBooking = selectedRoom ? getRoomBooking(selectedRoom) : null;
           const canCancel = existingBooking && (
             String(existingBooking.created_by) === String(user?.id) ||
-            user?.role === 'ADMIN' ||
-            user?.role === 'FACULTY'
+            isAdmin(user) ||
+            (user?.faculty_id != null && String(existingBooking.faculty_id) === String(user.faculty_id))
           );
 
           if (existingBooking && canCancel) {
@@ -483,7 +485,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
               </div>
 
               <div className="flex gap-4 pt-2">
-                {user?.role !== "VIEWER" ? (
+                {canBook(user) ? (
                   <button
                     type="submit"
                     disabled={loading || transferBlocked || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}

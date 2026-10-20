@@ -1,7 +1,7 @@
 // Unit tests for the pure parts of src/services/bookingRules.js (the single rule set shared by
 // create, reschedule, quick-book and approval). Times are fixed, so these never depend on "today".
 import {
-  RULES, checkTimes, checkRoom, slotOverlaps, timetableMinutes, dateInSameWeek, constraintConflict, isStaff,
+  RULES, checkTimes, checkRoom, slotOverlaps, timetableMinutes, dateInSameWeek, constraintConflict,
 } from '../../src/services/bookingRules.js';
 import { istDateTimeToUtc, formatIstRange } from '../../src/utils/timezone.js';
 import { closeDb } from '../../test/helpers/factories.js';
@@ -11,7 +11,9 @@ afterAll(closeDb);
 // Mon 2030-01-07 .. Sun 2030-01-13 (IST). "now" = Sun 2030-01-06 12:00 IST.
 const NOW = new Date(istDateTimeToUtc('2030-01-06', 12)).getTime();
 const at = (date, hour, minute = 0) => istDateTimeToUtc(date, hour, minute);
-const times = (s, e, opts = {}) => checkTimes(s, e, { role: 'STUDENT_REP', now: NOW, ...opts });
+// `direct` = cras.bookings.direct, `admin` = cras.admin (what used to be decided by role).
+const AS = { STUDENT_REP: {}, FACULTY: { direct: true }, ADMIN: { direct: true, admin: true } };
+const times = (s, e, { role = 'STUDENT_REP', ...opts } = {}) => checkTimes(s, e, { ...AS[role], now: NOW, ...opts });
 
 describe('checkTimes', () => {
   test('a valid weekday request is normalised to IST day, date and hours', () => {
@@ -64,7 +66,6 @@ describe('checkTimes', () => {
 
   test('RULES are the documented ones', () => {
     expect(RULES).toEqual({ OPEN_HOUR: 8, CLOSE_HOUR: 20, MAX_HOURS: 4, WINDOW_DAYS: 7 });
-    expect([isStaff('ADMIN'), isStaff('FACULTY'), isStaff('STUDENT_REP'), isStaff('VIEWER')]).toEqual([true, true, false, false]);
   });
 });
 
@@ -77,7 +78,7 @@ describe('checkRoom', () => {
     ['Auditorium, student', room({ type: 'Auditorium' }), 'VIEWER', 403],
     ['student_access=false, student', room({ student_access: false }), 'STUDENT_REP', 403],
   ])('%s → %s', (_n, r, role, status) => {
-    expect(checkRoom(r, role)).toMatchObject({ status });
+    expect(checkRoom(r, ['FACULTY', 'ADMIN'].includes(role))).toMatchObject({ status });
   });
   test.each([
     ['Committee Room, faculty', room({ type: 'Committee Room' }), 'FACULTY'],
@@ -85,7 +86,7 @@ describe('checkRoom', () => {
     ['student_access=false, faculty', room({ student_access: false }), 'FACULTY'],
     ['plain room, student', room(), 'STUDENT_REP'],
   ])('%s → allowed', (_n, r, role) => {
-    expect(checkRoom(r, role)).toBeNull();
+    expect(checkRoom(r, ['FACULTY', 'ADMIN'].includes(role))).toBeNull();
   });
 });
 

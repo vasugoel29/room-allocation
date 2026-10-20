@@ -4,12 +4,19 @@ import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppContext } from '../../context/AppContext';
 
+// Each test person carries the permissions the ACL would grant their role (suggested bundles).
+const B = {
+  VIEWER: ['cras.calendar', 'cras.timetable'],
+  STUDENT_REP: ['cras.calendar', 'cras.timetable', 'cras.bookings'],
+  FACULTY: ['cras.calendar', 'cras.timetable', 'cras.bookings.direct', 'cras.faculty_portal'],
+  ADMIN: ['cras.calendar', 'cras.timetable', 'cras.bookings', 'cras.bookings.direct', 'cras.admin'],
+};
 export const USERS = {
-  VIEWER: { id: 11, name: 'Vik Viewer', email: 'viewer@nsut.ac.in', role: 'VIEWER', branch: 'IT', section: 1, semester: 5, year: 3 },
-  STUDENT_REP: { id: 12, name: 'Rita Rep', email: 'rep@nsut.ac.in', role: 'STUDENT_REP', branch: 'IT', section: 1, semester: 5, year: 3 },
+  VIEWER: { id: 11, name: 'Vik Viewer', email: 'viewer@nsut.ac.in', role: 'VIEWER', permissions: B.VIEWER, branch: 'IT', section: 1, semester: 5, year: 3 },
+  STUDENT_REP: { id: 12, name: 'Rita Rep', email: 'rep@nsut.ac.in', role: 'STUDENT_REP', permissions: B.STUDENT_REP, branch: 'IT', section: 1, semester: 5, year: 3 },
   // faculty_id is the faculty-directory id (a different id space from user ids, as in the API).
-  FACULTY: { id: 21, faculty_id: 500021, name: 'Prof Fay', email: 'fay@nsut.ac.in', role: 'FACULTY', department_name: 'IT' },
-  ADMIN: { id: 1, name: 'Ada Admin', email: 'admin@nsut.ac.in', role: 'ADMIN' },
+  FACULTY: { id: 21, faculty_id: 500021, name: 'Prof Fay', email: 'fay@nsut.ac.in', role: 'FACULTY', permissions: B.FACULTY, department_name: 'IT' },
+  ADMIN: { id: 1, name: 'Ada Admin', email: 'admin@nsut.ac.in', role: 'ADMIN', permissions: B.ADMIN },
 };
 
 /** A full AppContext value with inert defaults; override any key. */

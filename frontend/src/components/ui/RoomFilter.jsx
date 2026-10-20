@@ -1,10 +1,11 @@
 import { useContext } from 'react';
 import { Wind, Search, Layers, Zap } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
+import { booksDirect } from '../../utils/permissions';
 
 function RoomFilter() {
   const { user, filters, setFilters } = useContext(AppContext);
-  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+  const isStudent = !booksDirect(user);
 
   const updateFilter = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }));

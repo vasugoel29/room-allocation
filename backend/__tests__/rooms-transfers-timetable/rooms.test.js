@@ -541,8 +541,8 @@ describe('GET /api/availability and POST /api/availability/override', () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual([expect.objectContaining({ room_id: r1.id, room_name: r1.name, day: 'Mon', hour: 10, user_id: me.user.id })]);
     expect((await request(app).get('/api/availability/my')).status).toBe(401);
-    const none = await request(app).get('/api/availability/my').set('Authorization', viewer.auth);
-    expect(none.body).toEqual([]);
+    // Weekly overrides are an admin tool (cras.admin).
+    expect((await request(app).get('/api/availability/my').set('Authorization', viewer.auth)).status).toBe(403);
   });
 });
 

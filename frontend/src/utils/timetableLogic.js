@@ -2,6 +2,7 @@
  * Utility for Timetable and Booking logic
  */
 import { getIstDateKey, getIstHour, getIstTime } from './timezone';
+import { teaches } from '../utils/permissions';
 
 /**
  * Gets the base 5-day week name (Mon, Tue, etc.) from a date string or Date object
@@ -83,10 +84,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
   // 1. Static Base
   let staticClasses = [];
   
-  const role = (user.role || '').toUpperCase();
-  console.log('[DEBUG] getMergedSchedule: role=', role, 'day=', dayOfWeek, 'date=', dateStr);
-
-  if (role === 'FACULTY' || role === 'FACULTY MEMBER') {
+  if (teaches(user)) {
     // Faculty Logic
     const rawSlots = facultyTimetableData[dayOfWeek] || [];
     staticClasses = rawSlots.map(s => ({
@@ -126,7 +124,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
       if (bDateStr !== dateStr) return false;
       if (b.status !== 'ACTIVE' && b.status !== 'CONFIRMED' && b.status != null) return false;
 
-      if (user.role === 'FACULTY') {
+      if (teaches(user)) {
         // Faculty's own bookings or bookings they accepted
         // faculty_id is a faculty-directory id, so compare with the user's directory id, not user.id.
         return (user.faculty_id != null && String(b.faculty_id) === String(user.faculty_id)) || String(b.created_by) === String(user.id);
@@ -187,8 +185,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
 
   // 4. Filter static slots by Faculty Overrides (if applicable)
   const finalStatic = filteredStatic.filter(sc => {
-    const role = (user.role || '').toUpperCase();
-    if (role === 'FACULTY' || role === 'FACULTY MEMBER') {
+    if (teaches(user)) {
       const scHour = getHourFromTime(sc.time);
       const isOverridden = (facultyOverrides || []).some(o => {
         const oDate = new Date(o.date).toISOString().split('T')[0];

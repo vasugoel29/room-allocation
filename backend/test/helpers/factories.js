@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import * as db from '../../src/db.js';
+import { SUGGESTED_BUNDLES } from '../../src/auth/permissions.js';
+import { invalidatePrincipal } from '../../src/auth/session.js';
 import { istDateTimeToUtc, getIstParts } from '../../src/utils/timezone.js';
 
 // Sign-in is Google SSO + ACL only (migration v25 cleared stored passwords), but the column still
@@ -26,7 +28,7 @@ export function tokenFor(user, opts = {}) {
  * real seeded timetable never clashes with test bookings unless a test opts in.
  * Returns { user, token, auth } where auth is the Authorization header value.
  */
-export async function createUser(overrides = {}) {
+export async function createUser({ permissions, ...overrides } = {}) {
   const role = overrides.role || 'VIEWER';
   const fields = {
     name: `Test ${role} ${uid()}`,
@@ -42,8 +44,21 @@ export async function createUser(overrides = {}) {
     cols.map((c) => fields[c]),
   );
   const user = rows[0];
+  // An ACL snapshot like a real sign-in leaves: the suggested bundle for the role, or `permissions`.
+  await grantPermissions(user.id, permissions ?? SUGGESTED_BUNDLES[role] ?? [], role);
   const token = tokenFor(user);
   return { user, token, auth: `Bearer ${token}` };
+}
+
+/** Replaces a test user's ACL-granted permissions (the principal cache is cleared). */
+export async function grantPermissions(userId, permissions, role = null) {
+  await db.query(
+    `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, fetched_at)
+     VALUES ($1, $5, $2, $3, $4, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET permissions = EXCLUDED.permissions, fetched_at = NOW()`,
+    [userId, role || 'VIEWER', JSON.stringify(role ? [role] : []), JSON.stringify(permissions), `test_${userId}`],
+  );
+  invalidatePrincipal(userId);
 }
 
 export const createAdmin = (o) => createUser({ ...o, role: 'ADMIN' });

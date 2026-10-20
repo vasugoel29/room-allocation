@@ -145,7 +145,7 @@ describe('GET /api/timetable/cancellation-requests/pending', () => {
     const res = await pending(a.fac.auth);
     expect(res.status).toBe(200);
     expect(res.body).toEqual([expect.objectContaining({ id: ra.id, user_name: a.rep.user.name, status: 'PENDING' })]);
-    expect((await pending(admin.auth)).body.map((r) => r.id)).not.toContain(ra.id);
+    expect((await pending(admin.auth)).status).toBe(403); // the Faculty Portal isn't the admin's
   });
 });
 
@@ -161,15 +161,14 @@ describe('PATCH /api/timetable/cancellation-requests/:id/:action', () => {
     expect((await reqRow(c.id)).status).toBe('PENDING');
   });
 
-  test('another faculty (or an admin) cannot review it: 404 and status unchanged', async () => {
+  test('another faculty cannot review it (404); the admin has no Faculty Portal (403); status unchanged', async () => {
     const s = await setup();
     const other = await createFaculty();
     const c = (await create(s.rep.auth, s.body)).body.request;
-    for (const u of [other, admin]) {
-      const res = await review(u.auth, c.id, 'approve');
-      expect(res.status).toBe(404);
-      expect(res.body.error).toBe('Cancellation request was not found or has already been reviewed.');
-    }
+    const res = await review(other.auth, c.id, 'approve');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('Cancellation request was not found or has already been reviewed.');
+    expect((await review(admin.auth, c.id, 'approve')).status).toBe(403);
     expect((await reqRow(c.id)).status).toBe('PENDING');
   });
 

@@ -6,6 +6,7 @@ import { PERMISSIONS as P } from '../auth/permissions.js';
 import { idParam, validate, dateKey, hour, positiveInt, text, bool, pagination, WEEKDAYS } from '../middleware/validators.js';
 import { isDateKey } from '../utils/timezone.js';
 
+const SEE_ROOMS = [P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
 const router = express.Router();
 router.param('id', idParam);
 
@@ -20,15 +21,15 @@ const roomFields = [
   body('description').optional({ values: 'null' }).isString().isLength({ max: 1000 }).withMessage('description must be at most 1000 characters'),
 ];
 
-router.get('/rooms', authenticate, validate(pagination({ max: 500 })), getRooms);
-router.post('/rooms', authenticate, requirePermission(P.ROOMS_MANAGE), validate(roomFields), createRoom);
-router.patch('/rooms/:id', authenticate, requirePermission(P.ROOMS_MANAGE), updateRoom);
-router.delete('/rooms/:id', authenticate, requirePermission(P.ROOMS_MANAGE), deleteRoom);
-router.get('/availability', authenticate, getAvailability);
-router.get('/availability/my', authenticate, getMyOverrides);
-router.get('/rooms/admin/status', authenticate, requirePermission(P.ROOMS_MANAGE),
+router.get('/rooms', authenticate, requirePermission(...SEE_ROOMS), validate(pagination({ max: 500 })), getRooms);
+router.post('/rooms', authenticate, requirePermission(P.ADMIN), validate(roomFields), createRoom);
+router.patch('/rooms/:id', authenticate, requirePermission(P.ADMIN), updateRoom);
+router.delete('/rooms/:id', authenticate, requirePermission(P.ADMIN), deleteRoom);
+router.get('/availability', authenticate, requirePermission(...SEE_ROOMS), getAvailability);
+router.get('/availability/my', authenticate, requirePermission(P.ADMIN), getMyOverrides);
+router.get('/rooms/admin/status', authenticate, requirePermission(P.ADMIN),
   validate(dateKey('date', { optional: true }), hour('slot', { optional: true })), getAdminRoomStatus);
-router.post('/availability/override', authenticate, requirePermission(P.AVAILABILITY_OVERRIDE),
+router.post('/availability/override', authenticate, requirePermission(P.ADMIN),
   validate(
     text('room_name', { optional: true, max: 32 }),
     body('day').optional({ values: 'falsy' }).custom((v) => WEEKDAYS.includes(v) || isDateKey(v))
@@ -38,9 +39,9 @@ router.post('/availability/override', authenticate, requirePermission(P.AVAILABI
   ), overrideRoomAvailability);
 
 // Room Schedule Grid Endpoints
-router.get('/rooms/:id/week-schedule', authenticate, requirePermission(P.ROOMS_MANAGE),
+router.get('/rooms/:id/week-schedule', authenticate, requirePermission(P.ADMIN),
   validate(dateKey('weekStart', { optional: true })), getRoomWeekSchedule);
-router.get('/rooms/:id/conflict-check', authenticate, requirePermission(P.ROOMS_MANAGE),
+router.get('/rooms/:id/conflict-check', authenticate, requirePermission(P.ADMIN),
   validate(dateKey('date', { optional: true }), hour('startHour', { optional: true }), hour('endHour', { optional: true, min: 1, max: 24 })),
   checkRoomConflict);
 

@@ -92,9 +92,9 @@ describe('DELETE /api/auth/users/:id', () => {
   // Re-sign-in of a deactivated account (dev-login / Google) is covered in sso.test.js.
   test('a soft-deleted user\'s token → 401', async () => {
     const { user, auth } = await createViewer();
-    expect((await request(app).get('/api/auth/faculties').set('Authorization', auth)).status).toBe(200); // token works before
+    expect((await request(app).get('/api/auth/me').set('Authorization', auth)).status).toBe(200); // token works before
     expect((await request(app).delete(`/api/auth/users/${user.id}`).set('Authorization', admin.auth)).status).toBe(200);
-    const res = await request(app).get('/api/auth/faculties').set('Authorization', auth);
+    const res = await request(app).get('/api/auth/me').set('Authorization', auth);
     expect(res.status).toBe(401);
   });
 

@@ -14,6 +14,9 @@ import {
 } from '../controllers/bookingController.js';
 import { idParamWith } from '../middleware/validators.js';
 
+// Any one of these lets a person see the calendar / make bookings (ownership is checked in the service).
+const SEE_CALENDAR = [P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
+const BOOK = [P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
 const router = express.Router();
 router.param('id', idParamWith('Valid booking ID required'));
 
@@ -34,16 +37,16 @@ const quickBookValidation = [
   body('slot').isInt({ min: 0, max: 23 }).withMessage('Slot must be between 0 and 23')
 ];
 
-router.get('/', authenticate, getBookings);
-router.get('/calendar', authenticate, getCalendar);
+router.get('/', authenticate, requirePermission(...SEE_CALENDAR), getBookings);
+router.get('/calendar', authenticate, requirePermission(...SEE_CALENDAR), getCalendar);
 router.get('/mine', authenticate, getMyBookings);
-router.post('/', authenticate, requirePermission(P.ROOMS_BOOK), bookingValidation, validateRequest, createBooking);
-router.patch('/:id/cancel', authenticate, idValidation, validateRequest, cancelBooking);
-router.patch('/:id', authenticate, requirePermission(P.ROOMS_BOOK), idValidation, validateRequest, rescheduleBooking);
+router.post('/', authenticate, requirePermission(...BOOK), bookingValidation, validateRequest, createBooking);
+router.patch('/:id/cancel', authenticate, requirePermission(...BOOK, P.FACULTY_PORTAL), idValidation, validateRequest, cancelBooking);
+router.patch('/:id', authenticate, requirePermission(...BOOK), idValidation, validateRequest, rescheduleBooking);
 
 
 // Admin-only all bookings (active & cancelled)
-router.get('/admin/all', authenticate, requirePermission(P.BOOKINGS_MANAGE), getBookings);
-router.post('/admin/quick', authenticate, requirePermission(P.BOOKINGS_MANAGE), quickBookValidation, validateRequest, quickBook);
+router.get('/admin/all', authenticate, requirePermission(P.ADMIN), getBookings);
+router.post('/admin/quick', authenticate, requirePermission(P.ADMIN), quickBookValidation, validateRequest, quickBook);
 
 export default router;

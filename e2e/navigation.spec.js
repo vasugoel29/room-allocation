@@ -1,14 +1,15 @@
 import { test, expect, signIn } from './helpers.js';
 
 test.describe('Route guards & navigation', () => {
-  for (const role of ['VIEWER', 'STUDENT_REP', 'FACULTY']) {
-    test(`${role} hitting /admin is redirected to /calendar`, async ({ page, request, seed }) => {
+  // Without cras.admin you're sent to your own home: faculty to their portal, others to Rooms.
+  for (const [role, home] of [['VIEWER', /\/calendar$/], ['STUDENT_REP', /\/calendar$/], ['FACULTY', /\/faculty$/]]) {
+    test(`${role} hitting /admin is redirected to their home`, async ({ page, request, seed }) => {
       const user = await seed.user({ role });
       await signIn(page, request, user, '/admin');
-      await expect(page).toHaveURL(/\/calendar$/);
+      await expect(page).toHaveURL(home);
       await expect(page.getByRole('heading', { name: /admin console/i })).toHaveCount(0);
       await page.goto('/admin?tab=users');
-      await expect(page).toHaveURL(/\/calendar$/);
+      await expect(page).toHaveURL(home);
     });
   }
 

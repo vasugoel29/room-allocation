@@ -1,5 +1,6 @@
 import logger from '../utils/logger.js';
 import * as db from '../db.js';
+import { SUGGESTED_BUNDLES } from './permissions.js';
 
 /**
  * Client for the central Access Control Layer (ACL).
@@ -132,7 +133,8 @@ async function dbDirectoryEntry(email) {
     },
     role: u.role,
     roles: [u.role],
-    permissions: [],
+    // Simulates an ACL configured with the suggested bundle for this role (dev/e2e/load only).
+    permissions: SUGGESTED_BUNDLES[u.role] || [],
   };
 }
 

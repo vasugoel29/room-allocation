@@ -4,13 +4,15 @@ import cache from '../utils/cache.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import logger from '../utils/logger.js';
 import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
+import { canBookDirect } from '../auth/permissions.js';
 
 const STUDENT_HIDDEN_TYPES = ['Committee Room', 'Auditorium'];
 
 export const getRooms = async (req, res) => {
   const { capacity, ac, projector, building, floor, type, page, limit } = req.query;
   try {
-    const isStudent = req.user?.role !== 'ADMIN' && req.user?.role !== 'FACULTY';
+    // Restricted rooms are only listed for people who may book them (cras.bookings.direct).
+    const isStudent = !canBookDirect(req.user);
     
     if (page && limit) {
       const pageNum = parseInt(page) || 1;

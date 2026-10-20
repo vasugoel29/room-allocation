@@ -8,6 +8,7 @@ import { getInitialBookingDateObject } from '../utils/dateHelpers';
 import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
 import { addMinutesToUtc, istDateTimeToUtc } from '../utils/timezone';
+import { booksDirect, P, can } from '../utils/permissions';
 
 function MobileBooking({ onBack }) {
   const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
@@ -47,7 +48,7 @@ function MobileBooking({ onBack }) {
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [conflictingClass, setConflictingClass] = useState(null);
 
-  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+  const isStudent = !booksDirect(user);
 
   // Extract unique blocks (buildings) from rooms and sort alphabetically
   const blocks = ['all', ...[...new Set(rooms.map(r => r.building).filter(Boolean))].sort((a, b) => a.localeCompare(b))];
@@ -122,7 +123,7 @@ function MobileBooking({ onBack }) {
 
     try {
       // 1. Check for Class Conflicts
-      const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
+      const isRep = can(user, P.BOOKINGS);
       const conflict = getClassConflict(user, dateStr, selectedHour, bookings, availability || []);
       
       if (conflict) {

@@ -5,7 +5,8 @@ import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
-import { createAdmin, createFaculty, createRep, createViewer, tokenFor, closeDb } from '../../test/helpers/factories.js';
+import { createAdmin, createFaculty, createRep, createViewer, tokenFor, grantPermissions, closeDb } from '../../test/helpers/factories.js';
+import { PERMISSIONS, CATALOG } from '../../src/auth/permissions.js';
 
 // No route may call out to the network (the removed verify-student proxy used to).
 const realFetch = globalThis.fetch;
@@ -13,102 +14,111 @@ const fetchMock = jest.fn(async () => ({ ok: false, json: async () => ({}) }));
 beforeAll(() => { globalThis.fetch = fetchMock; });
 afterAll(async () => { globalThis.fetch = realFetch; await closeDb(); });
 
-const ROLES = ['VIEWER', 'STUDENT_REP', 'FACULTY', 'ADMIN'];
+const P = PERMISSIONS;
+// Signed-in users holding exactly one permission each, plus one holding none.
 const users = {};
 beforeAll(async () => {
+  users.none = await createViewer({ permissions: [] });
+  for (const perm of Object.values(P)) users[perm] = await createViewer({ permissions: [perm] });
+  users.ADMIN = await createAdmin();
+  // Typical people (suggested ACL bundles) for the non-matrix tests below.
   users.VIEWER = await createViewer();
   users.STUDENT_REP = await createRep();
   users.FACULTY = await createFaculty();
-  users.ADMIN = await createAdmin();
 });
 
 const X = 999999; // non-existent id: authorised calls must not mutate anything
 
+const SEE_CALENDAR = [P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
+const BOOK = [P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
+const ANSWER = [P.BOOKINGS, P.FACULTY_PORTAL, P.ADMIN];
+const ADMIN = [P.ADMIN];
+
 /**
- * Every route mounted in src/server.js + src/routes/*.js.
- *  min:    PUBLIC (no auth by design) | the minimum role that should be allowed.
- *  path:   string, or fn(user) for self-scoped routes.
- *  bug:    finding ID when the CURRENT gate is weaker than `min` (asserted with test.failing).
+ * Every route mounted in src/server.js + src/routes/*.js and its gate:
+ *  'PUBLIC' (no sign-in) | 'AUTH' (any signed-in person) | [permissions] (any one of them).
+ * Ownership (your booking, requests naming you) is checked by the services and tested there.
  */
 const ROUTES = [
   // server.js
-  { m: 'get', path: '/', min: 'PUBLIC' },
-  { m: 'get', path: '/api/health', min: 'PUBLIC' },
+  { m: 'get', path: '/', gate: 'PUBLIC' },
+  { m: 'get', path: '/api/health', gate: 'PUBLIC' },
+  { m: 'get', path: '/api/permissions/catalog', gate: 'PUBLIC' },
   // authRoutes
-  { m: 'post', path: '/api/auth/logout', min: 'PUBLIC' },
-  { m: 'post', path: '/api/auth/google', min: 'PUBLIC', body: {} },
-  { m: 'post', path: '/api/auth/dev-login', min: 'PUBLIC', body: {} },
-  { m: 'get', path: '/api/auth/me', min: 'VIEWER' },
-  { m: 'get', path: '/api/auth/faculties', min: 'VIEWER' },
-  { m: 'get', path: '/api/auth/users', min: 'ADMIN' },
-  { m: 'delete', path: `/api/auth/users/${X}`, min: 'ADMIN' },
+  { m: 'post', path: '/api/auth/logout', gate: 'PUBLIC' },
+  { m: 'post', path: '/api/auth/google', gate: 'PUBLIC', body: {} },
+  { m: 'post', path: '/api/auth/dev-login', gate: 'PUBLIC', body: {} },
+  { m: 'get', path: '/api/auth/me', gate: 'AUTH' },
+  { m: 'get', path: '/api/auth/faculties', gate: [P.BOOKINGS, P.BOOKINGS_DIRECT, P.FACULTY_PORTAL, P.ADMIN] },
+  { m: 'get', path: '/api/auth/users', gate: ADMIN },
+  { m: 'delete', path: `/api/auth/users/${X}`, gate: ADMIN },
   // roomRoutes (mounted at /api)
-  { m: 'get', path: '/api/rooms', min: 'VIEWER' },
-  { m: 'post', path: '/api/rooms', min: 'ADMIN', body: {} },
-  { m: 'patch', path: `/api/rooms/${X}`, min: 'ADMIN', body: { capacity: 1 } },
-  { m: 'delete', path: `/api/rooms/${X}`, min: 'ADMIN' },
-  { m: 'get', path: '/api/availability', min: 'VIEWER' },
-  { m: 'get', path: '/api/availability/my', min: 'VIEWER' },
-  { m: 'get', path: '/api/rooms/admin/status', min: 'ADMIN' },
-  { m: 'post', path: '/api/availability/override', min: 'ADMIN', body: {} },
-  { m: 'get', path: `/api/rooms/${X}/week-schedule`, min: 'ADMIN' },
-  { m: 'get', path: `/api/rooms/${X}/conflict-check`, min: 'ADMIN' },
-  // notificationRoutes (scoped to the caller: every role may use its own inbox)
-  { m: 'get', path: '/api/notifications', min: 'VIEWER' },
-  { m: 'get', path: '/api/notifications/unread-count', min: 'VIEWER' },
-  { m: 'post', path: '/api/notifications/read-all', min: 'VIEWER' },
-  { m: 'patch', path: `/api/notifications/${X}/read`, min: 'VIEWER' },
-  { m: 'delete', path: `/api/notifications/${X}`, min: 'VIEWER' },
+  { m: 'get', path: '/api/rooms', gate: SEE_CALENDAR },
+  { m: 'post', path: '/api/rooms', gate: ADMIN, body: {} },
+  { m: 'patch', path: `/api/rooms/${X}`, gate: ADMIN, body: { capacity: 1 } },
+  { m: 'delete', path: `/api/rooms/${X}`, gate: ADMIN },
+  { m: 'get', path: '/api/availability', gate: SEE_CALENDAR },
+  { m: 'get', path: '/api/availability/my', gate: ADMIN },
+  { m: 'get', path: '/api/rooms/admin/status', gate: ADMIN },
+  { m: 'post', path: '/api/availability/override', gate: ADMIN, body: {} },
+  { m: 'get', path: `/api/rooms/${X}/week-schedule`, gate: ADMIN },
+  { m: 'get', path: `/api/rooms/${X}/conflict-check`, gate: ADMIN },
+  // notificationRoutes (everyone's own inbox)
+  { m: 'get', path: '/api/notifications', gate: 'AUTH' },
+  { m: 'get', path: '/api/notifications/unread-count', gate: 'AUTH' },
+  { m: 'post', path: '/api/notifications/read-all', gate: 'AUTH' },
+  { m: 'patch', path: `/api/notifications/${X}/read`, gate: 'AUTH' },
+  { m: 'delete', path: `/api/notifications/${X}`, gate: 'AUTH' },
   // bookingRoutes
-  { m: 'get', path: '/api/bookings', min: 'VIEWER' },
-  { m: 'get', path: '/api/bookings/calendar?from=2030-01-07&to=2030-01-07', min: 'VIEWER' },
-  { m: 'get', path: '/api/bookings/mine', min: 'VIEWER' },
-  { m: 'post', path: '/api/bookings', min: 'STUDENT_REP', body: {} },
-  { m: 'patch', path: `/api/bookings/${X}/cancel`, min: 'VIEWER' },
-  { m: 'patch', path: `/api/bookings/${X}`, min: 'STUDENT_REP', body: {} },
-  { m: 'get', path: '/api/bookings/admin/all', min: 'ADMIN' },
-  { m: 'post', path: '/api/bookings/admin/quick', min: 'ADMIN', body: {} },
+  { m: 'get', path: '/api/bookings', gate: SEE_CALENDAR },
+  { m: 'get', path: '/api/bookings/calendar?from=2030-01-07&to=2030-01-07', gate: SEE_CALENDAR },
+  { m: 'get', path: '/api/bookings/mine', gate: 'AUTH' },
+  { m: 'post', path: '/api/bookings', gate: BOOK, body: {} },
+  { m: 'patch', path: `/api/bookings/${X}/cancel`, gate: [...BOOK, P.FACULTY_PORTAL] },
+  { m: 'patch', path: `/api/bookings/${X}`, gate: BOOK, body: {} },
+  { m: 'get', path: '/api/bookings/admin/all', gate: ADMIN },
+  { m: 'post', path: '/api/bookings/admin/quick', gate: ADMIN, body: {} },
   // facultyRoutes
-  { m: 'get', path: '/api/faculty/pending', min: 'FACULTY' },
-  { m: 'patch', path: `/api/faculty/${X}/approve`, min: 'FACULTY' },
-  { m: 'patch', path: `/api/faculty/${X}/reject`, min: 'FACULTY' },
-  // transferRoutes — requesting a transfer is a booking action, which VIEWERs cannot perform.
-  { m: 'post', path: '/api/transfers/request', min: 'STUDENT_REP', body: { booking_id: X }, bug: 'SEC-06' },
-  { m: 'get', path: '/api/transfers/incoming', min: 'VIEWER' },
-  { m: 'get', path: '/api/transfers/outgoing', min: 'VIEWER' },
-  { m: 'patch', path: `/api/transfers/${X}/accept`, min: 'VIEWER' },
-  { m: 'patch', path: `/api/transfers/${X}/reject`, min: 'VIEWER' },
+  { m: 'get', path: '/api/faculty/pending', gate: [P.FACULTY_PORTAL, P.ADMIN] },
+  { m: 'patch', path: `/api/faculty/${X}/approve`, gate: [P.FACULTY_PORTAL, P.ADMIN] },
+  { m: 'patch', path: `/api/faculty/${X}/reject`, gate: [P.FACULTY_PORTAL, P.ADMIN] },
+  // transferRoutes
+  { m: 'post', path: '/api/transfers/request', gate: [P.BOOKINGS], body: { booking_id: X } },
+  { m: 'get', path: '/api/transfers/incoming', gate: ANSWER },
+  { m: 'get', path: '/api/transfers/outgoing', gate: ANSWER },
+  { m: 'patch', path: `/api/transfers/${X}/accept`, gate: ANSWER },
+  { m: 'patch', path: `/api/transfers/${X}/reject`, gate: ANSWER },
   // departmentRoutes / branchRoutes
-  { m: 'get', path: '/api/departments', min: 'PUBLIC' },
-  { m: 'get', path: '/api/branches', min: 'PUBLIC' },
+  { m: 'get', path: '/api/departments', gate: 'PUBLIC' },
+  { m: 'get', path: '/api/branches', gate: 'PUBLIC' },
   // adminRoutes
-  { m: 'get', path: '/api/admin/export/bookings', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/audit-logs', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/analytics', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/uploads/template/faculty', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/uploads/template/timetable', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/uploads/export/students', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/uploads/export/faculty', min: 'ADMIN' },
-  { m: 'get', path: '/api/admin/uploads/export/timetable', min: 'ADMIN' },
-  { m: 'post', path: '/api/admin/uploads/import/faculty', min: 'ADMIN', body: {} },
-  { m: 'post', path: '/api/admin/uploads/import/timetable', min: 'ADMIN', body: {} },
-  { m: 'get', path: '/api/admin/uploads/status/no-such-job', min: 'ADMIN' },
+  { m: 'get', path: '/api/admin/export/bookings', gate: ADMIN },
+  { m: 'get', path: '/api/admin/audit-logs', gate: ADMIN },
+  { m: 'get', path: '/api/admin/analytics', gate: ADMIN },
+  { m: 'get', path: '/api/admin/uploads/template/faculty', gate: ADMIN },
+  { m: 'get', path: '/api/admin/uploads/template/timetable', gate: ADMIN },
+  { m: 'get', path: '/api/admin/uploads/export/students', gate: ADMIN },
+  { m: 'get', path: '/api/admin/uploads/export/faculty', gate: ADMIN },
+  { m: 'get', path: '/api/admin/uploads/export/timetable', gate: ADMIN },
+  { m: 'post', path: '/api/admin/uploads/import/faculty', gate: ADMIN, body: {} },
+  { m: 'post', path: '/api/admin/uploads/import/timetable', gate: ADMIN, body: {} },
+  { m: 'get', path: '/api/admin/uploads/status/no-such-job', gate: ADMIN },
   // timetableRoutes
-  { m: 'get', path: '/api/timetable/search', min: 'ADMIN' },
-  { m: 'get', path: '/api/timetable/autocomplete/faculty', min: 'VIEWER' },
-  { m: 'post', path: '/api/timetable/upload', min: 'ADMIN', body: {} },
-  { m: 'get', path: '/api/timetable/faculty', min: 'FACULTY' },
-  { m: 'get', path: `/api/timetable/faculty/check/${X}`, min: 'VIEWER' },
-  { m: 'post', path: '/api/timetable/faculty/override', min: 'FACULTY', body: {} },
-  { m: 'get', path: '/api/timetable/faculty/overrides', min: 'FACULTY' },
-  { m: 'get', path: '/api/timetable/cancellation-requests/pending', min: 'FACULTY' },
-  { m: 'patch', path: `/api/timetable/cancellation-requests/${X}/approve`, min: 'FACULTY' },
-  { m: 'post', path: '/api/timetable/cancellation-requests', min: 'STUDENT_REP', body: {} },
-  { m: 'get', path: '/api/timetable/slots', min: 'ADMIN' },
-  { m: 'post', path: '/api/timetable/slots', min: 'ADMIN', body: {} },
-  { m: 'patch', path: `/api/timetable/slots/${X}`, min: 'ADMIN', body: {} },
-  { m: 'delete', path: `/api/timetable/slots/${X}`, min: 'ADMIN' },
-  { m: 'get', path: '/api/timetable', min: 'VIEWER' },
+  { m: 'get', path: '/api/timetable/search', gate: ADMIN },
+  { m: 'get', path: '/api/timetable/autocomplete/faculty', gate: [P.TIMETABLE, P.BOOKINGS, P.ADMIN] },
+  { m: 'post', path: '/api/timetable/upload', gate: ADMIN, body: {} },
+  { m: 'get', path: '/api/timetable/faculty', gate: [P.TIMETABLE, P.FACULTY_PORTAL] },
+  { m: 'get', path: `/api/timetable/faculty/check/${X}`, gate: [P.BOOKINGS, P.BOOKINGS_DIRECT, P.FACULTY_PORTAL, P.ADMIN] },
+  { m: 'post', path: '/api/timetable/faculty/override', gate: [P.FACULTY_PORTAL], body: {} },
+  { m: 'get', path: '/api/timetable/faculty/overrides', gate: [P.FACULTY_PORTAL] },
+  { m: 'get', path: '/api/timetable/cancellation-requests/pending', gate: [P.FACULTY_PORTAL] },
+  { m: 'patch', path: `/api/timetable/cancellation-requests/${X}/approve`, gate: [P.FACULTY_PORTAL] },
+  { m: 'post', path: '/api/timetable/cancellation-requests', gate: [P.BOOKINGS], body: {} },
+  { m: 'get', path: '/api/timetable/slots', gate: ADMIN },
+  { m: 'post', path: '/api/timetable/slots', gate: ADMIN, body: {} },
+  { m: 'patch', path: `/api/timetable/slots/${X}`, gate: ADMIN, body: {} },
+  { m: 'delete', path: `/api/timetable/slots/${X}`, gate: ADMIN },
+  { m: 'get', path: '/api/timetable', gate: [P.TIMETABLE] },
 ];
 
 const label = (r) => `${r.m.toUpperCase()} ${typeof r.path === 'function' ? r.path({ id: ':self' }) : r.path}`;
@@ -127,8 +137,8 @@ describe('authorization matrix', () => {
     let count = 0;
     // internalRoutes.js is service-to-service (shared token, no user roles): covered by admin/internalSync.test.js.
     for (const f of fs.readdirSync(dir).filter((n) => n !== 'internalRoutes.js')) count += (fs.readFileSync(path.join(dir, f), 'utf8').match(/^router\.(get|post|patch|put|delete)\(/gm) || []).length;
-    // + '/', '/api/health' from server.js (/metrics uses a scraper token, tested separately)
-    expect(ROUTES.length).toBe(count + 2);
+    // + '/', '/api/health', '/api/permissions/catalog' from server.js (/metrics uses a scraper token, tested separately)
+    expect(ROUTES.length).toBe(count + 3);
   });
 
   // Password-era and promotion endpoints were removed on purpose (identity, roles and profile are
@@ -167,28 +177,46 @@ describe('authorization matrix', () => {
     expect(rowCount).toBe(0);
   });
 
-  const nonPublic = ROUTES.filter((r) => r.min !== 'PUBLIC' && !r.bug);
-  test.each(nonPublic.map((r) => [label(r), r]))('%s: no token → 401', async (_l, r) => {
-    const res = await call(r);
-    expect(res.status).toBe(401);
+  const signedIn = ROUTES.filter((r) => r.gate !== 'PUBLIC');
+  test.each(signedIn.map((r) => [label(r), r]))('%s: no token → 401', async (_l, r) => {
+    expect((await call(r)).status).toBe(401);
   });
 
-  const gated = ROUTES.filter((r) => r.min !== 'PUBLIC' && r.min !== 'VIEWER' && !r.bug);
-  test.each(gated.map((r) => [label(r), r]))('%s: one role below the minimum → 403', async (_l, r) => {
-    const below = ROLES[ROLES.indexOf(r.min) - 1];
-    const res = await call(r, users[below].user, users[below].auth);
-    expect(res.status).toBe(403);
+  const gated = ROUTES.filter((r) => Array.isArray(r.gate));
+  test.each(gated.map((r) => [label(r), r]))('%s: signed in without the permission → 403', async (_l, r) => {
+    expect((await call(r, users.none.user, users.none.auth)).status).toBe(403);
   });
 
-  // Note: the 403 check for VIEWER-minimum routes on someone else's resource is ownership, not role — covered elsewhere.
-  test.each(ROUTES.filter((r) => !r.bug).map((r) => [label(r), r]))('%s: minimum role passes the gate', async (_l, r) => {
-    const who = r.min === 'PUBLIC' ? null : users[r.min];
-    const res = await call(r, who?.user, who?.auth);
-    expect([401, 403]).not.toContain(res.status);
+  // Every listed permission opens the gate on its own; nothing else does.
+  const pairs = gated.flatMap((r) => Object.values(P).map((perm) => [label(r), perm, r.gate.includes(perm), r]));
+  test.each(pairs)('%s with only %s → allowed=%s', async (_l, perm, allowed, r) => {
+    const u = users[perm];
+    const res = await call(r, u.user, u.auth);
+    if (allowed) expect([401, 403]).not.toContain(res.status);
+    else expect(res.status).toBe(403);
+  });
+
+  test.each(ROUTES.filter((r) => r.gate === 'AUTH').map((r) => [label(r), r]))('%s: any signed-in person passes', async (_l, r) => {
+    expect([401, 403]).not.toContain((await call(r, users.none.user, users.none.auth)).status);
+  });
+
+  test('every permission the code checks is in the catalog, and every catalog entry is used', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const files = [];
+    const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).forEach((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : e.name.endsWith('.js') && files.push(path.join(d, e.name))));
+    walk(path.resolve(process.cwd(), 'src'));
+    const used = new Set();
+    for (const f of files.filter((x) => !x.endsWith('permissions.js'))) {
+      for (const m of fs.readFileSync(f, 'utf8').matchAll(/\bP\.([A-Z_]+)\b/g)) used.add(m[1]);
+    }
+    expect([...used].filter((k) => !(k in P))).toEqual([]);
+    expect(Object.keys(P).filter((k) => !used.has(k))).toEqual([]);
+    expect(CATALOG.map((c) => c.name)).toEqual(Object.values(P));
   });
 
   test('public routes are reachable without a token', async () => {
-    for (const r of ROUTES.filter((x) => x.min === 'PUBLIC')) {
+    for (const r of ROUTES.filter((x) => x.gate === 'PUBLIC')) {
       const res = await call(r);
       expect({ route: label(r), blocked: [401, 403].includes(res.status) }).toEqual({ route: label(r), blocked: false });
     }
@@ -309,7 +337,8 @@ describe('JWT handling', () => {
   test('[SEC-09] demoted admin loses admin access immediately (stale role claim)', async () => {
     const { user, auth } = await createAdmin();
     expect((await get(ADMIN_ONLY, auth)).status).toBe(200);
-    await db.query("UPDATE users SET role = 'VIEWER' WHERE id = $1", [user.id]);
+    // Demotion happens in the ACL: once cras.admin is withdrawn, access ends at once.
+    await grantPermissions(user.id, []);
     expect((await get(ADMIN_ONLY, auth)).status).toBe(403);
   });
 });
@@ -350,11 +379,11 @@ describe('SQL-injection probes', () => {
 
   test('probes did not destroy or alter data', async () => {
     const { rows } = await db.query('SELECT count(*)::int AS c FROM users WHERE id = ANY($1)', [Object.values(users).map((u) => u.user.id)]);
-    expect(rows[0].c).toBe(4);
+    expect(rows[0].c).toBe(new Set(Object.values(users).map((u) => u.user.id)).size);
   });
 
   test('[SEC-12] injection in a numeric path param → 4xx without Postgres error text', async () => {
-    const res = await request(app).get(`/api/timetable/faculty/check/${encodeURIComponent('1 OR 1=1')}`).set('Authorization', users.VIEWER.auth);
+    const res = await request(app).get(`/api/timetable/faculty/check/${encodeURIComponent('1 OR 1=1')}`).set('Authorization', users.STUDENT_REP.auth);
     expect(JSON.stringify(res.body)).not.toMatch(SQL_TEXT);
     expect(res.status).toBeLessThan(500);
   });

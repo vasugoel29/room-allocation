@@ -24,7 +24,6 @@ export const RULES = Object.freeze({
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export const isStaff = (role) => role === 'ADMIN' || role === 'FACULTY';
 
 const bad = (error, status = 400, extra = {}) => ({ error, status, ...extra });
 
@@ -57,7 +56,11 @@ export function slotOverlaps(slotTime, startMin, endMin) {
  * Validates and normalises the requested time. Returns { ok: { start, end, day, dateKey,
  * startMin, endMin, startHour, endHour } } or an error.
  */
-export function checkTimes(startTime, endTime, { role, now = Date.now(), mode = 'create' } = {}) {
+/**
+ * `direct`: the person books without approval (cras.bookings.direct) — weekends allowed.
+ * `admin`: cras.admin — not limited to the booking window.
+ */
+export function checkTimes(startTime, endTime, { direct = false, admin = false, now = Date.now(), mode = 'create' } = {}) {
   const start = new Date(startTime);
   const end = new Date(endTime);
   if (!startTime || !endTime || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
@@ -81,10 +84,10 @@ export function checkTimes(startTime, endTime, { role, now = Date.now(), mode = 
   if (start.getTime() <= now) {
     return bad(mode === 'approve' ? 'This request is for a time that has already started' : 'Cannot book in the past');
   }
-  if (mode !== 'approve' && role !== 'ADMIN' && start.getTime() > now + RULES.WINDOW_DAYS * 86400000) {
+  if (mode !== 'approve' && !admin && start.getTime() > now + RULES.WINDOW_DAYS * 86400000) {
     return bad('Regular bookings allowed only for the current week');
   }
-  if (mode !== 'approve' && !isStaff(role) && (s.day === 'Sat' || s.day === 'Sun')) {
+  if (mode !== 'approve' && !direct && (s.day === 'Sat' || s.day === 'Sun')) {
     return bad('Students are not allowed to book rooms on weekends');
   }
   return {
@@ -95,23 +98,23 @@ export function checkTimes(startTime, endTime, { role, now = Date.now(), mode = 
   };
 }
 
-/** Room existence/type/access rules for a requester role. */
-export function checkRoom(room, role) {
+/** Room existence and access: restricted rooms need cras.bookings.direct (`direct`). */
+export function checkRoom(room, direct) {
   if (!room || room.is_active === false) return bad('Room not found', 404);
-  if ((room.type === 'Committee Room' || room.type === 'Auditorium') && !isStaff(role)) {
+  if ((room.type === 'Committee Room' || room.type === 'Auditorium') && !direct) {
     return bad('Committee Rooms and Auditoriums can only be booked by Faculty or Admin', 403);
   }
-  if (!isStaff(role) && room.student_access === false) {
+  if (!direct && room.student_access === false) {
     return bad('Students do not have permission to book this room', 403);
   }
   return null;
 }
 
-/** Students must name an active supervising faculty member. Returns { faculty } or an error. */
-export async function checkFaculty(facultyId, role, client, { required = true } = {}) {
+/** Bookings that need approval must name an active faculty member. Returns { faculty } or an error. */
+export async function checkFaculty(facultyId, direct, client, { required = true } = {}) {
   const given = facultyId !== undefined && facultyId !== null && facultyId !== '';
   if (!given) {
-    if (required && !isStaff(role)) return bad('Choose the faculty member who will approve this booking');
+    if (required && !direct) return bad('Choose the faculty member who will approve this booking');
     return { faculty: null };
   }
   const faculty = await facultyRepository.findActiveById(facultyId, client);
@@ -212,15 +215,22 @@ async function facultyTimetableHit(client, facultyName, t) {
     && !off.has(Math.floor(timetableMinutes(String(r.slot_time).split('-')[0]) / 60))) || null;
 }
 
+/** Does this person teach (linked to the faculty directory)? Identity, not a permission. */
+async function teaches(client, person) {
+  if (person.faculty_id !== undefined) return person.faculty_id != null;
+  const { rowCount } = await client.query('SELECT 1 FROM faculties WHERE user_id = $1 AND is_active', [person.id]);
+  return rowCount > 0;
+}
+
 /**
  * Timetable commitments of the people involved: the requester's section (students) or own
  * teaching timetable (faculty), and the selected faculty member's teaching timetable.
  */
 export async function checkPeopleTimetables(client, requester, faculty, t) {
-  if (requester && requester.role === 'FACULTY' && requester.name) {
+  if (requester && requester.name && await teaches(client, requester)) {
     const hit = await facultyTimetableHit(client, requester.name, t);
     if (hit) return bad('This booking clashes with an existing timetable slot in your timetable', 409, { conflict: timetableConflict('your timetable', hit, t) });
-  } else if (requester && !isStaff(requester.role)) {
+  } else if (requester) {
     const department = timetableDepartment(requester.branch || requester.department_name);
     const semester = requester.semester || (requester.year ? requester.year * 2 : null);
     if (department && semester && requester.section != null) {

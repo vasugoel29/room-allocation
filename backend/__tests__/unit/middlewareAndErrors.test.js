@@ -1,8 +1,8 @@
-// Unit tests with mock req/res for: src/middleware/auth.js (authenticate, requireRole),
+// Unit tests with mock req/res for: src/middleware/auth.js (authenticate, requirePermission),
 // src/middleware/validate.js (validateRequest) and src/utils/httpErrors.js.
 import jwt from 'jsonwebtoken';
 import { body, query } from 'express-validator';
-import { authenticate, requireRole, JWT_SECRET } from '../../src/middleware/auth.js';
+import { authenticate, requirePermission, JWT_SECRET } from '../../src/middleware/auth.js';
 import { validateRequest } from '../../src/middleware/validate.js';
 import { sendError, sendServerError } from '../../src/utils/httpErrors.js';
 import { createFaculty, closeDb } from '../../test/helpers/factories.js';
@@ -40,7 +40,7 @@ describe('authenticate', () => {
     expect(out.nextArg).toBeUndefined();
     expect(out.res.body).toBeUndefined();
     expect(req.user).toMatchObject({ id: user.id, role: 'FACULTY', email: user.email });
-    expect(req.user.permissions.has('bookings:approve')).toBe(true);
+    expect(req.user.permissions.has('cras.faculty_portal')).toBe(true);
   });
 
   test('token for a user that does not exist -> 401', async () => {
@@ -81,34 +81,30 @@ describe('authenticate', () => {
   });
 });
 
-describe('requireRole', () => {
-  const ROLES = ['VIEWER', 'STUDENT_REP', 'FACULTY', 'ADMIN'];
+describe('requirePermission', () => {
+  test('passes with any one of the listed permissions; 403 otherwise', () => {
+    const gate = requirePermission('cras.bookings', 'cras.admin');
+    expect(run(gate, { user: { permissions: ['cras.admin'] } }).nextCalled).toBe(true);
+    expect(run(gate, { user: { permissions: new Set(['cras.bookings']) } }).nextCalled).toBe(true);
+    const denied = run(gate, { user: { permissions: ['cras.calendar'] } });
+    expect(denied.nextCalled).toBe(false);
+    expect(denied.res.statusCode).toBe(403);
+    expect(denied.res.body).toEqual({ error: 'Forbidden' });
+  });
 
-  test.each(ROLES.flatMap((required, ri) => ROLES.map((actual, ai) => [actual, required, ai >= ri])))(
-    'user %s on requireRole(%s) -> allowed=%s',
-    (actual, required, allowed) => {
-      const { res, nextCalled } = run(requireRole(required), { user: { role: actual } });
-      expect(nextCalled).toBe(allowed);
-      if (!allowed) {
-        expect(res.statusCode).toBe(403);
-        expect(res.body).toEqual({ error: 'Forbidden' });
-      }
-    },
-  );
-
-  test.each([['admin'], ['SUPERUSER'], [undefined]])('an unknown user role (%p) is treated as lowest -> 403 even for VIEWER routes', (role) => {
-    const { res, nextCalled } = run(requireRole('VIEWER'), { user: { role } });
+  test('a role alone grants nothing (ADMIN role, no permissions → 403)', () => {
+    const { res, nextCalled } = run(requirePermission('cras.admin'), { user: { role: 'ADMIN', permissions: [] } });
     expect(nextCalled).toBe(false);
     expect(res.statusCode).toBe(403);
   });
 
-  // A misspelt role name used to fall back to level 0 and let everyone through.
-  test('[NEW-admin-7] requireRole with an unknown/misspelt role name throws when the route is defined', () => {
-    expect(() => requireRole('Admin')).toThrow(/unknown role/);
+  test('defining a gate without a permission throws', () => {
+    expect(() => requirePermission()).toThrow(/permission is required/);
+    expect(() => requirePermission(undefined)).toThrow(/permission is required/);
   });
 
   test('without authenticate (no req.user) it fails closed with 401', () => {
-    const { res, nextCalled } = run(requireRole('VIEWER'), {});
+    const { res, nextCalled } = run(requirePermission('cras.calendar'), {});
     expect(nextCalled).toBe(false);
     expect(res.statusCode).toBe(401);
   });

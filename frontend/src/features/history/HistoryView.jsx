@@ -8,11 +8,12 @@ import { bookingService } from '../../services/bookingService';
 import { roomService } from '../../services/roomService';
 
 import PageSearch from '../../components/ui/PageSearch';
+import { canBook, isAdmin } from '../../utils/permissions';
 
 const HistoryView = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
   const [myOverrides, setMyOverrides] = useState([]);
-  const [filterMe] = useState(user?.role !== 'ADMIN');
+  const [filterMe] = useState(!isAdmin(user));
   const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST, TRANSFERS
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,7 +36,7 @@ const HistoryView = ({ onClose }) => {
   };
 
   useEffect(() => {
-    if (user?.role !== 'VIEWER') {
+    if (canBook(user)) {
       fetchHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,10 +137,10 @@ const HistoryView = ({ onClose }) => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight capitalize leading-none font-display">
-              {user?.role === 'ADMIN' ? 'Allocation Registry' : 'My Schedule'}
+              {isAdmin(user) ? 'Allocation Registry' : 'My Schedule'}
             </h2>
             <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest mt-1 opacity-40 font-display">
-              {user?.role === 'ADMIN' ? 'Review room reservations campus-wide' : 'Track your active room reservations'}
+              {isAdmin(user) ? 'Review room reservations campus-wide' : 'Track your active room reservations'}
             </p>
           </div>
           <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">

@@ -8,6 +8,7 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = Array.from({ length: 10 }, (_, i) => i + 8); // 08:00–18:00; final slot is 17:00–18:00
 
 import PageSearch from './PageSearch';
+import { booksDirect } from '../../utils/permissions';
 
 function Calendar({ onSlotClick }) {
   const { bookings, rooms, roomsError, fetchRooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, timetableData, user } = useContext(AppContext);
@@ -175,7 +176,7 @@ function Calendar({ onSlotClick }) {
 
   const timePos = getCurrentTimePosition();
 
-  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+  const isStudent = !booksDirect(user);
 
   const filteredRooms = useMemo(() => {
     return rooms.filter(room => {

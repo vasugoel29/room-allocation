@@ -92,22 +92,6 @@ export const transferRepository = {
   rejectOtherPending: async (bookingId, excludeId, client = db) => {
     const query = "UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW() WHERE booking_id = $1 AND id != $2 AND status = 'PENDING'";
     return client.query(query, [bookingId, excludeId]);
-  },
-
-  /**
-   * Reject a transfer using a join (legacy logic)
-   */
-  rejectWithAuth: async (id, userId, userRole, client = db) => {
-    const query = `
-      UPDATE booking_transfers t
-      SET status = 'REJECTED', updated_at = NOW()
-      FROM bookings b
-      WHERE t.booking_id = b.id
-      AND t.id = $1 AND t.status = 'PENDING'
-      AND (b.created_by = $2 OR $3 = 'ADMIN')
-      RETURNING t.id
-    `;
-    const result = await client.query(query, [id, userId, userRole]);
-    return result.rows[0];
   }
+
 };

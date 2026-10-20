@@ -11,6 +11,7 @@ import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, M
 import BottomNav from './components/ui/BottomNav';
 import FloatingActions from './components/ui/FloatingActions';
 import NotificationBell from './components/ui/NotificationBell';
+import { P, can, canAny, canSeeCalendar, isAdmin } from './utils/permissions';
 
 // Lazy-loaded pages for bundle splitting
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
@@ -106,18 +107,20 @@ const DashboardLoadingFallback = () => (
   </div>
 );
 
-const ProtectedRoute = ({ user, children, roles = [], resource = null }) => {
+// Route guard: the user must hold one of `perms` (none listed = any signed-in user).
+const ProtectedRoute = ({ user, children, perms = [] }) => {
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role === 'ADMIN' || (Array.isArray(user.roles) && user.roles.includes('ADMIN'))) {
-    return children;
-  }
-  if (resource && Array.isArray(user.permissions) && user.permissions.includes(resource)) {
-    return children;
-  }
-  if (roles.length > 0 && !roles.includes(user.role)) {
-    return <Navigate to="/calendar" replace />;
-  }
+  if (perms.length > 0 && !canAny(user, ...perms)) return <Navigate to={homeFor(user)} replace />;
   return children;
+};
+
+/** Where a person lands: their most specific area they're allowed into. */
+const homeFor = (user) => {
+  if (isAdmin(user)) return '/admin';
+  if (can(user, P.FACULTY_PORTAL)) return '/faculty';
+  if (canSeeCalendar(user)) return '/calendar';
+  if (can(user, P.TIMETABLE)) return '/timetable';
+  return '/profile';
 };
 
 
@@ -157,7 +160,7 @@ const ThemeToggle = ({ theme, setTheme, className = "" }) => (
 );
 
 function App() {
-  const { user, hasResource, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
+  const { user, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
   const { isDesktop } = useWindowSize();
   const location = useLocation();
   const navigate = useNavigate();
@@ -199,31 +202,11 @@ function App() {
   const getNavigationTabs = () => {
     const tabs = [];
 
-    // Admin Console
-    if (user?.role === 'ADMIN' || hasResource?.('admin:access')) {
-      tabs.push({ id: 'admin', icon: Shield, label: 'Admin Console' });
-    }
-
-    // Faculty Portal
-    if (user?.role === 'FACULTY' || hasResource?.('schedule:faculty:view')) {
-      tabs.push({ id: 'faculty', icon: GraduationCap, label: 'Faculty Portal' });
-    }
-
-    // Rooms (requires rooms:view or user session)
-    if (hasResource?.('rooms:view') || user) {
-      tabs.push({ id: 'calendar', icon: CalendarIcon, label: 'Rooms' });
-    }
-
-    // Bookings (only if user has rooms:book permission or is STUDENT_REP/ADMIN)
-    if (hasResource?.('rooms:book') || user?.role === 'STUDENT_REP' || user?.role === 'ADMIN') {
-      tabs.push({ id: 'bookings', icon: History, label: 'Bookings' });
-    }
-
-    // Timetable (requires schedule:view or user session)
-    if (hasResource?.('schedule:view') || user) {
-      tabs.push({ id: 'timetable', icon: Clock, label: 'Timetable' });
-    }
-
+    if (isAdmin(user)) tabs.push({ id: 'admin', icon: Shield, label: 'Admin Console' });
+    if (can(user, P.FACULTY_PORTAL)) tabs.push({ id: 'faculty', icon: GraduationCap, label: 'Faculty Portal' });
+    if (canSeeCalendar(user)) tabs.push({ id: 'calendar', icon: CalendarIcon, label: 'Rooms' });
+    if (canAny(user, P.BOOKINGS, P.ADMIN)) tabs.push({ id: 'bookings', icon: History, label: 'Bookings' });
+    if (can(user, P.TIMETABLE)) tabs.push({ id: 'timetable', icon: Clock, label: 'Timetable' });
     tabs.push({ id: 'profile', icon: User, label: 'Profile' });
     return tabs;
   };
@@ -333,22 +316,18 @@ function App() {
                   <div className="glass rounded-2xl p-2 sm:p-4 shadow-ambient flex-1 flex flex-col overflow-hidden w-full">
                     <Suspense fallback={<DashboardLoadingFallback />}>
                       <Routes>
-                      <Route path="/calendar" element={<ProtectedRoute user={user}><Calendar onSlotClick={(slot) => { setSelectedSlot(slot); setIsModalOpen(true); }} /></ProtectedRoute>} />
-                      <Route path="/admin" element={<ProtectedRoute user={user} roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
+                      <Route path="/calendar" element={<ProtectedRoute user={user} perms={[P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN]}><Calendar onSlotClick={(slot) => { setSelectedSlot(slot); setIsModalOpen(true); }} /></ProtectedRoute>} />
+                      <Route path="/admin" element={<ProtectedRoute user={user} perms={[P.ADMIN]}><AdminDashboard /></ProtectedRoute>} />
                       <Route path="/admin/timetable" element={<Navigate to="/admin?tab=timetable" replace />} />
-                      <Route path="/faculty" element={<ProtectedRoute user={user} roles={['FACULTY']}><FacultyDashboard /></ProtectedRoute>} />
+                      <Route path="/faculty" element={<ProtectedRoute user={user} perms={[P.FACULTY_PORTAL]}><FacultyDashboard /></ProtectedRoute>} />
                       <Route path="/profile" element={<ProtectedRoute user={user}><Profile /></ProtectedRoute>} />
-                      <Route path="/timetable" element={<ProtectedRoute user={user}><Timetable /></ProtectedRoute>} />
-                      <Route path="/bookings" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}><Bookings /></ProtectedRoute>} />
+                      <Route path="/timetable" element={<ProtectedRoute user={user} perms={[P.TIMETABLE]}><Timetable /></ProtectedRoute>} />
+                      <Route path="/bookings" element={<ProtectedRoute user={user} perms={[P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN]}><Bookings /></ProtectedRoute>} />
                       {/* Same roles as /bookings: viewers can't reach the booking flow by URL (FE-24). */}
-                      <Route path="/history" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}>{!isDesktop ? <MobileHistory onBack={() => navigate('/calendar')} /> : <Navigate to="/bookings" />}</ProtectedRoute>} />
-                      <Route path="/book-a-slot" element={<ProtectedRoute user={user} roles={['STUDENT_REP', 'FACULTY', 'ADMIN']}>{!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />}</ProtectedRoute>} />
-                      <Route path="/" element={
-                        user?.role === 'ADMIN' ? <Navigate to="/admin" replace /> :
-                        user?.role === 'FACULTY' ? <Navigate to="/faculty" replace /> :
-                        <Navigate to="/calendar" replace />
-                      } />
-                      <Route path="*" element={<Navigate to="/calendar" replace />} />
+                      <Route path="/history" element={<ProtectedRoute user={user} perms={[P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN]}>{!isDesktop ? <MobileHistory onBack={() => navigate('/calendar')} /> : <Navigate to="/bookings" />}</ProtectedRoute>} />
+                      <Route path="/book-a-slot" element={<ProtectedRoute user={user} perms={[P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN]}>{!isDesktop ? <MobileBooking onBack={() => navigate('/calendar')} /> : <Navigate to="/calendar" />}</ProtectedRoute>} />
+                      <Route path="/" element={<Navigate to={homeFor(user)} replace />} />
+                      <Route path="*" element={<Navigate to={homeFor(user)} replace />} />
                       </Routes>
                     </Suspense>
                   </div>

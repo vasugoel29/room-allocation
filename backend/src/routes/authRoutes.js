@@ -18,10 +18,10 @@ router.post('/dev-login', authLimiter, devLogin);
 router.get('/me', authenticate, me);
 router.post('/logout', logout);
 
-router.get('/faculties', authenticate, getFaculties);
+router.get('/faculties', authenticate, requirePermission(P.BOOKINGS, P.BOOKINGS_DIRECT, P.FACULTY_PORTAL, P.ADMIN), getFaculties);
 
 // Admin: read-only mirror of the people who have signed in, plus deactivation (soft delete).
-router.get('/users', authenticate, requirePermission(P.USERS_MANAGE), getUsers);
-router.delete('/users/:id', authenticate, requirePermission(P.USERS_MANAGE), deleteUser);
+router.get('/users', authenticate, requirePermission(P.ADMIN), getUsers);
+router.delete('/users/:id', authenticate, requirePermission(P.ADMIN), deleteUser);
 
 export default router;

@@ -2,6 +2,7 @@ import { sendServerError } from '../utils/httpErrors.js';
 import logger from '../utils/logger.js';
 import cache from '../utils/cache.js';
 import * as bookingService from '../services/bookingService.js';
+import { isAdmin as hasAdmin } from '../auth/permissions.js';
 
 export const getPendingRequests = async (req, res) => {
   // Requests are addressed to the faculty-directory entry linked to this account.
@@ -17,7 +18,7 @@ export const getPendingRequests = async (req, res) => {
 
 export const approveBooking = async (req, res) => {
   const { id } = req.params;
-  const isAdmin = req.user.role === 'ADMIN';
+  const isAdmin = hasAdmin(req.user);
   
   const result = await bookingService.inTransaction((client) => bookingService.approveBooking(client, id, req.user, isAdmin));
 
@@ -33,7 +34,7 @@ export const approveBooking = async (req, res) => {
 
 export const rejectBooking = async (req, res) => {
   const { id } = req.params;
-  const isAdmin = req.user.role === 'ADMIN';
+  const isAdmin = hasAdmin(req.user);
   
   try {
     const result = await bookingService.rejectBooking(id, req.user, isAdmin);

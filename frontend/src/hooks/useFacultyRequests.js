@@ -1,13 +1,14 @@
 import { useState, useCallback, useEffect } from 'react';
 import { api } from '../utils/api';
 import toast from 'react-hot-toast';
+import { P, canAny } from '../utils/permissions';
 
 export function useFacultyRequests(user) {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const loadRequests = useCallback(async () => {
-    if (!user || (user.role !== 'FACULTY' && user.role !== 'ADMIN')) {
+    if (!user || !canAny(user, P.FACULTY_PORTAL, P.ADMIN)) {
       return;
     }
     
@@ -71,7 +72,7 @@ export function useFacultyRequests(user) {
   }, [user]);
 
   useEffect(() => {
-    if (user?.role === 'FACULTY' || user?.role === 'ADMIN') {
+    if (canAny(user, P.FACULTY_PORTAL, P.ADMIN)) {
       loadRequests();
     } else {
       setLoading(false);

@@ -2,6 +2,7 @@ import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
 import { User, Mail, Shield, Building, BookOpen, LogOut, Sun, Moon, Info } from 'lucide-react';
 import { getRoleLabel } from '../utils/roleUtils';
+import { isAdmin as isAdminUser, teaches } from '../utils/permissions';
 
 /** Read-only: the profile is owned by the institutional directory (college ACL). */
 function Profile() {
@@ -14,8 +15,9 @@ function Profile() {
   const rollNo = user?.academic?.roll_no || user?.roll_no || '';
   const degree = user?.academic?.degree || user?.degree || '';
 
-  const isAdmin = user?.role === 'ADMIN';
-  const isStudent = user?.role === 'STUDENT_REP' || user?.role === 'VIEWER';
+  // Display only: which profile details apply to this person.
+  const isAdmin = isAdminUser(user);
+  const isStudent = !isAdmin && !teaches(user);
 
   if (!user) return null;
 

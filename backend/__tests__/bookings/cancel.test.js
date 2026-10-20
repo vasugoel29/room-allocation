@@ -106,10 +106,12 @@ describe('PATCH /api/bookings/:id/cancel', () => {
 
   // QUESTION: cancel has no role gate, so a VIEWER who owns a booking (e.g. a demoted rep or a transfer
   // recipient) can cancel it. Documenting current behaviour.
-  test('VIEWER owner can cancel their booking (no role gate on cancel)', async () => {
+  // Cancelling your own booking is part of cras.bookings: someone the ACL no longer lets book
+  // (e.g. a former class rep) can't cancel either; the admin or the faculty can.
+  test('an owner without cras.bookings can no longer cancel (403)', async () => {
     const viewer = await createViewer();
     const { booking } = await seeded({ owner: viewer });
-    expect((await cancel(viewer.auth, booking.id)).status).toBe(200);
+    expect((await cancel(viewer.auth, booking.id)).status).toBe(403);
   });
 
   test('not found → 404', async () => {

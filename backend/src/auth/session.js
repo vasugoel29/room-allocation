@@ -175,7 +175,8 @@ function toPrincipal(row) {
     name: row.name,
     role,
     roles: row.acl_roles || [role],
-    permissions: effectivePermissions(role, row.acl_permissions || []),
+    // Exactly what the ACL granted (catalog names only); no role-based defaults.
+    permissions: effectivePermissions(row.acl_permissions || []),
     allowed_scope: row.allowed_scope || {},
     scopes_by_permission: row.scopes_by_permission || {},
     branch: row.branch,

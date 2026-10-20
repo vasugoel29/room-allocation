@@ -1,69 +1,101 @@
 /**
- * CRAS authorization policy: the single place that decides what a principal may do.
+ * CRAS permission catalog — the single list of what can be granted in this app.
  *
- * Permissions come from the central ACL (`permissions` in the /v1/user-access response).
- * Until the ACL defines permission strings for every app action, each role also carries a
- * default set below that reproduces the app's historical role gates exactly; ACL grants are
- * added on top. Tighten by removing defaults once the ACL publishes the full catalogue.
+ * CRAS defines these names; the college ACL grants them verbatim (`permissions` in the
+ * /v1/user-access response). There is no mapping and no built-in default: a person may do exactly
+ * what the ACL grants, and a name the catalog doesn't know is ignored. Role is a display label only.
+ *
+ * Ownership stays in the app: holding cras.bookings lets you manage *your* bookings; holding
+ * cras.faculty_portal lets you approve requests that *name you*.
  */
 
 export const PERMISSIONS = Object.freeze({
-  ROOMS_VIEW: 'rooms:view',
-  ROOMS_BOOK: 'rooms:book',
-  ROOMS_MANAGE: 'rooms:manage',
-  AVAILABILITY_OVERRIDE: 'availability:override',
-  BOOKINGS_TRANSFER: 'bookings:transfer',
-  BOOKINGS_APPROVE: 'bookings:approve',
-  BOOKINGS_MANAGE: 'bookings:manage',
-  TIMETABLE_VIEW: 'timetable:view',
-  TIMETABLE_FACULTY: 'timetable:faculty',
-  TIMETABLE_MANAGE: 'timetable:manage',
-  CANCELLATION_REQUEST: 'cancellations:request',
-  CANCELLATION_REVIEW: 'cancellations:review',
-  USERS_MANAGE: 'users:manage',
-  DIRECTORY_MANAGE: 'directory:manage',
-  ADMIN_REPORTS: 'admin:reports',
-  ADMIN_IMPORTS: 'admin:imports',
+  CALENDAR: 'cras.calendar',
+  TIMETABLE: 'cras.timetable',
+  BOOKINGS: 'cras.bookings',
+  BOOKINGS_DIRECT: 'cras.bookings.direct',
+  FACULTY_PORTAL: 'cras.faculty_portal',
+  ADMIN: 'cras.admin',
 });
 
 const P = PERMISSIONS;
 
-/** Wildcard granted to admins. */
-export const ALL = '*';
+/** What each permission grants, for the ACL team and GET /api/permissions/catalog. */
+export const CATALOG = Object.freeze([
+  {
+    name: P.CALENDAR,
+    title: 'Rooms calendar',
+    grants: 'See the rooms calendar: availability and who holds a slot (never the purpose). Read-only on its own.',
+  },
+  {
+    name: P.TIMETABLE,
+    title: 'Timetable',
+    grants: 'See your own timetable: your section\'s classes, or the classes you teach.',
+  },
+  {
+    name: P.BOOKINGS,
+    title: 'Bookings',
+    grants: 'The Bookings tab and everything a booker does: request a room (it goes to the named faculty for approval), '
+      + 'ask for someone else\'s booking and accept or decline requests for your own, reschedule or cancel your own bookings, '
+      + 'and ask a faculty member to cancel a class for a date.',
+  },
+  {
+    name: P.BOOKINGS_DIRECT,
+    title: 'Book without approval',
+    grants: 'Bookings take effect immediately with no faculty approval, including restricted rooms (committee rooms, auditorium).',
+  },
+  {
+    name: P.FACULTY_PORTAL,
+    title: 'Faculty Portal',
+    grants: 'Approve or reject booking requests that name you, review class-cancellation requests for your classes, '
+      + 'and cancel or restore one of your own classes for a date.',
+  },
+  {
+    name: P.ADMIN,
+    title: 'Admin Console',
+    grants: 'Everything in the Admin Console: Quick Book for anyone; all bookings with purposes, cancel or move anyone\'s, export; '
+      + 'timetable search, editing, import and export; Room Grid; users (view, deactivate, export); rooms (add, edit, '
+      + 'deactivate, weekly blocks); faculty directory import and export; analytics and the audit log.',
+  },
+]);
 
-const VIEWER = [P.ROOMS_VIEW, P.TIMETABLE_VIEW];
-// availability:override changes a room's recurring weekly availability, so it is admin-only (SEC-05).
-const STUDENT_REP = [...VIEWER, P.ROOMS_BOOK, P.BOOKINGS_TRANSFER, P.CANCELLATION_REQUEST];
-const FACULTY = [...STUDENT_REP, P.BOOKINGS_APPROVE, P.TIMETABLE_FACULTY, P.CANCELLATION_REVIEW];
+const KNOWN = new Set(Object.values(P));
 
-export const ROLE_DEFAULT_PERMISSIONS = Object.freeze({
-  VIEWER,
-  STUDENT_REP,
-  FACULTY,
-  ADMIN: [ALL],
+/**
+ * Suggested bundles to configure in the ACL for each role. CRAS itself never grants from these
+ * (a role gives nothing by itself); only the mock ACL used in development and tests reads them.
+ */
+export const SUGGESTED_BUNDLES = Object.freeze({
+  VIEWER: [P.CALENDAR, P.TIMETABLE],
+  STUDENT_REP: [P.CALENDAR, P.TIMETABLE, P.BOOKINGS],
+  // Faculty book directly and work through their portal (their own bookings are listed there).
+  FACULTY: [P.CALENDAR, P.TIMETABLE, P.BOOKINGS_DIRECT, P.FACULTY_PORTAL],
+  // The admin approves and cancels anything through cras.admin; no Faculty Portal of their own.
+  ADMIN: [P.CALENDAR, P.TIMETABLE, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN],
 });
 
 export const ROLES = Object.freeze(['VIEWER', 'STUDENT_REP', 'FACULTY', 'ADMIN']);
 
-const ROLE_LEVEL = { VIEWER: 1, STUDENT_REP: 2, FACULTY: 3, ADMIN: 4 };
-
-/** Normalises an ACL/DB role string to a known CRAS role (unknown → VIEWER). */
+/** Normalises an ACL role string for display (unknown → VIEWER). Grants nothing. */
 export function normalizeRole(role) {
   const r = typeof role === 'string' ? role.trim().toUpperCase() : '';
   return ROLES.includes(r) ? r : 'VIEWER';
 }
 
-export function roleLevel(role) {
-  return ROLE_LEVEL[role] || 0;
-}
-
-/** Effective permission set = role defaults ∪ explicit ACL grants. */
-export function effectivePermissions(role, aclPermissions = []) {
-  return new Set([...(ROLE_DEFAULT_PERMISSIONS[normalizeRole(role)] || []), ...aclPermissions]);
+/** The permissions a principal holds: exactly the catalog names the ACL granted. */
+export function effectivePermissions(aclPermissions = []) {
+  return new Set((Array.isArray(aclPermissions) ? aclPermissions : []).filter((p) => KNOWN.has(p)));
 }
 
 export function hasPermission(principal, permission) {
   if (!principal) return false;
   const perms = principal.permissions instanceof Set ? principal.permissions : new Set(principal.permissions || []);
-  return perms.has(ALL) || perms.has(permission);
+  return perms.has(permission);
 }
+
+export const hasAnyPermission = (principal, ...permissions) => permissions.some((p) => hasPermission(principal, p));
+
+/** Bookings by this person take effect immediately (no approval) and may use restricted rooms. */
+export const canBookDirect = (principal) => hasPermission(principal, P.BOOKINGS_DIRECT);
+
+export const isAdmin = (principal) => hasPermission(principal, P.ADMIN);

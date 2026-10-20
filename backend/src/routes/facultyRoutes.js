@@ -8,7 +8,7 @@ const router = express.Router();
 router.param('id', idParam);
 
 router.use(authenticate);
-router.use(requirePermission(P.BOOKINGS_APPROVE));
+router.use(requirePermission(P.FACULTY_PORTAL, P.ADMIN));
 
 router.get('/pending', getPendingRequests);
 router.patch('/:id/approve', approveBooking);

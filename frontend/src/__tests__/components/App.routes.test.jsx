@@ -45,11 +45,11 @@ describe('App routing — role landing and guards', () => {
 
   it.each([
     ['/admin', 'VIEWER', 'Calendar'],
-    ['/admin', 'FACULTY', 'Calendar'],
+    ['/admin', 'FACULTY', 'FacultyDashboard'], // no cras.admin: sent to their own home
     ['/admin', 'STUDENT_REP', 'Calendar'],
     ['/admin', 'ADMIN', 'AdminDashboard'],
     ['/faculty', 'STUDENT_REP', 'Calendar'],
-    ['/faculty', 'ADMIN', 'FacultyDashboard'],
+    ['/faculty', 'ADMIN', 'AdminDashboard'], // the admin has no Faculty Portal
     ['/faculty', 'FACULTY', 'FacultyDashboard'],
     ['/bookings', 'VIEWER', 'Calendar'],
     ['/bookings', 'STUDENT_REP', 'Bookings'],
@@ -59,7 +59,7 @@ describe('App routing — role landing and guards', () => {
     ['/profile', 'FACULTY', 'Profile'],
     ['/promotion', 'VIEWER', 'Calendar'],
     ['/forgot-password', 'STUDENT_REP', 'Calendar'],
-    ['/reset-password?token=x', 'FACULTY', 'Calendar'],
+    ['/reset-password?token=x', 'FACULTY', 'FacultyDashboard'], // unknown routes go to your own home
     ['/admin/timetable', 'ADMIN', 'AdminDashboard'],
     ['/does-not-exist', 'VIEWER', 'Calendar'],
   ])('%s as %s -> %s', async (route, role, name) => {

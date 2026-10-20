@@ -14,7 +14,7 @@ let seq = 0;
 const uniqEmail = (tag) => `sso.${tag}.${process.pid}.${Date.now().toString(36)}${seq++}@nsut.ac.in`;
 
 /** An ACL /v1/user-access response in the real shape (see the live sample in FINDINGS / session notes). */
-function aclEntry(email, { role = 'STUDENT_REP', permissions = ['rooms:view', 'rooms:book', 'bookings:transfer'], status = 'ACTIVE', academic = {}, id } = {}) {
+function aclEntry(email, { role = 'STUDENT_REP', permissions = ['cras.calendar', 'cras.timetable', 'cras.bookings'], status = 'ACTIVE', academic = {}, id } = {}) {
   return {
     user: {
       id: id || `usr_${email.split('@')[0].replace(/\W/g, '')}`.slice(0, 60),
@@ -58,7 +58,7 @@ describe('POST /api/auth/google', () => {
     expect(res.status).toBe(200);
     expect(seenToken).toBe('google-id-token');
     expect(res.body.user).toMatchObject({ email, role: 'STUDENT_REP', branch: 'INFORMATION TECHNOLOGY', year: 3, semester: 6, section: 2 });
-    expect(res.body.user.permissions).toEqual(expect.arrayContaining(['rooms:book', 'bookings:transfer']));
+    expect(res.body.user.permissions.sort()).toEqual(['cras.bookings', 'cras.calendar', 'cras.timetable']);
     expect(JSON.stringify(res.body)).not.toMatch(/mobile|password/i);
 
     const claims = jwt.verify(res.body.token, process.env.JWT_SECRET);
@@ -141,11 +141,11 @@ describe('POST /api/auth/google', () => {
 describe('POST /api/auth/dev-login', () => {
   test('signs in through the ACL when enabled', async () => {
     const email = uniqEmail('dev');
-    mockAcl.set(email, aclEntry(email, { role: 'FACULTY', permissions: [] }));
+    mockAcl.set(email, aclEntry(email, { role: 'FACULTY', permissions: ['cras.faculty_portal'] }));
     const res = await devLogin(email);
     expect(res.status).toBe(200);
     expect(res.body.user).toMatchObject({ email, role: 'FACULTY' });
-    expect((await me(res.body.token)).body.user.permissions).toContain('bookings:approve');
+    expect((await me(res.body.token)).body.user.permissions).toEqual(['cras.faculty_portal']);
   });
 
   test('is disabled unless AUTH_DEV_LOGIN=true (looks like a missing route)', async () => {
@@ -238,7 +238,7 @@ describe('soft-deleted accounts and the faculty directory', () => {
 describe('sessions follow the ACL', () => {
   test('a role change in the ACL applies at the next refresh', async () => {
     const email = uniqEmail('promo');
-    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['rooms:view'] }));
+    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['cras.calendar'] }));
     const { token } = (await devLogin(email)).body;
     expect((await me(token)).body.user.role).toBe('VIEWER');
 
@@ -301,12 +301,18 @@ describe('sessions follow the ACL', () => {
 
   test('permissions granted by the ACL open the matching routes', async () => {
     const email = uniqEmail('grant');
-    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['rooms:view', 'admin:reports'] }));
+    // The role is only a label: a VIEWER the ACL grants cras.admin can use the Admin Console...
+    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['cras.admin'] }));
     const { token } = (await devLogin(email)).body;
-    const res = await request(app).get('/api/admin/audit-logs').set('Authorization', `Bearer ${token}`);
-    expect(res.status).toBe(200);
-    // ...but not unrelated admin routes.
-    expect((await request(app).get('/api/auth/users').set('Authorization', `Bearer ${token}`)).status).toBe(403);
+    expect((await request(app).get('/api/admin/audit-logs').set('Authorization', `Bearer ${token}`)).status).toBe(200);
+    // ...but nothing it wasn't granted (its own timetable needs cras.timetable).
+    expect((await request(app).get('/api/timetable').set('Authorization', `Bearer ${token}`)).status).toBe(403);
+
+    // ...and an ADMIN role with no grants can do nothing gated.
+    const bare = uniqEmail('bare');
+    mockAcl.set(bare, aclEntry(bare, { role: 'ADMIN', permissions: [] }));
+    const t2 = (await devLogin(bare)).body.token;
+    expect((await request(app).get('/api/admin/audit-logs').set('Authorization', `Bearer ${t2}`)).status).toBe(403);
   });
 });
 
@@ -317,18 +323,18 @@ describe('permission policy', () => {
     expect(normalizeRole(undefined)).toBe('VIEWER');
   });
 
-  test('role defaults reproduce the historical role hierarchy', () => {
-    const can = (role, perm) => hasPermission({ permissions: effectivePermissions(role) }, perm);
-    expect(can('VIEWER', P.ROOMS_VIEW)).toBe(true);
-    expect(can('VIEWER', P.ROOMS_BOOK)).toBe(false);
-    expect(can('STUDENT_REP', P.ROOMS_BOOK)).toBe(true);
-    expect(can('STUDENT_REP', P.BOOKINGS_APPROVE)).toBe(false);
-    expect(can('FACULTY', P.BOOKINGS_APPROVE)).toBe(true);
-    expect(can('FACULTY', P.USERS_MANAGE)).toBe(false);
-    for (const perm of Object.values(P)) expect(can('ADMIN', perm)).toBe(true);
+  test('a role grants nothing; only catalog names the ACL sends count, unknown names are ignored', () => {
+    expect([...effectivePermissions([])]).toEqual([]);
+    expect([...effectivePermissions(['cras.bookings', 'rooms:book', '*', 'cras.admin '])]).toEqual(['cras.bookings']);
+    expect(hasPermission({ permissions: effectivePermissions(['cras.admin']) }, P.ADMIN)).toBe(true);
+    expect(hasPermission({ permissions: effectivePermissions(['cras.admin']) }, P.BOOKINGS)).toBe(false);
   });
 
-  test('ACL grants add to role defaults', () => {
-    expect(hasPermission({ permissions: effectivePermissions('VIEWER', ['rooms:book']) }, P.ROOMS_BOOK)).toBe(true);
+  test('the catalog is public and lists exactly the six permissions with suggested ACL bundles', async () => {
+    const res = await request(app).get('/api/permissions/catalog');
+    expect(res.status).toBe(200);
+    expect(res.body.permissions.map((p) => p.name)).toEqual(Object.values(P));
+    expect(res.body.permissions.every((p) => p.title && p.grants)).toBe(true);
+    expect(Object.keys(res.body.suggested_bundles).sort()).toEqual(['ADMIN', 'FACULTY', 'STUDENT_REP', 'VIEWER']);
   });
 });

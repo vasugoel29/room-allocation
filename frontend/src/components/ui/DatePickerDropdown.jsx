@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useContext } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
+import { booksDirect } from '../../utils/permissions';
 
 function DatePickerDropdown({ selectedDate, onChange }) {
   const { user } = useContext(AppContext);
@@ -117,7 +118,7 @@ function DatePickerDropdown({ selectedDate, onChange }) {
               const dateObj = new Date(year, month, d);
               const dayOfWeek = dateObj.getDay();
               const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-              const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+              const isStudent = !booksDirect(user);
               const isWeekendDisabled = isWeekend && isStudent;
 
               return (

@@ -46,6 +46,7 @@ import AdminRooms from '../features/admin/AdminRooms';
 import AdminRoomModal from '../components/modals/AdminRoomModal';
 import AdminDepartments from '../features/admin/AdminDepartments';
 import AdminBranches from '../features/admin/AdminBranches';
+import { isAdmin } from '../utils/permissions';
 
 function AdminDashboard() {
   const { user } = useContext(AppContext);
@@ -218,7 +219,7 @@ function AdminDashboard() {
     });
   };
 
-  if (user?.role !== 'ADMIN') {
+  if (!isAdmin(user)) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
         <Shield size={48} className="text-red-500 mb-4 opacity-20" />

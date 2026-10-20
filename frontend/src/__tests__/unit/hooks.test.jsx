@@ -178,7 +178,7 @@ describe('useFacultyRequests', () => {
       ['GET', '/api/transfers/incoming', [{ id: 7, requester_name: 'A', requestee_name: 'B', new_purpose: 'Quiz' }]],
       ['GET', '/api/timetable/cancellation-requests/pending', [{ id: 3, class_date: '2026-10-20T00:00:00.000Z', hour: 9, subject_name: 'DBMS' }]],
     ]);
-    const user = { id: 21, role: 'FACULTY' };
+    const user = { id: 21, role: 'FACULTY', permissions: ['cras.faculty_portal'] };
     const { result } = renderHook(() => useFacultyRequests(user));
     await waitFor(() => expect(result.current.pendingRequests).toHaveLength(3));
     const [b, t, c] = result.current.pendingRequests;
@@ -194,7 +194,7 @@ describe('useFacultyRequests', () => {
     ]);
     // transfers network error would be retried by apiFetch with real backoff; keep it fast with fake timers
     vi.useFakeTimers();
-    const user = { id: 21, role: 'FACULTY' };
+    const user = { id: 21, role: 'FACULTY', permissions: ['cras.faculty_portal'] };
     const { result } = renderHook(() => useFacultyRequests(user));
     await act(async () => { await vi.advanceTimersByTimeAsync(31000); });
     expect(result.current.loading).toBe(false);

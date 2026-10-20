@@ -45,7 +45,8 @@ let hourSeq = 0;
  */
 async function scenario({ ownerFaculty = false, requester: requesterRole = 'rep', targetFaculty = requesterRole === 'rep', booking = {} } = {}) {
   const [owner, requester, room] = await Promise.all([
-    createRep(), requesterRole === 'faculty' ? createFaculty() : createRep(), createRoom(),
+    // A staff requester: books directly, and the ACL also grants cras.bookings (transfers are part of it).
+    createRep(), requesterRole === 'faculty' ? createFaculty({ permissions: ['cras.calendar', 'cras.bookings', 'cras.bookings.direct', 'cras.faculty_portal'] }) : createRep(), createRoom(),
   ]);
   const ownerFac = ownerFaculty ? await createFaculty() : null;
   const targetFac = targetFaculty ? await createFaculty() : null;

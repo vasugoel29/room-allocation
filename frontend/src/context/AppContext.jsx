@@ -5,6 +5,7 @@ import { bookingService } from '../services/bookingService';
 import { getInitialBookingDateString } from '../utils/dateHelpers';
 import { roomService } from '../services/roomService';
 import { getIstDateKey, addDaysToKey, mondayOfKey } from '../utils/timezone';
+import { teaches, can as canUser } from '../utils/permissions';
 
 export const AppContext = createContext();
 
@@ -168,7 +169,7 @@ export const AppProvider = ({ children }) => {
   const fetchTimetable = useCallback(async () => {
     if (!user) return;
     try {
-      if (user.role === 'FACULTY') {
+      if (teaches(user)) {
         const data = await roomService.getFacultyTimetable();
         setFacultyTimetableData(data || {});
       } else {
@@ -181,7 +182,7 @@ export const AppProvider = ({ children }) => {
   }, [user]); // Depend on user directly to satisfy ESLint rules
 
   const fetchFacultyOverrides = useCallback(async () => {
-    if (!user || user.role !== 'FACULTY') return;
+    if (!user || !teaches(user)) return;
     try {
       const data = await roomService.getFacultyOverrides();
       setFacultyOverrides(data || []);
@@ -282,13 +283,8 @@ export const AppProvider = ({ children }) => {
     return incomingTransfers.filter(t => t.status === 'PENDING').length;
   }, [incomingTransfers]);
 
-  const hasResource = useCallback((resource) => {
-    if (!user) return false;
-    if (user.role === 'ADMIN' || (Array.isArray(user.roles) && user.roles.includes('ADMIN'))) {
-      return true;
-    }
-    return Array.isArray(user.permissions) && user.permissions.includes(resource);
-  }, [user]);
+  // Permission check against what the ACL granted (catalog names in utils/permissions.js).
+  const hasResource = useCallback((permission) => canUser(user, permission), [user]);
 
   const contextValue = useMemo(() => ({
     user,

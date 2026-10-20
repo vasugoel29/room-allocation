@@ -11,6 +11,7 @@ import PageSearch from '../components/ui/PageSearch';
 import { getDatesOfWeek } from '../utils/dateHelpers';
 import { WeekView } from '../components/ui/WeekView';
 import { toTitleCase } from '../utils/roleUtils';
+import { P, can, teaches, isAdmin } from '../utils/permissions';
 
 const Timetable = () => {
   const { user, selectedDay, setSelectedDay, bookings, availability, fetchAvailability, timetableData, facultyTimetableData, facultyOverrides } = useContext(AppContext);
@@ -42,8 +43,9 @@ const Timetable = () => {
 
   // Permission check
   const { fetchBookings, fetchFacultyOverrides, fetchTimetable } = useContext(AppContext);
-  const isRep = user?.role === 'STUDENT_REP' || user?.role === 'ADMIN';
-  const isFaculty = user?.role === 'FACULTY';
+  // Ask for a class to be cancelled (cras.bookings) / cancel your own class (Faculty Portal + teaching).
+  const isRep = can(user, P.BOOKINGS);
+  const isFaculty = teaches(user) && can(user, P.FACULTY_PORTAL);
 
   const weeklySchedule = useMemo(() => {
     if (viewMode !== 'week') return {};
@@ -219,7 +221,7 @@ const Timetable = () => {
                         <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
                         {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full capitalize tracking-tighter">Updated</span>}
                       </div>
-                      {item.isDynamic && item.className && (user.role === 'FACULTY' || user.role === 'ADMIN') && (
+                      {item.isDynamic && item.className && (teaches(user) || isAdmin(user)) && (
                         <div className="mt-1">
                           <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">{item.className}</p>
                         </div>
@@ -268,12 +270,12 @@ const Timetable = () => {
             weeklySchedule={weeklySchedule}
             accentColor="accent"
             renderSlotSubtitle={(item) => {
-              const isAdmin = user?.role === 'ADMIN';
-              const isFaculty = user?.role === 'FACULTY';
-              const isStudent = !isAdmin && !isFaculty;
+              const admin = isAdmin(user);
+              const isFaculty = teaches(user);
+              const isStudent = !admin && !isFaculty;
               return (
                 <>
-                  {item.className && (isAdmin || isFaculty) && (
+                  {item.className && (admin || isFaculty) && (
                     <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
                   )}
                   {item.faculty && (isAdmin || isStudent) && (

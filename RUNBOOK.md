@@ -166,8 +166,42 @@ The outbox worker is already safe to run on several instances (`FOR UPDATE SKIP 
 ## 8. Open actions before go-live
 
 These need the repository owner and are not done by code changes:
+0. **Configure the CRAS permissions in the ACL** (section 9). CRAS grants nothing by itself, so until the ACL grants these names nobody can use the app.
 1. **Make the repository private.**
 2. **Rotate the leaked ACL client secret** (ACL-04) and set a new `JWT_SECRET`.
 3. **Purge the leaked secret and credential files from git history.** This is a history rewrite plus force-push, done deliberately with every collaborator re-cloning afterwards.
 4. **Tighten `connect-src`** in `frontend/vercel.json` to the final API origin (section 1).
 5. **Set up the backup schedule and run one test restore** (section 6).
+
+---
+
+## 9. Permission catalog (configure these in the ACL)
+
+CRAS checks exactly these names, as the ACL sends them in `permissions`. There is no mapping and no default: no grant means no access, and a role on its own grants nothing. The live list, with descriptions, is served at `GET /api/permissions/catalog`.
+
+| Permission | Grants |
+|---|---|
+| `cras.calendar` | See the rooms calendar: availability and who holds a slot (never the purpose). Read-only on its own |
+| `cras.timetable` | See your own timetable: your section's classes, or the classes you teach |
+| `cras.bookings` | The Bookings tab and everything a booker does: request a room (approved by the named faculty member), request someone else's booking and answer requests for your own, reschedule or cancel your own, ask a faculty member to cancel a class |
+| `cras.bookings.direct` | Bookings take effect immediately with no approval, including committee rooms and the auditorium |
+| `cras.faculty_portal` | Approve or reject requests that name you, review class-cancellation requests for your classes, cancel or restore your own class for a date |
+| `cras.admin` | The whole Admin Console |
+
+Profile and the notification inbox need no permission.
+
+**Suggested role bundles** (configure as roles in the ACL):
+
+| Role | Permissions |
+|---|---|
+| Student | `cras.calendar`, `cras.timetable` |
+| Class representative | `cras.calendar`, `cras.timetable`, `cras.bookings` |
+| Faculty | `cras.calendar`, `cras.timetable`, `cras.bookings.direct`, `cras.faculty_portal` |
+| Admin | `cras.calendar`, `cras.timetable`, `cras.bookings`, `cras.bookings.direct`, `cras.admin` |
+
+**Checks that stay inside CRAS, whatever the ACL grants:**
+- only the faculty member named on a request can approve it;
+- only the owner can manage their own bookings, though the admin can manage anyone's;
+- booking times, conflicts and the one-commitment-per-slot rule always apply.
+
+**Faculty:** someone counts as faculty if their email is in the faculty directory, which the ACL faculty sync fills. That link drives the teaching-timetable checks, separately from permissions.

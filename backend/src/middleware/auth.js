@@ -1,5 +1,5 @@
 import { loadPrincipal, verifySessionToken, SessionError } from '../auth/session.js';
-import { hasPermission, roleLevel } from '../auth/permissions.js';
+import { hasAnyPermission } from '../auth/permissions.js';
 
 if (!process.env.JWT_SECRET) {
   console.error('CRITICAL: JWT_SECRET environment variable is not set!');
@@ -40,26 +40,15 @@ export async function authenticate(req, res, next) {
   }
 }
 
-/** Minimum-role gate (kept for routes whose rule is genuinely role-based). */
-export function requireRole(minimumRole) {
-  const required = roleLevel(minimumRole);
-  if (!required) throw new Error(`requireRole: unknown role "${minimumRole}"`);
+/**
+ * Permission gate. Passes when the principal holds any one of `permissions` (catalog names in
+ * src/auth/permissions.js, granted only by the college ACL).
+ */
+export function requirePermission(...permissions) {
+  if (!permissions.length || permissions.some((p) => !p)) throw new Error('requirePermission: permission is required');
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-    if (roleLevel(req.user.role) < required) return res.status(403).json({ error: 'Forbidden' });
+    if (!hasAnyPermission(req.user, ...permissions)) return res.status(403).json({ error: 'Forbidden' });
     next();
   };
 }
-
-/** Permission gate backed by src/auth/permissions.js (ACL grants + role defaults). */
-export function requirePermission(permission) {
-  if (!permission) throw new Error('requirePermission: permission is required');
-  return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-    if (!hasPermission(req.user, permission)) return res.status(403).json({ error: 'Forbidden' });
-    next();
-  };
-}
-
-/** @deprecated alias kept for the access-control branch call sites; use requirePermission. */
-export const requireResource = (resource) => requirePermission(resource);

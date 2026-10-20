@@ -4,7 +4,8 @@ import { transferRepository } from '../repositories/transferRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { logActivity } from './loggerService.js';
-import { checkTimes, checkPeopleTimetables, checkBookingConflicts, isStaff } from './bookingRules.js';
+import { checkTimes, checkPeopleTimetables, checkBookingConflicts } from './bookingRules.js';
+import { canBookDirect, isAdmin as hasAdmin, effectivePermissions, PERMISSIONS as P } from '../auth/permissions.js';
 import { inTransaction } from './bookingService.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
 
@@ -46,8 +47,15 @@ const meta = (t, actorId) => ({ actorId, entityType: 'transfer', entityId: t.id 
 const bookingUpcomingActive = (booking) =>
   booking && booking.status === 'ACTIVE' && new Date(booking.start_time).getTime() > Date.now();
 
-export const requestTransfer = async (reqData, userId, userRole) => {
+/** Does this user's ACL snapshot let them book without approval (i.e. staff)? */
+async function ownerBooksDirect(client, userId) {
+  const { rows: [r] } = await client.query('SELECT permissions FROM user_access WHERE user_id = $1', [userId]);
+  return effectivePermissions(r?.permissions || []).has(P.BOOKINGS_DIRECT);
+}
+
+export const requestTransfer = async (reqData, principal) => {
   const { booking_id, target_faculty_id, new_purpose } = reqData;
+  const userId = principal.id;
   return inTransaction(async (client) => {
     const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [booking_id]);
     if (!booking) return fail('Target booking not found', 404);
@@ -55,14 +63,14 @@ export const requestTransfer = async (reqData, userId, userRole) => {
     if (new Date(booking.start_time).getTime() <= Date.now()) return fail('This booking has already started and can no longer be transferred.');
     if (booking.created_by === userId) return fail('Cannot request transfer from yourself.');
 
-    const owner = await userRepository.findById(booking.created_by, client);
-    if ((owner?.role === 'ADMIN' || owner?.role === 'FACULTY') && userRole !== 'ADMIN') {
+    // Staff bookings (owner books without approval) can't be requested, except by the admin.
+    if (!hasAdmin(principal) && await ownerBooksDirect(client, booking.created_by)) {
       return fail('Cannot request transfers for faculty or admin bookings.', 403);
     }
 
     // Students taking over a booking need a supervising faculty, like any student booking.
     const given = target_faculty_id !== undefined && target_faculty_id !== null && target_faculty_id !== '';
-    if (!given && !isStaff(userRole)) return fail('Choose the faculty member who will approve this booking');
+    if (!given && !canBookDirect(principal)) return fail('Choose the faculty member who will approve this booking');
     if (given && !(await facultyRepository.findActiveById(target_faculty_id, client))) {
       return fail('Selected faculty member was not found');
     }
@@ -110,7 +118,7 @@ async function completeTransfer(client, t, booking, actorId) {
     return fail('The requester can no longer receive this booking.', 409, { commit: true });
   }
   const faculty = t.target_faculty_id ? await facultyRepository.findById(t.target_faculty_id, client) : null;
-  const times = checkTimes(booking.start_time, booking.end_time, { role: 'ADMIN', mode: 'approve' });
+  const times = checkTimes(booking.start_time, booking.end_time, { direct: true, admin: true, mode: 'approve' });
   if (times.error) return times;
   const people = await checkPeopleTimetables(client, requester, faculty, times.ok);
   if (people) return people;
@@ -145,7 +153,9 @@ async function completeTransfer(client, t, booking, actorId) {
   return { status: 200, message: 'Transfer completed successfully' };
 }
 
-export const acceptTransfer = async (transferId, userId, userRole, facultyId = null) => {
+export const acceptTransfer = async (transferId, principal) => {
+  const userId = principal.id;
+  const facultyId = principal.faculty_id ?? null;
   return inTransaction(async (client) => {
     const locked = await lockTransfer(client, transferId);
     if (locked.error) return locked;
@@ -156,7 +166,7 @@ export const acceptTransfer = async (transferId, userId, userRole, facultyId = n
       return fail('This booking is no longer available for transfer.', 409, { conflict: { type: 'booking_unavailable' }, commit: true });
     }
 
-    const isAdmin = userRole === 'ADMIN';
+    const isAdmin = hasAdmin(principal);
     const ownerFaculty = booking.faculty_id;
     const step = async (next, action, message) => {
       if (next === 'ACCEPTED') return completeTransfer(client, t, booking, userId);
@@ -187,7 +197,9 @@ export const acceptTransfer = async (transferId, userId, userRole, facultyId = n
   });
 };
 
-export const rejectTransfer = async (transferId, userId, userRole, facultyId = null) => {
+export const rejectTransfer = async (transferId, principal) => {
+  const userId = principal.id;
+  const facultyId = principal.faculty_id ?? null;
   return inTransaction(async (client) => {
     const locked = await lockTransfer(client, transferId);
     if (locked.error) return locked;
@@ -199,7 +211,7 @@ export const rejectTransfer = async (transferId, userId, userRole, facultyId = n
       booking?.created_by === userId ||
       (facultyId != null && String(booking?.faculty_id) === String(facultyId)) ||
       (facultyId != null && String(t.target_faculty_id) === String(facultyId)) ||
-      userRole === 'ADMIN';
+      hasAdmin(principal);
     if (!isAuthorized) return fail('Not authorized to reject this transfer', 403);
 
     // The requester closing their own request is a withdrawal, whatever their role.

@@ -24,10 +24,10 @@ function limitedView(booking, canTransfer, now) {
 export function viewBookingFor(principal, booking, now = Date.now()) {
   const isOwner = String(booking.created_by) === String(principal.id);
   const isSupervisor = principal.faculty_id != null && String(booking.faculty_id) === String(principal.faculty_id);
-  if (isOwner || isSupervisor || hasPermission(principal, P.BOOKINGS_MANAGE)) {
+  if (isOwner || isSupervisor || hasPermission(principal, P.ADMIN)) {
     return { ...booking, visibility: "full" };
   }
-  return limitedView(booking, hasPermission(principal, P.BOOKINGS_TRANSFER), now);
+  return limitedView(booking, hasPermission(principal, P.BOOKINGS), now);
 }
 
 export const getBookings = async (req, res) => {
@@ -49,8 +49,8 @@ export const getCalendar = async (req, res) => {
   try {
     const range = bookingService.calendarRange(req.query);
     if (range.error) return res.status(range.status).json({ error: range.error });
-    const manage = hasPermission(req.user, P.BOOKINGS_MANAGE);
-    const transfer = hasPermission(req.user, P.BOOKINGS_TRANSFER);
+    const manage = hasPermission(req.user, P.ADMIN);
+    const transfer = hasPermission(req.user, P.BOOKINGS);
     const variant = manage ? "full" : transfer ? "transfer" : "view";
     const key = `calendar|${range.from}|${range.to}`;
     const body = await sharedCached(`${key}|${variant}`, async () => {

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Wind, Monitor } from 'lucide-react';
+import { booksDirect } from '../../utils/permissions';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
 
@@ -121,7 +122,7 @@ function RescheduleDetails({
             <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
               {rooms
                 .filter(room => {
-                  const isStudent = user?.role !== 'ADMIN' && user?.role !== 'FACULTY';
+                  const isStudent = !booksDirect(user);
                   if (isStudent && (room.type === 'Committee Room' || room.type === 'Auditorium')) return false;
                   if (!rescheduleDebouncedTerm) return true;
                   return room.name.toLowerCase().includes(rescheduleDebouncedTerm.toLowerCase()) || 

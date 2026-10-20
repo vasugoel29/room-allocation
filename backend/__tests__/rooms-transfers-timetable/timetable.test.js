@@ -159,9 +159,14 @@ describe('GET /api/timetable/autocomplete/faculty', () => {
 
 // ─── GET /api/timetable/faculty ──────────────────────────────────────────────
 describe('GET /api/timetable/faculty (own faculty timetable)', () => {
-  test('401 / 403 for VIEWER and STUDENT_REP', async () => {
+  test('401 without sign-in; 403 without cras.timetable / cras.faculty_portal; others see only their own (none)', async () => {
     expect((await request(app).get('/api/timetable/faculty')).status).toBe(401);
-    for (const u of [viewer, rep]) expect((await request(app).get('/api/timetable/faculty').set('Authorization', u.auth)).status).toBe(403);
+    expect((await request(app).get('/api/timetable/faculty').set('Authorization', (await createViewer({ permissions: ['cras.calendar'] })).auth)).status).toBe(403);
+    for (const u of [viewer, rep]) {
+      const res = await request(app).get('/api/timetable/faculty').set('Authorization', u.auth);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({});
+    }
   });
 
   test('returns only the caller\'s slots (by name, case-insensitive), grouped by day, with room name; ?day filters', async () => {
@@ -211,44 +216,44 @@ describe('GET /api/timetable/faculty/check/:id', () => {
     const inactive = await createFacultyEntry({ is_active: false });
     // A user id (even the faculty member's own account id) is not a directory id.
     for (const id of [rep.user.id, fac.user.id, inactive.id]) {
-      const res = await check(viewer.auth, id, { date: slot.dateKey, hour: 10 });
+      const res = await check(rep.auth, id, { date: slot.dateKey, hour: 10 });
       expect(res.status).toBe(404);
       expect(res.body.error).toBe('Faculty not found');
     }
   });
 
   test('static timetable class (12h data converted) → occupied, details hidden', async () => {
-    const res = await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 13 });
+    const res = await check(rep.auth, fac.faculty.id, { date: slot.dateKey, hour: 13 });
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ isOccupied: true, reason: 'Static Class', details: null });
   });
 
   test('occupied faculty_timetable_slots count, unoccupied ones do not', async () => {
-    expect((await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(true);
-    expect((await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 16 })).body.isOccupied).toBe(false);
+    expect((await check(rep.auth, fac.faculty.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(true);
+    expect((await check(rep.auth, fac.faculty.id, { date: slot.dateKey, hour: 16 })).body.isOccupied).toBe(false);
   });
 
   test('ACTIVE booking supervised by the faculty → Dynamic Booking', async () => {
-    const res = await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 10 });
+    const res = await check(rep.auth, fac.faculty.id, { date: slot.dateKey, hour: 10 });
     expect(res.body).toEqual({ isOccupied: true, reason: 'Dynamic Booking', details: null });
   });
 
   test('a soft-deleted faculty_timetable_slot no longer makes the faculty busy', async () => {
     await db.query("UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE UPPER(faculty_name) = UPPER($1) AND slot_time = '03:00-04:00'", [fac.faculty.name]);
     try {
-      expect((await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(false);
+      expect((await check(rep.auth, fac.faculty.id, { date: slot.dateKey, hour: 15 })).body.isOccupied).toBe(false);
     } finally {
       await db.query("UPDATE faculty_timetable_slots SET is_active = TRUE, deactivated_at = NULL WHERE UPPER(faculty_name) = UPPER($1) AND slot_time = '03:00-04:00'", [fac.faculty.name]);
     }
   });
 
   test('free hour → not occupied', async () => {
-    const res = await check(viewer.auth, fac.faculty.id, { date: slot.dateKey, hour: 9 });
+    const res = await check(rep.auth, fac.faculty.id, { date: slot.dateKey, hour: 9 });
     expect(res.body).toEqual({ isOccupied: false, reason: null, details: null });
   });
 
   test('[NEW-RTT-8] missing date/hour returns 400 (currently 500 TypeError)', async () => {
-    const res = await check(viewer.auth, fac.faculty.id, {});
+    const res = await check(rep.auth, fac.faculty.id, {});
     expect(res.status).toBe(400);
   });
 });

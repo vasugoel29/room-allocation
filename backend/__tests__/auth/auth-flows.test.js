@@ -5,7 +5,7 @@
 import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
-import { createViewer, createFaculty, createFacultyEntry, closeDb } from '../../test/helpers/factories.js';
+import { createViewer, createRep, createFaculty, createFacultyEntry, closeDb } from '../../test/helpers/factories.js';
 
 afterAll(closeDb);
 
@@ -33,13 +33,15 @@ describe('GET /api/auth/faculties', () => {
     expect((await request(app).get('/api/auth/faculties')).status).toBe(401);
   });
 
-  test('any authenticated role gets the ACTIVE faculty directory (faculties.id), without sensitive fields', async () => {
+  test('people who book or review get the ACTIVE faculty directory (faculties.id), without sensitive fields', async () => {
     const { rows: [dept] } = await db.query('SELECT id, name FROM departments WHERE is_active ORDER BY id LIMIT 1');
     const { user: facUser, faculty: linked } = await createFaculty();
     await db.query('UPDATE faculties SET department_id = $1 WHERE id = $2', [dept.id, linked.id]);
     const noAccount = await createFacultyEntry({ department_name: 'Directory Only Dept' });
     const inactive = await createFacultyEntry({ is_active: false });
-    const { user: viewer, auth } = await createViewer();
+    // The dropdown is for booking: a calendar-only viewer has no use for it.
+    expect((await request(app).get('/api/auth/faculties').set('Authorization', (await createViewer()).auth)).status).toBe(403);
+    const { user: viewer, auth } = await createRep();
     const res = await request(app).get('/api/auth/faculties').set('Authorization', auth);
     expect(res.status).toBe(200);
     const ids = res.body.map((f) => f.id);
