@@ -26,25 +26,39 @@ room-all/
 - **Node.js**: (v20+)
 - **Docker & Docker Compose**: For the database.
 
-### Setup & Installation
+### Setup & Installation (new machine)
 
-1. **Install Dependencies**:
-   Run this from the root folder to install all packages for both frontend and backend:
+1. **Get the code** — all current work is on the `testing` branch:
+   ```bash
+   git clone <repo-url> && cd room-allocation && git checkout testing
+   ```
+2. **Install dependencies** (from the root):
    ```bash
    npm run install:all
    ```
-
-2. **Start the Database**:
+3. **Start PostgreSQL**:
    ```bash
-   docker-compose up -d
+   docker compose up -d
    ```
-
-3. **Development Mode**:
-   Start both the backend and frontend simultaneously from the root with hot-reloading:
+4. **Create the env files** (they are not in git): `cp backend/.env.example backend/.env` and
+   `cp frontend/.env.example frontend/.env`, then for local development set:
+   - `backend/.env`: `DATABASE_URL=postgresql://roomuser:roompass@localhost:5432/roomdb`,
+     `JWT_SECRET=<32+ random chars>`, `ACL_CLIENT_SECRET=<from the ACL team>`, `AUTH_DEV_LOGIN=true`,
+     `CORS_ORIGIN=http://localhost:5173`, `APP_URL=http://localhost:5173`. Leave `NODE_ENV` out (`npm run dev` sets it).
+   - `frontend/.env`: `VITE_DEV_LOGIN=true`.
+5. **Create the database, migrate and seed** (the seeder applies every migration first; safe to re-run):
+   ```bash
+   npm run db:create --prefix backend
+   npm run seed                                   # 130 rooms + 231 faculty
+   npm run seed --prefix backend -- --demo-timetable   # optional: two demo section timetables
+   ```
+   No people are seeded: you appear on your first sign-in, and only if the college ACL grants
+   your email CRAS permissions (see RUNBOOK §9). The real timetable comes through the admin import.
+6. **Run**:
    ```bash
    npm run dev
    ```
-   - **Frontend**: `http://localhost:5173`
+   - **Frontend**: `http://localhost:5173` (developer sign-in with your @nsut.ac.in email)
    - **Backend**: `http://localhost:4000`
 
 ### 🏗️ Verification & Building
@@ -77,7 +91,7 @@ Please see the [Deployment Guide](./deployment_guide.md) for step-by-step instru
 
 - **🎨 Premium UI**: Modern dark theme using Tailwind CSS, glassmorphism, and **buttery smooth transitions**.
 - **📱 Mobile Optimized**: High-performance responsive layouts, including a 2-column Day view and GPU-accelerated navigation.
-- **🔐 Robust Auth**: JWT-based authentication with a secure Signup/Login flow.
+- **🔐 Auth**: Google SSO (or developer sign-in locally); identity, roles and permissions come from the college ACL.
 - **🔍 Searchable Picker**: Debounced (300ms) room search in the booking modal.
 - **📅 Visual Calendar**: Real-time room schedule with "Booked by" owner visibility.
 - **📜 Booking History**: Unified view of all reservations with direct cancellation.
