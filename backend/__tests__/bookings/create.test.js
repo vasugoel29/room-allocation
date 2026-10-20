@@ -379,13 +379,12 @@ describe('POST /api/bookings — conflicts', () => {
     expect((await post(rep.auth, await studentBody(room, futureSlot({ hour: 15, day: 'Tue', minLeadHours: 0 })))).status).toBe(201);
   });
 
-  test('section derived from year when semester is null (year*2)', async () => {
+  test('without an ACL semester the section timetable is not guessed from the year (no false clash)', async () => {
     const dept = uniq('DEPT ');
     await insertTimetableSlot({ department: dept, semester: 4, section: 1, day_of_week: 'Wed', slot_time: '11:00-12:00', subject_name: 'Y' });
     const rep = await createRep({ branch: dept, year: 2, section: 1 });
     const res = await post(rep.auth, await studentBody(await createRoom(), futureSlot({ hour: 11, day: 'Wed', minLeadHours: 0 })));
-    expect(res.status).toBe(409);
-    expect(res.body.conflict.label).toBe('your section timetable');
+    expect(res.status).toBe(201);
   });
 
   test('ADMIN is exempt from their own section timetable', async () => {

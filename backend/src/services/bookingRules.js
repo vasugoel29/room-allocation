@@ -232,7 +232,8 @@ export async function checkPeopleTimetables(client, requester, faculty, t) {
     if (hit) return bad('This booking clashes with an existing timetable slot in your timetable', 409, { conflict: timetableConflict('your timetable', hit, t) });
   } else if (requester) {
     const department = timetableDepartment(requester.branch || requester.department_name);
-    const semester = requester.semester || (requester.year ? requester.year * 2 : null);
+    // The ACL's semester only: guessing it from the year picked the wrong (even) semester for half the students.
+    const semester = requester.semester;
     if (department && semester && requester.section != null) {
       const { rows } = await client.query(
         `SELECT slot_time, subject_name, faculty_name, room_name FROM timetable_slots

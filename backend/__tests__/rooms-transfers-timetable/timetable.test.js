@@ -67,10 +67,11 @@ describe('GET /api/timetable (own section)', () => {
     expect(res.body.every((r) => String(r.section) === '2' && String(r.semester) === '1')).toBe(true);
   });
 
-  test('legacy token without semester falls back to year * 2', async () => {
+  test('no semester from the ACL → no section timetable (the year is never used to guess one)', async () => {
     const u = await createRep({ branch: 'CS', year: 1, section: 1 });
     const res = await request(app).get('/api/timetable').set('Authorization', u.auth);
-    expect(res.body).toHaveLength(await sectionCount(CSE, 2, 1));
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
   });
 
   test('a user without branch/section gets an empty list', async () => {

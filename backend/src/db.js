@@ -945,6 +945,32 @@ const migrations = [
         CREATE UNIQUE INDEX IF NOT EXISTS branches_acl_id_key ON branches (acl_id) WHERE acl_id IS NOT NULL;
       `);
     }
+  },
+  {
+    version: 34,
+    name: 'Retire junk "free" availability rows from the old seeder; case-insensitive unique email',
+    run: async (client) => {
+      // The old scripts/seed.js wrote is_available=TRUE weekly rows with no author. In the UI an
+      // override row skips the timetable check, so these made timetabled slots look free while the
+      // server refused them. Real overrides always record their admin (user_id). Soft delete.
+      await client.query(`
+        UPDATE room_availability SET is_active = FALSE, deactivated_at = NOW()
+         WHERE source = 'manual' AND is_available AND user_id IS NULL AND is_active
+      `);
+      // Sign-in looks people up by lower(email): give that a unique index (was a sequential scan).
+      const { rows: [dup] } = await client.query(
+        'SELECT lower(email) AS email FROM users GROUP BY lower(email) HAVING count(*) > 1 LIMIT 1',
+      );
+      if (dup) {
+        logger.warn(`Migration v34: users share an email in different case (${dup.email}); adding a non-unique index instead`);
+        await client.query('CREATE INDEX IF NOT EXISTS users_email_lower_idx ON users (lower(email))');
+      } else {
+        await client.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS users_email_lower_key ON users (lower(email));
+          ALTER TABLE users DROP CONSTRAINT IF EXISTS users_email_key;
+        `);
+      }
+    }
   }
 ];
 

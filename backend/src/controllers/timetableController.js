@@ -19,8 +19,8 @@ export async function getTimetable(req, res) {
     if (!user) return res.status(401).json({ error: 'Unauthorized' });
 
     const dept = user.branch || user.department_name;
-    // Use semester directly; fall back to year * 2 for legacy tokens without semester
-    const semester = user.semester || (user.year ? (user.year * 2) : null);
+    // The ACL's semester only (no guessing from the year).
+    const semester = user.semester;
     
     // Mapping from short codes to full names in timetable_slots
     const deptMapping = {

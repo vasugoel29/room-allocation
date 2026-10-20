@@ -10,7 +10,7 @@ export const userRepository = {
    */
   findById: async (id, client = db) => {
     const query = `
-      SELECT u.*, d.name as department_name, b.name as branch_name, b.short_code as branch_code
+      SELECT u.*, COALESCE(u.department_name, d.name) AS department_name, COALESCE(b.name, u.branch) AS branch_name, b.short_code AS branch_code
       FROM users u 
       LEFT JOIN departments d ON u.department_id = d.id 
       LEFT JOIN branches b ON u.branch_id = b.id
@@ -25,7 +25,7 @@ export const userRepository = {
    */
   findByEmail: async (email, client = db) => {
     const query = `
-      SELECT u.*, d.name as department_name, b.name as branch_name, b.short_code as branch_code
+      SELECT u.*, COALESCE(u.department_name, d.name) AS department_name, COALESCE(b.name, u.branch) AS branch_name, b.short_code AS branch_code
       FROM users u 
       LEFT JOIN departments d ON u.department_id = d.id 
       LEFT JOIN branches b ON u.branch_id = b.id
@@ -39,7 +39,7 @@ export const userRepository = {
     let query = `
       SELECT u.id, u.name, u.email, u.role, u.branch, u.branch_id, u.year, u.semester, u.section,
              u.group_name, u.is_approved, u.created_at,
-             d.name as department_name, b.name as branch_name, b.short_code as branch_code
+             COALESCE(u.department_name, d.name) AS department_name, COALESCE(b.name, u.branch) AS branch_name, b.short_code AS branch_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       LEFT JOIN branches b ON u.branch_id = b.id
