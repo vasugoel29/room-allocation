@@ -683,30 +683,43 @@ const RoomScheduleGrid = () => {
 
                 {/* Override Options Panel */}
                 <div className="bg-surface-mid/20 rounded-2xl p-4 border border-border/10 space-y-4">
-                  <div className="flex items-start gap-2.5">
-                    <Info size={15} className="text-text-secondary shrink-0 mt-0.5" />
-                    <p className="text-[11px] text-text-secondary leading-relaxed">
-                      This is a recurring weekly timetable block. You can either lift this block to free the room or book over it directly.
-                    </p>
-                  </div>
+                  {drawer.timetable?.source === 'class' ? (
+                    // Classes come from the timetables; the booking check applies them, so they can't be lifted here.
+                    <div className="flex items-start gap-2.5">
+                      <Info size={15} className="text-text-secondary shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-text-secondary leading-relaxed">
+                        This is a timetabled class. It can't be lifted here: the teacher cancels it for a date from their Faculty Portal
+                        (or approves a student's cancellation request), and a timetable re-import changes it for good.
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2.5">
+                        <Info size={15} className="text-text-secondary shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-text-secondary leading-relaxed">
+                          This is a recurring weekly block set by an admin. You can lift it to free the room, or book over it directly.
+                        </p>
+                      </div>
 
-                  {/* Lift Block Button */}
-                  <button
-                    type="button"
-                    disabled={actionLoading || submittingBooking}
-                    onClick={handleLiftBlock}
-                    className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
-                  >
-                    {actionLoading ? (
-                      <>
-                        <Loader size={14} className="animate-spin" /> Freeing Slot...
-                      </>
-                    ) : (
-                      <>
-                        <Unlock size={14} /> Lift / Free Up This Weekly Slot
-                      </>
-                    )}
-                  </button>
+                      {/* Lift Block Button */}
+                      <button
+                        type="button"
+                        disabled={actionLoading || submittingBooking}
+                        onClick={handleLiftBlock}
+                        className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 px-4 py-3 rounded-xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        {actionLoading ? (
+                          <>
+                            <Loader size={14} className="animate-spin" /> Freeing Slot...
+                          </>
+                        ) : (
+                          <>
+                            <Unlock size={14} /> Lift / Free Up This Weekly Slot
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
 
                   <div className="relative py-1 flex items-center justify-center">
                     <div className="absolute inset-0 flex items-center">

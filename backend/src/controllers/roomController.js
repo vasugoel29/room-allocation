@@ -236,11 +236,15 @@ export const getRoomWeekSchedule = async (req, res) => {
       for (let h = Math.floor(c.start_min / 60); h * 60 < c.end_min; h++) {
         if (seen.has(`${c.day_of_week}|${h}`)) continue;
         seen.add(`${c.day_of_week}|${h}`);
-        timetableBlocks.push({ day: c.day_of_week, hour: h, faculty: c.faculty_name, subject: c.subject_name, semester: c.semester });
+        timetableBlocks.push({
+          day: c.day_of_week, hour: h, faculty: c.faculty_name, subject: c.subject_name, semester: c.semester,
+          // A class comes from a timetable (it is cancelled per date, not lifted); only faculty slots have an editable id.
+          source: 'class', slotId: c.kind === 'faculty' ? c.id : null,
+        });
       }
     }
     for (const b of blocks.rows) {
-      if (!seen.has(`${b.day}|${b.hour}`)) timetableBlocks.push({ day: b.day, hour: b.hour });
+      if (!seen.has(`${b.day}|${b.hour}`)) timetableBlocks.push({ day: b.day, hour: b.hour, source: 'block' }); // admin weekly block: can be lifted
     }
 
     // Normalise bookings to {date, startHour, endHour, ...}

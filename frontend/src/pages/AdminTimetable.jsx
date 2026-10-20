@@ -21,7 +21,7 @@ import { toTitleCase, getShortDept } from '../utils/roleUtils';
 import { WeekView } from '../components/ui/WeekView';
 import CustomSelect from '../components/ui/CustomSelect';
 import { getIstDateKey, getIstHour, getIstWeekday } from '../utils/timezone';
-import { getHourFromTime } from '../../../shared/timetable.js';
+import { getHourFromTime, formatTo24h } from '../../../shared/timetable.js';
 
 function AdminTimetable() {
   const [searchType, setSearchType] = useState('FACULTY'); // 'FACULTY' | 'SECTION'
@@ -136,7 +136,7 @@ function AdminTimetable() {
 
         return {
           time: realHour,
-          displayTime: s.slot_time,
+          displayTime: formatTo24h(s.slot_time),
           subject: s.subject_name || s.subject_code,
           room: s.room_name,
           instructor: s.faculty_name,

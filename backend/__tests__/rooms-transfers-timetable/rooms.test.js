@@ -688,11 +688,11 @@ describe('GET /api/rooms/:id/week-schedule', () => {
     expect(res.body.room).toMatchObject({ id: room.id, name: room.name, capacity: 77 });
     const blocks = [...res.body.timetableBlocks].sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour);
     expect(blocks).toEqual([
-      { day: 'Mon', hour: 10, faculty: 'RTT Prof A', subject: 'Maths', semester: '3' },
-      { day: 'Thu', hour: 9, faculty: 'RTT Prof C', subject: 'Lab', semester: '4' },
-      { day: 'Thu', hour: 10, faculty: 'RTT Prof C', subject: 'Lab', semester: '4' },
-      { day: 'Tue', hour: 14, faculty: 'RTT Prof B', subject: 'Physics', semester: '5' },
-      { day: 'Wed', hour: 9 },
+      { day: 'Mon', hour: 10, faculty: 'RTT Prof A', subject: 'Maths', semester: '3', source: 'class', slotId: expect.any(Number) },
+      { day: 'Thu', hour: 9, faculty: 'RTT Prof C', subject: 'Lab', semester: '4', source: 'class', slotId: null },
+      { day: 'Thu', hour: 10, faculty: 'RTT Prof C', subject: 'Lab', semester: '4', source: 'class', slotId: null },
+      { day: 'Tue', hour: 14, faculty: 'RTT Prof B', subject: 'Physics', semester: '5', source: 'class', slotId: expect.any(Number) },
+      { day: 'Wed', hour: 9, source: 'block' },
     ]);
     expect(res.body.bookings).toEqual([expect.objectContaining({
       id: active.id, date: slot.dateKey, startHour: 10, endHour: 11, purpose: 'In week', status: 'ACTIVE',
