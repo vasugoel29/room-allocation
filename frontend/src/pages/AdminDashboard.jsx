@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect } from 'react';
+import { useState, useContext, useEffect, useCallback } from 'react';
 import { 
   Shield, 
   Users, 
@@ -77,10 +77,11 @@ function AdminDashboard() {
   const [editingRoom, setEditingRoom] = useState(null);
 
 
-  const fetchAdminRooms = async (page = roomsMeta.page) => {
+  // Stable per filter, so the tab effect re-runs only when a filter or the tab changes.
+  const loadAdminRooms = useCallback(async (page) => {
     try {
-      const queryParams = { 
-        page, 
+      const queryParams = {
+        page,
         limit: 10,
         building: roomBuildingFilter === 'Others' ? ['Other', 'Others'] : (roomBuildingFilter !== 'all' ? [roomBuildingFilter] : undefined),
         type: roomTypeFilter !== 'all' ? roomTypeFilter : undefined
@@ -92,7 +93,8 @@ function AdminDashboard() {
       console.error(err);
       toast.error('Failed to fetch rooms');
     }
-  };
+  }, [roomBuildingFilter, roomTypeFilter]);
+  const fetchAdminRooms = (page = roomsMeta.page) => loadAdminRooms(page);
 
   const deleteRoom = (id) => {
     setConfirmConfig({
@@ -122,9 +124,9 @@ function AdminDashboard() {
 
   useEffect(() => {
     if (activeTab === 'rooms') {
-      fetchAdminRooms(1);
+      loadAdminRooms(1);
     }
-  }, [roomBuildingFilter, roomTypeFilter, activeTab]);
+  }, [loadAdminRooms, activeTab]);
 
   // Confirmation modal state
   const [confirmConfig, setConfirmConfig] = useState({ 

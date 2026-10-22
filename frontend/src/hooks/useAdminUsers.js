@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
 
@@ -10,7 +10,8 @@ export function useAdminUsers(activeTab, searchTerm = '') {
   const [users, setUsers] = useState([]);
   const [usersMeta, setUsersMeta] = useState({ page: 1, totalPages: 1 });
 
-  const fetchUsers = async (page = usersMeta.page) => {
+  // Stable per search term, so the tab effect below doesn't re-run when only the page changes.
+  const loadUsers = useCallback(async (page) => {
     try {
       const result = await adminService.getUsers(page, 20, searchTerm);
       setUsers(result.data || result);
@@ -18,7 +19,8 @@ export function useAdminUsers(activeTab, searchTerm = '') {
     } catch (err) {
       console.error('Failed to fetch users', err);
     }
-  };
+  }, [searchTerm]);
+  const fetchUsers = (page = usersMeta.page) => loadUsers(page);
 
 
   const handleDeactivateUser = async (id) => {
@@ -34,9 +36,9 @@ export function useAdminUsers(activeTab, searchTerm = '') {
 
   useEffect(() => {
     if (activeTab === 'users' || activeTab === 'quick') {
-      fetchUsers(1);
+      loadUsers(1);
     }
-  }, [activeTab, searchTerm]);
+  }, [activeTab, loadUsers]);
 
   return { users, usersMeta, fetchUsers, handleDeactivateUser };
 }

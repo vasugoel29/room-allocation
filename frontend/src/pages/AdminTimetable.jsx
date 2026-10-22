@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   Search, 
   MapPin, 
@@ -115,7 +115,7 @@ function AdminTimetable() {
     return `Week of ${first} - ${last}`;
   };
 
-  const getMergedSchedule = (dateStr) => {
+  const getMergedSchedule = useCallback((dateStr) => {
     if (!data) return [];
     
     const targetDay = dateStr || selectedDay;
@@ -172,7 +172,7 @@ function AdminTimetable() {
       seen.add(key);
       return true;
     });
-  };
+  }, [data, selectedDay]);
 
   const weeklySchedule = useMemo(() => {
     if (viewMode !== 'week' || !data) return {};
@@ -189,7 +189,7 @@ function AdminTimetable() {
     });
     
     return weekData;
-  }, [viewMode, data, selectedDay]);
+  }, [viewMode, data, selectedDay, getMergedSchedule]);
 
   const schedule = getMergedSchedule();
 

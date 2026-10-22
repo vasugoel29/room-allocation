@@ -343,6 +343,8 @@ const RoomScheduleGrid = () => {
         <div className="flex items-center gap-2 bg-surface-mid/30 border border-border/10 p-1.5 rounded-2xl">
           <button 
             onClick={handlePrevWeek}
+            aria-label="Previous week"
+            title="Previous week"
             className="p-2 hover:bg-surface-mid rounded-xl text-text-secondary hover:text-text-primary transition-colors"
           >
             <ChevronLeft size={16} />
@@ -355,6 +357,8 @@ const RoomScheduleGrid = () => {
           </span>
           <button 
             onClick={handleNextWeek}
+            aria-label="Next week"
+            title="Next week"
             className="p-2 hover:bg-surface-mid rounded-xl text-text-secondary hover:text-text-primary transition-colors"
           >
             <ChevronRight size={16} />
@@ -423,7 +427,7 @@ const RoomScheduleGrid = () => {
         <div className="overflow-x-auto min-w-full">
           <div className="min-w-[1000px]">
             {/* Hour headers */}
-            <div className="grid grid-cols-11 gap-2 border-b border-border/10 pb-3 mb-3 text-center">
+            <div className="grid room-grid-row gap-2 border-b border-border/10 pb-3 mb-3 text-center">
               <div className="text-left text-[9px] capitalize tracking-widest font-extrabold text-text-secondary flex items-center pl-2">Day &amp; Date</div>
               {HOURS.map(h => (
                 <div key={h} className="text-[9px] capitalize tracking-widest font-extrabold text-text-secondary font-mono">
@@ -438,7 +442,7 @@ const RoomScheduleGrid = () => {
                 const date = weekDates[dayIdx];
                 const dateStr = date ? formatDateISO(date) : '';
                 return (
-                  <div key={dayName} className="grid grid-cols-11 gap-2 items-stretch">
+                  <div key={dayName} className="grid room-grid-row gap-2 items-stretch">
                     {/* Y-axis Day Header */}
                     <div className="bg-surface-mid/40 rounded-2xl p-3 border border-border/5 flex flex-col justify-center">
                       <span className="text-xs font-bold text-text-primary">{dayName}</span>
@@ -526,8 +530,8 @@ const RoomScheduleGrid = () => {
 
       {/* Grid column styling */}
       <style>{`
-        .grid-cols-11 {
-          grid-template-columns: 160px repeat(10, minmax(0, 1fr));
+        .room-grid-row {
+          grid-template-columns: 160px repeat(${HOURS.length}, minmax(0, 1fr));
         }
       `}</style>
 

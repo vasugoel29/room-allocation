@@ -205,7 +205,7 @@ test.describe('Admin console', () => {
     await selectGridRoom(page, room);
     const title = `Booked by ${booker.name}: ${purpose}`;
     await expect(page.getByTitle(title)).toBeVisible(); // it is rendered somewhere...
-    const rowOf = (day) => page.locator('div.grid-cols-11').filter({ has: page.getByText(day, { exact: true }) });
+    const rowOf = (day) => page.locator('div.room-grid-row').filter({ has: page.getByText(day, { exact: true }) });
     const observed = [];
     for (const day of DOW_LONG.slice(1, 6)) if (await rowOf(day).getByTitle(title).count()) observed.push(day);
     test.info().annotations.push({ type: 'observed-row', description: observed.join(',') });
@@ -221,7 +221,9 @@ test.describe('Admin console', () => {
 
     await signIn(page, request, admin, '/admin?tab=room-grid');
     await selectGridRoom(page, room);
-    const thursday = page.locator('div.grid-cols-11').filter({ has: page.getByText('Thursday', { exact: true }) });
+    // Next week's Thursday 11:00 is always in the future (this week's may already have passed).
+    await page.getByRole('button', { name: 'Next week' }).click();
+    const thursday = page.locator('div.room-grid-row').filter({ has: page.getByText('Thursday', { exact: true }) });
     await thursday.locator(':scope > div').nth(11 - 8 + 1).click();
     await expect(page.getByRole('heading', { name: /create booking/i })).toBeVisible();
     await expect(page.getByText(/slot is free/i)).toBeVisible();
