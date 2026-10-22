@@ -17,7 +17,7 @@ export function tokenFor(user, opts = {}) {
  * real seeded timetable never clashes with test bookings unless a test opts in.
  * Returns { user, token, auth } where auth is the Authorization header value.
  */
-export async function createUser({ permissions, ...overrides } = {}) {
+export async function createUser({ permissions, scopes, ...overrides } = {}) {
   const role = overrides.role || 'VIEWER';
   const fields = {
     name: `Test ${role} ${uid()}`,
@@ -32,18 +32,21 @@ export async function createUser({ permissions, ...overrides } = {}) {
   );
   const user = rows[0];
   // An ACL snapshot like a real sign-in leaves: the suggested bundle for the role, or `permissions`.
-  await grantPermissions(user.id, permissions ?? SUGGESTED_BUNDLES[role] ?? [], role);
+  await grantPermissions(user.id, permissions ?? SUGGESTED_BUNDLES[role] ?? [], role, scopes);
   const token = tokenFor(user);
   return { user, token, auth: `Bearer ${token}` };
 }
 
-/** Replaces a test user's ACL-granted permissions (the principal cache is cleared). */
-export async function grantPermissions(userId, permissions, role = null) {
+/**
+ * Replaces a test user's ACL-granted permissions (the principal cache is cleared). `scopes` is the
+ * ACL's scopes_by_permission ({ 'cras.admin': [{ branch: 'IT' }] }); omitted = unrestricted.
+ */
+export async function grantPermissions(userId, permissions, role = null, scopes = {}) {
   await db.query(
-    `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, fetched_at)
-     VALUES ($1, $5, $2, $3, $4, NOW())
-     ON CONFLICT (user_id) DO UPDATE SET permissions = EXCLUDED.permissions, fetched_at = NOW()`,
-    [userId, role || 'VIEWER', JSON.stringify(role ? [role] : []), JSON.stringify(permissions), `test_${userId}`],
+    `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, scopes_by_permission, fetched_at)
+     VALUES ($1, $5, $2, $3, $4, $6, NOW())
+     ON CONFLICT (user_id) DO UPDATE SET permissions = EXCLUDED.permissions, scopes_by_permission = EXCLUDED.scopes_by_permission, fetched_at = NOW()`,
+    [userId, role || 'VIEWER', JSON.stringify(role ? [role] : []), JSON.stringify(permissions), `test_${userId}`, JSON.stringify(scopes || {})],
   );
   invalidatePrincipal(userId);
 }

@@ -2,6 +2,7 @@ import express from 'express';
 import { body } from 'express-validator';
 import { getRooms, getAvailability, getAdminRoomStatus, overrideRoomAvailability, getMyOverrides, createRoom, updateRoom, deleteRoom, getRoomWeekSchedule, checkRoomConflict } from '../controllers/roomController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
+import { roomInAdminScope } from '../middleware/scope.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
 import { idParam, validate, dateKey, hour, positiveInt, text, bool, pagination, oneOf, WEEKDAYS } from '../middleware/validators.js';
 import { ROOM_TYPES } from '../repositories/roomRepository.js';
@@ -24,8 +25,8 @@ const roomFields = [
 
 router.get('/rooms', authenticate, requirePermission(...SEE_ROOMS), validate(pagination({ max: 500 })), getRooms);
 router.post('/rooms', authenticate, requirePermission(P.ADMIN), validate(roomFields), createRoom);
-router.patch('/rooms/:id', authenticate, requirePermission(P.ADMIN), validate([oneOf('type', ROOM_TYPES, { optional: true })]), updateRoom);
-router.delete('/rooms/:id', authenticate, requirePermission(P.ADMIN), deleteRoom);
+router.patch('/rooms/:id', authenticate, requirePermission(P.ADMIN), roomInAdminScope, validate([oneOf('type', ROOM_TYPES, { optional: true })]), updateRoom);
+router.delete('/rooms/:id', authenticate, requirePermission(P.ADMIN), roomInAdminScope, deleteRoom);
 router.get('/availability', authenticate, requirePermission(...SEE_ROOMS), getAvailability);
 router.get('/availability/my', authenticate, requirePermission(P.ADMIN), getMyOverrides);
 router.get('/rooms/admin/status', authenticate, requirePermission(P.ADMIN),
@@ -40,9 +41,9 @@ router.post('/availability/override', authenticate, requirePermission(P.ADMIN),
   ), overrideRoomAvailability);
 
 // Room Schedule Grid Endpoints
-router.get('/rooms/:id/week-schedule', authenticate, requirePermission(P.ADMIN),
+router.get('/rooms/:id/week-schedule', authenticate, requirePermission(P.ADMIN), roomInAdminScope,
   validate(dateKey('weekStart', { optional: true })), getRoomWeekSchedule);
-router.get('/rooms/:id/conflict-check', authenticate, requirePermission(P.ADMIN),
+router.get('/rooms/:id/conflict-check', authenticate, requirePermission(P.ADMIN), roomInAdminScope,
   validate(dateKey('date', { optional: true }), hour('startHour', { optional: true }), hour('endHour', { optional: true, min: 1, max: 24 })),
   checkRoomConflict);
 

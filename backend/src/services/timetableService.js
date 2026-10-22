@@ -10,6 +10,12 @@ import { notify } from '../notifications/notify.js';
 import { logActivity } from './loggerService.js';
 import { facultyClassAt } from './bookingRules.js';
 import { importSectionSlots } from './timetableImport.js';
+import { scopesFor, allows, mayInclude, OUT_OF_SCOPE } from '../auth/scopes.js';
+import { PERMISSIONS as P } from '../auth/permissions.js';
+
+// ACL people scopes on admin timetable work: a section is the person { branch, semester, section }.
+const sectionPerson = (key) => ({ branch: key.department, semester: key.semester, section: key.section });
+const adminScopes = (actor) => scopesFor(actor, P.ADMIN);
 
 /**
  * Timetable rules: the student's section timetable, a faculty member's own classes and their
@@ -27,6 +33,11 @@ export const sectionTimetable = async (principal) => ok(await tt.sectionClasses(
 /** Admin import of section timetables (see timetableImport.js). */
 export async function importSections(slots, actor) {
   if (!Array.isArray(slots) || !slots.length) return bad('slots must be a non-empty array');
+  const scopes = adminScopes(actor);
+  const outside = [...new Set(slots.map((sl) => sectionKey({ branch: sl?.department ?? sl?.branch, semester: sl?.semester, section: sl?.section }))
+    .filter((key) => key && !allows(scopes, { person: sectionPerson(key) }))
+    .map((key) => `${key.department} sem ${key.semester} sec ${key.section}`))];
+  if (outside.length) return bad(`${OUT_OF_SCOPE} Sections: ${outside.join('; ')}`, 403);
   const result = await db.runInTransaction(async (client) => {
     const r = await importSectionSlots(client, slots);
     await logActivity({
@@ -177,14 +188,20 @@ export async function reviewCancellationRequest(principal, id, action) {
   return result;
 }
 
-export const branches = async () => ok(await tt.branches());
+export const branches = async (actor) => {
+  const scopes = adminScopes(actor);
+  return ok((await tt.branches()).filter((b) => mayInclude(scopes, 'branch', b)));
+};
 
 /** Admin search: a teacher's or a section's classes, with the ACTIVE bookings that belong to them. */
-export async function search({ type, name, department, semester, section }) {
+export async function search({ type, name, department, semester, section }, actor) {
+  const scopes = adminScopes(actor);
   const blank = (v) => typeof v !== 'string' || !v.trim();
   if (type === 'FACULTY') {
     if (blank(name)) return bad('name is required for a faculty search');
     const facultyName = name.trim().toUpperCase();
+    const entry = await facultyRepository.findActiveByName(facultyName);
+    if (!allows(scopes, { person: { department_name: entry?.department_name } })) return bad(OUT_OF_SCOPE, 403);
     return ok({
       type: 'FACULTY',
       name: facultyName,
@@ -199,6 +216,7 @@ export async function search({ type, name, department, semester, section }) {
     // The ACL section key: branch + semester + section, matched exactly.
     const key = sectionKey({ branch: department, semester, section });
     if (!key) return bad('semester and section must be numbers');
+    if (!allows(scopes, { person: sectionPerson(key) })) return bad(OUT_OF_SCOPE, 403);
     return ok({
       type: 'SECTION', department: key.department, semester: key.semester, section: key.section,
       staticSlots: await tt.sectionClasses(key),
@@ -244,18 +262,32 @@ async function slotFields(body) {
   return ok(out);
 }
 
-export async function createFacultySlot(body) {
+/** A faculty slot (its teacher's department and its room) must be within the admin's scope. */
+async function slotInScope(actor, { faculty_id, room_id }) {
+  const scopes = adminScopes(actor);
+  if (scopes === null) return true;
+  const teacher = faculty_id ? await facultyRepository.findById(faculty_id) : null;
+  const room = room_id ? await roomRepository.findById(room_id) : null;
+  return allows(scopes, { person: { department_name: teacher?.department_name }, room: room || undefined });
+}
+
+export async function createFacultySlot(body, actor) {
   if (!body.faculty_name || !body.day_of_week || !body.slot_time) return bad('faculty_name, day_of_week, and slot_time are required');
   const fields = await slotFields(body);
   if (fields.error) return fields;
+  if (!(await slotInScope(actor, fields.data))) return bad(OUT_OF_SCOPE, 403);
   const slot = await tt.createFacultySlot(fields.data);
   invalidateRoomCaches();
   return ok(slot);
 }
 
-export async function updateFacultySlot(id, body) {
+export async function updateFacultySlot(id, body, actor) {
   const fields = await slotFields(body);
   if (fields.error) return fields;
+  const current = await tt.facultySlotById(id);
+  if (current && (!(await slotInScope(actor, current)) || !(await slotInScope(actor, { ...current, ...definedOnly(fields.data) })))) {
+    return bad(OUT_OF_SCOPE, 403);
+  }
   const slot = await tt.updateFacultySlot(id, fields.data, { setRoom: Object.hasOwn(body, 'room_id') });
   if (!slot) return bad('Slot not found', 404);
   invalidateRoomCaches();
@@ -263,7 +295,11 @@ export async function updateFacultySlot(id, body) {
 }
 
 /** Soft delete. */
-export async function deleteFacultySlot(id) {
+const definedOnly = (o) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined));
+
+export async function deleteFacultySlot(id, actor) {
+  const current = await tt.facultySlotById(id);
+  if (current && !(await slotInScope(actor, current))) return bad(OUT_OF_SCOPE, 403);
   if (!(await tt.deactivateFacultySlot(id))) return bad('Slot not found', 404);
   invalidateRoomCaches();
   return ok({ success: true });

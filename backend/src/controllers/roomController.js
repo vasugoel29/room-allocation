@@ -5,7 +5,8 @@ import { roomRepository } from '../repositories/roomRepository.js';
 import { timetableRepository } from '../repositories/timetableRepository.js';
 import logger from '../utils/logger.js';
 import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
-import { canBookDirect } from '../auth/permissions.js';
+import { canBookDirect, PERMISSIONS as P } from '../auth/permissions.js';
+import { scopesFor, allows, ROOM_VIEW_PERMISSIONS, OUT_OF_SCOPE } from '../auth/scopes.js';
 
 const STUDENT_HIDDEN_TYPES = ['Committee Room', 'Auditorium'];
 
@@ -14,6 +15,8 @@ export const getRooms = async (req, res) => {
   try {
     // Restricted rooms are only listed for people who may book them (cras.bookings.direct).
     const isStudent = !canBookDirect(req.user);
+    // ...and only rooms within the viewer's ACL room scopes.
+    const scopes = scopesFor(req.user, ...ROOM_VIEW_PERMISSIONS);
     
     if (page && limit) {
       const pageNum = parseInt(page) || 1;
@@ -23,7 +26,7 @@ export const getRooms = async (req, res) => {
       // Hidden room types are excluded in SQL so the page and its total agree (NEW-RTT-1).
       const { total, rooms } = await roomRepository.findFilteredPaginated({
         capacity, ac, projector, building, floor, type, limit: limitNum, offset,
-        excludeTypes: isStudent ? STUDENT_HIDDEN_TYPES : [],
+        excludeTypes: isStudent ? STUDENT_HIDDEN_TYPES : [], scopes,
       });
 
       res.json({
@@ -36,7 +39,7 @@ export const getRooms = async (req, res) => {
         }
       });
     } else {
-      let rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor, type);
+      let rooms = await roomRepository.findFiltered(capacity, ac, projector, building, floor, type, scopes);
       if (isStudent) {
         rooms = rooms.filter(r => !STUDENT_HIDDEN_TYPES.includes(r.type));
       }
@@ -51,12 +54,13 @@ export const getRooms = async (req, res) => {
 export const getAvailability = async (req, res) => {
   try {
     const cacheKey = 'room_availability_all';
-    const cached = cache.get(cacheKey);
-    if (cached) return res.json(cached);
-
-    const result = await roomRepository.getAllAvailability();
-    cache.set(cacheKey, result, 300000); // 5 min
-    res.json(result);
+    let result = cache.get(cacheKey);
+    if (!result) {
+      result = await roomRepository.getAllAvailability();
+      cache.set(cacheKey, result, 300000); // 5 min
+    }
+    const visible = await roomRepository.visibleRoomIds(scopesFor(req.user, ...ROOM_VIEW_PERMISSIONS));
+    res.json(visible ? result.filter((r) => visible.has(r.room_id)) : result);
   } catch (err) {
     logger.error('getAvailability error', err);
     sendServerError(res, err, 'Failed to fetch availability');
@@ -71,16 +75,15 @@ export const getAdminRoomStatus = async (req, res) => {
 
   try {
     const cacheKey = `admin_status_${date}_${slot}`;
-    const cached = cache.get(cacheKey);
-    if (cached) return res.json(cached);
-
-    const startTime = new Date(istDateTimeToUtc(date, parseInt(slot)));
-    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-
-    const statuses = await roomRepository.getAdminRoomStatus(startTime.toISOString(), endTime.toISOString());
-    
-    cache.set(cacheKey, statuses, 30000); // 30s cache
-    res.json(statuses);
+    let statuses = cache.get(cacheKey);
+    if (!statuses) {
+      const startTime = new Date(istDateTimeToUtc(date, parseInt(slot)));
+      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+      statuses = await roomRepository.getAdminRoomStatus(startTime.toISOString(), endTime.toISOString());
+      cache.set(cacheKey, statuses, 30000); // 30s cache
+    }
+    const visible = await roomRepository.visibleRoomIds(scopesFor(req.user, P.ADMIN));
+    res.json(visible ? statuses.filter((r) => visible.has(r.room_id)) : statuses);
   } catch (err) {
     logger.error('getAdminRoomStatus error', err);
     sendServerError(res, err, 'Failed to fetch room statuses');
@@ -93,6 +96,8 @@ export const overrideRoomAvailability = async (req, res) => {
   }
 
   try {
+    const room = await roomRepository.findByName(room_name);
+    if (room && !allows(scopesFor(req.user, P.ADMIN), { room })) return res.status(403).json({ error: OUT_OF_SCOPE });
     const userId = req.user?.id; // Capture who is making the override
     await roomRepository.overrideAvailability(room_name, day, hour, is_available, userId);
     
@@ -119,6 +124,7 @@ export const createRoom = async (req, res) => {
   if (!name || capacity === undefined) {
     return res.status(400).json({ error: 'Missing name or capacity' });
   }
+  if (!allows(scopesFor(req.user, P.ADMIN), { room: { name, building } })) return res.status(403).json({ error: OUT_OF_SCOPE });
 
   try {
     const room = await roomRepository.create({
@@ -159,6 +165,12 @@ export const updateRoom = async (req, res) => {
     }
     if (patch.name !== undefined && (typeof patch.name !== 'string' || !patch.name.trim() || patch.name.length > 32)) {
       return res.status(400).json({ error: 'name must be 1–32 characters' });
+    }
+    if (patch.name !== undefined || patch.building !== undefined) {
+      const current = await roomRepository.findById(id);
+      if (current && !allows(scopesFor(req.user, P.ADMIN), { room: { ...current, ...patch } })) {
+        return res.status(403).json({ error: OUT_OF_SCOPE });
+      }
     }
     const room = await roomRepository.update(id, patch);
     if (!room) {

@@ -6,6 +6,7 @@ import { facultyRepository } from '../repositories/facultyRepository.js';
 import { logActivity } from './loggerService.js';
 import { checkTimes, checkPeopleTimetables, checkBookingConflicts } from './bookingRules.js';
 import { canBookDirect, isAdmin as hasAdmin, effectivePermissions, PERMISSIONS as P } from '../auth/permissions.js';
+import { scopesFor, allows, OUT_OF_SCOPE } from '../auth/scopes.js';
 import { inTransaction } from './bookingService.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
 
@@ -53,6 +54,14 @@ async function ownerBooksDirect(client, userId) {
   return effectivePermissions(r?.permissions || []).has(P.BOOKINGS_DIRECT);
 }
 
+async function adminScopeAllows(client, principal, booking) {
+  const [{ rows: [person] }, { rows: [room] }] = await Promise.all([
+    client.query('SELECT * FROM users WHERE id = $1', [booking.created_by]),
+    client.query('SELECT * FROM rooms WHERE id = $1', [booking.room_id]),
+  ]);
+  return allows(scopesFor(principal, P.ADMIN), { person, room });
+}
+
 export const requestTransfer = async (reqData, principal) => {
   const { booking_id, target_faculty_id, new_purpose } = reqData;
   const userId = principal.id;
@@ -62,6 +71,9 @@ export const requestTransfer = async (reqData, principal) => {
     if (booking.status !== 'ACTIVE') return fail('Can only request transfer for an ACTIVE booking.');
     if (new Date(booking.start_time).getTime() <= Date.now()) return fail('This booking has already started and can no longer be transferred.');
     if (booking.created_by === userId) return fail('Cannot request transfer from yourself.');
+    // Taking over a booking is booking that room: it must be within the requester's ACL room scope.
+    const { rows: [room] } = await client.query('SELECT * FROM rooms WHERE id = $1', [booking.room_id]);
+    if (!allows(scopesFor(principal, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN), { room })) return fail(OUT_OF_SCOPE, 403);
 
     // Staff bookings (owner books without approval) can't be requested, except by the admin.
     if (!hasAdmin(principal) && await ownerBooksDirect(client, booking.created_by)) {
@@ -165,7 +177,8 @@ export const acceptTransfer = async (transferId, principal) => {
       return fail('This booking is no longer available for transfer.', 409, { conflict: { type: 'booking_unavailable' }, commit: true });
     }
 
-    const isAdmin = hasAdmin(principal);
+    // The admin may act for anyone in a transfer whose booking (booker and room) is within their scope.
+    const isAdmin = hasAdmin(principal) && await adminScopeAllows(client, principal, booking);
     const ownerFaculty = booking.faculty_id;
     const step = async (next, action, message) => {
       if (next === 'ACCEPTED') return completeTransfer(client, t, booking, userId);
@@ -210,7 +223,7 @@ export const rejectTransfer = async (transferId, principal) => {
       booking?.created_by === userId ||
       (facultyId != null && String(booking?.faculty_id) === String(facultyId)) ||
       (facultyId != null && String(t.target_faculty_id) === String(facultyId)) ||
-      hasAdmin(principal);
+      (hasAdmin(principal) && booking && await adminScopeAllows(client, principal, booking));
     if (!isAuthorized) return fail('Not authorized to reject this transfer', 403);
 
     // The requester closing their own request is a withdrawal, whatever their role.

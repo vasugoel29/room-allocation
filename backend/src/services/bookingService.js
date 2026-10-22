@@ -8,7 +8,8 @@ import { userRepository } from '../repositories/userRepository.js';
 import { timetableRepository } from '../repositories/timetableRepository.js';
 import { cancelClassesForBooking, restoreClassesForBookings } from './classDisplacement.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
-import { canBookDirect, isAdmin } from '../auth/permissions.js';
+import { canBookDirect, isAdmin, PERMISSIONS as P } from '../auth/permissions.js';
+import { scopesFor, allows, OUT_OF_SCOPE } from '../auth/scopes.js';
 import { logActivity } from './loggerService.js';
 import { dateKeyToDays, isDateKey } from '../utils/timezone.js';
 import {
@@ -120,6 +121,18 @@ async function resolveRescheduleSource(client, reqData, dateKey, startHour) {
   return { source: { reschedule_room_id: room.id, reschedule_date: day ? dateInSameWeek(dateKey, day) : dateKey, reschedule_hour: hour } };
 }
 
+// ACL scopes. Your own bookings: the room must be within the scope of a booking permission you hold.
+// Acting on someone else's (admin quick book, cancel, move): their person and the room must fit
+// the admin scope.
+const BOOK_PERMISSIONS = [P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN];
+const OUT_OF_SCOPE_ERROR = { error: OUT_OF_SCOPE, status: 403 };
+const ownRoomAllowed = (actor, room) => allows(scopesFor(actor, ...BOOK_PERMISSIONS), { room });
+const adminAllows = (actor, person, room) => allows(scopesFor(actor, P.ADMIN), { person, room });
+async function adminScopeAllowsBooking(client, actor, booking) {
+  const [owner, room] = await Promise.all([userRepository.findById(booking.created_by, client), roomRepository.findById(booking.room_id, client)]);
+  return adminAllows(actor, owner, room);
+}
+
 /**
  * Creates a booking for `owner` (the requester, or the target user of an admin quick-book).
  * `actor` is who performed the action (for rules and the audit trail).
@@ -144,6 +157,7 @@ export const createBooking = async (client, reqData, owner, actor = owner, { req
 
   const ownerProfile = await userRepository.findById(owner.id, client);
   const profile = { ...ownerProfile, role: owner.role, faculty_id: owner.faculty_id ?? null };
+  if (owner.id === actor.id ? !ownRoomAllowed(actor, room) : !adminAllows(actor, ownerProfile, room)) return OUT_OF_SCOPE_ERROR;
 
   // Requests wait for the named faculty member unless the actor may book directly.
   const status = fac.faculty && !direct ? 'PENDING' : 'ACTIVE';
@@ -201,12 +215,16 @@ export const createBookingHandler = async (reqData, user) => {
  * bookings can be cancelled; open transfer requests on it are closed and any class release it
  * created is withdrawn.
  */
-export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFacultyId = null, { reason = null } = {}) => {
+export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFacultyId = null, { reason = null, actor = null } = {}) => {
   const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [bookingId]);
   if (!booking) return { error: 'Booking not found', status: 404 };
   const isCreator = String(booking.created_by) === String(userId);
   const isAssignedFaculty = actorFacultyId != null && String(booking.faculty_id) === String(actorFacultyId);
   if (!isCreator && !isAssignedFaculty && !isAdmin) return { error: 'Not authorized', status: 403 };
+  if (!isCreator && !isAssignedFaculty && actor) {
+    // An admin cancelling someone else's booking: the booker and the room must be in scope.
+    if (!(await adminScopeAllowsBooking(client, actor, booking))) return OUT_OF_SCOPE_ERROR;
+  }
   if (!['ACTIVE', 'PENDING'].includes(booking.status)) {
     return { error: `This booking is already ${String(booking.status).toLowerCase()}`, status: 409 };
   }
@@ -246,7 +264,7 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFac
 
 export const cancelBookingHandler = async (bookingId, user) => {
   const result = await inTransaction((client) =>
-    cancelBooking(client, bookingId, user.id, isAdmin(user), user.faculty_id ?? null));
+    cancelBooking(client, bookingId, user.id, isAdmin(user), user.faculty_id ?? null, { actor: user }));
   if (result.error) return result;
 
   invalidateRoomCaches();
@@ -286,6 +304,10 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
 
   const ownerRow = await userRepository.findById(booking.created_by, client);
   const profile = byAdmin ? ownerRow : { ...ownerRow, role: user.role };
+  if (byAdmin) {
+    const oldRoom = await roomRepository.findById(booking.room_id, client);
+    if (!adminAllows(user, ownerRow, oldRoom) || !adminAllows(user, ownerRow, room)) return OUT_OF_SCOPE_ERROR;
+  } else if (!ownRoomAllowed(user, room)) return OUT_OF_SCOPE_ERROR;
   const ownerFacultyId = byAdmin ? null : (user.faculty_id ?? null);
   // Moving the booking gives back any class it had replaced; an admin's move may replace the
   // classes at the new time (decision 2026-10-22).
@@ -355,7 +377,9 @@ export const getPendingFacultyRequests = async (facultyId) => {
 export const approveBooking = async (client, id, actor, isAdmin) => {
   const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [id]);
   if (!booking) return { error: 'Booking not found', status: 404 };
-  if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
+  const asSupervisor = actor.faculty_id != null && booking.faculty_id === actor.faculty_id;
+  if (!isAdmin && !asSupervisor) return { error: 'Not authorized', status: 403 };
+  if (!asSupervisor && !(await adminScopeAllowsBooking(client, actor, booking))) return OUT_OF_SCOPE_ERROR;
   if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
 
   const times = checkTimes(booking.start_time, booking.end_time, { direct: true, admin: true, mode: 'approve' });
@@ -400,7 +424,9 @@ export const rejectBooking = async (id, actor, isAdmin) => {
   return inTransaction(async (client) => {
     const { rows: [booking] } = await client.query('SELECT * FROM bookings WHERE id = $1 FOR UPDATE', [id]);
     if (!booking) return { error: 'Booking not found', status: 404 };
-    if (!isAdmin && (actor.faculty_id == null || booking.faculty_id !== actor.faculty_id)) return { error: 'Not authorized', status: 403 };
+    const asSupervisor = actor.faculty_id != null && booking.faculty_id === actor.faculty_id;
+    if (!isAdmin && !asSupervisor) return { error: 'Not authorized', status: 403 };
+    if (!asSupervisor && !(await adminScopeAllowsBooking(client, actor, booking))) return OUT_OF_SCOPE_ERROR;
     if (booking.status !== 'PENDING') return { error: 'Booking is not pending', status: 400 };
     await bookingRepository.updateStatus(id, 'REJECTED', client);
     await logActivity({

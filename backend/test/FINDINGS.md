@@ -248,3 +248,5 @@ commitment per slot). Open, needs a decision: FE-04 (session token in localStora
 | MAINT-03 | fixed | The calendar and mobile booking used two "is the room free" checks that matched only a booking's first hour and counted PENDING requests; one shared function now follows the server rule |
 | MAINT-04 | fixed | Slots like "11:00 PM-01:00 AM" parsed to an end before the start; now rejected (and retired by v36) |
 | MAINT-05 | fixed | Legacy `{ id }` tokens no longer accepted; one JWT secret definition; the rate limiter reuses the cached session verification; one cache-invalidation helper; one frontend `readJson` for API errors; import job status stored in `import_jobs` (survives restarts, v38) |
+| DEC-19 | done | Admin booking over a timetabled class cancels the class for that date (release + teacher record tied to the booking), notifies the teacher and section, restores both on cancel/move (v39) |
+| DEC-20 | done | ACL scopes enforced: people (department, branch, semester, section) and rooms (building, room) per permission; published in the catalog and RUNBOOK §9; scoped admins can't run whole-campus imports |

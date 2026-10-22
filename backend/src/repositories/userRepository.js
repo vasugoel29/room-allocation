@@ -1,5 +1,6 @@
 import * as db from '../db.js';
 import { timetableRepository } from './timetableRepository.js';
+import { scopeSql } from '../auth/scopes.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
 import { restoreClassesForBookings } from '../services/classDisplacement.js';
 
@@ -33,14 +34,14 @@ export const userRepository = {
     return result.rows[0];
   },
 
-  findAll: async (limit, offset, search = '', role = '') => {
+  findAll: async (limit, offset, search = '', role = '', scopes = null) => {
+    const params = [];
     let query = `
       SELECT u.id, u.name, u.email, u.role, u.branch, u.year, u.semester, u.section,
              u.group_name, u.created_at, u.department_name
       FROM users u
-      WHERE u.is_active
+      WHERE u.is_active AND ${scopeSql(scopes, { person: 'u' }, params)}
     `;
-    const params = [];
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;
@@ -65,12 +66,22 @@ export const userRepository = {
     return result.rows;
   },
 
+  /** Active students (class representatives included) for the export, within `scopes`. */
+  students: async (scopes = null) => {
+    const params = [];
+    return (await db.query(
+      `SELECT name, email, role, branch, year, section, degree, department_name, roll_no FROM users u
+        WHERE role IN ('VIEWER', 'STUDENT_REP') AND is_active AND ${scopeSql(scopes, { person: 'u' }, params)} ORDER BY name`,
+      params,
+    )).rows;
+  },
+
   /**
    * Count total users (for pagination)
    */
-  countUsers: async (search = '', role = '') => {
-    let query = 'SELECT COUNT(*) FROM users u WHERE u.is_active';
+  countUsers: async (search = '', role = '', scopes = null) => {
     const params = [];
+    let query = `SELECT COUNT(*) FROM users u WHERE u.is_active AND ${scopeSql(scopes, { person: 'u' }, params)}`;
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;

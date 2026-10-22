@@ -11,8 +11,8 @@ export const getUsers = async (filters = {}) => {
   const role = filters.role || '';
 
   const [users, total] = await Promise.all([
-    userRepository.findAll(limit, offset, search, role),
-    userRepository.countUsers(search, role)
+    userRepository.findAll(limit, offset, search, role, filters.scopes ?? null),
+    userRepository.countUsers(search, role, filters.scopes ?? null)
   ]);
 
   return {

@@ -1,5 +1,6 @@
 import * as db from '../db.js';
 import { timetableRepository } from './timetableRepository.js';
+import { scopeSql } from '../auth/scopes.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
 import { restoreClassesForBookings } from '../services/classDisplacement.js';
 
@@ -35,6 +36,14 @@ export const roomRepository = {
       student_access !== undefined ? student_access : true
     ]);
     return result.rows[0];
+  },
+
+  /** Ids of active rooms within `scopes` (null when unrestricted). */
+  visibleRoomIds: async (scopes) => {
+    if (scopes === null) return null;
+    const params = [];
+    const { rows } = await db.query(`SELECT id FROM rooms WHERE is_active AND ${scopeSql(scopes, { room: 'rooms' }, params)}`, params);
+    return new Set(rows.map((r) => r.id));
   },
 
   /**
@@ -87,9 +96,10 @@ export const roomRepository = {
   /**
    * Find available rooms with filters
    */
-  findFiltered: async (capacity, ac, projector, building, floor, type) => {
-    let query = 'SELECT * FROM rooms WHERE is_active';
+  findFiltered: async (capacity, ac, projector, building, floor, type, scopes = null) => {
     const params = [];
+    // ACL room scopes: only the rooms the viewer may see.
+    let query = `SELECT * FROM rooms WHERE is_active AND ${scopeSql(scopes, { room: 'rooms' }, params)}`;
 
     if (capacity) { params.push(capacity); query += ` AND capacity >= $${params.length}`; }
     if (ac === 'true') query += ' AND has_ac = TRUE';
@@ -128,9 +138,9 @@ export const roomRepository = {
    * Find available rooms with filters and pagination
    */
   findFilteredPaginated: async (filters) => {
-    const { capacity, ac, projector, building, floor, type, limit, offset, excludeTypes = [] } = filters;
-    let baseQuery = 'FROM rooms WHERE is_active';
+    const { capacity, ac, projector, building, floor, type, limit, offset, excludeTypes = [], scopes = null } = filters;
     const params = [];
+    let baseQuery = `FROM rooms WHERE is_active AND ${scopeSql(scopes, { room: 'rooms' }, params)}`;
     if (excludeTypes.length) { params.push(excludeTypes); baseQuery += ` AND (type IS NULL OR type <> ALL($${params.length}))`; }
 
     if (capacity) { params.push(capacity); baseQuery += ` AND capacity >= $${params.length}`; }

@@ -1,6 +1,8 @@
 import { istDateTimeToUtc } from '../utils/timezone.js';
 import { sendServerError } from '../utils/httpErrors.js';
-import * as db from "../db.js";
+import { adminRepository } from "../repositories/adminRepository.js";
+import { scopesFor } from "../auth/scopes.js";
+import { PERMISSIONS as P } from "../auth/permissions.js";
 import logger from "../utils/logger.js";
 
 /**
@@ -26,29 +28,14 @@ export const exportBookingsCSV = async (req, res) => {
     return res.status(400).json({ error: "start_date and end_date must be valid dates" });
   }
   try {
-    let query = `
-      SELECT b.id, r.name as room_name, b.start_time, b.end_time, u.name as user_name, b.purpose, b.status
-      FROM bookings b
-      JOIN rooms r ON b.room_id = r.id
-      JOIN users u ON b.created_by = u.id
-      WHERE 1=1
-    `;
-    const params = [];
     // A date-only value means the whole IST day: from its 00:00 to the next day's 00:00 (IST).
     const dayOnly = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v));
     const nextDay = (k) => new Date(Date.parse(`${k}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
-    if (start_date) {
-      params.push(dayOnly(start_date) ? istDateTimeToUtc(start_date, 0) : start_date);
-      query += ` AND b.start_time >= $${params.length}`;
-    }
-    if (end_date) {
-      params.push(dayOnly(end_date) ? istDateTimeToUtc(nextDay(end_date), 0) : end_date);
-      query += ` AND b.end_time <= $${params.length}`;
-    }
-    query += " ORDER BY b.start_time DESC";
-
-    // Pool query: no checked-out client that could leak on error (OPS-07).
-    const { rows } = await db.query(query, params);
+    const rows = await adminRepository.exportBookings({
+      from: start_date ? (dayOnly(start_date) ? istDateTimeToUtc(start_date, 0) : start_date) : null,
+      to: end_date ? (dayOnly(end_date) ? istDateTimeToUtc(nextDay(end_date), 0) : end_date) : null,
+      scopes: scopesFor(req.user, P.ADMIN),
+    });
     const lines = ["ID,Room,Start Time,End Time,User,Purpose,Status"];
     for (const row of rows) {
       lines.push([row.id, row.room_name, row.start_time, row.end_time, row.user_name, row.purpose, row.status].map(csvCell).join(","));
@@ -69,31 +56,10 @@ export const getAuditLogs = async (req, res) => {
     const offset = (page - 1) * limit;
     const search = typeof req.query.search === 'string' ? req.query.search : '';
 
-    let queryText = `
-      SELECT al.*, u.name as user_name, u.email as user_email
-      FROM audit_logs al
-      LEFT JOIN users u ON al.user_id = u.id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (search) {
-      params.push(`%${search}%`);
-      queryText += ` AND (al.action ILIKE $${params.length} OR u.name ILIKE $${params.length})`;
-    }
-
-    const countQuery = `SELECT COUNT(*) FROM (${queryText}) as total`;
-    const dataQuery = queryText + ` ORDER BY al.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    
-    const [countResult, dataResult] = await Promise.all([
-      db.query(countQuery, params),
-      db.query(dataQuery, [...params, limit, offset])
-    ]);
-
-    const total = parseInt(countResult.rows[0].count);
+    const { rows, total } = await adminRepository.auditLogs({ search, limit, offset });
 
     res.json({
-      data: dataResult.rows,
+      data: rows,
       meta: {
         total,
         page,
@@ -107,70 +73,12 @@ export const getAuditLogs = async (req, res) => {
   }
 };
 // "Last N days" = from N days ago up to now; future bookings are not counted (decision 2026-10-20).
+// Scoped admins see their rooms and people only.
 export const getAnalytics = async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
 
-    // 1. Overall Utilization
-    const utilizationQuery = `
-      WITH stats AS (
-        SELECT COUNT(*) as booking_count, 
-               (SELECT COUNT(*) FROM rooms WHERE is_active) as room_count
-        FROM bookings
-        WHERE start_time >= NOW() - INTERVAL '1 day' * $1 AND start_time <= NOW()
-        AND status = 'ACTIVE'
-      )
-      SELECT booking_count, 
-             room_count,
-             (booking_count::float / NULLIF(room_count * 12 * $1, 0)) * 100 as utilization_percent
-      FROM stats
-    `;
-
-    // 2. Room Utilization (Top 5)
-    const roomPerformanceQuery = `
-      SELECT r.name, COUNT(b.id) as booking_count
-      FROM rooms r
-      LEFT JOIN bookings b ON r.id = b.room_id 
-        AND b.start_time >= NOW() - INTERVAL '1 day' * $1 AND b.start_time <= NOW()
-        AND b.status = 'ACTIVE'
-      GROUP BY r.id, r.name
-      ORDER BY booking_count DESC
-      LIMIT 5
-    `;
-
-    // 3. Peak Hours
-    const peakHoursQuery = `
-      SELECT EXTRACT(HOUR FROM start_time AT TIME ZONE 'Asia/Kolkata') as hour, COUNT(*) as count
-      FROM bookings
-      WHERE start_time >= NOW() - INTERVAL '1 day' * $1 AND start_time <= NOW()
-      AND status = 'ACTIVE'
-      GROUP BY hour
-      ORDER BY hour ASC
-    `;
-
-    // 4. Daily Trends
-    const dailyTrendsQuery = `
-      SELECT (start_time AT TIME ZONE 'Asia/Kolkata')::date as date, COUNT(*) as count
-      FROM bookings
-      WHERE start_time >= NOW() - INTERVAL '1 day' * $1 AND start_time <= NOW()
-      AND status = 'ACTIVE'
-      GROUP BY date
-      ORDER BY date ASC
-    `;
-
-    const [utilRes, roomRes, hoursRes, trendsRes] = await Promise.all([
-      db.query(utilizationQuery, [days]),
-      db.query(roomPerformanceQuery, [days]),
-      db.query(peakHoursQuery, [days]),
-      db.query(dailyTrendsQuery, [days])
-    ]);
-
-    res.json({
-      summary: utilRes.rows[0],
-      topRooms: roomRes.rows,
-      peakHours: hoursRes.rows,
-      dailyTrends: trendsRes.rows
-    });
+    res.json(await adminRepository.analytics(days, scopesFor(req.user, P.ADMIN)));
   } catch (err) {
     logger.error('Failed to fetch analytics', err);
     sendServerError(res, err, 'Failed to fetch analytics');

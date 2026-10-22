@@ -1,5 +1,12 @@
 import { istDateTimeToUtc } from '../utils/timezone.js';
 import * as db from '../db.js';
+import { scopeSql } from '../auth/scopes.js';
+
+/**
+ * ACL scope filter for booking lists: `scope = { scopes, people }` — rooms always, and the booker
+ * too when `people` (admin lists). Absent = no filter.
+ */
+const scopeWhere = (scope, params) => (scope ? scopeSql(scope.scopes, scope.people ? { person: 'u', room: 'r' } : { room: 'r' }, params) : 'TRUE');
 
 const BOOKING_SELECT = `
   SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
@@ -63,10 +70,10 @@ export const bookingRepository = {
    */
   findBookings: async (filters) => {
     const { room_id, user_id, start_date, end_date, slot, limit, offset } = filters;
-    let query = `${BOOKING_SELECT}
-      WHERE 1=1
-    `;
     const params = [];
+    let query = `${BOOKING_SELECT}
+      WHERE ${scopeWhere(filters.scope, params)}
+    `;
     if (room_id) { params.push(room_id); query += ` AND b.room_id = $${params.length}`; }
     if (user_id) { params.push(user_id); query += ` AND b.created_by = $${params.length}`; }
     if (start_date) { params.push(start_date); query += ` AND b.start_time >= $${params.length}`; }
@@ -93,8 +100,9 @@ export const bookingRepository = {
    */
   countBookings: async (filters) => {
     const { room_id, user_id, start_date, end_date, slot } = filters;
-    let query = 'SELECT COUNT(*) FROM bookings b WHERE 1=1';
     const params = [];
+    let query = `SELECT COUNT(*) FROM bookings b JOIN rooms r ON r.id = b.room_id JOIN users u ON u.id = b.created_by
+      WHERE ${scopeWhere(filters.scope, params)}`;
 
     if (room_id) { params.push(room_id); query += ` AND b.room_id = $${params.length}`; }
     if (user_id) { params.push(user_id); query += ` AND b.created_by = $${params.length}`; }

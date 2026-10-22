@@ -30,10 +30,10 @@ export const getPendingCancellationRequests = handle((req) => timetable.pendingC
   { failure: 'Failed to load cancellation requests.' });
 export const reviewCancellationRequest = handle((req) => timetable.reviewCancellationRequest(req.user, req.params.id, req.params.action),
   { failure: 'Failed to review cancellation request.' });
-export const listBranches = handle(() => timetable.branches());
-export const searchTimetable = handle((req) => timetable.search(req.query));
+export const listBranches = handle((req) => timetable.branches(req.user));
+export const searchTimetable = handle((req) => timetable.search(req.query, req.user));
 export const autocompleteFaculty = handle((req) => timetable.autocompleteFaculty(req.query.query));
 export const listSlots = handle((req) => timetable.listFacultySlots(req.query));
-export const createSlot = handle((req) => timetable.createFacultySlot(req.body), { status: 201 });
-export const updateSlot = handle((req) => timetable.updateFacultySlot(req.params.id, req.body));
-export const deleteSlot = handle((req) => timetable.deleteFacultySlot(req.params.id));
+export const createSlot = handle((req) => timetable.createFacultySlot(req.body, req.user), { status: 201 });
+export const updateSlot = handle((req) => timetable.updateFacultySlot(req.params.id, req.body, req.user));
+export const deleteSlot = handle((req) => timetable.deleteFacultySlot(req.params.id, req.user));

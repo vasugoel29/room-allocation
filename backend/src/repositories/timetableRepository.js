@@ -168,6 +168,10 @@ export const timetableRepository = {
       f.room_id ?? null, id, setRoom],
   )).rows[0],
 
+  facultySlotById: async (id, client = db) => (await client.query(
+    'SELECT * FROM faculty_timetable_slots WHERE id = $1 AND is_active', [id],
+  )).rows[0] || null,
+
   /** Soft delete. */
   deactivateFacultySlot: async (id, client = db) => (await client.query(
     'UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE id = $1 AND is_active RETURNING id', [id],

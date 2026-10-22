@@ -200,6 +200,27 @@ Profile and the notification inbox need no permission.
 | Faculty | `cras.calendar`, `cras.timetable`, `cras.bookings.direct`, `cras.faculty_portal` |
 | Admin | `cras.calendar`, `cras.timetable`, `cras.bookings`, `cras.bookings.direct`, `cras.admin` |
 
+**Scopes (optional limits on a grant).** The ACL can limit any permission with `scopes_by_permission`. CRAS enforces them; the same text is served in the catalog.
+
+| Form | Meaning |
+|---|---|
+| no entry, or `[{}]` | unrestricted (every grant today) |
+| `[{ "branch": "INFORMATION TECHNOLOGY" }, { "building": "APJ Block" }]` | any one object may match |
+| `{ "branch": "INFORMATION TECHNOLOGY", "semester": 5 }` | every key in one object must match; a value may be a list |
+
+| Key | Matches |
+|---|---|
+| `department`, `branch`, `semester`, `section` | the person acted on (their ACL attributes) |
+| `building`, `room` | the room (its CRAS building or name) |
+
+An unknown key matches nothing. Where scopes apply:
+- `cras.calendar`: which rooms you see.
+- `cras.bookings` / `cras.bookings.direct`: which rooms you can book, move into or take over.
+- `cras.admin`: rooms you manage, and people you act on (bookings, users, quick book, timetable search, import and slots, analytics, exports). A scoped admin cannot run the faculty directory or faculty timetable CSV imports, because those replace data for the whole campus.
+- `cras.timetable` and `cras.faculty_portal` are not scoped; they only ever show your own data.
+
+The audit log and faculty directory export stay campus-wide for every admin.
+
 **Checks that stay inside CRAS, whatever the ACL grants:**
 - only the faculty member named on a request can approve it;
 - only the owner can manage their own bookings, though the admin can manage anyone's;

@@ -3,6 +3,7 @@ import * as adminController from '../controllers/adminController.js';
 import * as uploadController from '../controllers/uploadController.js';
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
+import { requireUnscopedAdmin } from '../middleware/scope.js';
 
 const router = express.Router();
 
@@ -20,8 +21,8 @@ router.get('/uploads/export/faculty', authenticate, requirePermission(P.ADMIN), 
 router.get('/uploads/export/timetable', authenticate, requirePermission(P.ADMIN), uploadController.exportTimetable);
 
 // Imports (CSV)
-router.post('/uploads/import/faculty', authenticate, requirePermission(P.ADMIN), uploadController.importFaculty);
-router.post('/uploads/import/timetable', authenticate, requirePermission(P.ADMIN), uploadController.importTimetable);
+router.post('/uploads/import/faculty', authenticate, requirePermission(P.ADMIN), requireUnscopedAdmin, uploadController.importFaculty);
+router.post('/uploads/import/timetable', authenticate, requirePermission(P.ADMIN), requireUnscopedAdmin, uploadController.importTimetable);
 
 // Async job status polling
 router.get('/uploads/status/:jobId', authenticate, requirePermission(P.ADMIN), uploadController.getJobStatus);

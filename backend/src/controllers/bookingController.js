@@ -4,6 +4,8 @@ import * as bookingService from "../services/bookingService.js";
 import { hasPermission, PERMISSIONS as P } from "../auth/permissions.js";
 import zlib from "zlib";
 import { sharedCached } from "../utils/sharedCache.js";
+import { scopesFor, ROOM_VIEW_PERMISSIONS } from "../auth/scopes.js";
+import { roomRepository } from "../repositories/roomRepository.js";
 
 // Fields everyone may see on someone else's booking: when and where it is, and who holds it
 // (name, branch, year, section) so they can coordinate or request a transfer. Never the purpose,
@@ -32,7 +34,12 @@ export function viewBookingFor(principal, booking, now = Date.now()) {
 
 export const getBookings = async (req, res) => {
   try {
-    const bookings = await bookingService.getBookings(req.query);
+    // ACL scopes: the admin list (/admin/all) by booker and room; the calendar list by room.
+    const adminList = req.route?.path === '/admin/all';
+    const scope = adminList
+      ? { scopes: scopesFor(req.user, P.ADMIN), people: true }
+      : { scopes: scopesFor(req.user, ...ROOM_VIEW_PERMISSIONS), people: false };
+    const bookings = await bookingService.getBookings({ ...req.query, scope });
     const now = Date.now();
     bookings.data = bookings.data.map((b) => viewBookingFor(req.user, b, now));
     res.json(bookings);
@@ -53,8 +60,11 @@ export const getCalendar = async (req, res) => {
     const transfer = hasPermission(req.user, P.BOOKINGS);
     const variant = manage ? "full" : transfer ? "transfer" : "view";
     const key = `calendar|${range.from}|${range.to}`;
-    const body = await sharedCached(`${key}|${variant}`, async () => {
-      const rows = await sharedCached(`${key}|rows`, () => bookingService.getCalendarRows(range));
+    // Viewers limited to some rooms (ACL room scopes) get their own copy; everyone else shares one.
+    const visible = await roomRepository.visibleRoomIds(scopesFor(req.user, ...ROOM_VIEW_PERMISSIONS));
+    const build = async () => {
+      let rows = await sharedCached(`${key}|rows`, () => bookingService.getCalendarRows(range));
+      if (visible) rows = rows.filter((b) => visible.has(b.room_id));
       const now = Date.now();
       const data = manage
         ? rows.map((b) => ({ ...b, visibility: "full" }))
@@ -62,7 +72,8 @@ export const getCalendar = async (req, res) => {
       const json = JSON.stringify({ data, meta: { from: range.from, to: range.to } });
       // Compressed once here rather than by the compression middleware on every response.
       return { json, gzip: zlib.gzipSync(json, { level: 6 }) };
-    });
+    };
+    const body = visible ? await build() : await sharedCached(`${key}|${variant}`, build);
     res.type("application/json").vary("Accept-Encoding");
     if (req.acceptsEncodings("gzip", "identity") === "gzip") {
       res.set("Content-Encoding", "gzip");

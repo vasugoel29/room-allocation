@@ -3,6 +3,9 @@ import { sendServerError } from '../utils/httpErrors.js';
 import * as db from '../db.js';
 import { invalidateRoomCaches } from '../utils/cache.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
+import { userRepository } from '../repositories/userRepository.js';
+import { scopesFor } from '../auth/scopes.js';
+import { PERMISSIONS as P } from '../auth/permissions.js';
 import XLSX from 'xlsx-js-style';
 import logger from '../utils/logger.js';
 import { logActivity } from '../services/loggerService.js';
@@ -248,11 +251,9 @@ export const exportStudents = async (req, res) => {
       });
     }
     // Students include class representatives (decision 2026-10-20); deactivated accounts are left out.
-    const result = await db.query(
-      `SELECT name, email, role, branch, year, section, degree, department_name, roll_no FROM users
-        WHERE role IN ('VIEWER', 'STUDENT_REP') AND is_active ORDER BY name`,
-    );
-    return exportToXLSX(result.rows, 'students_export.xlsx', res);
+    // Scoped admins export only the students within their ACL people scopes.
+    const rows = await userRepository.students(scopesFor(req.user, P.ADMIN));
+    return exportToXLSX(rows, 'students_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export students XLSX', err);
     sendServerError(res, err, 'Failed to export students XLSX');
