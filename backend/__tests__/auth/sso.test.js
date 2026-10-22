@@ -189,6 +189,25 @@ describe('POST /api/auth/dev-login', () => {
   });
 });
 
+describe('developer personas (ACL_MOCK_SOURCE=personas, local development without the live ACL)', () => {
+  afterEach(() => { delete process.env.ACL_MOCK_SOURCE; });
+
+  test('each persona signs in with its role bundle; students land in the demo section; other emails are refused', async () => {
+    process.env.ACL_MOCK_SOURCE = 'personas';
+    const rep = await devLogin('dev.rep@nsut.ac.in');
+    expect(rep.status).toBe(200);
+    expect(rep.body.user).toMatchObject({ role: 'STUDENT_REP', branch: 'INFORMATION TECHNOLOGY', semester: 5, section: 1 });
+    expect(rep.body.user.permissions.sort()).toEqual(['cras.bookings', 'cras.calendar', 'cras.timetable']);
+    const admin = await devLogin('dev.admin@nsut.ac.in');
+    expect(admin.body.user.permissions).toContain('cras.admin');
+    expect((await devLogin(uniqEmail('stranger'))).status).toBe(403);
+  });
+
+  test('without the setting, personas are unknown like anyone else', async () => {
+    expect((await devLogin('dev.student@nsut.ac.in')).status).toBe(403);
+  });
+});
+
 describe('soft-deleted accounts and the faculty directory', () => {
   test('a soft-deleted (deactivated) account cannot sign in again, even with a valid ACL entry', async () => {
     const email = uniqEmail('softdel');

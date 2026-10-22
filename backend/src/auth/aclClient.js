@@ -9,6 +9,8 @@ import { SUGGESTED_BUNDLES } from './permissions.js';
  *   ACL_MODE=mock            → in-process directory (test suites only; refused in production)
  *     + ACL_MOCK_SOURCE=db     → directory answered from the local users table (e2e/load stacks,
  *                                where tests seed users in the database of a separate server process)
+ *     + ACL_MOCK_SOURCE=personas → fixed developer personas (local development without the live ACL;
+ *                                see DEV_PERSONAS)
  *
  * Every error thrown here is an AclError with a `code` the auth layer maps to an HTTP status.
  */
@@ -138,9 +140,34 @@ async function dbDirectoryEntry(email) {
   };
 }
 
+/**
+ * Local development without the live ACL (ACL_MODE=mock, ACL_MOCK_SOURCE=personas, AUTH_DEV_LOGIN=true).
+ * One persona per role with the suggested permission bundle. The students are in the demo timetable's
+ * section, and the faculty persona is a seeded directory entry who teaches in it (`npm run seed --
+ * --demo-timetable`), so every flow has data.
+ */
+const DEMO_SECTION = { dept: 'Department of Information Technology', branch: 'INFORMATION TECHNOLOGY', year: 3, semester: 5, section: 1, group_no: 1 };
+export const DEV_PERSONAS = Object.freeze({
+  'dev.admin@nsut.ac.in': { name: 'Dev Admin', role: 'ADMIN', academic: {} },
+  'abhinav.tomar@nsut.ac.in': { name: 'Abhinav Tomar', role: 'FACULTY', academic: { dept: 'Department of Computer Science & Engineering' } },
+  'dev.rep@nsut.ac.in': { name: 'Dev Class Rep', role: 'STUDENT_REP', academic: DEMO_SECTION },
+  'dev.student@nsut.ac.in': { name: 'Dev Student', role: 'VIEWER', academic: DEMO_SECTION },
+});
+
+function personaEntry(email) {
+  const p = DEV_PERSONAS[email];
+  if (!p) return undefined;
+  return {
+    user: { id: `persona_${email.split('@')[0]}`, name: p.name, email, status: 'ACTIVE', academic: p.academic },
+    role: p.role, roles: [p.role], permissions: SUGGESTED_BUNDLES[p.role], allowed_scope: {}, scopes_by_permission: {},
+  };
+}
+
 async function mockFetchUserAccess(email) {
   mockCalls++;
-  const entry = mockDirectory.get(email) ?? (process.env.ACL_MOCK_SOURCE === 'db' ? await dbDirectoryEntry(email) : undefined);
+  const source = process.env.ACL_MOCK_SOURCE;
+  const entry = mockDirectory.get(email)
+    ?? (source === 'db' ? await dbDirectoryEntry(email) : source === 'personas' ? personaEntry(email) : undefined);
   if (entry instanceof Error) throw entry;
   if (!entry) throw new AclError('not_found', 'You are not registered in the institutional access directory.', { status: 404 });
   return checkActive(normalize(entry));

@@ -47,6 +47,10 @@ room-all/
      `JWT_SECRET=<32+ random chars>`, `ACL_CLIENT_SECRET=<from the ACL team>`, `AUTH_DEV_LOGIN=true`,
      `CORS_ORIGIN=http://localhost:5173`, `APP_URL=http://localhost:5173`. Leave `NODE_ENV` out (`npm run dev` sets it).
    - `frontend/.env`: `VITE_DEV_LOGIN=true`.
+   **Offline (no live ACL):** instead of `ACL_CLIENT_SECRET`, set `ACL_MODE=mock` and `ACL_MOCK_SOURCE=personas` in
+   `backend/.env`. Developer sign-in then accepts four fixed personas, each with its role's suggested permissions:
+   `dev.admin@nsut.ac.in`, `abhinav.tomar@nsut.ac.in` (faculty), `dev.rep@nsut.ac.in` and `dev.student@nsut.ac.in`
+   (the students are in the demo timetable's section, so seed with `--demo-timetable`). Refused in production.
 5. **Create the database, migrate and seed** (the seeder applies every migration first; safe to re-run):
    ```bash
    npm run db:create --prefix backend
