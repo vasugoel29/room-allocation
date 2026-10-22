@@ -4,6 +4,7 @@ import * as db from '../db.js';
 import { invalidateRoomCaches } from '../utils/cache.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
+import { timetableRepository } from '../repositories/timetableRepository.js';
 import { scopesFor } from '../auth/scopes.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
 import XLSX from 'xlsx-js-style';
@@ -270,10 +271,7 @@ export const exportFaculty = async (req, res) => {
         details: { format: 'xlsx' }
       });
     }
-    const result = await db.query(`
-      SELECT name, email, department_name, CASE WHEN is_active THEN 'active' ELSE 'inactive' END AS status
-      FROM faculties ORDER BY name`);
-    return exportToXLSX(result.rows, 'faculty_export.xlsx', res);
+    return exportToXLSX(await facultyRepository.exportRows(), 'faculty_export.xlsx', res);
   } catch (err) {
     logger.error('Failed to export faculty XLSX', err);
     sendServerError(res, err, 'Failed to export faculty XLSX');
@@ -291,15 +289,8 @@ export const exportTimetable = async (req, res) => {
         details: { format: 'xlsx', view }
       });
     }
-    const result = await db.query(`
-      SELECT fts.id, fts.faculty_name, fts.semester, fts.day_of_week, fts.slot_time,
-             fts.content, fts.is_occupied, fts.room_id, r.name AS room_name
-      FROM faculty_timetable_slots fts
-      LEFT JOIN rooms r ON r.id = fts.room_id
-      WHERE fts.is_active
-      ORDER BY fts.faculty_name, fts.day_of_week, fts.slot_time
-    `);
-    return exportTimetableCalendar(result.rows, res, view);
+    const rows = await timetableRepository.facultySlotsForExport();
+    return exportTimetableCalendar(rows, res, view);
   } catch (err) {
     logger.error('Failed to export timetable XLSX', err);
     sendServerError(res, err, 'Failed to export timetable XLSX');
@@ -338,8 +329,8 @@ const runFacultyImport = async (jobId, csvContent, userId) => {
     await db.runInTransaction(async (client) => {
       for (const entry of seen.values()) {
         if (entry.inactive) {
-          const { rows: found } = await client.query('SELECT id FROM faculties WHERE lower(email) = $1 AND is_active', [entry.email]);
-          if (found[0] && (await facultyRepository.deactivate(found[0].id, client))) counts.deactivated++;
+          const found = await facultyRepository.findActiveByEmail(entry.email, client);
+          if (found && (await facultyRepository.deactivate(found.id, client))) counts.deactivated++;
           continue;
         }
         const saved = await facultyRepository.upsert(entry, client);
@@ -399,25 +390,13 @@ const runTimetableImport = async (jobId, csvContent, userId) => {
 
     let unresolved = [];
     await db.runInTransaction(async (client) => {
-      const names = [...new Set(slots.map((s) => s.name.toUpperCase()))];
-      const ids = new Map((await client.query(
-        `SELECT DISTINCT ON (upper(trim(name))) upper(trim(name)) AS k, id FROM faculties
-          WHERE upper(trim(name)) = ANY($1) ORDER BY upper(trim(name)), is_active DESC, id`, [names],
-      )).rows.map((r) => [r.k, r.id]));
-      unresolved = [...new Set(slots.filter((s) => !ids.has(s.name.toUpperCase())).map((s) => s.name))].sort();
-
+      const ids = await facultyRepository.idsByName([...new Set(slots.map((sl) => sl.name.toUpperCase()))], client);
+      unresolved = [...new Set(slots.filter((sl) => !ids.has(sl.name.toUpperCase())).map((sl) => sl.name))].sort();
       // A timetable import replaces the active timetable; previous slots are soft-deleted, never removed.
-      await client.query('UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE is_active');
-      const COLS = ['faculty_name', 'faculty_id', 'semester', 'day_of_week', 'slot_time', 'start_min', 'end_min', 'content', 'is_occupied', 'room_id'];
-      for (let i = 0; i < slots.length; i += 500) {
-        const chunk = slots.slice(i, i + 500);
-        const placeholders = chunk.map((_, r) => `(${COLS.map((__, c) => `$${r * COLS.length + c + 1}`).join(',')})`);
-        await client.query(
-          `INSERT INTO faculty_timetable_slots (${COLS.join(', ')}) VALUES ${placeholders.join(',')}`,
-          chunk.flatMap((s) => [s.name, ids.get(s.name.toUpperCase()) ?? null, s.semester, s.day, s.slotTime,
-            s.startMin, s.endMin, s.content, s.isOccupied, s.roomId]),
-        );
-      }
+      await timetableRepository.replaceFacultySlots(slots.map((sl) => ({
+        faculty_name: sl.name, faculty_id: ids.get(sl.name.toUpperCase()) ?? null, semester: sl.semester, day_of_week: sl.day,
+        slot_time: sl.slotTime, start_min: sl.startMin, end_min: sl.endMin, content: sl.content, is_occupied: sl.isOccupied, room_id: sl.roomId,
+      })), client);
       if (userId) {
         await logActivity({
           userId, action: 'IMPORT_TIMETABLE_CSV', entityType: 'upload',

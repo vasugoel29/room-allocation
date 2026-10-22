@@ -61,8 +61,8 @@ export async function syncFaculties(req, res) {
     await db.runInTransaction(async (client) => {
       for (const entry of seen.values()) {
         if (entry.inactive) {
-          const { rows } = await client.query('SELECT id FROM faculties WHERE lower(email) = $1 AND is_active', [entry.email]);
-          if (rows[0] && (await facultyRepository.deactivate(rows[0].id, client))) counts.deactivated++;
+          const found = await facultyRepository.findActiveByEmail(entry.email, client);
+          if (found && (await facultyRepository.deactivate(found.id, client))) counts.deactivated++;
           else counts.unchanged++;
           continue;
         }

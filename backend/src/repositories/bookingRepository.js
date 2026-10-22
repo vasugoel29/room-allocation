@@ -145,6 +145,17 @@ export const bookingRepository = {
     [id],
   ),
 
+  /** ACTIVE bookings in a room overlapping [from, to), with who booked them (Room Grid). */
+  activeInRoom: async (roomId, from, to, client = db) => (await client.query(
+    `SELECT b.id, b.start_time, b.end_time, b.purpose, b.status,
+            u.name AS booker_name, u.email AS booker_email, u.role AS booker_role
+       FROM bookings b JOIN users u ON b.created_by = u.id
+      WHERE b.room_id = $1 AND b.status = 'ACTIVE'
+        AND tstzrange(b.start_time, b.end_time) && tstzrange($2::timestamptz, $3::timestamptz)
+      ORDER BY b.start_time`,
+    [roomId, from, to],
+  )).rows,
+
   /** ACTIVE bookings supervised by, or made by, someone of that (upper-cased) name. */
   activeForFacultyName: async (upperName, client = db) => (await client.query(
     `SELECT b.*, r.name AS room_name, u.name AS creator_name

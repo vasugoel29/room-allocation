@@ -3,6 +3,7 @@ import * as db from '../db.js';
 import cache, { invalidateRoomCaches } from '../utils/cache.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { timetableRepository } from '../repositories/timetableRepository.js';
+import { bookingRepository } from '../repositories/bookingRepository.js';
 import logger from '../utils/logger.js';
 import { getIstParts, istDateTimeToUtc } from '../utils/timezone.js';
 import { canBookDirect, PERMISSIONS as P } from '../auth/permissions.js';
@@ -217,29 +218,15 @@ export const getRoomWeekSchedule = async (req, res) => {
     const start = new Date(istDateTimeToUtc(weekStart, 0));
     const end = new Date(start.getTime() + (7 * 24 * 60 * 60 * 1000) - 1);
 
-    const [roomResult, classes, blocks, bookingsResult] = await Promise.all([
-      // Room details
-      db.query('SELECT id, name, floor, building, capacity, type, has_ac, has_projector FROM rooms WHERE id = $1', [id]),
+    const [room, classes, blocks, weekBookings] = await Promise.all([
+      roomRepository.findById(id),
       // Weekly classes in this room (section timetables and faculty slots, by room id)
       timetableRepository.roomClasses(id),
-      // Admin weekly blocks
-      db.query('SELECT day, hour FROM room_availability WHERE room_id = $1 AND is_active ORDER BY day, hour', [id]),
-
-      // Active bookings within this week
-      db.query(`
-        SELECT b.id, b.start_time, b.end_time, b.purpose, b.status,
-               u.name AS booker_name, u.email AS booker_email, u.role AS booker_role
-        FROM bookings b
-        JOIN users u ON b.created_by = u.id
-        WHERE b.room_id = $1
-          AND b.status = 'ACTIVE'
-          AND b.start_time <= $3::timestamptz
-          AND b.end_time   >= $2::timestamptz
-        ORDER BY b.start_time
-      `, [id, start.toISOString(), end.toISOString()])
+      timetableRepository.blocksOfRoom(id),
+      bookingRepository.activeInRoom(id, start.toISOString(), end.toISOString()),
     ]);
 
-    if (!roomResult.rows[0]) return res.status(404).json({ error: 'Room not found' });
+    if (!room) return res.status(404).json({ error: 'Room not found' });
 
     // One block per taken hour: classes carry their detail, admin blocks none.
     const timetableBlocks = [];
@@ -255,12 +242,12 @@ export const getRoomWeekSchedule = async (req, res) => {
         });
       }
     }
-    for (const b of blocks.rows) {
+    for (const b of blocks) {
       if (!seen.has(`${b.day}|${b.hour}`)) timetableBlocks.push({ day: b.day, hour: b.hour, source: 'block' }); // admin weekly block: can be lifted
     }
 
     // Normalise bookings to {date, startHour, endHour, ...}
-    const bookings = bookingsResult.rows.map(b => {
+    const bookings = weekBookings.map(b => {
       const st = getIstParts(b.start_time);
       const et = getIstParts(b.end_time);
       return {
@@ -279,7 +266,8 @@ export const getRoomWeekSchedule = async (req, res) => {
     });
 
     res.json({
-      room: roomResult.rows[0],
+      room: { id: room.id, name: room.name, floor: room.floor, building: room.building, capacity: room.capacity,
+        type: room.type, has_ac: room.has_ac, has_projector: room.has_projector },
       timetableBlocks,
       bookings
     });
@@ -347,17 +335,9 @@ export const checkRoomConflict = async (req, res) => {
       const startTime = new Date(istDateTimeToUtc(date, sh));
       const endTime   = new Date(istDateTimeToUtc(date, eh));
 
-      const bookingResult = await db.query(`
-        SELECT b.id, b.start_time, b.end_time, b.purpose,
-               u.name AS booker_name, u.email AS booker_email
-        FROM bookings b
-        JOIN users u ON b.created_by = u.id
-        WHERE b.room_id = $1
-          AND b.status = 'ACTIVE'
-          AND tstzrange(b.start_time, b.end_time) && tstzrange($2::timestamptz, $3::timestamptz)
-      `, [id, startTime.toISOString(), endTime.toISOString()]);
+      const clashes = await bookingRepository.activeInRoom(id, startTime.toISOString(), endTime.toISOString());
 
-      for (const b of bookingResult.rows) {
+      for (const b of clashes) {
         conflicts.push({
           type: 'booking',
           bookingId: b.id,

@@ -1,25 +1,16 @@
-import * as db from '../db.js';
 import { sendServerError } from '../utils/httpErrors.js';
-
-// Notifications addressed to this user, or (before their first sign-in) to their email address.
-const MINE = `is_active AND (user_id = $1 OR (user_id IS NULL AND lower(email) = lower($2)))`;
-const FIELDS = 'id, type, title, body, link, entity_type, entity_id, read_at, created_at';
+import { notificationRepository as inbox } from '../repositories/notificationRepository.js';
 
 /** GET /api/notifications?limit=20&before=<id>&unread=true — newest first, plus the unread count. */
 export const listNotifications = async (req, res) => {
   try {
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 20));
     const before = parseInt(req.query.before) || null;
-    const unreadOnly = req.query.unread === 'true';
-    const params = [req.user.id, req.user.email || '', limit];
-    let extra = '';
-    if (before) { params.push(before); extra += ` AND id < $${params.length}`; }
-    if (unreadOnly) extra += ' AND read_at IS NULL';
-    const [list, count] = await Promise.all([
-      db.query(`SELECT ${FIELDS} FROM notifications WHERE ${MINE}${extra} ORDER BY id DESC LIMIT $3`, params),
-      db.query(`SELECT COUNT(*)::int AS n FROM notifications WHERE ${MINE} AND read_at IS NULL`, params.slice(0, 2)),
+    const [data, unread] = await Promise.all([
+      inbox.list(req.user, { limit, before, unreadOnly: req.query.unread === 'true' }),
+      inbox.unreadCount(req.user),
     ]);
-    res.json({ data: list.rows, unread: count.rows[0].n });
+    res.json({ data, unread });
   } catch (err) {
     sendServerError(res, err, 'Failed to load notifications');
   }
@@ -28,11 +19,7 @@ export const listNotifications = async (req, res) => {
 /** GET /api/notifications/unread-count — cheap poll for the bell. */
 export const unreadCount = async (req, res) => {
   try {
-    const { rows: [r] } = await db.query(
-      `SELECT COUNT(*)::int AS n FROM notifications WHERE ${MINE} AND read_at IS NULL`,
-      [req.user.id, req.user.email || ''],
-    );
-    res.json({ unread: r.n });
+    res.json({ unread: await inbox.unreadCount(req.user) });
   } catch (err) {
     sendServerError(res, err, 'Failed to load notifications');
   }
@@ -41,13 +28,9 @@ export const unreadCount = async (req, res) => {
 /** PATCH /api/notifications/:id/read */
 export const markRead = async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `UPDATE notifications SET read_at = COALESCE(read_at, NOW())
-        WHERE id = $3 AND ${MINE} RETURNING ${FIELDS}`,
-      [req.user.id, req.user.email || '', req.params.id],
-    );
-    if (!rows[0]) return res.status(404).json({ error: 'Notification not found' });
-    res.json(rows[0]);
+    const row = await inbox.markRead(req.user, req.params.id);
+    if (!row) return res.status(404).json({ error: 'Notification not found' });
+    res.json(row);
   } catch (err) {
     sendServerError(res, err, 'Failed to update the notification');
   }
@@ -56,11 +39,7 @@ export const markRead = async (req, res) => {
 /** POST /api/notifications/read-all */
 export const markAllRead = async (req, res) => {
   try {
-    const { rowCount } = await db.query(
-      `UPDATE notifications SET read_at = NOW() WHERE ${MINE} AND read_at IS NULL`,
-      [req.user.id, req.user.email || ''],
-    );
-    res.json({ updated: rowCount });
+    res.json({ updated: await inbox.markAllRead(req.user) });
   } catch (err) {
     sendServerError(res, err, 'Failed to update notifications');
   }
@@ -69,12 +48,7 @@ export const markAllRead = async (req, res) => {
 /** DELETE /api/notifications/:id — dismiss from the inbox (soft delete; the row stays). */
 export const dismiss = async (req, res) => {
   try {
-    const { rowCount } = await db.query(
-      `UPDATE notifications SET is_active = FALSE, deactivated_at = NOW(), read_at = COALESCE(read_at, NOW())
-        WHERE id = $3 AND ${MINE}`,
-      [req.user.id, req.user.email || '', req.params.id],
-    );
-    if (!rowCount) return res.status(404).json({ error: 'Notification not found' });
+    if (!(await inbox.dismiss(req.user, req.params.id))) return res.status(404).json({ error: 'Notification not found' });
     res.json({ message: 'Notification dismissed' });
   } catch (err) {
     sendServerError(res, err, 'Failed to dismiss the notification');

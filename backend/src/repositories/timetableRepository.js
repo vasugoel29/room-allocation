@@ -72,6 +72,11 @@ export const timetableRepository = {
     [roomId, day],
   )).rows.map((r) => r.hour),
 
+  /** All admin weekly blocks of a room: [{ day, hour }]. */
+  blocksOfRoom: async (roomId, client = db) => (await client.query(
+    'SELECT day, hour FROM room_availability WHERE room_id = $1 AND is_active ORDER BY day, hour', [roomId],
+  )).rows,
+
   /** Is every hour of [startHour, endHour) of this room released on dateKey (class cancelled/moved)? */
   isReleased: async (roomId, dateKey, startHour, endHour, client = db) => (await client.query(
     `SELECT 1 FROM room_slot_releases
@@ -167,6 +172,26 @@ export const timetableRepository = {
     [f.faculty_name, f.faculty_id, f.semester, f.day_of_week, f.slot_time, f.start_min, f.end_min, f.content, f.is_occupied,
       f.room_id ?? null, id, setRoom],
   )).rows[0],
+
+  /** Active faculty slots with room names, for the XLSX export. */
+  facultySlotsForExport: async (client = db) => (await client.query(
+    `SELECT fts.id, fts.faculty_name, fts.semester, fts.day_of_week, fts.slot_time, fts.content, fts.is_occupied, fts.room_id,
+            r.name AS room_name
+       FROM faculty_timetable_slots fts LEFT JOIN rooms r ON r.id = fts.room_id
+      WHERE fts.is_active ORDER BY fts.faculty_name, fts.day_of_week, fts.start_min`,
+  )).rows,
+
+  /** Replaces the active faculty timetable with `slots` (previous slots soft-deleted). */
+  replaceFacultySlots: async (slots, client) => {
+    await client.query('UPDATE faculty_timetable_slots SET is_active = FALSE, deactivated_at = NOW() WHERE is_active');
+    const COLS = ['faculty_name', 'faculty_id', 'semester', 'day_of_week', 'slot_time', 'start_min', 'end_min', 'content', 'is_occupied', 'room_id'];
+    for (let i = 0; i < slots.length; i += 500) {
+      const chunk = slots.slice(i, i + 500);
+      const placeholders = chunk.map((_, r) => `(${COLS.map((__, c) => `$${r * COLS.length + c + 1}`).join(',')})`);
+      await client.query(`INSERT INTO faculty_timetable_slots (${COLS.join(', ')}) VALUES ${placeholders.join(',')}`,
+        chunk.flatMap((sl) => COLS.map((c) => sl[c])));
+    }
+  },
 
   facultySlotById: async (id, client = db) => (await client.query(
     'SELECT * FROM faculty_timetable_slots WHERE id = $1 AND is_active', [id],

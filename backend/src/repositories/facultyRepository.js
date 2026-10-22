@@ -27,6 +27,22 @@ export const facultyRepository = {
     return rows[0] || null;
   },
 
+  findActiveByEmail: async (email, client = db) => (await client.query(
+    'SELECT * FROM faculties WHERE lower(email) = lower($1) AND is_active', [email],
+  )).rows[0] || null,
+
+  /** Directory ids by upper-cased name (active entries preferred), for imports. */
+  idsByName: async (names, client = db) => new Map((await client.query(
+    `SELECT DISTINCT ON (upper(trim(name))) upper(trim(name)) AS k, id FROM faculties
+      WHERE upper(trim(name)) = ANY($1) ORDER BY upper(trim(name)), is_active DESC, id`, [names],
+  )).rows.map((r) => [r.k, r.id])),
+
+  /** The whole directory for the export, with each entry's status. */
+  exportRows: async (client = db) => (await client.query(
+    `SELECT name, email, department_name, CASE WHEN is_active THEN 'active' ELSE 'inactive' END AS status
+       FROM faculties ORDER BY name`,
+  )).rows,
+
   searchActiveNames: async (pattern, limit = 10, client = db) => {
     const { rows } = await client.query(
       'SELECT name FROM faculties WHERE is_active AND name ILIKE $1 ORDER BY name LIMIT $2',
