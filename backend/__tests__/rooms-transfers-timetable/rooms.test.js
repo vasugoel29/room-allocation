@@ -773,7 +773,7 @@ describe('GET /api/rooms/:id/conflict-check', () => {
     expect(res.body.conflicts).toEqual([
       { type: 'timetable', hour: 10, slotId: null, faculty: null, subject: 'Blocked by an admin', resolution: 'Lift the weekly block for this room and hour first.' },
       { type: 'timetable', hour: 11, slotId: null, faculty: 'RTT Prof D', subject: 'Physics',
-        resolution: 'This is a section class from the timetable import; cancel it for this date or re-import the timetable.' },
+        resolution: 'A section class from the timetable import. An admin booking here cancels it for this date and notifies its teacher and students.' },
     ]);
   });
 });

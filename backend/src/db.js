@@ -1269,6 +1269,27 @@ const migrations = [
         CREATE INDEX IF NOT EXISTS idx_import_jobs_created ON import_jobs (created_at DESC);
       `);
     }
+  },
+  {
+    version: 39,
+    name: 'Admin bookings over a class: releases and teacher cancellations tied to the booking',
+    run: async (client) => {
+      // An admin booking over a timetabled class cancels that class for the date (decision
+      // 2026-10-22). The room release and the teacher's "class cancelled" record point at the
+      // booking, so cancelling or moving the booking puts the class back.
+      await client.query(`
+        ALTER TABLE room_slot_releases DROP CONSTRAINT IF EXISTS room_slot_releases_source_type_check;
+        ALTER TABLE room_slot_releases ADD CONSTRAINT room_slot_releases_source_type_check
+          CHECK (source_type IN ('faculty_override', 'cancellation_request', 'reschedule', 'admin_booking'));
+        ALTER TABLE faculty_slot_overrides ADD COLUMN IF NOT EXISTS booking_id INTEGER;
+        CREATE INDEX IF NOT EXISTS idx_faculty_slot_overrides_booking ON faculty_slot_overrides (booking_id) WHERE booking_id IS NOT NULL;
+      `);
+      const { rowCount } = await client.query("SELECT 1 FROM pg_constraint WHERE conname = 'faculty_slot_overrides_booking_id_fkey'");
+      if (!rowCount) {
+        await client.query(`ALTER TABLE faculty_slot_overrides ADD CONSTRAINT faculty_slot_overrides_booking_id_fkey
+          FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE RESTRICT`);
+      }
+    }
   }
 ];
 

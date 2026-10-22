@@ -6,12 +6,13 @@ import { facultyRepository } from '../repositories/facultyRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { timetableRepository } from '../repositories/timetableRepository.js';
+import { cancelClassesForBooking, restoreClassesForBookings } from './classDisplacement.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
 import { canBookDirect, isAdmin } from '../auth/permissions.js';
 import { logActivity } from './loggerService.js';
 import { dateKeyToDays, isDateKey } from '../utils/timezone.js';
 import {
-  checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts,
+  checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts, unreleasedClassesAt,
   constraintConflict, dateInSameWeek, istDateTimeToUtc, DAYS,
 } from './bookingRules.js';
 
@@ -144,7 +145,12 @@ export const createBooking = async (client, reqData, owner, actor = owner, { req
   const ownerProfile = await userRepository.findById(owner.id, client);
   const profile = { ...ownerProfile, role: owner.role, faculty_id: owner.faculty_id ?? null };
 
-  const roomTimetable = await checkRoomTimetable(client, room, t);
+  // Requests wait for the named faculty member unless the actor may book directly.
+  const status = fac.faculty && !direct ? 'PENDING' : 'ACTIVE';
+  // An admin's booking replaces a timetabled class in the room for that date (decision 2026-10-22).
+  const replacesClasses = admin && status === 'ACTIVE';
+  const displaced = replacesClasses ? await unreleasedClassesAt(client, room, t) : [];
+  const roomTimetable = await checkRoomTimetable(client, room, t, { ignoreClasses: replacesClasses });
   if (roomTimetable) return roomTimetable;
   // Admins booking for themselves aren't held to a section timetable; the people involved are.
   const people = await checkPeopleTimetables(client, admin && owner.id === actor.id ? null : profile, fac.faculty, t);
@@ -154,13 +160,12 @@ export const createBooking = async (client, reqData, owner, actor = owner, { req
   });
   if (conflict) return conflict;
 
-  // Requests wait for the named faculty member unless the actor may book directly.
-  const status = fac.faculty && !direct ? 'PENDING' : 'ACTIVE';
   const booking = await bookingRepository.create({
     room_id: room.id, start_time: t.start, end_time: t.end, created_by: owner.id, purpose: reqData.purpose,
     faculty_id: fac.faculty?.id ?? null, status, ...(reschedule.source || {}),
   }, client);
   if (status === 'ACTIVE') await activateRescheduleRelease(client, booking, actor.id);
+  await cancelClassesForBooking(client, { booking, room, t, hits: displaced, actor });
 
   await logActivity({
     userId: actor.id,
@@ -214,6 +219,8 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFac
     [bookingId],
   );
   await deactivateReleasesFor(client, 'reschedule', booking.id);
+  // Classes this booking had replaced go ahead after all.
+  await restoreClassesForBookings(client, booking.id, { actorId: userId, reason: 'cancelled' });
 
   await logActivity({
     userId,
@@ -280,7 +287,14 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   const ownerRow = await userRepository.findById(booking.created_by, client);
   const profile = byAdmin ? ownerRow : { ...ownerRow, role: user.role };
   const ownerFacultyId = byAdmin ? null : (user.faculty_id ?? null);
-  const roomTimetable = await checkRoomTimetable(client, room, t);
+  // Moving the booking gives back any class it had replaced; an admin's move may replace the
+  // classes at the new time (decision 2026-10-22).
+  const slotChanges = t.start !== new Date(booking.start_time).toISOString() || t.end !== new Date(booking.end_time).toISOString()
+    || room.id !== booking.room_id;
+  if (slotChanges) await restoreClassesForBookings(client, booking.id, { actorId: user.id, reason: 'moved to another time' });
+  const replacesClasses = isAdmin(user) && booking.status === 'ACTIVE';
+  const displaced = replacesClasses ? await unreleasedClassesAt(client, room, t) : [];
+  const roomTimetable = await checkRoomTimetable(client, room, t, { ignoreClasses: replacesClasses });
   if (roomTimetable) return roomTimetable;
   const people = await checkPeopleTimetables(client, profile, faculty, t);
   if (people) return people;
@@ -290,6 +304,7 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   if (conflict) return conflict;
 
   let updated = await bookingRepository.updateBooking(bookingId, { start_time: t.start, end_time: t.end, room_id: room.id }, client);
+  await cancelClassesForBooking(client, { booking: updated, room, t, hits: displaced, actor: user });
   // A student's approved booking that moves needs its faculty to approve the new slot (NEW-P4-2).
   const moved = t.start !== new Date(booking.start_time).toISOString() || t.end !== new Date(booking.end_time).toISOString() || room.id !== booking.room_id;
   if (moved && !byAdmin && !direct && booking.faculty_id && booking.status === 'ACTIVE') {

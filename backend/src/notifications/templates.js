@@ -169,6 +169,19 @@ export const TEMPLATES = {
     rows: [['Class', d.subject], ...slotRows(d), ['Reviewed by', d.by]],
     link: '/timetable',
   }),
+  class_cancelled_for_booking: (d) => make({
+    title: `Class cancelled: ${d.subject} on ${d.date}`,
+    body: `${d.subject} in room ${d.roomName} on ${when(d)} is cancelled: ${d.by} booked the room for that time.`,
+    rows: [['Class', d.subject], ...slotRows(d), ['Cancelled by', d.by]],
+    note: 'Only this date is affected; the class runs as usual on other days.',
+    link: '/timetable',
+  }),
+  class_restored: (d) => make({
+    title: `Class back on: ${d.subject} on ${d.date}`,
+    body: `${d.subject} in room ${d.roomName} on ${when(d)} goes ahead after all: the booking that replaced it was ${d.reason}.`,
+    rows: [['Class', d.subject], ...slotRows(d)],
+    link: '/timetable',
+  }),
 };
 
 export function render(type, data) {

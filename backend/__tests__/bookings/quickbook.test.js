@@ -77,13 +77,15 @@ describe('POST /api/bookings/admin/quick', () => {
     expect(res.body.conflict).toMatchObject({ type: 'timetable', label: 'your section timetable' });
   });
 
-  test("the room's own timetable applies → 409 with conflict body", async () => {
+  test("a quick book over the room's class cancels the class for that date (decision 2026-10-22)", async () => {
     const room = await createRoom();
     await insertTimetableSlot({ department: uniq('D '), semester: 1, section: 1, day_of_week: 'Wed', slot_time: '12:00-01:00', room_name: room.name, subject_name: 'Noon' });
     const slot = futureSlot({ hour: 12, day: 'Wed', minLeadHours: 0 });
     const res = await quick(admin.auth, { room_name: room.name, date: slot.dateKey, slot: 12 });
-    expect(res.status).toBe(409);
-    expect(res.body.conflict).toMatchObject({ type: 'room_timetable', subject: 'Noon', room: room.name });
+    expect(res.status).toBe(201);
+    const { rows } = await db.query(
+      "SELECT start_hour FROM room_slot_releases WHERE source_type = 'admin_booking' AND room_id = $1 AND release_date = $2 AND is_active", [room.id, slot.dateKey]);
+    expect(rows).toEqual([{ start_hour: 12 }]);
   });
 
   test('time rules still apply: slot 7 (before opening) and a past date → 400', async () => {

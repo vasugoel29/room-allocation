@@ -688,8 +688,8 @@ const RoomScheduleGrid = () => {
                     <div className="flex items-start gap-2.5">
                       <Info size={15} className="text-text-secondary shrink-0 mt-0.5" />
                       <p className="text-[11px] text-text-secondary leading-relaxed">
-                        This is a timetabled class. It can't be lifted here: the teacher cancels it for a date from their Faculty Portal
-                        (or approves a student's cancellation request), and a timetable re-import changes it for good.
+                        This is a timetabled class. Booking the room below cancels the class for that date only, and its teacher
+                        and students are notified; cancelling that booking puts the class back. A timetable re-import changes it for good.
                       </p>
                     </div>
                   ) : (

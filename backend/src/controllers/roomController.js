@@ -323,7 +323,7 @@ export const checkRoomConflict = async (req, res) => {
             subject: cls.subject_name || 'Scheduled class',
             resolution: cls.kind === 'faculty'
               ? 'Remove the timetable slot for this room and hour first.'
-              : 'This is a section class from the timetable import; cancel it for this date or re-import the timetable.',
+              : 'A section class from the timetable import. An admin booking here cancels it for this date and notifies its teacher and students.',
           });
         } else if (blocked.includes(h)) {
           conflicts.push({ type: 'timetable', hour: h, slotId: null, faculty: null, subject: 'Blocked by an admin',

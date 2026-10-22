@@ -436,7 +436,8 @@ describe('POST /api/bookings — conflicts', () => {
     // A class for some *other* section is held in this room on Wed 10-11.
     await insertTimetableSlot({ department: uniq('D '), semester: 6, section: 3, day_of_week: 'Wed', slot_time: '10:00-11:00', room_name: room.name, subject_name: 'Scheduled class', faculty_name: 'Prof Room' });
     const slot = futureSlot({ hour: 10, day: 'Wed', minLeadHours: 0 });
-    for (const who of [await createRep(), await createFaculty(), await createAdmin()]) {
+    // (An admin replaces the class instead: __tests__/bookings/adminOverClass.test.js.)
+    for (const who of [await createRep(), await createFaculty()]) {
       const res = await post(who.auth, await studentBody(room, slot));
       expect(res.status).toBe(409);
       expect(res.body).toEqual({

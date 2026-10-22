@@ -105,16 +105,28 @@ export async function checkFaculty(facultyId, direct, client, { required = true 
 
 const overlaps = (c, startMin, endMin) => overlapsMinutes(startMin, endMin, c);
 
-/** The room's own timetable: scheduled classes (by room id) and admin weekly blocks (BKG-01). */
-export async function checkRoomTimetable(client, room, t) {
+/**
+ * The room's classes during the booking that are not released for that date: one { cls, hour } per
+ * class per booked hour (NEW-P4-1: a release for 10–11 doesn't need to cover a free 11–12).
+ */
+export async function unreleasedClassesAt(client, room, t) {
   const classes = await timetableRepository.roomClasses(room.id, t.day, client);
-  // Each booked hour that has a class must be released on this date (NEW-P4-1: a release for 10–11
-  // doesn't need to cover a free 11–12).
-  let hit = null;
-  for (let h = t.startHour; h < t.endHour && !hit; h++) {
-    const cls = classes.find((c) => overlaps(c, h * 60, h * 60 + 60));
-    if (cls && !(await timetableRepository.isReleased(room.id, t.dateKey, h, h + 1, client))) hit = cls;
+  const hits = [];
+  for (let h = t.startHour; h < t.endHour; h++) {
+    const here = classes.filter((c) => overlaps(c, h * 60, h * 60 + 60));
+    if (here.length && !(await timetableRepository.isReleased(room.id, t.dateKey, h, h + 1, client))) {
+      for (const cls of here) hits.push({ cls, hour: h });
+    }
   }
+  return hits;
+}
+
+/**
+ * The room's own timetable: scheduled classes (by room id) and admin weekly blocks (BKG-01).
+ * `ignoreClasses`: an admin booking replaces the classes instead (classDisplacement.js).
+ */
+export async function checkRoomTimetable(client, room, t, { ignoreClasses = false } = {}) {
+  const hit = ignoreClasses ? null : (await unreleasedClassesAt(client, room, t))[0]?.cls;
   if (hit) {
     return bad(`Room ${room.name} has a scheduled class at this time`, 409, {
       conflict: {
