@@ -32,7 +32,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                   <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''}`}>
                     <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                   </div>
-                  <span className="text-[9px] font-bold capitalize tracking-tight">{label}</span>
+                  <span className={`text-[11px] capitalize tracking-tight font-display ${isActive ? 'font-semibold' : 'font-medium'}`}>{label}</span>
                 </>
               )}
             </NavLink>
@@ -56,12 +56,12 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                     <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''} relative`}>
                       <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                       {(id === 'history' || id === 'bookings') && !isAdmin && pendingTransferCount > 0 && ( /* NEW-FE-3 */
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[7px] font-black border-2 border-surface-low animate-pulse">
+                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-[10px] font-semibold border-2 border-surface-low animate-pulse">
                           {pendingTransferCount}
                         </span>
                       )}
                     </div>
-                    <span className="text-[9px] font-black capitalize tracking-widest">{label}</span>
+                    <span className={`text-[11px] capitalize tracking-tight font-display ${isActive ? 'font-semibold' : 'font-medium'}`}>{label}</span>
                   </>
                 )}
               </NavLink>
@@ -93,7 +93,7 @@ const BottomNav = ({ user, tabs = [], pendingTransferCount }) => {
                     <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-primary-accent/10' : ''}`}>
                       <Icon size={22} strokeWidth={isActive ? 2.5 : 2} />
                     </div>
-                    <span className="text-[9px] font-black capitalize tracking-widest">{label}</span>
+                    <span className={`text-[11px] capitalize tracking-tight font-display ${isActive ? 'font-semibold' : 'font-medium'}`}>{label}</span>
                   </>
                 )}
               </NavLink>

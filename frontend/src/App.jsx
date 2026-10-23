@@ -11,7 +11,7 @@ import { LogOut, Calendar as CalendarIcon, History, Menu, X as CloseIcon, Sun, M
 import BottomNav from './components/ui/BottomNav';
 import FloatingActions from './components/ui/FloatingActions';
 import NotificationBell from './components/ui/NotificationBell';
-import { P, can, canAny, canSeeCalendar, isAdmin } from './utils/permissions';
+import { P, can, canAny, canSeeCalendar, isAdmin, canBook } from './utils/permissions';
 import { BOOKING_RULES } from '../../shared/bookingRules.js';
 import InteractiveTutorial from './components/tutorial/InteractiveTutorial';
 
@@ -305,7 +305,7 @@ function App() {
                 <header className="relative z-50 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low border-b border-border-subtle">
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-surface-high rounded-xl text-primary-accent transition-colors"><Menu size={22} /></button>
-                    <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight capitalize font-display">
+                    <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-primary-accent leading-tight capitalize font-display">
                       {getHeaderTitle(location.pathname)}
                     </h2>
                   </div>
@@ -316,18 +316,18 @@ function App() {
                     </div>
                     {location.pathname === '/calendar' && (
                       <div data-tour="view-toggle" className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
-                        <button onClick={() => setViewMode('day')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
-                        <button onClick={() => setViewMode('week')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
+                        <button onClick={() => setViewMode('day')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white font-semibold shadow-ambient' : 'text-text-secondary font-medium hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
+                        <button onClick={() => setViewMode('week')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white font-semibold shadow-ambient' : 'text-text-secondary font-medium hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
                       </div>
                     )}
                   </div>
                 </header>
 
-                <section className="flex-1 flex flex-col overflow-hidden w-full p-2 sm:p-4 pb-20 lg:pb-0">
-                  <div className="glass rounded-2xl p-2 sm:p-4 shadow-ambient flex-1 flex flex-col overflow-hidden w-full">
+                <section className="flex-1 flex flex-col overflow-hidden w-full p-1.5 sm:p-3 pb-20 lg:pb-0">
+                  <div className="glass rounded-2xl p-1 sm:p-2 shadow-ambient flex-1 flex flex-col overflow-hidden w-full">
                     <Suspense fallback={<DashboardLoadingFallback />}>
                       <Routes>
-                      <Route path="/calendar" element={<ProtectedRoute user={user} perms={[P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN]}><Calendar onSlotClick={(slot) => { setSelectedSlot(slot); setIsModalOpen(true); }} /></ProtectedRoute>} />
+                      <Route path="/calendar" element={<ProtectedRoute user={user} perms={[P.CALENDAR, P.BOOKINGS, P.BOOKINGS_DIRECT, P.ADMIN]}><Calendar onSlotClick={canBook(user) ? (slot) => { setSelectedSlot(slot); setIsModalOpen(true); } : undefined} /></ProtectedRoute>} />
                       <Route path="/admin" element={<ProtectedRoute user={user} perms={[P.ADMIN]}><AdminDashboard /></ProtectedRoute>} />
                       <Route path="/admin/timetable" element={<Navigate to="/admin?tab=timetable" replace />} />
                       <Route path="/faculty" element={<ProtectedRoute user={user} perms={[P.FACULTY_PORTAL]}><FacultyDashboard /></ProtectedRoute>} />
@@ -363,7 +363,7 @@ function App() {
                 />
               )}
 
-              {isModalOpen && <BookingModal slot={selectedSlot} onClose={() => setIsModalOpen(false)} onSuccess={() => setIsModalOpen(false)} />}
+              {isModalOpen && canBook(user) && <BookingModal slot={selectedSlot} onClose={() => setIsModalOpen(false)} onSuccess={() => setIsModalOpen(false)} />}
               <InteractiveTutorial />
             </div>
           )

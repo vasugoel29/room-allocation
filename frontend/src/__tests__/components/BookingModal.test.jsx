@@ -220,9 +220,12 @@ describe('BookingModal', () => {
   });
 
   it('own booking: shows details and cancels via PATCH', async () => {
-    const { ue, f, onSuccess } = setup({ ctx: { bookings: [booking({ created_by: USERS.STUDENT_REP.id })] } });
+    const { ue, f, onSuccess } = setup({ ctx: { bookings: [booking({ created_by: USERS.STUDENT_REP.id, faculty_name: 'Dr Mukherjee', status: 'PENDING' })] } });
     expect(screen.getByRole('heading', { name: /booking details/i })).toBeInTheDocument();
     expect(screen.getByText('Club')).toBeInTheDocument();
+    expect(screen.getByText('Faculty')).toBeInTheDocument();
+    expect(screen.getByText('Dr Mukherjee')).toBeInTheDocument();
+    expect(screen.getByText('PENDING')).toHaveClass('text-amber-500');
     await ue.click(screen.getByRole('button', { name: /cancel booking/i }));
     await waitFor(() => expect(onSuccess).toHaveBeenCalled());
     expect(fetchCalls(f)).toEqual([['PATCH', '/api/bookings/77/cancel', undefined]]);

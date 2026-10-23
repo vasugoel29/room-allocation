@@ -70,10 +70,27 @@ describe('HistoryView tabs', () => {
     expect(tableRooms()).toContain('R-5');
   });
 
-  it('search filters by room/class/purpose', async () => {
-    const { ue } = setup();
-    await ue.type(screen.getByPlaceholderText('Search bookings...'), 'purpose 2');
-    expect(tableRooms()).toEqual(['R-2']);
+  it('search filters by room/class/purpose/faculty', async () => {
+    const { ue } = setup({
+      ctx: {
+        bookings: [
+          b(1, 21, 14, { faculty_name: 'Dr Mukherjee' }),
+          b(2, 22, 9, { faculty_name: 'Prof Raman' }),
+        ],
+      },
+    });
+    await ue.type(screen.getByPlaceholderText('Search bookings...'), 'Mukherjee');
+    expect(tableRooms()).toEqual(['R-1']);
+  });
+
+  it('renders faculty name in table when present', () => {
+    setup({
+      ctx: {
+        bookings: [b(1, 21, 14, { faculty_name: 'Dr Mukherjee' })],
+      },
+    });
+    expect(screen.getByText('Faculty')).toBeInTheDocument();
+    expect(screen.getAllByText('Dr Mukherjee')).toHaveLength(2); // desktop table + mobile cards
   });
 
   it('empty state', async () => {

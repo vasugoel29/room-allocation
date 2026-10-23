@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect, useRef } from "react";
 import { AppContext } from "../../context/AppContext";
 import toast from "react-hot-toast";
-import { X, AlertCircle, CheckCircle } from "lucide-react";
+import { X, AlertCircle, CheckCircle, GraduationCap } from "lucide-react";
 import { bookingService } from "../../services/bookingService";
 import { roomService } from "../../services/roomService";
 import { useSearchDebounce } from "../../hooks/useSearchDebounce";
@@ -24,6 +24,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
     refreshAllData,
   } = useContext(AppContext);
   const modalRef = useRef(null);
+
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -299,10 +300,10 @@ function BookingModal({ slot, onClose, onSuccess }) {
           return (
             <h3
               id="modal-title"
-              className="text-2xl sm:text-3xl font-extrabold text-text-primary mb-2 flex items-center gap-4 flex-wrap font-display capitalize tracking-tight"
+              className="text-xl sm:text-2xl font-bold text-text-primary mb-2 flex items-center gap-3 flex-wrap font-display tracking-tight"
             >
               {headerTitle}
-              <span className="text-[10px] sm:text-[11px] font-extrabold px-3 py-1 rounded-lg bg-tonal-secondary/10 text-primary capitalize tracking-widest">
+              <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-tonal-secondary/10 text-primary">
                 {slot.day}{formattedDate ? `, ${formattedDate}` : ""} @ {slot.hour}:00
               </span>
             </h3>
@@ -311,19 +312,19 @@ function BookingModal({ slot, onClose, onSuccess }) {
         <div className="mb-6 sm:mb-8" />
 
         {error && (
-          <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-red-500/10 text-red-500 text-xs sm:text-sm flex items-center gap-3 font-extrabold font-display capitalize tracking-tight">
+          <div className="mb-6 sm:mb-8 p-4 rounded-2xl bg-red-500/10 text-red-500 text-xs sm:text-sm flex items-center gap-3 font-semibold font-display tracking-tight">
             <AlertCircle size={20} />
             {error}
           </div>
         )}
 
         {isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium') && (
-          <div className="mb-6 sm:mb-8 p-5 rounded-[1.75rem] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-xs sm:text-sm flex flex-col gap-2 font-display capitalize tracking-tight">
-            <div className="flex items-center gap-3 font-extrabold text-sm">
+          <div className="mb-6 sm:mb-8 p-5 rounded-[1.75rem] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-500 text-xs sm:text-sm flex flex-col gap-2 font-display tracking-tight">
+            <div className="flex items-center gap-3 font-bold text-sm">
               <AlertCircle size={20} />
               Booking Restricted
             </div>
-            <p className="font-bold opacity-80 normal-case">
+            <p className="font-medium opacity-80 normal-case">
               {selectedRoomData.name} is a {selectedRoomData.type}. These spaces are reserved for academic/official activities and can only be booked by Faculty or Admin roles.
             </p>
           </div>
@@ -343,18 +344,22 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 <div className="bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-3xl p-6 space-y-4 shadow-sm">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                      <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block mb-1">
                         Room
                       </span>
-                      <span className="text-sm font-black text-text-primary">
+                      <span className="text-sm font-semibold text-text-primary">
                         {selectedRoomData?.name || selectedRoom}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                      <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block mb-1">
                         Status
                       </span>
-                      <span className="text-xs font-extrabold px-2.5 py-1 rounded bg-green-500/10 text-green-500 capitalize inline-block">
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize inline-block ${
+                        existingBooking.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' :
+                        existingBooking.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500' :
+                        'bg-green-500/10 text-green-500'
+                      }`}>
                         {existingBooking.status}
                       </span>
                     </div>
@@ -363,21 +368,33 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   <div className="grid grid-cols-2 gap-4">
                     {existingBooking.class_name && (
                       <div>
-                        <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block mb-1">
                           Class
                         </span>
-                        <span className="text-sm font-black text-text-primary">
+                        <span className="text-sm font-semibold text-text-primary">
                           {existingBooking.class_name}
                         </span>
                       </div>
                     )}
 
-                    {existingBooking.purpose && (
+                    {existingBooking.faculty_name && (
                       <div>
-                        <span className="text-[10px] font-extrabold text-text-secondary capitalize tracking-wider opacity-40 block mb-1">
+                        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block mb-1">
+                          Faculty
+                        </span>
+                        <span className="text-sm font-semibold text-text-primary flex items-center gap-1.5">
+                          <GraduationCap size={14} className="text-primary shrink-0" />
+                          {existingBooking.faculty_name}
+                        </span>
+                      </div>
+                    )}
+
+                    {existingBooking.purpose && (
+                      <div className={existingBooking.faculty_name ? "col-span-2" : ""}>
+                        <span className="text-xs font-semibold text-text-secondary uppercase tracking-wider block mb-1">
                           Purpose
                         </span>
-                        <span className="text-sm font-black text-text-primary font-body">
+                        <span className="text-sm font-medium text-text-primary font-body">
                           {existingBooking.purpose}
                         </span>
                       </div>
@@ -391,17 +408,17 @@ function BookingModal({ slot, onClose, onSuccess }) {
                       type="button"
                       onClick={handleCancel}
                       disabled={loading}
-                      className="flex-1 bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600 disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest flex items-center justify-center gap-3"
+                      className="flex-1 bg-red-500 text-white shadow-lg shadow-red-500/20 hover:bg-red-600 disabled:opacity-50 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] font-display flex items-center justify-center gap-2"
                     >
                       {loading ? "Processing..." : (
                         <>
-                          <X size={20} />
+                          <X size={18} />
                           Cancel Booking
                         </>
                       )}
                     </button>
                   ) : (
-                    <div className="flex-1 bg-tonal-secondary/5 text-text-secondary py-5 px-6 rounded-3xl text-center text-xs font-bold opacity-60 leading-relaxed border border-border/10">
+                    <div className="flex-1 bg-tonal-secondary/5 text-text-secondary py-4 px-6 rounded-2xl text-center text-xs font-medium opacity-60 leading-relaxed border border-border/10">
                       Only the organizer or administration can revoke this booking.
                     </div>
                   )}
@@ -414,11 +431,12 @@ function BookingModal({ slot, onClose, onSuccess }) {
           return (
             <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
               {existingBooking && (
-                <div className="rounded-2xl border border-border/20 bg-surface-lowest px-5 py-4 text-sm" data-testid="booked-by">
-                  <span className="block text-[10px] font-extrabold tracking-wider text-text-secondary opacity-60">Currently booked by</span>
-                  <span className="font-bold text-text-primary">
+                <div className="rounded-2xl border border-border/20 bg-surface-lowest px-4 py-3 text-sm" data-testid="booked-by">
+                  <span className="block text-xs font-semibold tracking-wider text-text-secondary uppercase mb-0.5">Currently booked by</span>
+                  <span className="text-sm font-semibold text-text-primary">
                     {existingBooking.user_name || 'Another user'}
                     {existingBooking.class_name && existingBooking.class_name !== existingBooking.user_name ? ` · ${existingBooking.class_name}` : ''}
+                    {existingBooking.faculty_name ? ` · Faculty: ${existingBooking.faculty_name}` : ''}
                   </span>
                   {transferBlocked && (
                     <span className="mt-1 block text-xs text-text-secondary">This booking can't be transferred (it is past, not active, or you can't request transfers).</span>
@@ -472,7 +490,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">
+                <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider ml-0.5 font-display">
                   Logistics & Context
                 </label>
                 <textarea
@@ -490,17 +508,17 @@ function BookingModal({ slot, onClose, onSuccess }) {
                   <button
                     type="submit"
                     disabled={loading || transferBlocked || (isStudent && selectedRoomData && (selectedRoomData.type === 'Committee Room' || selectedRoomData.type === 'Auditorium'))}
-                    className={`flex-[2] flex items-center justify-center gap-3 ${existingBooking ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-5 rounded-[2rem] text-sm font-extrabold transition-all active:scale-[0.98] font-display capitalize tracking-widest`}
+                    className={`flex-[2] flex items-center justify-center gap-2.5 ${existingBooking ? "bg-tertiary text-white shadow-tertiary" : "bg-primary text-white shadow-ambient"} disabled:opacity-50 py-3.5 sm:py-4 rounded-2xl text-xs sm:text-sm font-semibold transition-all active:scale-[0.98] font-display`}
                   >
                     {loading ? "Processing..." : (
                       <>
                         {existingBooking ? "Request Transfer" : "Finalize Allocation"}
-                        <CheckCircle size={20} />
+                        <CheckCircle size={18} />
                       </>
                     )}
                   </button>
                 ) : (
-                  <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-5 rounded-2xl text-center text-[10px] font-extrabold capitalize tracking-widest opacity-40">
+                  <div className="flex-1 bg-tonal-secondary/10 text-text-secondary py-3.5 rounded-2xl text-center text-xs font-semibold uppercase tracking-wider opacity-60">
                     Read Only Registry
                   </div>
                 )}

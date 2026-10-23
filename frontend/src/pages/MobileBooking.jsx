@@ -216,7 +216,7 @@ function MobileBooking({ onBack }) {
         {step === 1 && (
           <div className="space-y-6 animate-in slide-in-from-right duration-300">
             <div className="space-y-3">
-              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-50">
+              <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-2 font-display">
                 <CalendarIcon size={14} className="text-primary" />
                 Select Date
               </label>
@@ -228,7 +228,7 @@ function MobileBooking({ onBack }) {
             </div>
 
             <div className="space-y-3">
-              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display opacity-50">
+              <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-2 font-display">
                 <Clock size={14} className="text-primary" />
                 Select Start Time
               </label>
@@ -243,7 +243,7 @@ function MobileBooking({ onBack }) {
                       key={hour}
                       disabled={isPast}
                       onClick={() => setSelectedHour(hour)}
-                      className={`py-3.5 rounded-xl text-xs font-extrabold transition-all font-display ${isPast ? 'opacity-10 grayscale cursor-not-allowed' : selectedHour === hour ? 'bg-primary text-white shadow-ambient' : 'bg-tonal-secondary/10 text-text-primary'}`}
+                      className={`py-3 rounded-xl text-xs transition-all font-display ${isPast ? 'opacity-20 grayscale cursor-not-allowed' : selectedHour === hour ? 'bg-primary text-white font-semibold shadow-ambient' : 'bg-surface-mid/60 text-text-primary font-medium hover:bg-surface-mid'}`}
                     >
                       {hour.toString().padStart(2, '0')}:00
                     </button>
@@ -268,10 +268,10 @@ function MobileBooking({ onBack }) {
                 }
                 setStep(2);
               }}
-              className="w-full bg-primary text-white font-extrabold py-5 rounded-2xl shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-lg mt-2 font-display capitalize tracking-tight"
+              className="w-full bg-primary text-white font-semibold py-4 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm mt-2 font-display capitalize"
             >
               Next: Select Room
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </button>
           </div>
         )}
@@ -285,11 +285,11 @@ function MobileBooking({ onBack }) {
                    <CalendarIcon size={16} />
                 </div>
                 <div className="font-display">
-                   <p className="text-[9px] font-extrabold capitalize tracking-widest text-text-secondary opacity-60">Selected Time</p>
-                   <p className="text-xs font-extrabold text-text-primary capitalize tracking-tight">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
+                   <p className="text-[11px] font-medium text-text-secondary">Selected Time</p>
+                   <p className="text-xs font-semibold text-text-primary capitalize">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                 </div>
               </div>
-              <button onClick={() => setStep(1)} className="text-primary font-bold text-[10px] capitalize tracking-wider px-2 py-1 rounded-lg bg-primary/5 hover:bg-primary/10 font-display transition-colors">Edit</button>
+              <button onClick={() => setStep(1)} className="text-primary font-semibold text-xs px-2.5 py-1 rounded-lg bg-primary/5 hover:bg-primary/10 font-display transition-colors">Edit</button>
             </div>
 
             {/* Filters */}
@@ -301,13 +301,13 @@ function MobileBooking({ onBack }) {
                     placeholder="Quick search room..."
                     value={roomSearch}
                     onChange={(e) => setRoomSearch(e.target.value)}
-                    className="w-full bg-surface-low border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-primary/50 transition-all pl-9 h-10 font-body font-bold text-text-primary placeholder:text-text-secondary/40"
+                    className="w-full bg-surface-low border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-primary/50 transition-all pl-9 h-10 font-body font-medium text-text-primary placeholder:text-text-secondary/40"
                   />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/40" size={14} />
                 </div>
                 <button 
                   onClick={() => setSmartRoomFilter(!smartRoomFilter)}
-                  className={`px-3.5 rounded-xl text-[10px] font-bold capitalize tracking-wider transition-all flex items-center gap-1.5 h-10 font-display border ${smartRoomFilter ? 'bg-tertiary text-white border-tertiary shadow-sm' : 'bg-surface-low text-text-secondary border-border-subtle hover:text-text-primary'}`}
+                  className={`px-3.5 rounded-xl text-xs transition-all flex items-center gap-1.5 h-10 font-display border ${smartRoomFilter ? 'bg-tertiary text-white font-semibold border-tertiary shadow-sm' : 'bg-surface-low text-text-secondary font-medium border-border-subtle hover:text-text-primary'}`}
                 >
                   <Monitor size={14} />
                   <span>AC & Projector</span>
@@ -317,15 +317,15 @@ function MobileBooking({ onBack }) {
               <div className="space-y-2">
                 {/* Floor Level */}
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider ml-0.5 opacity-60 font-display">Floor Level</label>
+                  <label className="text-xs font-semibold text-text-secondary capitalize font-display">Floor Level</label>
                   <div className="flex bg-surface-low p-1 rounded-xl border border-border-subtle gap-1">
                     {['all', '0', '1', '2', '3'].map(f => (
                       <button
                         key={f}
                         onClick={() => setFloorFilter(f)}
-                        className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all font-display ${floorFilter === f ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                        className={`flex-1 py-1 rounded-lg text-xs transition-all font-display ${floorFilter === f ? 'bg-primary text-white font-semibold shadow-sm' : 'text-text-secondary font-medium hover:text-text-primary'}`}
                       >
-                        {f === 'all' ? 'ALL' : f}
+                        {f === 'all' ? 'All' : f}
                       </button>
                     ))}
                   </div>
@@ -333,7 +333,7 @@ function MobileBooking({ onBack }) {
 
                 {/* Room Type */}
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider ml-0.5 opacity-60 font-display">Room Type</label>
+                  <label className="text-xs font-semibold text-text-secondary capitalize font-display">Room Type</label>
                   <div className="flex overflow-x-auto no-scrollbar gap-1.5 py-0.5">
                     {[
                       { id: 'all', label: 'All' },
@@ -347,7 +347,7 @@ function MobileBooking({ onBack }) {
                       <button
                         key={t.id}
                         onClick={() => setRoomTypeFilter(t.id)}
-                        className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap font-display border ${roomTypeFilter === t.id ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface-low text-text-secondary border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
+                        className={`px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap font-display border ${roomTypeFilter === t.id ? 'bg-primary text-white font-semibold border-primary shadow-sm' : 'bg-surface-low text-text-secondary font-medium border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
                       >
                         {t.label}
                       </button>
@@ -357,13 +357,13 @@ function MobileBooking({ onBack }) {
 
                 {/* Block / Building */}
                 <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider ml-0.5 opacity-60 font-display">Block / Building</label>
+                  <label className="text-xs font-semibold text-text-secondary capitalize font-display">Block / Building</label>
                   <div className="flex overflow-x-auto no-scrollbar gap-1.5 py-0.5">
                     {blocks.map(b => (
                       <button
                         key={b}
                         onClick={() => setBlockFilter(b)}
-                        className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap font-display border ${blockFilter === b ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface-low text-text-secondary border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
+                        className={`px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap font-display border ${blockFilter === b ? 'bg-primary text-white font-semibold border-primary shadow-sm' : 'bg-surface-low text-text-secondary font-medium border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
                       >
                         {b === 'all' ? 'All Blocks' : b}
                       </button>
@@ -373,9 +373,9 @@ function MobileBooking({ onBack }) {
               </div>
             </div>
 
-            <div className="space-y-2.5 pt-1">
-              <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider flex items-center gap-1.5 font-display opacity-60 ml-0.5">
-                <Hash size={12} className="text-primary" />
+            <div className="space-y-2 pt-1">
+              <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-1.5 font-display">
+                <Hash size={13} className="text-primary" />
                 Available Spaces ({availableRooms.length})
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -434,7 +434,7 @@ function MobileBooking({ onBack }) {
             <button 
               disabled={!selectedRoom}
               onClick={() => setStep(3)}
-              className="w-full bg-primary text-white font-extrabold py-3.5 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm disabled:opacity-40 font-display capitalize tracking-tight mt-2"
+              className="w-full bg-primary text-white font-semibold py-3.5 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm disabled:opacity-40 font-display capitalize mt-2"
             >
               Next: Details
               <ChevronRight size={18} />
@@ -445,23 +445,23 @@ function MobileBooking({ onBack }) {
         {/* Step 3: Details & Confirm */}
         {step === 3 && (
           <div className="space-y-4 animate-in slide-in-from-right duration-300">
-            <div className="bg-surface-low p-4 rounded-2xl shadow-sm border border-border-subtle space-y-3.5 font-display">
+            <div className="bg-surface-low p-4 rounded-2xl shadow-sm border border-border-subtle space-y-3 font-display">
                <div className="flex items-center gap-4">
                   <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center shadow-ambient shrink-0">
                      <Hash size={22} strokeWidth={2.5}/>
                   </div>
                   <div>
-                    <h2 className="text-lg font-extrabold text-text-primary tracking-tight leading-none mb-1 capitalize">Room {rooms.find(r => r.id === selectedRoom)?.name}</h2>
-                    <p className="text-[10px] font-bold text-text-secondary capitalize tracking-wider opacity-60">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
+                    <h2 className="text-base font-semibold text-text-primary tracking-tight leading-none mb-1 capitalize">Room {rooms.find(r => r.id === selectedRoom)?.name}</h2>
+                    <p className="text-xs font-normal text-text-secondary capitalize">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                   </div>
                </div>
-               <button onClick={() => setStep(2)} className="w-full py-2 bg-surface-mid/50 rounded-xl text-[10px] font-bold capitalize tracking-wider text-primary border border-border-subtle hover:bg-surface-mid">Change Selection</button>
+               <button onClick={() => setStep(2)} className="w-full py-2 bg-surface-mid/50 rounded-xl text-xs font-medium text-primary border border-border-subtle hover:bg-surface-mid">Change Selection</button>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-text-secondary capitalize tracking-wider flex items-center gap-1.5 mb-1 font-display opacity-60">
-                  <Clock size={12} className="text-primary" />
+                <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-1.5 mb-1 font-display">
+                  <Clock size={13} className="text-primary" />
                   Purpose of Booking
                 </label>
                 <textarea 
@@ -475,17 +475,17 @@ function MobileBooking({ onBack }) {
 
               {isStudent && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-text-secondary capitalize tracking-wider flex items-center gap-1.5 mb-1 font-display opacity-60">
-                    <User size={12} className="text-primary" />
+                  <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-1.5 mb-1 font-display">
+                    <User size={13} className="text-primary" />
                     Select Faculty
                   </label>
                   <div className="relative">
                     <button 
                       type="button"
                       onClick={() => setIsFacultyOpen(!isFacultyOpen)}
-                      className="w-full bg-surface-low border border-border-subtle rounded-xl px-4 py-3 text-xs font-bold text-text-primary focus:outline-none transition-all flex items-center justify-between font-display capitalize tracking-tight"
+                      className="w-full bg-surface-low border border-border-subtle rounded-xl px-4 py-3 text-xs font-medium text-text-primary focus:outline-none transition-all flex items-center justify-between font-display capitalize"
                     >
-                      <span className={selectedFaculty ? 'text-text-primary' : 'text-text-secondary opacity-60'}>
+                      <span className={selectedFaculty ? 'text-text-primary font-semibold' : 'text-text-secondary opacity-60'}>
                         {selectedFaculty ? faculties.find(f => String(f.id) === String(selectedFaculty))?.name : 'Choose a Faculty...'}
                       </span>
                       <ChevronRight size={16} className={`transition-transform duration-200 text-secondary ${isFacultyOpen ? 'rotate-90' : ''}`} />

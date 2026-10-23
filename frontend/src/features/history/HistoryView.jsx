@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { X, Clock, User, Hash, Trash2, AlertCircle, Check, ArrowRightLeft } from 'lucide-react';
+import { X, Clock, User, Hash, Trash2, AlertCircle, Check, ArrowRightLeft, GraduationCap } from 'lucide-react';
 import { AppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/modals/ConfirmModal';
@@ -83,7 +83,8 @@ const HistoryView = ({ onClose }) => {
       const matchesRoom = item.room_name?.toLowerCase().includes(search);
       const matchesClass = item.class_name?.toLowerCase().includes(search);
       const matchesPurpose = item.purpose?.toLowerCase().includes(search);
-      if (!matchesRoom && !matchesClass && !matchesPurpose) return false;
+      const matchesFaculty = item.faculty_name?.toLowerCase().includes(search);
+      if (!matchesRoom && !matchesClass && !matchesPurpose && !matchesFaculty) return false;
     }
 
     const bEnd = new Date(item.end_time);
@@ -275,10 +276,11 @@ const HistoryView = ({ onClose }) => {
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="text-text-secondary text-[10px] font-bold tracking-wider opacity-60 border-b border-border-subtle">
+                  <tr className="text-text-secondary text-xs font-semibold uppercase tracking-wider border-b border-border-subtle">
                     <th className="py-2.5 px-4">Room</th>
                     <th className="py-2.5 px-4 text-center">Time</th>
                     <th className="py-2.5 px-4 text-center">Reference</th>
+                    <th className="py-2.5 px-4 text-center">Faculty</th>
                     <th className="py-2.5 px-4">Details</th>
                     <th className="py-2.5 px-4 text-right">Actions</th>
                   </tr>
@@ -294,22 +296,22 @@ const HistoryView = ({ onClose }) => {
                           <div className="flex flex-col items-start gap-1">
                             <span className="font-bold text-text-primary text-base tracking-tight leading-none font-display">{item.room_name}</span>
                             {(item.status === 'PENDING') && (
-                              <span className="px-2 py-0.5 rounded-md bg-tonal-tertiary text-tertiary text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-tonal-tertiary text-tertiary text-[10px] font-semibold">
                                 Pending
                               </span>
                             )}
                             {(item.status === 'ACTIVE' || item.status === 'CONFIRMED' || item.status == null) && item.type === 'BOOKING' && (
-                              <span className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 text-[10px] font-semibold">
                                 Valid
                               </span>
                             )}
                             {(item.status === 'FREED') && (
-                              <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary text-[10px] font-semibold">
                                 Freed
                               </span>
                             )}
                             {(item.status === 'CANCELLED') && (
-                              <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 text-[9px] font-bold">
+                              <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 text-[10px] font-semibold">
                                 Revoked
                               </span>
                             )}
@@ -331,6 +333,16 @@ const HistoryView = ({ onClose }) => {
                           {item.type === 'OVERRIDE' ? <AlertCircle size={13} className="text-secondary" /> : <User size={13} className="text-primary" />}
                           {item.class_name}
                         </div>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        {item.faculty_name ? (
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-lowest border border-border-subtle text-text-secondary text-xs font-semibold">
+                            <GraduationCap size={13} className="text-secondary" />
+                            {item.faculty_name}
+                          </div>
+                        ) : (
+                          <span className="text-text-secondary opacity-40 text-xs">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-4 max-w-[200px]">
                         <p className="text-text-secondary text-xs italic line-clamp-2 leading-relaxed">
@@ -404,6 +416,11 @@ const HistoryView = ({ onClose }) => {
                      <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-secondary font-medium flex items-center gap-1.5">
                        {item.type === 'OVERRIDE' ? <AlertCircle size={12} /> : <User size={12} />} {item.class_name}
                      </div>
+                     {item.faculty_name && (
+                       <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-secondary font-medium flex items-center gap-1.5">
+                         <GraduationCap size={12} className="text-secondary" /> {item.faculty_name}
+                       </div>
+                     )}
                   </div>
 
                   {item.purpose && (

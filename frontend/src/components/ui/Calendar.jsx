@@ -7,11 +7,12 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = BOOKING_START_HOURS; // 08:00–20:00, the hours the server accepts (shared/bookingRules.js)
 
 import PageSearch from './PageSearch';
-import { booksDirect } from '../../utils/permissions';
+import { booksDirect, canBook } from '../../utils/permissions';
 import { BOOKING_START_HOURS } from '../../../../shared/bookingRules.js';
 
 function Calendar({ onSlotClick }) {
   const { bookings, rooms, roomsError, fetchRooms, availability, viewMode, setViewMode, selectedDay, setSelectedDay, filters, user } = useContext(AppContext);
+  const canUserBook = canBook(user);
   const onDayChange = setSelectedDay;
   const [now, setNow] = useState(new Date());
   const [expandedSlots, setExpandedSlots] = useState({}); // Key: `${dateStr}-${hour}`
@@ -109,22 +110,19 @@ function Calendar({ onSlotClick }) {
 
   return (
     <div data-tour="calendar-grid" className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
-
-
-      <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar p-2 sm:p-4">
-        <div className={`flex flex-col min-h-full w-full relative layout-transition bg-surface-low border border-border-subtle rounded-2xl ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
-          
+      <div className="overflow-auto flex-1 w-full no-scrollbar relative rounded-2xl border border-border-subtle bg-surface-low">
+        <table className={`border-separate border-spacing-0 w-full ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[760px]'}`}>
           {/* Days Header (Sticky Anchor Top) */}
-          <div className="sticky top-0 z-20 bg-surface-low border-b border-border-subtle shadow-xs rounded-t-2xl">
-            <div className={`grid gap-0 ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-              {/* Intersection Cell (Sticky Anchor Top-Left) */}
-              <div className="sticky left-0 z-30 py-4 flex items-center justify-center bg-surface-low border-r border-border-subtle rounded-tl-2xl">
-                <Clock size={16} className="text-text-secondary opacity-50" />
-              </div>
-              {weekDates.filter(d => displayDays.includes(d.dateStr)).map((day, idx, arr) => (
-                <div 
+          <thead>
+            <tr>
+              {/* Corner Intersection Cell (Sticky Anchor Top-Left) */}
+              <th className="sticky top-0 left-0 z-30 w-[55px] sm:w-[110px] min-w-[55px] sm:min-w-[110px] py-3.5 bg-surface-low border-b border-r border-border-subtle text-center align-middle">
+                <Clock size={16} className="text-text-secondary opacity-50 mx-auto" />
+              </th>
+              {weekDates.filter(d => displayDays.includes(d.dateStr)).map((day) => (
+                <th 
                   key={day.dateStr} 
-                  className={`py-4 px-2 text-center transition-all border-l border-border-subtle flex items-center justify-center bg-surface-low ${idx === arr.length - 1 ? 'rounded-tr-2xl' : ''} ${viewMode === 'week' ? 'cursor-pointer hover:bg-primary-accent/5' : ''}`}
+                  className={`sticky top-0 z-20 py-3.5 px-2 text-center transition-all border-b border-l border-border-subtle bg-surface-low min-w-[130px] sm:min-w-[160px] ${viewMode === 'week' ? 'cursor-pointer hover:bg-surface-mid/40' : ''}`}
                   onClick={() => {
                     if (viewMode === 'week') {
                       onDayChange(day.dateStr);
@@ -132,73 +130,58 @@ function Calendar({ onSlotClick }) {
                     }
                   }}
                 >
-                  <h3 className="text-[10px] sm:text-xs font-black tracking-tighter sm:tracking-widest transition-colors text-text-secondary">
-                    {day.day} <span className="hidden sm:inline opacity-40 ml-1">{day.date}</span>
+                  <h3 className="text-xs font-semibold text-text-secondary font-display">
+                    {day.day} <span className="opacity-50 font-normal ml-1">{day.date}</span>
                   </h3>
-                </div>
+                </th>
               ))}
-            </div>
-          </div>
+            </tr>
+          </thead>
 
-          <div className="relative flex-1 flex flex-col w-full">
-            {timePos && (
-              <div 
-                className="absolute left-0 right-0 z-20 pointer-events-none transition-all duration-1000"
-                style={{ top: `${timePos.percentage}%` }}
-              >
-                <div className="flex items-center w-full">
-                  <div className="w-[50px] sm:w-[120px] sticky left-0 z-20 flex justify-end pr-1 sm:pr-2">
-                    <span className="bg-tertiary text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded shadow-tertiary whitespace-nowrap">
-                      {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                    </span>
-                  </div>
-                  <div className="flex-1 h-[1px] sm:h-[1.5px] bg-tertiary relative">
-                    <div className="absolute left-0 top-1/2 -translate-y-1/2 w-2 h-2 sm:w-2.5 sm:h-2.5 bg-tertiary rounded-full shadow-tertiary"></div>
-                  </div>
-                </div>
-              </div>
-            )}
-
+          <tbody>
             {roomsError && rooms.length === 0 ? (
-              <div role="alert" className="flex flex-col items-center justify-center py-20 bg-tonal-secondary/5 flex-1 p-8 rounded-[2rem] m-4 gap-4">
-                <p className="text-text-secondary text-base sm:text-lg font-extrabold font-display text-center">Couldn&apos;t load rooms. Check your connection and try again.</p>
-                <button type="button" onClick={() => fetchRooms()} className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-bold">Retry</button>
-              </div>
+              <tr>
+                <td colSpan={displayDays.length + 1} className="py-20 text-center">
+                  <div role="alert" className="flex flex-col items-center justify-center p-8 gap-4 max-w-md mx-auto">
+                    <p className="text-text-secondary text-sm font-semibold font-display text-center">Couldn&apos;t load rooms. Check your connection and try again.</p>
+                    <button type="button" onClick={() => fetchRooms()} className="px-4 py-2 rounded-xl bg-primary text-white text-xs font-semibold">Retry</button>
+                  </div>
+                </td>
+              </tr>
             ) : rooms.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 bg-tonal-secondary/5 flex-1 p-8 rounded-[2rem] m-4">
-                <div className="p-6 bg-tonal-secondary/10 rounded-full mb-6">
-                  <Filter className="text-secondary/60" size={48} strokeWidth={1.5} />
-                </div>
-                <p className="text-text-secondary text-base sm:text-lg font-extrabold capitalize tracking-widest opacity-40 font-display text-center">No structural matches found</p>
-              </div>
-            ) : (
-              filteredHours.map((hour, hourIdx) => {
-                const isLastHour = hourIdx === filteredHours.length - 1;
-                return (
-                  <div 
-                    key={hour} 
-                    className={`flex-1 grid gap-0 group layout-transition min-h-[90px] sm:min-h-[100px] transition-colors border-b border-border-subtle last:border-b-0 ${isLastHour ? 'rounded-b-2xl' : ''} ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}
-                  >
-                    {/* Time Label Column (Sticky Anchor Left) */}
-                    <div className={`sticky left-0 z-10 flex flex-col items-center justify-center transition-colors bg-surface-low border-r border-border-subtle ${isLastHour ? 'rounded-bl-2xl' : ''}`}>
-                      <span className="text-[10px] sm:text-xs font-black text-text-primary">{String(hour).padStart(2, '0')}:00</span>
-                      <span className="text-[8px] sm:text-[9px] text-text-secondary font-bold opacity-40">{String(hour + 1).padStart(2, '0')}:00</span>
+              <tr>
+                <td colSpan={displayDays.length + 1} className="py-20 text-center">
+                  <div className="flex flex-col items-center justify-center p-8 max-w-md mx-auto">
+                    <div className="p-5 bg-surface-mid/50 rounded-full mb-4">
+                      <Filter className="text-secondary/60" size={40} strokeWidth={1.5} />
                     </div>
+                    <p className="text-text-secondary text-sm font-semibold opacity-60 font-display text-center">No structural matches found</p>
+                  </div>
+                </td>
+              </tr>
+            ) : (
+              filteredHours.map((hour) => {
+                return (
+                  <tr key={hour} className="group hover:bg-surface-lowest/20 transition-colors">
+                    {/* Time Label Column (Sticky Anchor Left) */}
+                    <td className="sticky left-0 z-10 w-[55px] sm:w-[110px] min-w-[55px] sm:min-w-[110px] py-3.5 bg-surface-low border-r border-b border-border-subtle text-center align-middle">
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-xs font-semibold text-text-primary font-display">{String(hour).padStart(2, '0')}:00</span>
+                        <span className="text-[11px] font-normal text-text-secondary opacity-60 font-display">{String(hour + 1).padStart(2, '0')}:00</span>
+                      </div>
+                    </td>
 
-                    {displayDays.map((dateStr, dIdx) => {
+                    {displayDays.map((dateStr) => {
                       const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
                       const dayLabel = currentWeekDay?.day || getDayOfWeek(dateStr);
                       const dateObj = currentWeekDay?.fullDate || new Date(`${dateStr}T00:00:00`);
-                      const isBottomRight = isLastHour && dIdx === displayDays.length - 1;
                       
                       return (
-                        <div 
+                        <td 
                           key={dateStr} 
-                          className={`relative p-2 h-full transition-all border-l border-border-subtle hover:bg-tonal-secondary/5 ${isBottomRight ? 'rounded-br-2xl' : ''}`}
+                          className="p-2 border-b border-l border-border-subtle align-top min-w-[130px] sm:min-w-[160px]"
                         >
-                          <div className="absolute inset-0 z-0 transition-opacity duration-500 opacity-0" />
-                          
-                          <div className={`relative z-10 h-full overflow-y-auto no-scrollbar pt-1 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-2'}`}>
+                          <div className={`h-full overflow-y-auto no-scrollbar pt-0.5 ${viewMode === 'day' ? 'pill-grid' : 'flex flex-col gap-1.5'}`}>
                             {(() => {
                               const slotRooms = [...filteredRooms]
                                 .filter(room => {
@@ -230,48 +213,61 @@ function Calendar({ onSlotClick }) {
                                   {displayedRooms.map(room => {
                                     const booking = bookingAt(roomIndex, room.id, dateStr, hour);
                                     if (booking) {
+                                      const facultySuffix = booking.faculty_name ? ` (Faculty: ${booking.faculty_name})` : '';
+                                      const title = `${room.name} - Booked for ${booking.class_name || booking.purpose}${facultySuffix}`;
+                                      const isClickable = canUserBook && typeof onSlotClick === 'function';
+
                                       return (
                                         <button
                                           type="button"
                                           key={room.id}
-                                          onClick={(e) => {
+                                          onClick={isClickable ? (e) => {
                                             e.stopPropagation();
                                             onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id, booking });
-                                          }}
-                                          className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all opacity-45 hover:opacity-100 focus-visible:opacity-100 text-left"
-                                          title={`${room.name} - Booked for ${booking.class_name || booking.purpose}`}
+                                          } : undefined}
+                                          tabIndex={isClickable ? 0 : -1}
+                                          aria-disabled={!isClickable}
+                                          className={`rounded-xl room-card transform transition-all opacity-45 hover:opacity-100 focus-visible:opacity-100 text-left ${
+                                            isClickable ? 'hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer' : 'cursor-default'
+                                          }`}
+                                          title={title}
                                         >
-                                          <span className="flex flex-col text-left overflow-hidden py-1.5">
-                                            <span className="font-black truncate tracking-tight text-xs sm:text-sm">{room.name}</span>
-                                            <span className="text-[9px] font-bold text-text-secondary opacity-65 truncate block max-w-[85px] sm:max-w-[120px] leading-tight mt-0.5">
+                                          <span className="flex flex-col text-left overflow-hidden py-1">
+                                            <span className="font-semibold truncate tracking-tight text-xs font-display">{room.name}</span>
+                                            <span className="text-[11px] font-normal text-text-secondary opacity-70 truncate block max-w-[85px] sm:max-w-[120px] leading-tight mt-0.5">
                                               {booking.class_name || booking.purpose}
                                             </span>
                                           </span>
                                           <span className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0" aria-hidden="true">
-                                            <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
-                                            <Monitor size={isMobile ? 10 : 12} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
+                                            <Wind size={isMobile ? 11 : 13} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
+                                            <Monitor size={isMobile ? 11 : 13} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
                                           </span>
                                         </button>
                                       );
                                     }
 
+                                    const isClickable = canUserBook && typeof onSlotClick === 'function';
                                     return (
                                       <button
                                         type="button"
                                         key={room.id}
-                                        onClick={(e) => {
+                                        onClick={isClickable ? (e) => {
                                           e.stopPropagation();
                                           onSlotClick({ day: dayLabel, hour, date: dateObj, room_id: room.id });
-                                        }}
-                                        className="rounded-xl room-card hover:translate-y-[-2px] active:scale-95 cursor-pointer transform transition-all text-xs sm:text-sm leading-tight truncate font-bold text-text-primary text-left"
+                                        } : undefined}
+                                        tabIndex={isClickable ? 0 : -1}
+                                        aria-disabled={!isClickable}
+                                        className={`rounded-xl room-card transform transition-all text-xs leading-tight truncate font-semibold text-text-primary text-left ${
+                                          isClickable ? 'hover:translate-y-[-1px] active:scale-[0.98] cursor-pointer' : 'cursor-default'
+                                        }`}
                                         title={`${room.name} - Available`}
                                       >
                                         <span className="flex flex-col overflow-hidden">
-                                          <span className="font-black truncate tracking-tight text-xs sm:text-sm">{room.name}</span>
+                                          <span className="font-semibold truncate tracking-tight text-xs font-display">{room.name}</span>
                                         </span>
                                         <span className="flex items-center gap-1 sm:gap-1.5 ml-1.5 sm:ml-2 flex-shrink-0" aria-hidden="true">
-                                          <Wind size={isMobile ? 10 : 12} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
-                                          <Monitor size={isMobile ? 10 : 12} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
+                                          <Wind size={isMobile ? 11 : 13} className={room.has_ac ? 'text-primary' : 'text-text-secondary/10'} />
+                                          <Monitor size={isMobile ? 11 : 13} className={room.has_projector ? 'text-primary' : 'text-text-secondary/10'} />
                                         </span>
                                       </button>
                                     );
@@ -282,11 +278,11 @@ function Calendar({ onSlotClick }) {
                                         e.stopPropagation();
                                         setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: true }));
                                       }}
-                                      className="w-full dashed-block group"
+                                      className="w-full dashed-block group py-2"
                                     >
-                                      <div className="flex flex-col items-center gap-1">
-                                        <Filter size={14} className="text-text-secondary/50 group-hover:text-primary transition-colors" />
-                                        <span className="text-text-secondary/60 text-[9px] font-black capitalize tracking-tighter group-hover:text-primary">+{slotRooms.length - 3} More</span>
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        <Filter size={13} className="text-text-secondary/50 group-hover:text-primary transition-colors" />
+                                        <span className="text-text-secondary text-xs font-medium group-hover:text-primary">+{slotRooms.length - 3} More</span>
                                       </div>
                                     </button>
                                   )}
@@ -296,7 +292,7 @@ function Calendar({ onSlotClick }) {
                                         e.stopPropagation();
                                         setExpandedSlots(prev => ({ ...prev, [`${dateStr}-${hour}`]: false }));
                                       }}
-                                      className="px-3 py-2 rounded-xl bg-surface-lowest text-text-secondary text-[8px] sm:text-[10px] font-black capitalize hover:bg-bg-primary transition-all flex items-center justify-center gap-2 mt-1"
+                                      className="px-3 py-1.5 rounded-xl bg-surface-lowest text-text-secondary text-xs font-medium hover:bg-surface-mid transition-all flex items-center justify-center gap-1.5 mt-1"
                                     >
                                       Show Less
                                     </button>
@@ -305,15 +301,15 @@ function Calendar({ onSlotClick }) {
                               );
                             })()}
                           </div>
-                        </div>
+                        </td>
                       );
                     })}
-                  </div>
+                  </tr>
                 );
               })
             )}
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
     </div>
   );

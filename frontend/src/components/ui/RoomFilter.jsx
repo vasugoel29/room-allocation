@@ -41,9 +41,9 @@ function RoomFilter() {
         </button>
       </div>
 
-      <div className="space-y-2.5">
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-1 opacity-60 font-display">Campus Block</label>
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider px-0.5 font-display">Campus Block</label>
           <div className="grid grid-cols-3 gap-1 bg-surface-lowest/70 border border-border-subtle p-1 rounded-xl">
             {['all', '4th Block', '5th Block', '6th Block', '8th Block', 'APJ Block', 'Smart Block', ...(!isStudent ? ['Others'] : [])].map((b) => (
               <button
@@ -65,7 +65,7 @@ function RoomFilter() {
                     updateFilter('building', next.length === 0 ? ['all'] : next);
                   }
                 }}
-                className={`py-1.5 rounded-lg text-[10px] font-bold transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`py-1.5 rounded-lg text-xs transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white font-semibold shadow-sm' : 'text-text-secondary font-medium hover:text-text-primary'}`}
               >
                 {b === 'all' ? 'All' : b.replace(' Block', '')}
               </button>
@@ -73,14 +73,14 @@ function RoomFilter() {
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-1 opacity-60 font-display">Floor Level</label>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider px-0.5 font-display">Floor Level</label>
           <div className="flex bg-surface-lowest/70 border border-border-subtle p-1 rounded-xl gap-0.5">
             {['all', 'G', '1', '2', '3'].map((f) => (
               <button
                 key={f}
                 onClick={() => updateFilter('floor', f)}
-                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold transition-all font-display ${filters.floor === f ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`flex-1 py-1.5 rounded-lg text-xs transition-all font-display ${filters.floor === f ? 'bg-primary text-white font-semibold shadow-sm' : 'text-text-secondary font-medium hover:text-text-primary'}`}
               >
                 {f === 'all' ? 'All' : f}
               </button>
@@ -88,8 +88,8 @@ function RoomFilter() {
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[10px] font-bold text-text-secondary uppercase tracking-widest px-1 opacity-60 font-display">Room Type</label>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider px-0.5 font-display">Room Type</label>
           <div className="grid grid-cols-3 gap-1 bg-surface-lowest/70 border border-border-subtle p-1 rounded-xl">
             {[
               { id: 'all', label: 'All' },
@@ -103,7 +103,7 @@ function RoomFilter() {
               <button
                 key={t.id}
                 onClick={() => updateFilter('roomType', t.id)}
-                className={`py-1.5 rounded-lg text-[10px] font-bold transition-all font-display truncate px-1 ${filters.roomType === t.id ? 'bg-primary text-white shadow-sm' : (!filters.roomType && t.id === 'all') ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
+                className={`py-1.5 rounded-lg text-xs transition-all font-display truncate px-1 ${filters.roomType === t.id ? 'bg-primary text-white font-semibold shadow-sm' : (!filters.roomType && t.id === 'all') ? 'bg-primary text-white font-semibold shadow-sm' : 'text-text-secondary font-medium hover:text-text-primary'}`}
               >
                 {t.label}
               </button>

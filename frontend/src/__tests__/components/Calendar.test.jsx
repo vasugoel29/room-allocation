@@ -97,6 +97,26 @@ describe('Calendar room cards', () => {
     expect(onSlotClick.mock.calls[0][0]).toMatchObject({ hour: 10, room_id: 2, booking: { id: 50 } });
   });
 
+  it('booked card tooltip includes faculty when present', () => {
+    setup({ bookings: [{ id: 52, room_id: 2, start_time: '2026-10-20T04:30:00.000Z', status: 'ACTIVE', class_name: 'IT-2', faculty_name: 'Dr Sharma' }] });
+    expect(cards('R-2 - Booked for IT-2 (Faculty: Dr Sharma)')).toHaveLength(1);
+  });
+
+  it('viewers cannot click room cards to open modal and cards have cursor-default', () => {
+    const { onSlotClick } = setup({ user: USERS.VIEWER });
+    const availableCards = cards('R-1 - Available');
+    expect(availableCards[0]).toHaveAttribute('aria-disabled', 'true');
+    expect(availableCards[0].className).toContain('cursor-default');
+    fireEvent.click(availableCards[0]);
+    expect(onSlotClick).not.toHaveBeenCalled();
+
+    const bookedCards = cards('R-2 - Booked for IT-2');
+    expect(bookedCards[0]).toHaveAttribute('aria-disabled', 'true');
+    expect(bookedCards[0].className).toContain('cursor-default');
+    fireEvent.click(bookedCards[0]);
+    expect(onSlotClick).not.toHaveBeenCalled();
+  });
+
   it('today (IST) only shows the current and later hours', () => {
     vi.setSystemTime(ist(2026, 10, 19, 13, 30));
     setup({ selectedDay: '2026-10-19' });

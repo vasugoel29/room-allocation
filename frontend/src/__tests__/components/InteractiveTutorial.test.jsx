@@ -177,6 +177,107 @@ describe('InteractiveTutorial', () => {
       fireEvent.click(dot3);
       expect(screen.getByText('Smart Search & Room Filters')).toBeInTheDocument();
     });
+
+    it('toggles screen peek mode to collapse and restore the tutorial card', () => {
+      renderWithContext(<InteractiveTutorial />, {
+        ctx: { isTutorialOpen: true, user: USERS.VIEWER },
+      });
+
+      // Initially full card is shown
+      expect(screen.getByRole('button', { name: /Peek at screen/i })).toBeInTheDocument();
+
+      // Click Peek
+      fireEvent.click(screen.getByRole('button', { name: /Peek at screen/i }));
+
+      // Minimized pill is visible
+      expect(screen.getByRole('button', { name: /Expand tutorial card/i })).toBeInTheDocument();
+      expect(screen.getByText(/Screen Peek Mode/i)).toBeInTheDocument();
+
+      // Click to restore
+      fireEvent.click(screen.getByRole('button', { name: /Expand tutorial card/i }));
+      expect(screen.getByRole('button', { name: /Peek at screen/i })).toBeInTheDocument();
+    });
+  });
+
+  describe('Mobile Quick Booking Step', () => {
+    it('shows plus button booking step for student rep on mobile viewport', () => {
+      window.innerWidth = 480;
+      window.dispatchEvent(new Event('resize'));
+
+      renderWithContext(<InteractiveTutorial />, {
+        ctx: { isTutorialOpen: true, user: USERS.STUDENT_REP },
+      });
+
+      // Advance to Step 4
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+
+      // On mobile, step 4 should be the plus button step
+      expect(screen.getByText('Quick Booking via Plus (+)')).toBeInTheDocument();
+      expect(screen.getByText(/tap the large '\+' button in the bottom navigation/i)).toBeInTheDocument();
+
+      // Restore window size
+      window.innerWidth = 1280;
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+
+  describe('Cross-Tab Route Synchronization', () => {
+    it('automatically navigates to /calendar when tutorial is started from /profile', async () => {
+      const { useLocation } = await import('react-router-dom');
+      const LocationProbe = () => {
+        const location = useLocation();
+        return <div data-testid="location-probe">{location.pathname}</div>;
+      };
+
+      renderWithContext(
+        <>
+          <LocationProbe />
+          <InteractiveTutorial />
+        </>,
+        {
+          route: '/profile',
+          ctx: { isTutorialOpen: true, user: USERS.VIEWER },
+        }
+      );
+
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/calendar');
+    });
+
+    it('navigates to /calendar when an admin tutorial step requires the calendar tab', async () => {
+      const { useLocation } = await import('react-router-dom');
+      const LocationProbe = () => {
+        const location = useLocation();
+        return <div data-testid="location-probe">{location.pathname}</div>;
+      };
+
+      renderWithContext(
+        <>
+          <LocationProbe />
+          <InteractiveTutorial />
+        </>,
+        {
+          route: '/admin',
+          ctx: { isTutorialOpen: true, user: USERS.ADMIN },
+        }
+      );
+
+      // Initially on /admin
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/admin');
+
+      // Step 2: admin console (/admin)
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/admin');
+
+      // Step 3: timetable import (/admin)
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/admin');
+
+      // Step 4: calendar overview (/calendar)
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      expect(screen.getByTestId('location-probe')).toHaveTextContent('/calendar');
+    });
   });
 
   describe('Profile Page Integration', () => {
