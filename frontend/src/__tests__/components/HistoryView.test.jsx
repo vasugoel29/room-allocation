@@ -88,16 +88,18 @@ describe('HistoryView tabs', () => {
     expect(screen.getByText('Timeline Empty')).toBeInTheDocument();
   });
 
-  it('includes my availability overrides (non-viewers only)', async () => {
-    setup({ routes: [['GET', '/api/availability/my', [{ id: 9, room_name: 'R-9', day: '2026-10-22', hour: 11, user_id: REP.id, is_available: true }]]] });
+  it('includes my availability overrides (admins only)', async () => {
+    setup({ user: USERS.ADMIN, routes: [['GET', '/api/availability/my', [{ id: 9, room_name: 'R-9', day: '2026-10-22', hour: 11, user_id: USERS.ADMIN.id, is_available: true }]]] });
     await waitFor(() => expect(tableRooms()).toContain('R-9'));
     expect(screen.getAllByText('Manual Override').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Freed').length).toBeGreaterThan(0);
   });
 
-  it('viewer does not request overrides', () => {
+  it('non-admin (viewer or rep) does not request overrides', () => {
     const { f } = setup({ user: USERS.VIEWER, ctx: { bookings: [] } });
     expect(f).not.toHaveBeenCalled();
+    const { f: f2 } = setup({ user: USERS.STUDENT_REP, ctx: { bookings: [] } });
+    expect(f2).not.toHaveBeenCalled();
   });
 
   it('paginates 5 per page', async () => {

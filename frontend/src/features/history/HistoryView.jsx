@@ -26,17 +26,17 @@ const HistoryView = ({ onClose }) => {
   }, [timeFilter, searchText]);
 
   const fetchHistory = async () => {
-    if (!user) return;
+    if (!user || !isAdmin(user)) return;
     try {
       const overrides = await roomService.getMyAvailability();
       setMyOverrides(overrides);
     } catch (err) {
-      console.error('Failed to fetch overrides', err);
+      setMyOverrides([]);
     }
   };
 
   useEffect(() => {
-    if (canBook(user)) {
+    if (isAdmin(user)) {
       fetchHistory();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
