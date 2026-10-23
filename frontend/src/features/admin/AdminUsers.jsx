@@ -1,11 +1,4 @@
 import { Mail, UserX } from 'lucide-react';
-import { getRoleLabel } from '../../utils/roleUtils';
-
-const ROLE_BADGE = {
-  ADMIN: 'bg-red-500/10 text-red-500 border-red-500/20',
-  STUDENT_REP: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-  FACULTY: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-};
 
 const academicLabel = (u) => [
   u.branch,
@@ -69,9 +62,6 @@ function AdminUsers({ users, searchTerm, onDeactivate }) {
                 </span>
               </div>
               <div className="flex flex-col items-end gap-2">
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black capitalize border ${ROLE_BADGE[item.role] || 'bg-bg-secondary text-text-secondary border-border'}`}>
-                  {getRoleLabel(item.role)}
-                </span>
                 <StatusBadge user={item} />
               </div>
             </div>
@@ -90,7 +80,6 @@ function AdminUsers({ users, searchTerm, onDeactivate }) {
           <tr className="border-b border-border/25 bg-surface-low/60 backdrop-blur-sm">
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Name</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Email</th>
-            <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Role</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Branch / Year / Section</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Department</th>
             <th className="px-6 py-4 text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">Status</th>
@@ -108,11 +97,6 @@ function AdminUsers({ users, searchTerm, onDeactivate }) {
                   <Mail size={12} className="opacity-40" />
                   <span className="text-xs font-medium">{item.email}</span>
                 </div>
-              </td>
-              <td className="px-6 py-4">
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-black capitalize tracking-wider border ${ROLE_BADGE[item.role] || 'bg-bg-secondary text-text-secondary border-border'}`}>
-                  {getRoleLabel(item.role)}
-                </span>
               </td>
               <td className="px-6 py-4 text-xs font-bold text-text-primary">{academicLabel(item) || '—'}</td>
               <td className="px-6 py-4 text-xs font-bold text-text-primary">{item.department_name || 'General'}</td>

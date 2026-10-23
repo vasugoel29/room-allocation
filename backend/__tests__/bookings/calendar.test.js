@@ -89,7 +89,6 @@ describe('GET /api/bookings/calendar', () => {
       // A direct DB change (bypassing the API) is hidden by the cache…
       await db.query(`UPDATE bookings SET status = 'ACTIVE' WHERE id = $1`, [b.cancelled.id]);
       expect(ids(await get(other.auth, '/api/bookings/calendar', { from: day, to: day }))).not.toContain(b.cancelled.id);
-      // …and any successful API write clears it.
       const admin = await createAdmin();
       expect((await request(app).patch(`/api/bookings/${b.lateNight.id}/cancel`).set('Authorization', admin.auth)).status).toBe(200);
       const after = ids(await get(other.auth, '/api/bookings/calendar', { from: day, to: day }));

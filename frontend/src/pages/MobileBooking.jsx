@@ -218,8 +218,9 @@ function MobileBooking({ onBack }) {
               <div className="grid grid-cols-4 gap-2">
                 {HOURS.map(hour => {
                    const now = new Date();
-                   const isToday = selectedDate.toDateString() === now.toDateString();
-                   const isPast = isToday && hour <= now.getHours();
+                   const slotEnd = new Date(selectedDate);
+                   slotEnd.setHours(hour + 1, 0, 0, 0);
+                   const isPast = slotEnd.getTime() <= now.getTime();
                    return (
                     <button
                       key={hour}
@@ -237,8 +238,9 @@ function MobileBooking({ onBack }) {
             <button 
               onClick={() => {
                 const now = new Date();
-                const isToday = selectedDate.toDateString() === now.toDateString();
-                if (isToday && selectedHour <= now.getHours()) {
+                const slotEnd = new Date(selectedDate);
+                slotEnd.setHours(selectedHour + 1, 0, 0, 0);
+                if (slotEnd.getTime() <= now.getTime()) {
                   toast.error("Please select a future time slot");
                   return;
                 }

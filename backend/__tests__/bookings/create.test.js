@@ -104,16 +104,16 @@ describe('POST /api/bookings — success', () => {
     expect(await auditRows(res.body.id, 'CREATE_BOOKING')).toHaveLength(1);
   });
 
-  test('a slot that has already started is refused (no current-slot grace any more)', async () => {
+  test('a slot whose end time has already passed is refused', async () => {
     const admin = await createAdmin(); // admin: avoids weekend/window rules on whatever day today is
     const room = await createRoom();
-    const { start } = pastSlot(0); // the current IST hour, started up to 59 minutes ago
-    const res = await post(admin.auth, { room_id: room.id, start_time: start, end_time: plusHours(start), purpose: 'Now' });
+    const { start } = pastSlot(1); // 1 hour ago: ended in the past
+    const res = await post(admin.auth, { room_id: room.id, start_time: start, end_time: plusHours(start), purpose: 'Ended' });
     expect(res.status).toBe(400);
     const h = getIstParts(start).hour;
-    // Outside 08:00–20:00 the opening-hours rule is reported first.
+    // Outside 08:00–18:00 the opening-hours rule is reported first.
     expect(res.body.error).toBe(h === 23 ? 'A booking must start and end on the same day'
-      : h >= 8 && h < 20 ? 'Cannot book in the past' : 'Rooms can be booked between 08:00 and 20:00');
+      : h >= 8 && h < 18 ? 'Cannot book in the past' : 'Rooms can be booked between 08:00 and 18:00');
   });
 
   test('purpose is trimmed', async () => {
@@ -245,14 +245,14 @@ describe('POST /api/bookings — time rules', () => {
   });
 
   // Mon 01:00 IST (Sun 19:30 UTC) used to probe the IST weekend rule; it is now outside opening hours.
-  // (Within 08:00–20:00 IST the IST and UTC calendar days always agree.)
+  // (Within 08:00–18:00 IST the IST and UTC calendar days always agree.)
   test('Mon 01:00 IST is refused for being outside opening hours, not as a weekend booking', async () => {
     const rep = await createRep();
     const room = await createRoom();
     const mon = futureSlot({ hour: 1, day: 'Mon', minLeadHours: 0 });
     const res = await post(rep.auth, await studentBody(room, mon));
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'Rooms can be booked between 08:00 and 20:00' });
+    expect(res.body).toEqual({ error: 'Rooms can be booked between 08:00 and 18:00' });
   });
 
   test('Mon 08:00 IST (02:30 UTC) is a weekday for students', async () => {
@@ -549,10 +549,10 @@ describe('POST /api/bookings — end_time validation (BKG-08)', () => {
   });
 });
 
-describe('POST /api/bookings — time grid rules (on the hour, 1–4 h, 08:00–20:00 IST, same day)', () => {
+describe('POST /api/bookings — time grid rules (on the hour, 1–4 h, 08:00–18:00 IST, same day)', () => {
   const ON_THE_HOUR = { error: 'Bookings start and end on the hour' };
   const LENGTH = { error: 'Bookings last between 1 and 4 hours' };
-  const HOURS = { error: 'Rooms can be booked between 08:00 and 20:00' };
+  const HOURS = { error: 'Rooms can be booked between 08:00 and 18:00' };
   const at = (dateKey, h1, h2, m1 = 0, m2 = 0) => ({ start: ist(dateKey, h1, m1), end: ist(dateKey, h2, m2) });
   // A fresh faculty member each time: no weekend rule, no approval, no clash with the other cases.
   let dateKey;
@@ -566,7 +566,7 @@ describe('POST /api/bookings — time grid rules (on the hour, 1–4 h, 08:00–
     ['30 minutes', [10, 10, 0, 30], ON_THE_HOUR],
     ['5 hours', [9, 14], LENGTH],
     ['07:00–08:00 (before opening)', [7, 8], HOURS],
-    ['19:00–21:00 (after closing)', [19, 21], HOURS],
+    ['17:00–19:00 (after closing)', [17, 19], HOURS],
   ])('%s → 400', async (_n, hours, expected) => {
     const slot = hours ? at(dateKey, ...hours) : (() => {
       const s = new Date(ist(dateKey, 10)); s.setUTCMinutes(0); return { start: s.toISOString(), end: plusHours(s.toISOString()) };
@@ -593,8 +593,8 @@ describe('POST /api/bookings — time grid rules (on the hour, 1–4 h, 08:00–
   test.each([
     ['1 hour at opening (08:00–09:00)', [8, 9]],
     ['4 hours (08:00–12:00)', [8, 12]],
-    ['last hour (19:00–20:00)', [19, 20]],
-    ['4 hours up to closing (16:00–20:00)', [16, 20]],
+    ['last hour (17:00–18:00)', [17, 18]],
+    ['4 hours up to closing (14:00–18:00)', [14, 18]],
   ])('%s → 201', async (_n, hours) => {
     const res = await send(at(dateKey, ...hours));
     expect(res.status).toBe(201);

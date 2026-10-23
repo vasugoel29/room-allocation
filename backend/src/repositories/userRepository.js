@@ -37,9 +37,10 @@ export const userRepository = {
   findAll: async (limit, offset, search = '', role = '', scopes = null) => {
     const params = [];
     let query = `
-      SELECT u.id, u.name, u.email, u.role, u.branch, u.year, u.semester, u.section,
+      SELECT u.id, u.name, u.email, COALESCE(ua.role, 'VIEWER') AS role, u.branch, u.year, u.semester, u.section,
              u.group_name, u.created_at, u.department_name
       FROM users u
+      LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
       WHERE u.is_active AND ${scopeSql(scopes, { person: 'u' }, params)}
     `;
     if (search) {
@@ -48,10 +49,10 @@ export const userRepository = {
     }
     if (role) {
       params.push(role);
-      query += ` AND u.role = $${params.length}`;
+      query += ` AND COALESCE(ua.role, 'VIEWER') = $${params.length}`;
     }
 
-    query += ` ORDER BY u.role = 'ADMIN' DESC, u.role = 'FACULTY' DESC, u.role = 'STUDENT_REP' DESC, u.created_at DESC`;
+    query += ` ORDER BY COALESCE(ua.role, 'VIEWER') = 'ADMIN' DESC, COALESCE(ua.role, 'VIEWER') = 'FACULTY' DESC, COALESCE(ua.role, 'VIEWER') = 'STUDENT_REP' DESC, u.created_at DESC`;
 
     if (limit) {
       params.push(limit);
@@ -70,8 +71,10 @@ export const userRepository = {
   students: async (scopes = null) => {
     const params = [];
     return (await db.query(
-      `SELECT name, email, role, branch, year, section, degree, department_name, roll_no FROM users u
-        WHERE role IN ('VIEWER', 'STUDENT_REP') AND is_active AND ${scopeSql(scopes, { person: 'u' }, params)} ORDER BY name`,
+      `SELECT u.name, u.email, COALESCE(ua.role, 'VIEWER') AS role, u.branch, u.year, u.section, u.degree, u.department_name, u.roll_no
+       FROM users u
+       LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
+       WHERE COALESCE(ua.role, 'VIEWER') IN ('VIEWER', 'STUDENT_REP') AND u.is_active AND ${scopeSql(scopes, { person: 'u' }, params)} ORDER BY u.name`,
       params,
     )).rows;
   },
@@ -81,14 +84,19 @@ export const userRepository = {
    */
   countUsers: async (search = '', role = '', scopes = null) => {
     const params = [];
-    let query = `SELECT COUNT(*) FROM users u WHERE u.is_active AND ${scopeSql(scopes, { person: 'u' }, params)}`;
+    let query = `
+      SELECT COUNT(*)
+      FROM users u
+      ${role ? 'LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL' : ''}
+      WHERE u.is_active AND ${scopeSql(scopes, { person: 'u' }, params)}
+    `;
     if (search) {
       params.push(`%${search}%`);
       query += ` AND (u.name ILIKE $${params.length} OR u.email ILIKE $${params.length})`;
     }
     if (role) {
       params.push(role);
-      query += ` AND u.role = $${params.length}`;
+      query += ` AND COALESCE(ua.role, 'VIEWER') = $${params.length}`;
     }
     const result = await db.query(query, params);
     return parseInt(result.rows[0].count);

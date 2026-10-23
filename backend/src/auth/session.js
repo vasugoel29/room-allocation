@@ -117,18 +117,18 @@ export async function upsertUserFromAcl(access) {
     let user;
     if (existing.rows[0]) {
       ({ rows: [user] } = await client.query(
-        `UPDATE users SET acl_id = $1, name = $2, email = $3, role = $4, branch = $5, department_name = $6,
-                degree = $7, roll_no = $8, year = $9, semester = $10, section = $11, group_name = $12,
+        `UPDATE users SET acl_id = $1, name = $2, email = $3, branch = $4, department_name = $5,
+                degree = $6, roll_no = $7, year = $8, semester = $9, section = $10, group_name = $11,
                 updated_at = NOW()
-          WHERE id = $13 RETURNING *`,
-        [access.aclId, profile.name, profile.email, role, profile.branch, profile.department_name, profile.degree,
+          WHERE id = $12 RETURNING *`,
+        [access.aclId, profile.name, profile.email, profile.branch, profile.department_name, profile.degree,
           profile.roll_no, profile.year, profile.semester, profile.section, profile.group_name, existing.rows[0].id],
       ));
     } else {
       ({ rows: [user] } = await client.query(
-        `INSERT INTO users (acl_id, name, email, role, branch, department_name, degree, roll_no, year, semester, section, group_name)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
-        [access.aclId, profile.name, profile.email, role, profile.branch, profile.department_name, profile.degree,
+        `INSERT INTO users (acl_id, name, email, branch, department_name, degree, roll_no, year, semester, section, group_name)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+        [access.aclId, profile.name, profile.email, profile.branch, profile.department_name, profile.degree,
           profile.roll_no, profile.year, profile.semester, profile.section, profile.group_name],
       ));
     }
@@ -169,7 +169,7 @@ async function readRow(userId) {
 }
 
 function toPrincipal(row) {
-  const role = normalizeRole(row.acl_role || row.role);
+  const role = normalizeRole(row.acl_role || 'VIEWER');
   return {
     id: row.id,
     acl_id: row.acl_id || null,

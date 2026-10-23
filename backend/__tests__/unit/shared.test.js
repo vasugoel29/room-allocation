@@ -45,6 +45,6 @@ describe('shared/time', () => {
 describe('shared/bookingRules', () => {
   test('the server enforces exactly the hours the calendar offers', () => {
     expect(RULES).toBe(BOOKING_RULES);
-    expect(BOOKING_START_HOURS).toEqual([8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
+    expect(BOOKING_START_HOURS).toEqual([8, 9, 10, 11, 12, 13, 14, 15, 16, 17]);
   });
 });

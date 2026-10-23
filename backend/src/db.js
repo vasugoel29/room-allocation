@@ -1190,11 +1190,15 @@ const migrations = [
       await check('bookings', 'bookings_status_check', "status IN ('ACTIVE', 'PENDING', 'CANCELLED', 'REJECTED')");
       await check('booking_transfers', 'booking_transfers_status_check',
         "status IN ('PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED', 'ACCEPTED', 'REJECTED', 'CANCELLED')");
-      await check('users', 'users_role_check', `role IN ${ROLES}`);
+      const { rowCount: hasRoleCol } = await client.query("SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'role'");
+      if (hasRoleCol) {
+        await check('users', 'users_role_check', `role IN ${ROLES}`);
+        await client.query("UPDATE users SET role = 'VIEWER' WHERE role IS NULL; ALTER TABLE users ALTER COLUMN role SET DEFAULT 'VIEWER'");
+        await notNull('users', 'role');
+      }
       await check('user_access', 'user_access_role_check', `role IN ${ROLES}`);
       await check('rooms', 'rooms_type_check', "type IS NULL OR type IN ('Lecture Room', 'Lab', 'Auditorium', 'Committee Room')");
-      await client.query("UPDATE users SET role = 'VIEWER' WHERE role IS NULL; ALTER TABLE users ALTER COLUMN role SET DEFAULT 'VIEWER'");
-      for (const [table, column] of [['users', 'role'], ['bookings', 'room_id'], ['bookings', 'created_by'], ['bookings', 'status'],
+      for (const [table, column] of [['bookings', 'room_id'], ['bookings', 'created_by'], ['bookings', 'status'],
         ['booking_transfers', 'booking_id'], ['booking_transfers', 'owner_id'], ['booking_transfers', 'requested_by'],
         ['booking_transfers', 'status']]) {
         await notNull(table, column);
@@ -1289,6 +1293,13 @@ const migrations = [
         await client.query(`ALTER TABLE faculty_slot_overrides ADD CONSTRAINT faculty_slot_overrides_booking_id_fkey
           FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE RESTRICT`);
       }
+    }
+  },
+  {
+    version: 40,
+    name: 'Drop role column from users table (managed externally via user_access / ACL)',
+    run: async (client) => {
+      await client.query('ALTER TABLE users DROP COLUMN IF EXISTS role CASCADE');
     }
   }
 ];

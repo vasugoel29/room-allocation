@@ -120,7 +120,10 @@ export const mockAcl = {
 /** e2e/load: treat each seeded local user as an ACL directory entry with its stored role. */
 async function dbDirectoryEntry(email) {
   const { rows } = await db.query(
-    'SELECT id, name, email, role, branch, year, semester, section, group_name FROM users WHERE lower(email) = $1',
+    `SELECT u.id, u.name, u.email, COALESCE(ua.role, 'VIEWER') AS role, u.branch, u.year, u.semester, u.section, u.group_name
+     FROM users u
+     LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
+     WHERE lower(u.email) = $1`,
     [email],
   );
   const u = rows[0];

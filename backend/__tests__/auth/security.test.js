@@ -164,10 +164,10 @@ describe('authorization matrix', () => {
     `${m.toUpperCase()} ${typeof p === 'function' ? p({ id: ':self' }) : p}`, who, { m, path: p, body },
   ])))('removed endpoint %s → 404 for %s caller', async (_l, who, r) => {
     const caller = who === 'ADMIN' ? users.ADMIN : null;
-    const before = caller && (await db.query('SELECT role, name FROM users WHERE id = $1', [caller.user.id])).rows[0];
+    const before = caller && (await db.query('SELECT name FROM users WHERE id = $1', [caller.user.id])).rows[0];
     const res = await call(r, caller?.user, caller?.auth);
     expect(res.status).toBe(404);
-    if (caller) expect((await db.query('SELECT role, name FROM users WHERE id = $1', [caller.user.id])).rows[0]).toEqual(before);
+    if (caller) expect((await db.query('SELECT name FROM users WHERE id = $1', [caller.user.id])).rows[0]).toEqual(before);
   });
 
   test('removed endpoints left no side effects', async () => {

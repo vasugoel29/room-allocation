@@ -40,37 +40,37 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('Calendar room cards', () => {
-  it('free rooms appear in every bookable hour 08..19 of a future day (the hours the server accepts)', () => {
+  it('free rooms appear in every bookable hour 08..17 of a future day (the hours the server accepts)', () => {
     setup();
-    expect(cards('R-1 - Available')).toHaveLength(12);
+    expect(cards('R-1 - Available')).toHaveLength(10);
     expect(screen.getByText('08:00')).toBeInTheDocument();
-    expect(screen.getAllByText('19:00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('17:00').length).toBeGreaterThan(0);
   });
 
   it('booked room shows a booked card only at its IST hour', () => {
     setup();
     expect(cards('R-2 - Booked for IT-2')).toHaveLength(1);
-    expect(cards('R-2 - Available')).toHaveLength(11);
+    expect(cards('R-2 - Available')).toHaveLength(9);
   });
 
   it('timetable-occupied room is hidden at that hour', () => {
     setup();
-    expect(cards('R-3 - Available')).toHaveLength(11);
+    expect(cards('R-3 - Available')).toHaveLength(9);
   });
 
   it('a 2-hour booking takes both hours (as on the server)', () => {
     setup({ bookings: [{ id: 51, room_id: 1, start_time: '2026-10-20T04:30:00.000Z', end_time: '2026-10-20T06:30:00.000Z', status: 'ACTIVE', class_name: 'IT-3' }] });
-    expect(cards('R-1 - Available')).toHaveLength(10);
+    expect(cards('R-1 - Available')).toHaveLength(8);
   });
 
   it('date-specific availability override re-shows the timetable-occupied room', () => {
     setup({ availability: [CLASS_R3, { room_id: 3, room_name: 'R-3', day: '2026-10-20', hour: 9, is_available: true, source: 'release' }] });
-    expect(cards('R-3 - Available')).toHaveLength(12);
+    expect(cards('R-3 - Available')).toHaveLength(10);
   });
 
   it('a blocking override hides an otherwise free room', () => {
     setup({ availability: [CLASS_R3, { room_id: 1, room_name: 'R-1', day: 'Tue', hour: 11, is_available: false, source: 'block' }] });
-    expect(cards('R-1 - Available')).toHaveLength(11);
+    expect(cards('R-1 - Available')).toHaveLength(9);
   });
 
   it('student_access=false rooms are hidden from students but shown to admins', () => {
@@ -79,7 +79,7 @@ describe('Calendar room cards', () => {
   });
   it('...shown to admins', () => {
     setup({ user: USERS.ADMIN });
-    expect(cards('STAFF-1 - Available')).toHaveLength(12);
+    expect(cards('STAFF-1 - Available')).toHaveLength(10);
   });
 
   it('clicking a free card reports day/hour/date/room_id', () => {
@@ -100,7 +100,7 @@ describe('Calendar room cards', () => {
   it('today (IST) only shows the current and later hours', () => {
     vi.setSystemTime(ist(2026, 10, 19, 13, 30));
     setup({ selectedDay: '2026-10-19' });
-    expect(cards('R-1 - Available')).toHaveLength(7); // 13..19
+    expect(cards('R-1 - Available')).toHaveLength(5); // 13..17
   });
 
   it('empty room list shows the empty state', () => {
@@ -128,7 +128,7 @@ describe('Calendar room cards', () => {
     const many = Array.from({ length: 6 }, (_, i) => ({ id: 100 + i, name: `M-${i}`, floor: 0, capacity: 10 }));
     setup({ rooms: many, bookings: [], timetableData: {} });
     const more = screen.getAllByRole('button', { name: /\+3 more/i });
-    expect(more).toHaveLength(12);
+    expect(more).toHaveLength(10);
     fireEvent.click(more[0]);
     expect(screen.getAllByRole('button', { name: /show less/i })).toHaveLength(1);
   });

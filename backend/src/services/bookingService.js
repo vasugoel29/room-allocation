@@ -467,7 +467,8 @@ export const quickBookHandler = async (reqData, user) => {
     let owner = user;
     if (target_user_id && String(target_user_id) !== String(user.id)) {
       const { rows: [target] } = await client.query(
-        `SELECT u.id, u.role, u.name, f.id AS faculty_id FROM users u
+        `SELECT u.id, COALESCE(ua.role, 'VIEWER') AS role, u.name, f.id AS faculty_id FROM users u
+           LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
            LEFT JOIN faculties f ON f.user_id = u.id AND f.is_active
           WHERE u.id = $1 AND u.is_active`,
         [target_user_id],

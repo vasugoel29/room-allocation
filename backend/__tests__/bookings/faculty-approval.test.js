@@ -184,14 +184,14 @@ describe('PATCH /api/faculty/:id/approve', () => {
       expect((await getBooking(booking.id)).status).toBe('PENDING');
     });
 
-    test('a request whose start time has passed → 400', async () => {
-      const slot = pastSlot(0); // the current IST hour: started up to 59 minutes ago
+    test('a request whose end time has passed → 400', async () => {
+      const slot = pastSlot(1); // ended at least 1 hour ago
       const { fac, booking } = await pending({ slot });
       const res = await approve(fac.auth, booking.id);
       expect(res.status).toBe(400);
       const h = getIstParts(slot.start).hour; // outside opening hours that rule is reported first
       expect(res.body.error).toBe(h === 23 ? 'A booking must start and end on the same day'
-      : h >= 8 && h < 20 ? 'This request is for a time that has already started' : 'Rooms can be booked between 08:00 and 20:00');
+        : h >= 8 && h < 18 ? 'This request is for a time that has already ended' : 'Rooms can be booked between 08:00 and 18:00');
       expect((await getBooking(booking.id)).status).toBe('PENDING');
     });
 

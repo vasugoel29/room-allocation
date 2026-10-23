@@ -19,10 +19,10 @@ export function tokenFor(user, opts = {}) {
  */
 export async function createUser({ permissions, scopes, ...overrides } = {}) {
   const role = overrides.role || 'VIEWER';
+  delete overrides.role;
   const fields = {
     name: `Test ${role} ${uid()}`,
     email: `t.${role.toLowerCase()}.${uid()}@nsut.ac.in`,
-    role,
     ...overrides,
   };
   const cols = Object.keys(fields);
@@ -31,6 +31,7 @@ export async function createUser({ permissions, scopes, ...overrides } = {}) {
     cols.map((c) => fields[c]),
   );
   const user = rows[0];
+  user.role = role;
   // An ACL snapshot like a real sign-in leaves: the suggested bundle for the role, or `permissions`.
   await grantPermissions(user.id, permissions ?? SUGGESTED_BUNDLES[role] ?? [], role, scopes);
   const token = tokenFor(user);

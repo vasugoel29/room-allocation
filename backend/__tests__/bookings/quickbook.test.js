@@ -93,7 +93,7 @@ describe('POST /api/bookings/admin/quick', () => {
     const { dateKey } = futureSlot({ hour: 10 });
     const early = await quick(admin.auth, { room_name: room.name, date: dateKey, slot: 7 });
     expect(early.status).toBe(400);
-    expect(early.body).toEqual({ error: 'Rooms can be booked between 08:00 and 20:00' });
+    expect(early.body).toEqual({ error: 'Rooms can be booked between 08:00 and 18:00' });
     const past = await quick(admin.auth, { room_name: room.name, date: '2024-01-08', slot: 10 });
     expect(past.status).toBe(400);
     expect(past.body).toEqual({ error: 'Cannot book in the past' });

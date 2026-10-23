@@ -62,8 +62,8 @@ export function checkTimes(startTime, endTime, { direct = false, admin = false, 
     return bad(`Rooms can be booked between ${String(RULES.OPEN_HOUR).padStart(2, '0')}:00 and ${RULES.CLOSE_HOUR}:00`);
   }
 
-  if (start.getTime() <= now) {
-    return bad(mode === 'approve' ? 'This request is for a time that has already started' : 'Cannot book in the past');
+  if (end.getTime() <= now) {
+    return bad(mode === 'approve' ? 'This request is for a time that has already ended' : 'Cannot book in the past');
   }
   if (mode !== 'approve' && !admin && start.getTime() > now + RULES.WINDOW_DAYS * 86400000) {
     return bad('Regular bookings allowed only for the current week');

@@ -65,7 +65,10 @@ describe('POST /api/auth/google', () => {
     expect(Object.keys(claims).sort()).toEqual(['exp', 'iat', 'sub', 'sv', 'typ']);
     expect(claims.exp - claims.iat).toBeLessThanOrEqual(24 * 3600);
 
-    const { rows: [u] } = await db.query('SELECT acl_id, role FROM users WHERE email = $1', [email]);
+    const { rows: [u] } = await db.query(
+      'SELECT u.acl_id, ua.role FROM users u JOIN user_access ua ON ua.user_id = u.id WHERE u.email = $1',
+      [email],
+    );
     expect(u).toMatchObject({ role: 'STUDENT_REP' });
     expect(u.acl_id).toMatch(/^usr_/);
   });

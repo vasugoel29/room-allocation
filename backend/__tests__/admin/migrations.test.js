@@ -102,11 +102,11 @@ describe('migrations v25 + v35 (no passwords: cleared, then the columns dropped)
 
   test('a legacy account that had a password keeps its row; no password, reset or approval columns remain', async () => {
     await withClient(refUrl, async (c) => {
-      expect((await c.query("SELECT name, role FROM users WHERE email = 'legacy.v25@nsut.ac.in'")).rows[0])
-        .toEqual({ name: 'Legacy User', role: 'VIEWER' });
+      expect((await c.query("SELECT name FROM users WHERE email = 'legacy.v25@nsut.ac.in'")).rows[0])
+        .toEqual({ name: 'Legacy User' });
       const { rows } = await c.query(
         `SELECT column_name FROM information_schema.columns WHERE table_name = 'users'
-            AND column_name IN ('password', 'password_reset_token', 'password_reset_expires', 'is_approved', 'department_id', 'branch_id')`,
+            AND column_name IN ('password', 'password_reset_token', 'password_reset_expires', 'is_approved', 'department_id', 'branch_id', 'role')`,
       );
       expect(rows).toEqual([]);
       for (const t of ['departments', 'branches', 'promotion_requests', 'booking_history']) {
@@ -132,8 +132,8 @@ describe('migration v26 (booking integrity: exclusion constraints)', () => {
       for (const k of ['bookings_no_room_overlap', 'bookings_no_person_overlap', 'bookings_no_faculty_overlap', 'bookings_time_order']) {
         await c.query(`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS ${k}`);
       }
-      const { rows: [u1] } = await c.query("INSERT INTO users (name, email, role) VALUES ('V26 A', 'v26.a@nsut.ac.in', 'STUDENT_REP') RETURNING id");
-      const { rows: [u2] } = await c.query("INSERT INTO users (name, email, role) VALUES ('V26 B', 'v26.b@nsut.ac.in', 'STUDENT_REP') RETURNING id");
+      const { rows: [u1] } = await c.query("INSERT INTO users (name, email) VALUES ('V26 A', 'v26.a@nsut.ac.in') RETURNING id");
+      const { rows: [u2] } = await c.query("INSERT INTO users (name, email) VALUES ('V26 B', 'v26.b@nsut.ac.in') RETURNING id");
       const { rows: [r1] } = await c.query("INSERT INTO rooms (name, building, floor, capacity, type) VALUES ('V26-R1', 'B', 1, 10, 'Lecture Room') RETURNING id");
       const { rows: [r2] } = await c.query("INSERT INTO rooms (name, building, floor, capacity, type) VALUES ('V26-R2', 'B', 1, 10, 'Lecture Room') RETURNING id");
       const ins = async (room, user, start, end, status = 'ACTIVE', ago = 10) => (await c.query(

@@ -156,7 +156,7 @@ describe('faculty import (faculty directory)', () => {
     await createViewer({ name: 'A Student', email: e });
     const { job } = await runImport(app, admin.auth, 'faculty', `name,email\nA Professor,${e}\n`);
     expect(job.status).toBe('completed');
-    expect(await userByEmail(e)).toMatchObject({ name: 'A Student', role: 'VIEWER' });
+    expect(await userByEmail(e)).toMatchObject({ name: 'A Student' });
     expect(await facultyByEmail(e)).toMatchObject({ name: 'A Professor', is_active: true });
   });
 

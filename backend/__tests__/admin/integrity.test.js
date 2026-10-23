@@ -22,8 +22,8 @@ describe('vocabulary checks', () => {
     expect(await pgError(db.query(
       "INSERT INTO booking_transfers (booking_id, owner_id, requested_by, status) VALUES ($1, $2, $2, 'MAYBE')", [b.id, rep.user.id],
     ))).toEqual({ code: '23514', constraint: 'booking_transfers_status_check' });
-    expect(await pgError(db.query("UPDATE users SET role = 'SUPERUSER' WHERE id = $1", [rep.user.id])))
-      .toEqual({ code: '23514', constraint: 'users_role_check' });
+    expect(await pgError(db.query("UPDATE user_access SET role = 'SUPERUSER' WHERE user_id = $1", [rep.user.id])))
+      .toEqual({ code: '23514', constraint: 'user_access_role_check' });
     expect(await pgError(db.query("UPDATE rooms SET type = 'Cafeteria' WHERE id = $1", [room.id])))
       .toEqual({ code: '23514', constraint: 'rooms_type_check' });
   });

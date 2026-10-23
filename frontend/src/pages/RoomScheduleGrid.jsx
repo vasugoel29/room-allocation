@@ -113,7 +113,7 @@ const RoomScheduleGrid = () => {
     // 1. Check timetable slot (recurring)
     const shortDay = dayName.substring(0, 3).toLowerCase();
     const isTimetable = scheduleData.timetableBlocks?.find(
-      b => (b.day || '').toLowerCase() === shortDay && b.hour === hour
+      b => (b.day || '').toLowerCase() === shortDay && b.hour === hour && Boolean(b.subject || b.faculty)
     );
 
     // 2. Check bookings (date specific)

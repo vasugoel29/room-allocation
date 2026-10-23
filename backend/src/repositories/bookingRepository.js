@@ -9,11 +9,11 @@ import { scopeSql } from '../auth/scopes.js';
 const scopeWhere = (scope, params) => (scope ? scopeSql(scope.scopes, scope.people ? { person: 'u', room: 'r' } : { room: 'r' }, params) : 'TRUE');
 
 const BOOKING_SELECT = `
-  SELECT b.*, r.name as room_name, u.name as user_name, u.role as user_role,
+  SELECT b.*, r.name as room_name, u.name as user_name, COALESCE(ua.role, 'VIEWER') as user_role,
          u.branch, u.year, u.section, u.department_name,
          f.name as faculty_name,
          CASE 
-           WHEN u.role IN ('ADMIN', 'FACULTY') THEN u.name
+           WHEN COALESCE(ua.role, 'VIEWER') IN ('ADMIN', 'FACULTY') THEN u.name
            ELSE CONCAT(
              u.branch, 
              '-', 
@@ -32,6 +32,7 @@ const BOOKING_SELECT = `
   FROM bookings b
   JOIN rooms r ON b.room_id = r.id
   JOIN users u ON b.created_by = u.id
+  LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
   LEFT JOIN faculties f ON b.faculty_id = f.id
 `;
 
@@ -148,8 +149,10 @@ export const bookingRepository = {
   /** ACTIVE bookings in a room overlapping [from, to), with who booked them (Room Grid). */
   activeInRoom: async (roomId, from, to, client = db) => (await client.query(
     `SELECT b.id, b.start_time, b.end_time, b.purpose, b.status,
-            u.name AS booker_name, u.email AS booker_email, u.role AS booker_role
-       FROM bookings b JOIN users u ON b.created_by = u.id
+            u.name AS booker_name, u.email AS booker_email, COALESCE(ua.role, 'VIEWER') AS booker_role
+       FROM bookings b
+       JOIN users u ON b.created_by = u.id
+       LEFT JOIN user_access ua ON ua.user_id = u.id AND ua.revoked_at IS NULL
       WHERE b.room_id = $1 AND b.status = 'ACTIVE'
         AND tstzrange(b.start_time, b.end_time) && tstzrange($2::timestamptz, $3::timestamptz)
       ORDER BY b.start_time`,

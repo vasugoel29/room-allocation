@@ -37,17 +37,17 @@ describe('checkTimes', () => {
     ['UTC hour (= :30 IST)', ['2030-01-07T04:00:00.000Z', '2030-01-07T05:00:00.000Z'], 'Bookings start and end on the hour'],
     ['5 hours', [at('2030-01-07', 9), at('2030-01-07', 14)], 'Bookings last between 1 and 4 hours'],
     ['crosses midnight', [at('2030-01-07', 20), at('2030-01-08', 0)], 'A booking must start and end on the same day'],
-    ['before 08:00', [at('2030-01-07', 7), at('2030-01-07', 9)], 'Rooms can be booked between 08:00 and 20:00'],
-    ['after 20:00', [at('2030-01-07', 19), at('2030-01-07', 21)], 'Rooms can be booked between 08:00 and 20:00'],
+    ['before 08:00', [at('2030-01-07', 7), at('2030-01-07', 9)], 'Rooms can be booked between 08:00 and 18:00'],
+    ['after 18:00', [at('2030-01-07', 17), at('2030-01-07', 19)], 'Rooms can be booked between 08:00 and 18:00'],
     ['in the past', [at('2030-01-06', 10), at('2030-01-06', 11)], 'Cannot book in the past'],
-    ['starting exactly now', [at('2030-01-06', 12), at('2030-01-06', 13)], 'Cannot book in the past'],
+    ['ended at or before now', [at('2030-01-06', 11), at('2030-01-06', 12)], 'Cannot book in the past'],
     ['more than 7 days ahead', [at('2030-01-14', 10), at('2030-01-14', 11)], 'Regular bookings allowed only for the current week'],
     ['Saturday for a student', [at('2030-01-12', 10), at('2030-01-12', 11)], 'Students are not allowed to book rooms on weekends'],
   ])('%s → 400', (_n, [s, e], error) => {
     expect(times(s, e)).toEqual({ error, status: 400 });
   });
 
-  test.each([['08:00–09:00', 8, 9], ['16:00–20:00 (4 h, up to closing)', 16, 20], ['13:00–14:00', 13, 14]])('%s is fine', (_n, h1, h2) => {
+  test.each([['08:00–09:00', 8, 9], ['14:00–18:00 (4 h, up to closing)', 14, 18], ['13:00–14:00', 13, 14]])('%s is fine', (_n, h1, h2) => {
     expect(times(at('2030-01-07', h1), at('2030-01-07', h2)).ok).toBeDefined();
   });
 
@@ -60,12 +60,12 @@ describe('checkTimes', () => {
 
   test('approve mode ignores the window/weekend rules but not the start rule', () => {
     expect(times(at('2030-03-09', 10), at('2030-03-09', 11), { mode: 'approve' }).ok).toBeDefined(); // far Saturday
-    expect(times(at('2030-01-06', 12), at('2030-01-06', 13), { mode: 'approve' }))
-      .toEqual({ error: 'This request is for a time that has already started', status: 400 });
+    expect(times(at('2030-01-06', 11), at('2030-01-06', 12), { mode: 'approve' }))
+      .toEqual({ error: 'This request is for a time that has already ended', status: 400 });
   });
 
   test('RULES are the documented ones', () => {
-    expect(RULES).toEqual({ OPEN_HOUR: 8, CLOSE_HOUR: 20, MAX_HOURS: 4, WINDOW_DAYS: 7 });
+    expect(RULES).toEqual({ OPEN_HOUR: 8, CLOSE_HOUR: 18, MAX_HOURS: 4, WINDOW_DAYS: 7 });
   });
 });
 

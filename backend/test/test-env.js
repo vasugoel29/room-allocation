@@ -14,9 +14,10 @@ export function applyTestEnv() {
   process.env.GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'test-google-client-id.apps.googleusercontent.com';
   // Rate limiting has its own dedicated tests, which re-enable it explicitly.
   process.env.RATE_LIMIT_DISABLED = 'true';
-  // Never send real email from tests.
+  // Never send real email from tests; test notification outbox queues pending.
   delete process.env.SMTP_USER;
   delete process.env.SMTP_PASS;
+  process.env.EMAIL_DELIVERY = 'on';
 
   const dbName = new URL(process.env.DATABASE_URL).pathname.slice(1);
   if (!dbName.endsWith('_test')) {

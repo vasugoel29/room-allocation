@@ -300,7 +300,7 @@ describe('PATCH /api/bookings/:id (reschedule)', () => {
       for (const [start_time, end_time, error] of [
         [plusHours(slot.start, 0.5), plusHours(slot.start, 1.5), 'Bookings start and end on the hour'],
         [slot.start, plusHours(slot.start, 5), 'Bookings last between 1 and 4 hours'],
-        [plusHours(slot.start, -3), plusHours(slot.start, -2), 'Rooms can be booked between 08:00 and 20:00'], // 07:00 IST
+        [plusHours(slot.start, -3), plusHours(slot.start, -2), 'Rooms can be booked between 08:00 and 18:00'], // 07:00 IST
       ]) {
         const res = await patch(owner.auth, booking.id, { start_time, end_time });
         expect(res.status).toBe(400);
@@ -491,7 +491,7 @@ describe('POST /api/bookings with RESCHEDULE booking type (BKG-04)', () => {
     const fac = await createFaculty();
     const freed = await classroom();
     const room = await createRoom();
-    const res = await create(fac.auth, payload(room, futureSlot({ hour: 18 }), freed));
+    const res = await create(fac.auth, payload(room, futureSlot({ hour: 16 }), freed));
     expect(res.status).toBe(201);
     await request(app).delete(`/api/rooms/${room.id}`).set('Authorization', admin.auth).expect(200);
     expect((await getBooking(res.body.id)).status).toBe('CANCELLED');

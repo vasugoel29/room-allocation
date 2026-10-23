@@ -20,7 +20,7 @@ test('the ACL-provided department and branch are returned (not overwritten by an
 
 test('emails are unique regardless of case, and lookups by lower(email) use an index', async () => {
   const rep = await createRep();
-  await expect(db.query("INSERT INTO users (name, email, role) VALUES ('Dup', $1, 'VIEWER')", [rep.user.email.toUpperCase()]))
+  await expect(db.query("INSERT INTO users (name, email) VALUES ('Dup', $1)", [rep.user.email.toUpperCase()]))
     .rejects.toThrow(/duplicate key|users_email_lower_key/);
   await db.query('SET enable_seqscan = off');
   try {
