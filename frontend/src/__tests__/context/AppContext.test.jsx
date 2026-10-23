@@ -242,3 +242,38 @@ describe('Profile through the real provider (read-only)', () => {
     expect(fetchCalls(f).some(([m]) => m === 'PATCH')).toBe(false);
   });
 });
+
+describe('AppProvider tutorial state', () => {
+  it('allows starting and completing the tutorial and persists seen state', () => {
+    localStorage.setItem('user', JSON.stringify(USERS.VIEWER));
+    localStorage.setItem('token', 't');
+    installFetch(baseRoutes());
+    mount();
+
+    expect(ctx.isTutorialOpen).toBe(false);
+
+    // Start manually
+    act(() => ctx.startTutorial());
+    expect(ctx.isTutorialOpen).toBe(true);
+
+    // Complete tutorial
+    act(() => ctx.completeTutorial());
+    expect(ctx.isTutorialOpen).toBe(false);
+    expect(localStorage.getItem(`cras_tutorial_seen_${USERS.VIEWER.id}`)).toBe('true');
+  });
+
+  it('auto-launches tutorial when cras_tutorial_seen_id is absent', () => {
+    vi.useFakeTimers();
+    localStorage.setItem('user', JSON.stringify(USERS.STUDENT_REP));
+    localStorage.setItem('token', 't');
+    installFetch(baseRoutes());
+    mount();
+
+    expect(ctx.isTutorialOpen).toBe(false);
+    act(() => {
+      vi.advanceTimersByTime(1300);
+    });
+    expect(ctx.isTutorialOpen).toBe(true);
+    vi.useRealTimers();
+  });
+});

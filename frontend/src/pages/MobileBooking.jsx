@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles, MapPin, Sun, Moon } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { bookingService } from '../services/bookingService';
 import { roomService } from '../services/roomService';
@@ -7,12 +7,14 @@ import { getClassConflict, isRoomReallyFree } from '../utils/timetableLogic';
 import { getInitialBookingDateObject } from '../utils/dateHelpers';
 import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
+import NotificationBell from '../components/ui/NotificationBell';
+import { useSearchDebounce } from '../hooks/useSearchDebounce';
 import { addMinutesToUtc, istDateTimeToUtc } from '../utils/timezone';
 import { booksDirect, P, can } from '../utils/permissions';
 import { BOOKING_START_HOURS } from '../../../shared/bookingRules.js';
 
 function MobileBooking({ onBack }) {
-  const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability } = useContext(AppContext);
+  const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability, theme, setTheme } = useContext(AppContext);
   const [rooms, setRooms] = useState([]);
 
   useEffect(() => {
@@ -37,10 +39,13 @@ function MobileBooking({ onBack }) {
   const [selectedRoom, setSelectedRoom] = useState('');
   const [purpose, setPurpose] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState('');
+  const [facultySearch, setFacultySearch] = useState('');
+  const debouncedFacultySearch = useSearchDebounce(facultySearch, 200);
   const [isFacultyOpen, setIsFacultyOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [roomSearch, setRoomSearch] = useState('');
+  const debouncedRoomSearch = useSearchDebounce(roomSearch, 200);
   const [floorFilter, setFloorFilter] = useState('all');
   const [blockFilter, setBlockFilter] = useState('all');
   const [smartRoomFilter, setSmartRoomFilter] = useState(false);
@@ -86,7 +91,7 @@ function MobileBooking({ onBack }) {
     }
 
     // 3. Search filter
-    if (roomSearch && !room.name.toLowerCase().includes(roomSearch.toLowerCase())) return false;
+    if (debouncedRoomSearch && !room.name.toLowerCase().includes(debouncedRoomSearch.toLowerCase())) return false;
 
     // 4. Floor filter
     if (floorFilter !== 'all' && String(room.floor) !== String(floorFilter)) return false;
@@ -177,13 +182,25 @@ function MobileBooking({ onBack }) {
   return (
     <div className="flex flex-col h-full w-full bg-surface-lowest fixed inset-0 z-[60] overflow-y-auto no-scrollbar pb-20">
       {/* Header */}
-      <div className="p-4 flex items-center gap-4 bg-surface-low/80 sticky top-0 z-10 backdrop-blur-md font-display border-b border-border/20">
-        <button onClick={onBack} className="p-2 rounded-full text-text-secondary">
-          <ArrowLeft size={24} />
-        </button>
-        <div className="flex flex-col">
-          <h1 className="text-xl font-extrabold text-text-primary tracking-tight leading-none capitalize">Create Booking</h1>
-          <p className="text-[10px] font-extrabold text-primary capitalize tracking-widest mt-1 opacity-80">Step {step} of 3</p>
+      <div className="p-4 flex items-center justify-between bg-surface-low sticky top-0 z-10 font-display border-b border-border-subtle shadow-sm">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-mid/40 transition-colors" aria-label="Go back">
+            <ArrowLeft size={22} />
+          </button>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-extrabold text-text-primary tracking-tight leading-none capitalize">Create Booking</h1>
+            <p className="text-[10px] font-extrabold text-primary capitalize tracking-widest mt-1 opacity-80">Step {step} of 3</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 rounded-xl bg-surface-lowest border border-border-subtle text-text-secondary hover:text-text-primary transition-all active:scale-95 shadow-sm"
+            aria-label="Toggle theme"
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <NotificationBell />
         </div>
       </div>
 
@@ -361,36 +378,52 @@ function MobileBooking({ onBack }) {
                 <Hash size={12} className="text-primary" />
                 Available Spaces ({availableRooms.length})
               </label>
-              <div className="grid grid-cols-1 gap-2.5">
-                {availableRooms.map(room => (
-                  <button
-                    key={room.id}
-                    onClick={() => setSelectedRoom(room.id)}
-                    className={`flex items-center justify-between p-3.5 rounded-2xl transition-all shadow-sm border ${selectedRoom === room.id ? 'bg-primary text-white border-primary shadow-md' : 'bg-surface-low text-text-primary border-border-subtle hover:bg-surface-mid/40'}`}
-                  >
-                    <div className="flex items-center gap-3.5 flex-1 overflow-hidden">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selectedRoom === room.id ? 'bg-white/20 text-white' : 'bg-surface-mid/60 text-secondary'}`}>
-                        <Hash size={16} />
-                      </div>
-                      <div className="text-left overflow-hidden">
-                        <div className="flex items-center gap-2">
-                          <p className="font-extrabold text-base tracking-tight leading-none truncate font-display capitalize">{room.name}</p>
-                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md shrink-0 font-display ${selectedRoom === room.id ? 'bg-white/10 text-white/90' : 'bg-surface-highest/20 text-text-secondary opacity-70'}`}>
-                            {room.building}
+              <div className="grid grid-cols-2 gap-2">
+                {availableRooms.map(room => {
+                  const isSelected = selectedRoom === room.id;
+                  return (
+                    <button
+                      key={room.id}
+                      onClick={() => setSelectedRoom(room.id)}
+                      className={`flex flex-col justify-between p-3 rounded-xl transition-all shadow-sm border text-left active:scale-[0.98] ${
+                        isSelected 
+                          ? 'bg-primary text-white border-primary shadow-md ring-2 ring-primary/30' 
+                          : 'bg-surface-low text-text-primary border-border-subtle hover:bg-surface-mid/40'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-1 w-full">
+                        <div className="overflow-hidden flex-1">
+                          <p className="font-extrabold text-sm tracking-tight leading-tight truncate font-display capitalize">
+                            {room.name}
+                          </p>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded inline-block mt-1 font-display ${
+                            isSelected ? 'bg-white/15 text-white' : 'bg-surface-mid text-text-secondary'
+                          }`}>
+                            {room.building || 'Room'}
                           </span>
                         </div>
-                        <p className={`text-[10px] font-bold capitalize tracking-wider mt-1 font-display ${selectedRoom === room.id ? 'text-white/70' : 'text-text-secondary opacity-60'}`}>{room.capacity} Seats</p>
+                        <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                          {room.has_ac && (
+                            <Wind size={12} className={isSelected ? 'text-white' : 'text-primary'} />
+                          )}
+                          {room.has_projector && (
+                            <Monitor size={12} className={isSelected ? 'text-white' : 'text-primary'} />
+                          )}
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-3 shrink-0 opacity-80">
-                      <Wind size={14} className={room.has_ac ? (selectedRoom === room.id ? 'text-white' : 'text-primary') : 'text-text-secondary/20'} />
-                      <Monitor size={14} className={room.has_projector ? (selectedRoom === room.id ? 'text-white' : 'text-primary') : 'text-text-secondary/20'} />
-                    </div>
-                  </button>
-                ))}
+                      <div className="mt-2.5 pt-2 border-t border-border-subtle/40 flex items-center justify-between text-[10px]">
+                        <span className={`font-semibold ${isSelected ? 'text-white/80' : 'text-text-secondary opacity-70'}`}>
+                          {room.capacity} seats
+                        </span>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isSelected ? 'text-white' : 'text-primary'}`}>
+                          {room.type === 'Lab' ? 'Lab' : 'Room'}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
                 {availableRooms.length === 0 && (
-                  <div className="py-12 text-center space-y-3">
+                  <div className="col-span-2 py-12 text-center space-y-3">
                     <p className="text-text-secondary font-bold text-xs">No rooms available for this slot.</p>
                     <button onClick={() => setStep(1)} className="text-primary font-bold text-xs underline">Try another time</button>
                   </div>
@@ -435,7 +468,8 @@ function MobileBooking({ onBack }) {
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
                   placeholder="e.g. Special Class, Meeting"
-                  className="w-full bg-surface-low border border-border-subtle rounded-2xl px-4 py-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary/50 h-24 resize-none transition-all placeholder:text-text-secondary/40 font-body"
+                  rows={2}
+                  className="w-full bg-surface-low border border-border-subtle rounded-xl px-3.5 py-2.5 text-xs font-medium text-text-primary focus:outline-none focus:border-primary/50 h-14 resize-none transition-all placeholder:text-text-secondary/40 font-body"
                 />
               </div>
 
@@ -458,25 +492,53 @@ function MobileBooking({ onBack }) {
                     </button>
 
                      {isFacultyOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-2 bg-surface-low border border-border-subtle rounded-2xl shadow-2xl z-50 max-h-[280px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-md">
-                        {faculties.map(f => (
-                          <div
-                            key={f.id}
-                            onClick={() => {
-                              setSelectedFaculty(f.id);
-                              setIsFacultyOpen(false);
-                            }}
-                            className={`p-3.5 cursor-pointer transition-colors flex items-center justify-between hover:bg-accent/10 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-bold text-text-primary hover:text-text-primary'}`}
-                          >
-                            <div className="flex flex-col">
-                              <span className="text-xs font-display capitalize tracking-tight">{f.name}</span>
-                              <span className={`text-[9px] capitalize tracking-wider mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/80' : 'text-text-secondary opacity-70'}`}>
-                                {f.department || 'Faculty'}
-                              </span>
-                            </div>
-                            {String(selectedFaculty) === String(f.id) && <CheckCircle size={16} />}
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-surface-low border border-border-subtle rounded-2xl shadow-2xl z-50 max-h-[260px] overflow-hidden flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="p-2.5 border-b border-border-subtle bg-surface-low sticky top-0 z-10">
+                          <div className="relative">
+                            <input 
+                              type="text"
+                              placeholder="Search faculty name or dept..."
+                              value={facultySearch}
+                              onChange={(e) => setFacultySearch(e.target.value)}
+                              autoFocus
+                              className="w-full bg-surface-lowest border border-border-subtle rounded-xl px-3 py-2 text-xs font-semibold text-text-primary placeholder:text-text-secondary/40 pl-8 focus:outline-none focus:border-primary"
+                            />
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary/40" size={13} />
                           </div>
-                        ))}
+                        </div>
+                        <div className="overflow-y-auto max-h-[200px]">
+                          {faculties
+                            ?.filter(f => !debouncedFacultySearch || 
+                              f.name.toLowerCase().includes(debouncedFacultySearch.toLowerCase()) || 
+                              (f.department && f.department.toLowerCase().includes(debouncedFacultySearch.toLowerCase())))
+                            .map(f => {
+                              const isSelected = String(selectedFaculty) === String(f.id);
+                              return (
+                                <div
+                                  key={f.id}
+                                  onClick={() => {
+                                    setSelectedFaculty(f.id);
+                                    setIsFacultyOpen(false);
+                                    setFacultySearch('');
+                                  }}
+                                  className={`p-3 cursor-pointer transition-colors flex items-center justify-between hover:bg-surface-mid/50 ${isSelected ? 'bg-primary text-white font-extrabold' : 'font-medium text-text-primary'}`}
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="text-xs font-display capitalize tracking-tight">{f.name}</span>
+                                    <span className={`text-[9px] capitalize tracking-wider mt-0.5 ${isSelected ? 'text-white/80' : 'text-text-secondary opacity-70'}`}>
+                                      {f.department || 'Faculty'}
+                                    </span>
+                                  </div>
+                                  {isSelected && <CheckCircle size={15} />}
+                                </div>
+                              );
+                            })}
+                          {faculties?.filter(f => !debouncedFacultySearch || 
+                            f.name.toLowerCase().includes(debouncedFacultySearch.toLowerCase()) || 
+                            (f.department && f.department.toLowerCase().includes(debouncedFacultySearch.toLowerCase()))).length === 0 && (
+                            <div className="p-4 text-center text-xs text-text-secondary font-medium">No faculty found</div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>

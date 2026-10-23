@@ -108,22 +108,23 @@ function Calendar({ onSlotClick }) {
   }, [rooms, filters.searchTerm, filters.floor, filters.smartRoom, filters.roomType, isStudent]);
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
+    <div data-tour="calendar-grid" className="flex flex-col flex-1 overflow-hidden w-full relative pb-0 bg-transparent">
 
 
       <div className="overflow-x-auto overflow-y-auto flex-1 w-full no-scrollbar p-2 sm:p-4">
-        <div className={`flex flex-col min-h-full w-full relative layout-transition bg-surface-low border border-text-secondary/10 rounded-2xl overflow-hidden ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
+        <div className={`flex flex-col min-h-full w-full relative layout-transition bg-surface-low border border-border-subtle rounded-2xl ${viewMode === 'day' ? 'min-w-[320px]' : 'min-w-[800px]'}`}>
           
-          {/* Days Header */}
-          <div className="grid-header-sticky border-b border-text-secondary/10">
+          {/* Days Header (Sticky Anchor Top) */}
+          <div className="sticky top-0 z-20 bg-surface-low border-b border-border-subtle shadow-xs rounded-t-2xl">
             <div className={`grid gap-0 ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}>
-              <div className="py-4 flex items-center justify-center bg-tonal-secondary/5">
+              {/* Intersection Cell (Sticky Anchor Top-Left) */}
+              <div className="sticky left-0 z-30 py-4 flex items-center justify-center bg-surface-low border-r border-border-subtle rounded-tl-2xl">
                 <Clock size={16} className="text-text-secondary opacity-50" />
               </div>
-              {weekDates.filter(d => displayDays.includes(d.dateStr)).map(day => (
+              {weekDates.filter(d => displayDays.includes(d.dateStr)).map((day, idx, arr) => (
                 <div 
                   key={day.dateStr} 
-                  className={`py-4 px-2 text-center transition-all border-l border-text-secondary/10 flex items-center justify-center ${viewMode === 'week' ? 'cursor-pointer hover:bg-primary-accent/5' : ''}`}
+                  className={`py-4 px-2 text-center transition-all border-l border-border-subtle flex items-center justify-center bg-surface-low ${idx === arr.length - 1 ? 'rounded-tr-2xl' : ''} ${viewMode === 'week' ? 'cursor-pointer hover:bg-primary-accent/5' : ''}`}
                   onClick={() => {
                     if (viewMode === 'week') {
                       onDayChange(day.dateStr);
@@ -146,7 +147,7 @@ function Calendar({ onSlotClick }) {
                 style={{ top: `${timePos.percentage}%` }}
               >
                 <div className="flex items-center w-full">
-                  <div className="w-[50px] sm:w-[120px] flex justify-end pr-1 sm:pr-2">
+                  <div className="w-[50px] sm:w-[120px] sticky left-0 z-20 flex justify-end pr-1 sm:pr-2">
                     <span className="bg-tertiary text-white text-[8px] sm:text-[10px] font-bold px-1 sm:px-1.5 py-0.5 rounded shadow-tertiary whitespace-nowrap">
                       {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                     </span>
@@ -171,27 +172,29 @@ function Calendar({ onSlotClick }) {
                 <p className="text-text-secondary text-base sm:text-lg font-extrabold capitalize tracking-widest opacity-40 font-display text-center">No structural matches found</p>
               </div>
             ) : (
-              filteredHours.map((hour) => {
+              filteredHours.map((hour, hourIdx) => {
+                const isLastHour = hourIdx === filteredHours.length - 1;
                 return (
                   <div 
                     key={hour} 
-                    className={`flex-1 grid gap-0 group layout-transition min-h-[90px] sm:min-h-[100px] transition-colors border-b border-text-secondary/10 last:border-b-0 ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}
+                    className={`flex-1 grid gap-0 group layout-transition min-h-[90px] sm:min-h-[100px] transition-colors border-b border-border-subtle last:border-b-0 ${isLastHour ? 'rounded-b-2xl' : ''} ${viewMode === 'day' ? 'grid-cols-[50px_1fr] sm:grid-cols-[120px_1fr]' : 'grid-cols-[50px_repeat(5,1fr)] sm:grid-cols-[120px_repeat(5,1fr)]'}`}
                   >
-                    {/* Time Label Column */}
-                    <div className="flex flex-col items-center justify-center transition-colors bg-text-secondary/5">
+                    {/* Time Label Column (Sticky Anchor Left) */}
+                    <div className={`sticky left-0 z-10 flex flex-col items-center justify-center transition-colors bg-surface-low border-r border-border-subtle ${isLastHour ? 'rounded-bl-2xl' : ''}`}>
                       <span className="text-[10px] sm:text-xs font-black text-text-primary">{String(hour).padStart(2, '0')}:00</span>
                       <span className="text-[8px] sm:text-[9px] text-text-secondary font-bold opacity-40">{String(hour + 1).padStart(2, '0')}:00</span>
                     </div>
 
-                    {displayDays.map(dateStr => {
+                    {displayDays.map((dateStr, dIdx) => {
                       const currentWeekDay = weekDates.find(d => d.dateStr === dateStr);
                       const dayLabel = currentWeekDay?.day || getDayOfWeek(dateStr);
                       const dateObj = currentWeekDay?.fullDate || new Date(`${dateStr}T00:00:00`);
+                      const isBottomRight = isLastHour && dIdx === displayDays.length - 1;
                       
                       return (
                         <div 
                           key={dateStr} 
-                          className="relative p-2 h-full transition-all border-l border-text-secondary/10 hover:bg-tonal-secondary/5"
+                          className={`relative p-2 h-full transition-all border-l border-border-subtle hover:bg-tonal-secondary/5 ${isBottomRight ? 'rounded-br-2xl' : ''}`}
                         >
                           <div className="absolute inset-0 z-0 transition-opacity duration-500 opacity-0" />
                           

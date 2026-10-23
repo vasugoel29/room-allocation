@@ -53,6 +53,10 @@ export function makeContext(overrides = {}) {
     fetchFacultyOverrides: vi.fn(),
     fetchTransfers: vi.fn(),
     refreshAllData: vi.fn(),
+    isTutorialOpen: false,
+    startTutorial: vi.fn(),
+    closeTutorial: vi.fn(),
+    completeTutorial: vi.fn(),
     logout: vi.fn(),
     ...overrides,
   };

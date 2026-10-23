@@ -471,16 +471,17 @@ function BookingModal({ slot, onClose, onSuccess }) {
                 )}
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-40 font-display">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">
                   Logistics & Context
                 </label>
                 <textarea
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  placeholder="e.g. Special Class, Club Meeting, Portfolio Review"
+                  placeholder="e.g. Special Class, Meeting"
                   autoComplete="off"
-                  className="w-full bg-surface-lowest dark:bg-surface-high border border-black/10 dark:border-white/10 rounded-[2rem] px-6 py-6 text-sm text-text-primary font-bold focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all h-28 resize-none placeholder:text-text-secondary/30 shadow-sm font-body"
+                  rows={2}
+                  className="w-full bg-surface-lowest dark:bg-surface-high border border-border-subtle rounded-xl px-4 py-2.5 text-xs text-text-primary font-medium focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all h-14 resize-none placeholder:text-text-secondary/40 shadow-sm font-body"
                 />
               </div>
 

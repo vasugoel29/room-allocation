@@ -57,6 +57,21 @@ export const AppProvider = ({ children }) => {
   const [backendError, setBackendError] = useState(null);
   const prevBackendError = useRef(null);
 
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+  const startTutorial = useCallback(() => setIsTutorialOpen(true), []);
+  const closeTutorial = useCallback(() => setIsTutorialOpen(false), []);
+  const completeTutorial = useCallback(() => {
+    if (user?.id) {
+      try {
+        localStorage.setItem(`cras_tutorial_seen_${user.id}`, 'true');
+      } catch (e) {
+        console.error('Failed to save tutorial status to localStorage:', e);
+      }
+    }
+    setIsTutorialOpen(false);
+  }, [user]);
+
   const logout = useCallback(async () => {
     try {
       await authService.logout();
@@ -64,6 +79,7 @@ export const AppProvider = ({ children }) => {
       console.error('Logout error', err);
     } finally {
       setUser(null);
+      setIsTutorialOpen(false);
       localStorage.removeItem('user');
       localStorage.removeItem('token');
     }
@@ -83,6 +99,22 @@ export const AppProvider = ({ children }) => {
       })
       .catch((err) => console.warn('Could not refresh profile', err));
     return () => { cancelled = true; };
+  }, [userId]);
+
+  // Auto-launch interactive onboarding tutorial on first-time signin
+  useEffect(() => {
+    if (!userId || !localStorage.getItem('token')) return;
+    try {
+      const seen = localStorage.getItem(`cras_tutorial_seen_${userId}`);
+      if (!seen) {
+        const timer = setTimeout(() => {
+          setIsTutorialOpen(true);
+        }, 1200);
+        return () => clearTimeout(timer);
+      }
+    } catch {
+      // localStorage unavailable or restricted
+    }
   }, [userId]);
 
   // Listen for real-time permission updates synchronized from cookies/responses
@@ -328,6 +360,10 @@ export const AppProvider = ({ children }) => {
     fetchFacultyOverrides,
     fetchTransfers,
     refreshAllData,
+    isTutorialOpen,
+    startTutorial,
+    closeTutorial,
+    completeTutorial,
     logout
   }), [
     user,
@@ -358,6 +394,10 @@ export const AppProvider = ({ children }) => {
     fetchFacultyOverrides,
     fetchTransfers,
     refreshAllData,
+    isTutorialOpen,
+    startTutorial,
+    closeTutorial,
+    completeTutorial,
     logout
   ]);
 

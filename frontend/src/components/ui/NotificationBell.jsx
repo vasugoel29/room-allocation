@@ -115,7 +115,7 @@ export default function NotificationBell() {
       {open && (
         <>
           <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[190]" 
+            className="fixed inset-0 bg-black/40 z-[190]" 
             onClick={() => setOpen(false)} 
             aria-hidden="true" 
           />
@@ -123,9 +123,9 @@ export default function NotificationBell() {
             ref={panelRef}
             role="dialog"
             aria-label="Notifications"
-            className="fixed sm:absolute inset-x-3 sm:inset-x-auto top-[4.25rem] sm:top-full sm:right-0 sm:mt-2 sm:w-96 max-h-[70vh] flex flex-col bg-surface-low border border-border/20 rounded-2xl shadow-2xl z-[200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+            className="fixed sm:absolute inset-x-3 sm:inset-x-auto top-[3.75rem] sm:top-full sm:right-0 sm:mt-2 sm:w-96 max-h-[70vh] flex flex-col bg-surface-low border border-border-subtle rounded-2xl shadow-2xl z-[200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
           >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
             <h3 className="text-sm font-black text-text-primary">Notifications</h3>
             {unread > 0 && (
               <button type="button" onClick={readAll} className="text-xs font-bold text-primary hover:underline flex items-center gap-1">

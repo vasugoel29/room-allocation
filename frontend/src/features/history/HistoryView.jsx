@@ -128,9 +128,9 @@ const HistoryView = ({ onClose }) => {
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden rounded-2xl">
       {/* Streamlined Filter & Search Bar without redundant page title */}
-      <div className="p-3 sm:p-4 bg-surface-low/80 backdrop-blur-md shrink-0 border-b border-border-subtle">
-        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
-          <div className="inline-flex p-1 bg-surface-lowest/70 rounded-xl border border-border-subtle shrink-0">
+      <div className="p-3 sm:p-4 bg-surface-low border-b border-border-subtle shrink-0">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="inline-flex w-fit p-1 bg-surface-lowest/70 rounded-xl border border-border-subtle shrink-0">
             {[
               { id: 'UPCOMING', label: 'Upcoming' },
               { id: 'PAST', label: 'Past' },

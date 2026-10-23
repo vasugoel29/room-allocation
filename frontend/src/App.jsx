@@ -13,6 +13,7 @@ import FloatingActions from './components/ui/FloatingActions';
 import NotificationBell from './components/ui/NotificationBell';
 import { P, can, canAny, canSeeCalendar, isAdmin } from './utils/permissions';
 import { BOOKING_RULES } from '../../shared/bookingRules.js';
+import InteractiveTutorial from './components/tutorial/InteractiveTutorial';
 
 // Lazy-loaded pages for bundle splitting
 const AdminDashboard = React.lazy(() => import('./pages/AdminDashboard'));
@@ -136,6 +137,7 @@ const NavButton = ({ id, label, icon, to, setIsSidebarOpen, isSidebarCollapsed, 
   return (
     <NavLink 
       to={targetPath}
+      data-tour={`nav-${id}`}
       onClick={() => setIsSidebarOpen(false)}
       className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${isActive ? `bg-primary-accent text-white shadow-ambient` : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
     >
@@ -150,7 +152,7 @@ const NavButton = ({ id, label, icon, to, setIsSidebarOpen, isSidebarCollapsed, 
   );
 };
 
-const ThemeToggle = ({ theme, setTheme, className = "" }) => (
+export const ThemeToggle = ({ theme, setTheme, className = "" }) => (
   <button 
     onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
     className={`p-2.5 hover:bg-tonal-secondary rounded-xl text-text-secondary hover:text-text-primary transition-all active:scale-95 ${className}`}
@@ -243,27 +245,24 @@ function App() {
                 />
               )}
 
-              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border/20 lg:border-none lg:bg-transparent lg:glass px-6 py-3 sm:py-4 flex flex-col gap-6 z-[80] shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
+              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border-subtle lg:border-none lg:bg-transparent lg:glass px-4 py-3 sm:py-4 flex flex-col gap-3.5 z-[80] shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-5'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
                 <div className={`flex items-center text-primary-accent ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'} relative`}>
-                  <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="flex items-center gap-2.5 overflow-hidden">
                     <button 
                       onClick={() => window.innerWidth >= 1024 ? toggleSidebar() : setIsSidebarOpen(false)}
-                      className="p-1 hover:opacity-80 transition-opacity flex items-center gap-3 shrink-0"
+                      className="p-1 hover:opacity-80 transition-opacity flex items-center gap-2.5 shrink-0"
                       title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
                     >
-                      <Menu size={32} className="shrink-0" />
-                      {!isSidebarCollapsed && <h1 className="text-lg font-extrabold tracking-tighter text-text-primary whitespace-nowrap font-display capitalize leading-tight pr-8 lg:pr-0">ROOM ALLOCATION</h1>}
+                      <Menu size={28} className="shrink-0" />
+                      {!isSidebarCollapsed && <h1 className="text-base font-bold tracking-tight text-text-primary whitespace-nowrap font-display uppercase leading-tight">ROOM ALLOCATION</h1>}
                     </button>
                   </div>
-                  {!isSidebarCollapsed && (
-                    <button onClick={() => setIsSidebarOpen(false)} className="absolute right-0 top-1/2 -translate-y-1/2 p-2 lg:hidden text-text-secondary hover:text-text-primary"><CloseIcon size={24} /></button>
-                  )}
                 </div>
 
-                <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 min-h-0 flex flex-col gap-8 overflow-y-auto no-scrollbar pb-6`}>
+                <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 min-h-0 flex flex-col gap-3.5 sm:gap-4 overflow-y-auto no-scrollbar pb-3`}>
                   <div className="space-y-1">
-                    <p className="px-4 text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] mb-4 opacity-50 font-display">Navigation</p>
-                    <div className="flex flex-col gap-1">
+                    <p className="px-2 text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1 opacity-60 font-display">Navigation</p>
+                    <div className="flex flex-col gap-0.5">
                       {getNavigationTabs().map(tab => (
                         <NavButton 
                           key={tab.id} 
@@ -280,41 +279,43 @@ function App() {
                   </div>
 
                   {location.pathname === '/calendar' && (
-                    <div className="space-y-4 pt-4">
-                      <p className="px-4 text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] mb-2 opacity-50 font-display">Discovery</p>
+                    <div className="space-y-2 pt-1 border-t border-border-subtle/50">
+                      <p className="px-2 text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1 opacity-60 font-display">Discovery</p>
                       <RoomFilter />
                     </div>
                   )}
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-border/20 shrink-0">
+                <div className="mt-auto pt-3 border-t border-border-subtle shrink-0">
                   <div className={`flex items-center ${isSidebarCollapsed ? 'lg:flex-col lg:gap-2' : 'justify-between'}`}>
                     <div className={`overflow-hidden ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
-                      <p className="text-sm font-black text-text-primary truncate">{user?.name}</p>
-                      <p className="text-[9px] text-primary-accent capitalize tracking-widest font-black opacity-60">{getRoleLabel(user?.role)}</p>
+                      <p className="text-xs font-bold text-text-primary truncate">{user?.name}</p>
+                      <p className="text-[9px] text-primary-accent capitalize tracking-wider font-semibold opacity-75">{getRoleLabel(user?.role)}</p>
                     </div>
                     <div className={`flex items-center gap-1 ${isSidebarCollapsed ? 'flex-col' : ''}`}>
                       <ThemeToggle theme={theme} setTheme={setTheme} />
-                      <button onClick={logout} className="p-2.5 hover:bg-red-500/10 rounded-xl text-text-secondary hover:text-red-500 transition-colors" title="Logout"><LogOut size={18} /></button>
+                      <button onClick={logout} className="p-2 hover:bg-red-500/10 rounded-xl text-text-secondary hover:text-red-500 transition-colors" title="Logout"><LogOut size={16} /></button>
                     </div>
                   </div>
                 </div>
               </aside>
 
               <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
-                {/* relative z-50: backdrop-blur makes the header a stacking context; keep the inbox panel above page and sticky headers. */}
-                <header className="relative z-50 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
+                {/* Header without backdrop-blur that traps fixed-position elements */}
+                <header className="relative z-50 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low border-b border-border-subtle">
                   <div className="flex items-center gap-1 sm:gap-2">
-                    <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"><Menu size={24} /></button>
+                    <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-surface-high rounded-xl text-primary-accent transition-colors"><Menu size={22} /></button>
                     <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight capitalize font-display">
                       {getHeaderTitle(location.pathname)}
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">
                     <ThemeToggle theme={theme} setTheme={setTheme} />
-                    <NotificationBell />
+                    <div data-tour="notification-bell">
+                      <NotificationBell />
+                    </div>
                     {location.pathname === '/calendar' && (
-                      <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
+                      <div data-tour="view-toggle" className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
                         <button onClick={() => setViewMode('day')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
                         <button onClick={() => setViewMode('week')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
                       </div>
@@ -363,6 +364,7 @@ function App() {
               )}
 
               {isModalOpen && <BookingModal slot={selectedSlot} onClose={() => setIsModalOpen(false)} onSuccess={() => setIsModalOpen(false)} />}
+              <InteractiveTutorial />
             </div>
           )
         } />

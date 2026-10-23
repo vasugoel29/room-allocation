@@ -1,12 +1,12 @@
 import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { User, Mail, Shield, Building, BookOpen, LogOut, Info } from 'lucide-react';
+import { User, Mail, Shield, Building, BookOpen, LogOut, Info, Sparkles } from 'lucide-react';
 import { getRoleLabel } from '../utils/roleUtils';
 import { isAdmin as isAdminUser, teaches } from '../utils/permissions';
 
 /** Read-only: the profile is owned by the institutional directory (college ACL). */
 function Profile() {
-  const { user, logout } = useContext(AppContext);
+  const { user, logout, startTutorial } = useContext(AppContext);
   const deptName = user?.academic?.dept || user?.department_name || '';
   const branchName = user?.academic?.branch || user?.branch || '';
   const semNum = user?.academic?.semester ?? user?.semester ?? '';
@@ -101,7 +101,16 @@ function Profile() {
         </div>
 
         {/* BOTTOM: Preferences and Account Actions */}
-        <div className="pt-3 sm:pt-4 border-t border-border-subtle shrink-0">
+        <div className="pt-3 sm:pt-4 border-t border-border-subtle shrink-0 flex flex-col gap-2.5">
+          <button 
+            type="button"
+            onClick={startTutorial}
+            className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl bg-primary/10 text-primary-accent hover:bg-primary/20 font-semibold text-xs sm:text-sm active:scale-95 transition-all border border-primary/20"
+          >
+            <Sparkles size={16} />
+            Revisit App Tutorial
+          </button>
+
           <button 
             onClick={logout}
             className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-xl bg-red-500/10 text-red-500 hover:text-white hover:bg-red-500 font-semibold text-xs sm:text-sm active:scale-95 transition-all border border-red-500/20"
