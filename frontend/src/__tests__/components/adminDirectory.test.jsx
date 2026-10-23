@@ -126,8 +126,7 @@ describe('Profile (read-only, from the institutional directory)', () => {
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByRole('combobox')).toBeNull();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle Theme' }));
-    expect(ctx.setTheme).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: 'Toggle Theme' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /logout securely/i }));
     expect(ctx.logout).toHaveBeenCalled();
     expect(f).not.toHaveBeenCalled();

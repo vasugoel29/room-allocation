@@ -251,7 +251,7 @@ function App() {
                   )}
                 </div>
 
-                <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 flex flex-col gap-8`}>
+                <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 min-h-0 flex flex-col gap-8 overflow-y-auto no-scrollbar pb-6`}>
                   <div className="space-y-1">
                     <p className="px-4 text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] mb-4 opacity-50 font-display">Navigation</p>
                     <div className="flex flex-col gap-1">
@@ -278,7 +278,7 @@ function App() {
                   )}
                 </div>
 
-                <div className="mt-auto pt-6 border-t border-border/20">
+                <div className="mt-auto pt-6 border-t border-border/20 shrink-0">
                   <div className={`flex items-center ${isSidebarCollapsed ? 'lg:flex-col lg:gap-2' : 'justify-between'}`}>
                     <div className={`overflow-hidden ${isSidebarCollapsed ? 'hidden' : 'block'}`}>
                       <p className="text-sm font-black text-text-primary truncate">{user?.name}</p>
@@ -293,8 +293,8 @@ function App() {
               </aside>
 
               <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
-                {/* relative z-40: backdrop-blur makes the header a stacking context; keep the inbox panel above the page. */}
-                <header className="relative z-40 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
+                {/* relative z-50: backdrop-blur makes the header a stacking context; keep the inbox panel above page and sticky headers. */}
+                <header className="relative z-50 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low/50 backdrop-blur-md">
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"><Menu size={24} /></button>
                     <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight capitalize font-display">
@@ -302,6 +302,7 @@ function App() {
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">
+                    <ThemeToggle theme={theme} setTheme={setTheme} />
                     <NotificationBell />
                     {location.pathname === '/calendar' && (
                       <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">

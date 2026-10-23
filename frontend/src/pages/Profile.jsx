@@ -1,12 +1,12 @@
 import { useContext } from 'react';
 import { AppContext } from '../context/AppContext';
-import { User, Mail, Shield, Building, BookOpen, LogOut, Sun, Moon, Info } from 'lucide-react';
+import { User, Mail, Shield, Building, BookOpen, LogOut, Info } from 'lucide-react';
 import { getRoleLabel } from '../utils/roleUtils';
 import { isAdmin as isAdminUser, teaches } from '../utils/permissions';
 
 /** Read-only: the profile is owned by the institutional directory (college ACL). */
 function Profile() {
-  const { user, logout, theme, setTheme } = useContext(AppContext);
+  const { user, logout } = useContext(AppContext);
   const deptName = user?.academic?.dept || user?.department_name || '';
   const branchName = user?.academic?.branch || user?.branch || '';
   const semNum = user?.academic?.semester ?? user?.semester ?? '';
@@ -105,25 +105,7 @@ function Profile() {
         </div>
 
         {/* BOTTOM: Preferences and Account Actions */}
-        <div className="pt-6 sm:pt-10 border-t border-border/50 space-y-6 sm:space-y-8 shrink-0">
-          <div className="flex items-center justify-between pl-6 pr-4 py-3 sm:py-4 bg-bg-secondary/50 rounded-2xl sm:rounded-full border border-border/30 group">
-            <div className="flex flex-col">
-              <p className="text-sm sm:text-base font-black text-text-primary capitalize tracking-widest">Theme Mode</p>
-              <p className="text-[10px] sm:text-xs text-text-secondary font-bold">Switch Appearance</p>
-            </div>
-            <button 
-              onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
-              className={`w-24 sm:w-28 h-10 rounded-full relative transition-all duration-300 ${theme === 'dark' ? 'bg-accent/20' : 'bg-slate-200/50'}`}
-              aria-label="Toggle Theme"
-            >
-              <div className="absolute inset-0 flex items-center justify-between px-3">
-                <Sun size={18} className={`text-amber-500 transition-all ${theme === 'light' ? 'scale-100' : 'scale-0 opacity-0'}`} />
-                <Moon size={18} className={`text-accent transition-all ${theme === 'dark' ? 'scale-100' : 'scale-0 opacity-0'}`} />
-              </div>
-              <div className={`absolute top-0 h-full aspect-square rounded-full bg-white shadow-xl flex items-center justify-center transition-all ${theme === 'dark' ? 'left-0' : 'left-14 sm:left-18'}`} />
-            </button>
-          </div>
-
+        <div className="pt-6 sm:pt-10 border-t border-border/50 shrink-0">
           <button 
             onClick={logout}
             className="w-full flex items-center justify-center gap-4 py-4 sm:py-5 rounded-3xl bg-red-500/10 text-red-600 font-black text-sm sm:text-base hover:bg-red-500/20 active:scale-95 transition-all border border-red-500/20"
@@ -138,3 +120,4 @@ function Profile() {
 }
 
 export default Profile;
+
