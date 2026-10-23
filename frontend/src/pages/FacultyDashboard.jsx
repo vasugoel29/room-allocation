@@ -155,13 +155,9 @@ function FacultyDashboard() {
 
 
   return (
-    <div className="p-4 sm:p-8 w-full h-full overflow-y-auto no-scrollbar space-y-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-2xl font-extrabold tracking-tight text-text-primary capitalize font-display">Faculty Portal</h2>
-        <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest opacity-60 font-display">Review student requests and manage your scheduled bookings.</p>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 bg-tonal-secondary/10 p-1.5 rounded-2xl font-display ring-1 ring-border/15">
+    <div className="p-3 sm:p-6 w-full h-full overflow-y-auto no-scrollbar space-y-4">
+      {/* Sleek Segmented Tab Bar */}
+      <div className="grid grid-cols-3 gap-1.5 bg-surface-lowest/70 border border-border-subtle p-1 rounded-xl">
         {[
           { id: 'PENDING', label: `Pending (${pendingRequests.length})` },
           { id: 'ACCEPTED', label: 'Approved' },
@@ -170,96 +166,96 @@ function FacultyDashboard() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-2 py-3 rounded-xl text-[10px] sm:text-xs font-extrabold capitalize tracking-tight transition-all text-center ${activeTab === tab.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+            className={`px-2 py-2 rounded-lg text-xs font-semibold transition-all duration-150 text-center ${activeTab === tab.id ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-
+      <div key={activeTab} className="tab-content-enter">
       {loading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-pulse">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 animate-pulse">
           {[1, 2, 3].map(i => (
-            <div key={i} className="bg-surface-low rounded-2xl p-5 shadow-ambient flex flex-col gap-4 border border-text-secondary/5">
-              <div className="space-y-3 pb-2">
+            <div key={i} className="bg-surface-low rounded-2xl p-4 shadow-sm flex flex-col gap-3 border border-border-subtle">
+              <div className="space-y-2 pb-2">
                 <div className="h-5 w-24 bg-surface-highest/20 rounded-lg" />
                 <div className="h-4 w-3/4 bg-surface-highest/15 rounded-md" />
                 <div className="h-3.5 w-1/2 bg-surface-highest/10 rounded-md" />
               </div>
-              <div className="h-20 bg-surface-highest/10 rounded-xl mt-2" />
+              <div className="h-16 bg-surface-highest/10 rounded-xl mt-1" />
               <div className="flex gap-2 pt-2 mt-auto">
-                <div className="h-10 flex-1 bg-surface-highest/20 rounded-xl" />
-                <div className="h-10 flex-1 bg-surface-highest/10 rounded-xl" />
+                <div className="h-9 flex-1 bg-surface-highest/20 rounded-xl" />
+                <div className="h-9 flex-1 bg-surface-highest/10 rounded-xl" />
               </div>
             </div>
           ))}
         </div>
       ) : DISPLAY_BOOKINGS.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 px-4 text-center rounded-[2.5rem] bg-surface-low/60 ring-1 ring-border/10 m-4 shadow-sm">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-6">
-            <Check size={32} />
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center rounded-2xl bg-surface-low border border-border-subtle shadow-sm">
+          <div className="w-12 h-12 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-4">
+            <Check size={24} />
           </div>
-          <h3 className="text-xl font-extrabold text-text-primary mb-2 font-display capitalize tracking-tight">System Synchronized</h3>
-          <p className="text-text-secondary max-w-sm text-[10px] font-extrabold opacity-60 capitalize tracking-widest leading-loose">There are no pending actions in this architectural quadrant right now.</p>
+          <h3 className="text-base font-bold text-text-primary mb-1 font-display">System Synchronized</h3>
+          <p className="text-text-secondary max-w-sm text-xs">There are no pending actions in this category right now.</p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {DISPLAY_BOOKINGS.map(req => (
-            <div key={req.id} className="bg-surface-low rounded-2xl p-5 shadow-sm ring-1 ring-border/15 flex flex-col gap-4">
-              <div className="flex justify-between items-start gap-3 pb-2">
+            <div key={req.id} className="bg-surface-low rounded-2xl p-4 shadow-sm border border-border-subtle flex flex-col gap-3 hover:border-border transition-all">
+              <div className="flex justify-between items-start gap-3 pb-1">
                 <div className="flex-1">
                   {activeTab === 'PENDING' && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold capitalize leading-none bg-tonal-tertiary text-tertiary mb-4 font-display tracking-widest shadow-tertiary">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-tonal-tertiary text-tertiary mb-2 font-display">
                       <Clock size={12} /> {req.isCancellationRequest ? 'Cancellation Request' : 'Pending Approval'}
                     </span>
                   )}
                   {activeTab === 'ACCEPTED' && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold capitalize leading-none bg-green-500/10 text-green-600 mb-4 font-display tracking-widest">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-green-500/10 text-green-600 mb-2 font-display">
                       <Check size={12} /> Accepted Student Request
                     </span>
                   )}
-                    {activeTab === 'MY' && (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-extrabold capitalize leading-none bg-primary/10 text-primary mb-4 font-display tracking-widest">
-                        <GraduationCap size={12} /> My Booking
-                      </span>
-                    )}
-                  <p className="font-extrabold text-text-primary text-base line-clamp-2 capitalize font-display tracking-tight leading-tight">{req.purpose || 'No purpose specified'}</p>
+                  {activeTab === 'MY' && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-primary/10 text-primary mb-2 font-display">
+                      <GraduationCap size={12} /> My Booking
+                    </span>
+                  )}
+                  <p className="font-bold text-text-primary text-sm line-clamp-2 capitalize font-display leading-tight">{req.purpose || 'No purpose specified'}</p>
                 </div>
               </div>
 
-              <div className="space-y-3 flex-1 text-sm text-text-secondary">
-                <div className="flex items-center gap-3">
-                  <User size={16} className="text-primary shrink-0" />
-                  <span className="truncate font-bold text-[10px] capitalize tracking-widest opacity-60 font-body">{req.user_name}</span>
+              <div className="space-y-2 flex-1 text-xs text-text-secondary">
+                <div className="flex items-center gap-2">
+                  <User size={14} className="text-primary shrink-0" />
+                  <span className="truncate font-medium">{req.user_name}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <MapPin size={16} className="text-secondary shrink-0" />
-                  <span className="font-extrabold text-text-primary capitalize tracking-tight text-xs font-display">{req.room_name}</span>
+                <div className="flex items-center gap-2">
+                  <MapPin size={14} className="text-secondary shrink-0" />
+                  <span className="font-semibold text-text-primary capitalize">{req.room_name}</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <CalendarIcon size={16} className="text-primary shrink-0" />
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold capitalize text-[10px]">{formatDate(req.start_time)}</span>
-                    <ChevronRight size={12} className="opacity-50" />
-                    <span className="font-bold capitalize text-[10px]">{formatTime(req.start_time)} - {formatTime(req.end_time)}</span>
+                <div className="flex items-center gap-2">
+                  <CalendarIcon size={14} className="text-primary shrink-0" />
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="font-medium">{formatDate(req.start_time)}</span>
+                    <ChevronRight size={10} className="opacity-50" />
+                    <span className="font-medium">{formatTime(req.start_time)} - {formatTime(req.end_time)}</span>
                   </div>
                 </div>
               </div>
 
               {activeTab === 'PENDING' && (
-                <div className="flex gap-3 pt-2">
+                <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => handleAction(req.id, 'approve')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all shadow-ambient active:scale-95"
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-primary text-white py-2 rounded-xl font-semibold text-xs transition-all shadow-sm active:scale-95"
                   >
-                    <Check size={16} /> Approve
+                    <Check size={14} /> Approve
                   </button>
                   <button
                     onClick={() => handleAction(req.id, 'reject')}
-                    className="flex-1 flex items-center justify-center gap-2 bg-tonal-secondary/10 hover:bg-tonal-secondary/20 text-text-primary py-3 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95"
+                    className="flex-1 flex items-center justify-center gap-1.5 bg-surface-lowest border border-border-subtle hover:bg-surface-high text-text-primary py-2 rounded-xl font-semibold text-xs transition-all active:scale-95"
                   >
-                    <X size={16} /> Reject
+                    <X size={14} /> Reject
                   </button>
                 </div>
               )}
@@ -268,9 +264,9 @@ function FacultyDashboard() {
                 <div className="pt-2">
                   <button
                     onClick={() => handleCancel(req.id)}
-                    className="w-full flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 py-3 rounded-2xl font-extrabold text-[10px] capitalize tracking-widest transition-all active:scale-95 group"
+                    className="w-full flex items-center justify-center gap-1.5 bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 py-2 rounded-xl font-semibold text-xs transition-all active:scale-95 group border border-red-500/20"
                   >
-                    <Trash2 size={16} className="group-hover:scale-110 transition-transform" />
+                    <Trash2 size={14} className="group-hover:scale-110 transition-transform" />
                     Cancel Session
                   </button>
                 </div>
@@ -279,6 +275,7 @@ function FacultyDashboard() {
           ))}
         </div>
       )}
+      </div>
       
       {/* Conflict Resolution Modal */}
       {isConflictModalOpen && (

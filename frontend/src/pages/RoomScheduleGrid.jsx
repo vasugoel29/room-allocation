@@ -424,7 +424,7 @@ const RoomScheduleGrid = () => {
           </div>
         )}
 
-        <div className="overflow-x-auto min-w-full">
+        <div className="overflow-x-auto min-w-full overscroll-x-contain scroll-smooth snap-scroll-x">
           <div className="min-w-[1000px]">
             {/* Hour headers */}
             <div className="grid room-grid-row gap-2 border-b border-border/10 pb-3 mb-3 text-center">

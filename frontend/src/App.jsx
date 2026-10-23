@@ -160,6 +160,18 @@ const ThemeToggle = ({ theme, setTheme, className = "" }) => (
   </button>
 );
 
+const getHeaderTitle = (pathname) => {
+  const seg = (pathname.split('/')[1] || 'schedule').toLowerCase();
+  if (seg === 'history' || seg === 'bookings') return 'Bookings';
+  if (seg === 'calendar') return 'Rooms';
+  if (seg === 'timetable') return 'Timetable';
+  if (seg === 'profile') return 'Profile';
+  if (seg === 'faculty') return 'Faculty Portal';
+  if (seg === 'admin') return 'Admin Console';
+  if (seg === 'book-a-slot') return 'Create Booking';
+  return seg.replace(/-/g, ' ');
+};
+
 function App() {
   const { user, viewMode, setViewMode, backendError, logout, theme, setTheme, pendingTransferCount } = useContext(AppContext);
   const { isDesktop } = useWindowSize();
@@ -211,9 +223,6 @@ function App() {
     tabs.push({ id: 'profile', icon: User, label: 'Profile' });
     return tabs;
   };
-
-
-
 
   return (
     <div className={`h-screen w-full flex flex-col transition-colors duration-400 font-body ${theme === 'dark' ? 'dark' : ''} bg-surface-lowest`}>
@@ -298,7 +307,7 @@ function App() {
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-white/10 rounded-xl text-primary-accent transition-colors"><Menu size={24} /></button>
                     <h2 className="text-xl lg:text-2xl font-extrabold tracking-tight text-primary-accent leading-tight capitalize font-display">
-                      {(location.pathname.split('/')[1] || 'Schedule').replace(/-/g, ' ')}
+                      {getHeaderTitle(location.pathname)}
                     </h2>
                   </div>
                   <div className="flex items-center gap-2">

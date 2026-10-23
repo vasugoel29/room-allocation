@@ -187,7 +187,7 @@ function MobileBooking({ onBack }) {
         </div>
       </div>
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 sm:p-5 space-y-4">
         {error && (
           <div className="p-4 rounded-2xl bg-red-500/10 text-red-600 text-sm flex items-center gap-3 animate-in fade-in zoom-in duration-300">
             <AlertCircle size={20} />
@@ -261,22 +261,22 @@ function MobileBooking({ onBack }) {
 
         {/* Step 2: Room Selection */}
         {step === 2 && (
-          <div className="space-y-5 animate-in slide-in-from-right duration-300">
-            <div className="bg-surface-low/60 p-5 rounded-3xl flex items-center justify-between shadow-sm ring-1 ring-border/15">
-              <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                   <CalendarIcon size={20} />
+          <div className="space-y-3.5 animate-in slide-in-from-right duration-300">
+            <div className="bg-surface-low p-3.5 rounded-2xl flex items-center justify-between shadow-sm border border-border-subtle">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                   <CalendarIcon size={16} />
                 </div>
                 <div className="font-display">
-                   <p className="text-[10px] font-extrabold capitalize tracking-widest text-text-secondary opacity-60">Selected Time</p>
-                   <p className="text-sm font-extrabold text-text-primary capitalize tracking-tight">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
+                   <p className="text-[9px] font-extrabold capitalize tracking-widest text-text-secondary opacity-60">Selected Time</p>
+                   <p className="text-xs font-extrabold text-text-primary capitalize tracking-tight">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                 </div>
               </div>
-              <button onClick={() => setStep(1)} className="text-primary font-extrabold text-[10px] capitalize tracking-widest underline font-display">Edit</button>
+              <button onClick={() => setStep(1)} className="text-primary font-bold text-[10px] capitalize tracking-wider px-2 py-1 rounded-lg bg-primary/5 hover:bg-primary/10 font-display transition-colors">Edit</button>
             </div>
 
             {/* Filters */}
-            <div className="space-y-4 pt-2">
+            <div className="space-y-2.5">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <input 
@@ -284,28 +284,29 @@ function MobileBooking({ onBack }) {
                     placeholder="Quick search room..."
                     value={roomSearch}
                     onChange={(e) => setRoomSearch(e.target.value)}
-                    className="w-full bg-tonal-secondary/10 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:bg-tonal-secondary/20 transition-all pl-11 h-12 font-body font-bold text-text-primary placeholder:text-text-secondary/30"
+                    className="w-full bg-surface-low border border-border-subtle rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:border-primary/50 transition-all pl-9 h-10 font-body font-bold text-text-primary placeholder:text-text-secondary/40"
                   />
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary/40" size={16} />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary/40" size={14} />
                 </div>
                 <button 
                   onClick={() => setSmartRoomFilter(!smartRoomFilter)}
-                  className={`px-5 rounded-2xl text-[10px] font-extrabold capitalize tracking-widest transition-all flex items-center gap-2 h-12 font-display ${smartRoomFilter ? 'bg-tertiary text-white shadow-tertiary' : 'bg-tonal-secondary/10 text-text-secondary'}`}
+                  className={`px-3.5 rounded-xl text-[10px] font-bold capitalize tracking-wider transition-all flex items-center gap-1.5 h-10 font-display border ${smartRoomFilter ? 'bg-tertiary text-white border-tertiary shadow-sm' : 'bg-surface-low text-text-secondary border-border-subtle hover:text-text-primary'}`}
                 >
-                  <Monitor size={16} />
+                  <Monitor size={14} />
                   <span>AC & Projector</span>
                 </button>
               </div>
 
-              <div className="space-y-3">
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">Floor Level</label>
-                  <div className="flex bg-tonal-secondary/10 p-1.5 rounded-xl ring-1 ring-border/15">
+              <div className="space-y-2">
+                {/* Floor Level */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider ml-0.5 opacity-60 font-display">Floor Level</label>
+                  <div className="flex bg-surface-low p-1 rounded-xl border border-border-subtle gap-1">
                     {['all', '0', '1', '2', '3'].map(f => (
                       <button
                         key={f}
                         onClick={() => setFloorFilter(f)}
-                        className={`flex-1 py-2 rounded-lg text-[10px] font-extrabold transition-all font-display ${floorFilter === f ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                        className={`flex-1 py-1 rounded-lg text-[10px] font-bold transition-all font-display ${floorFilter === f ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
                       >
                         {f === 'all' ? 'ALL' : f}
                       </button>
@@ -313,22 +314,23 @@ function MobileBooking({ onBack }) {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">Room Type</label>
-                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5 ring-1 ring-border/15">
+                {/* Room Type */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider ml-0.5 opacity-60 font-display">Room Type</label>
+                  <div className="flex overflow-x-auto no-scrollbar gap-1.5 py-0.5">
                     {[
-                      { id: 'all', label: 'ALL' },
-                      { id: 'Lecture Room', label: 'LECTURE ROOMS' },
-                      { id: 'Lab', label: 'LABS' },
+                      { id: 'all', label: 'All' },
+                      { id: 'Lecture Room', label: 'Lecture Rooms' },
+                      { id: 'Lab', label: 'Labs' },
                       ...(isStudent ? [] : [
-                        { id: 'Auditorium', label: 'AUDITORIUMS' },
-                        { id: 'Committee Room', label: 'COMMITTEE ROOMS' }
+                        { id: 'Auditorium', label: 'Auditoriums' },
+                        { id: 'Committee Room', label: 'Committee Rooms' }
                       ])
                     ].map(t => (
                       <button
                         key={t.id}
                         onClick={() => setRoomTypeFilter(t.id)}
-                        className={`px-5 py-2 rounded-lg text-[10px] font-extrabold transition-all whitespace-nowrap min-w-[70px] font-display ${roomTypeFilter === t.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                        className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap font-display border ${roomTypeFilter === t.id ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface-low text-text-secondary border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
                       >
                         {t.label}
                       </button>
@@ -336,16 +338,17 @@ function MobileBooking({ onBack }) {
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[9px] font-extrabold text-text-secondary capitalize tracking-[0.2em] ml-1 opacity-60 font-display">Block / Building</label>
-                  <div className="flex overflow-x-auto no-scrollbar bg-tonal-secondary/10 p-1.5 rounded-xl gap-1.5 ring-1 ring-border/15">
+                {/* Block / Building */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider ml-0.5 opacity-60 font-display">Block / Building</label>
+                  <div className="flex overflow-x-auto no-scrollbar gap-1.5 py-0.5">
                     {blocks.map(b => (
                       <button
                         key={b}
                         onClick={() => setBlockFilter(b)}
-                        className={`px-5 py-2 rounded-lg text-[10px] font-extrabold transition-all whitespace-nowrap min-w-[70px] font-display ${blockFilter === b ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}
+                        className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all whitespace-nowrap font-display border ${blockFilter === b ? 'bg-primary text-white border-primary shadow-sm' : 'bg-surface-low text-text-secondary border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
                       >
-                        {b === 'all' ? 'ALL' : b}
+                        {b === 'all' ? 'All Blocks' : b}
                       </button>
                     ))}
                   </div>
@@ -353,43 +356,43 @@ function MobileBooking({ onBack }) {
               </div>
             </div>
 
-            <div className="space-y-4">
-              <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 font-display opacity-50">
-                <Hash size={14} className="text-primary" />
-                Available Spaces
+            <div className="space-y-2.5 pt-1">
+              <label className="text-[9px] font-bold text-text-secondary capitalize tracking-wider flex items-center gap-1.5 font-display opacity-60 ml-0.5">
+                <Hash size={12} className="text-primary" />
+                Available Spaces ({availableRooms.length})
               </label>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-2.5">
                 {availableRooms.map(room => (
                   <button
                     key={room.id}
                     onClick={() => setSelectedRoom(room.id)}
-                    className={`flex items-center justify-between p-4.5 rounded-[1.75rem] transition-all shadow-sm ring-1 ${selectedRoom === room.id ? 'bg-primary text-white ring-primary/30' : 'bg-surface-low text-text-primary ring-border/15'}`}
+                    className={`flex items-center justify-between p-3.5 rounded-2xl transition-all shadow-sm border ${selectedRoom === room.id ? 'bg-primary text-white border-primary shadow-md' : 'bg-surface-low text-text-primary border-border-subtle hover:bg-surface-mid/40'}`}
                   >
-                    <div className="flex items-center gap-4 flex-1 overflow-hidden">
-                      <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${selectedRoom === room.id ? 'bg-white/20' : 'bg-tonal-secondary/10 text-secondary'}`}>
-                        <Hash size={20} />
+                    <div className="flex items-center gap-3.5 flex-1 overflow-hidden">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${selectedRoom === room.id ? 'bg-white/20 text-white' : 'bg-surface-mid/60 text-secondary'}`}>
+                        <Hash size={16} />
                       </div>
                       <div className="text-left overflow-hidden">
                         <div className="flex items-center gap-2">
-                          <p className="font-extrabold text-lg tracking-tight leading-none truncate font-display capitalize">{room.name}</p>
-                          <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-md shrink-0 font-display ${selectedRoom === room.id ? 'bg-white/10 text-white/80' : 'bg-surface-highest/20 text-text-secondary opacity-60'}`}>
+                          <p className="font-extrabold text-base tracking-tight leading-none truncate font-display capitalize">{room.name}</p>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-md shrink-0 font-display ${selectedRoom === room.id ? 'bg-white/10 text-white/90' : 'bg-surface-highest/20 text-text-secondary opacity-70'}`}>
                             {room.building}
                           </span>
                         </div>
-                        <p className={`text-[10px] font-extrabold capitalize tracking-widest mt-1.5 font-display ${selectedRoom === room.id ? 'text-white/60' : 'text-text-secondary opacity-60'}`}>{room.capacity} Seats</p>
+                        <p className={`text-[10px] font-bold capitalize tracking-wider mt-1 font-display ${selectedRoom === room.id ? 'text-white/70' : 'text-text-secondary opacity-60'}`}>{room.capacity} Seats</p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-center gap-1.5 ml-3 shrink-0 opacity-80">
-                      <Wind size={15} className={room.has_ac ? (selectedRoom === room.id ? 'text-white' : 'text-primary') : 'text-text-secondary/10'} />
-                      <Monitor size={15} className={room.has_projector ? (selectedRoom === room.id ? 'text-white' : 'text-primary') : 'text-text-secondary/10'} />
+                    <div className="flex items-center gap-2 ml-3 shrink-0 opacity-80">
+                      <Wind size={14} className={room.has_ac ? (selectedRoom === room.id ? 'text-white' : 'text-primary') : 'text-text-secondary/20'} />
+                      <Monitor size={14} className={room.has_projector ? (selectedRoom === room.id ? 'text-white' : 'text-primary') : 'text-text-secondary/20'} />
                     </div>
                   </button>
                 ))}
                 {availableRooms.length === 0 && (
-                  <div className="py-20 text-center space-y-4">
-                    <p className="text-text-secondary font-bold">No rooms available for this slot.</p>
-                    <button onClick={() => setStep(1)} className="text-accent font-black underline">Try another time</button>
+                  <div className="py-12 text-center space-y-3">
+                    <p className="text-text-secondary font-bold text-xs">No rooms available for this slot.</p>
+                    <button onClick={() => setStep(1)} className="text-primary font-bold text-xs underline">Try another time</button>
                   </div>
                 )}
               </div>
@@ -398,33 +401,33 @@ function MobileBooking({ onBack }) {
             <button 
               disabled={!selectedRoom}
               onClick={() => setStep(3)}
-              className="w-full bg-primary text-white font-extrabold py-5 rounded-3xl shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-lg disabled:opacity-50 font-display capitalize tracking-tight"
+              className="w-full bg-primary text-white font-extrabold py-3.5 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm disabled:opacity-40 font-display capitalize tracking-tight mt-2"
             >
               Next: Details
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </button>
           </div>
         )}
 
         {/* Step 3: Details & Confirm */}
         {step === 3 && (
-          <div className="space-y-6 animate-in slide-in-from-right duration-300">
-            <div className="bg-surface-low/60 p-6 rounded-[2rem] shadow-sm ring-1 ring-border/15 space-y-5 font-display">
-               <div className="flex items-center gap-5">
-                  <div className="w-14 h-14 rounded-2xl bg-primary text-white flex items-center justify-center shadow-ambient">
-                     <Hash size={28} strokeWidth={2.5}/>
+          <div className="space-y-4 animate-in slide-in-from-right duration-300">
+            <div className="bg-surface-low p-4 rounded-2xl shadow-sm border border-border-subtle space-y-3.5 font-display">
+               <div className="flex items-center gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-primary text-white flex items-center justify-center shadow-ambient shrink-0">
+                     <Hash size={22} strokeWidth={2.5}/>
                   </div>
                   <div>
-                    <h2 className="text-xl font-extrabold text-text-primary tracking-tight leading-none mb-1.5 capitalize">Room {rooms.find(r => r.id === selectedRoom)?.name}</h2>
-                    <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest opacity-40">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
+                    <h2 className="text-lg font-extrabold text-text-primary tracking-tight leading-none mb-1 capitalize">Room {rooms.find(r => r.id === selectedRoom)?.name}</h2>
+                    <p className="text-[10px] font-bold text-text-secondary capitalize tracking-wider opacity-60">{getDayName(selectedDate)}, {selectedDate.getDate()} @ {selectedHour}:00</p>
                   </div>
                </div>
-               <button onClick={() => setStep(2)} className="w-full py-3.5 bg-tonal-secondary/10 rounded-xl text-[10px] font-extrabold capitalize tracking-widest text-primary">Change Selection</button>
+               <button onClick={() => setStep(2)} className="w-full py-2 bg-surface-mid/50 rounded-xl text-[10px] font-bold capitalize tracking-wider text-primary border border-border-subtle hover:bg-surface-mid">Change Selection</button>
             </div>
 
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-60">
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-text-secondary capitalize tracking-wider flex items-center gap-1.5 mb-1 font-display opacity-60">
                   <Clock size={12} className="text-primary" />
                   Purpose of Booking
                 </label>
@@ -432,13 +435,13 @@ function MobileBooking({ onBack }) {
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
                   placeholder="e.g. Special Class, Meeting"
-                  className="w-full bg-tonal-secondary/10 rounded-3xl px-5 py-5 text-sm font-bold text-text-primary focus:outline-none h-28 resize-none transition-all placeholder:text-text-secondary/30 font-body"
+                  className="w-full bg-surface-low border border-border-subtle rounded-2xl px-4 py-3 text-xs font-medium text-text-primary focus:outline-none focus:border-primary/50 h-24 resize-none transition-all placeholder:text-text-secondary/40 font-body"
                 />
               </div>
 
               {isStudent && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-extrabold text-text-secondary capitalize tracking-[0.2em] flex items-center gap-2 mb-1 font-display opacity-60">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-text-secondary capitalize tracking-wider flex items-center gap-1.5 mb-1 font-display opacity-60">
                     <User size={12} className="text-primary" />
                     Select Faculty
                   </label>
@@ -446,16 +449,16 @@ function MobileBooking({ onBack }) {
                     <button 
                       type="button"
                       onClick={() => setIsFacultyOpen(!isFacultyOpen)}
-                      className="w-full bg-tonal-secondary/10 rounded-2xl px-5 py-5 text-sm font-extrabold text-text-primary focus:outline-none transition-all flex items-center justify-between font-display capitalize tracking-tight"
+                      className="w-full bg-surface-low border border-border-subtle rounded-xl px-4 py-3 text-xs font-bold text-text-primary focus:outline-none transition-all flex items-center justify-between font-display capitalize tracking-tight"
                     >
                       <span className={selectedFaculty ? 'text-text-primary' : 'text-text-secondary opacity-60'}>
                         {selectedFaculty ? faculties.find(f => String(f.id) === String(selectedFaculty))?.name : 'Choose a Faculty...'}
                       </span>
-                      <ChevronRight size={18} className={`transition-transform duration-200 text-secondary ${isFacultyOpen ? 'rotate-90' : ''}`} />
+                      <ChevronRight size={16} className={`transition-transform duration-200 text-secondary ${isFacultyOpen ? 'rotate-90' : ''}`} />
                     </button>
 
                      {isFacultyOpen && (
-                      <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low border border-border/20 rounded-3xl shadow-2xl z-50 max-h-[300px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-300 backdrop-blur-md ring-1 ring-border/10">
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-surface-low border border-border-subtle rounded-2xl shadow-2xl z-50 max-h-[280px] overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200 backdrop-blur-md">
                         {faculties.map(f => (
                           <div
                             key={f.id}
@@ -463,15 +466,15 @@ function MobileBooking({ onBack }) {
                               setSelectedFaculty(f.id);
                               setIsFacultyOpen(false);
                             }}
-                            className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-accent/10 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-extrabold text-text-primary hover:text-text-primary'}`}
+                            className={`p-3.5 cursor-pointer transition-colors flex items-center justify-between hover:bg-accent/10 ${String(selectedFaculty) === String(f.id) ? 'bg-primary text-white font-extrabold' : 'font-bold text-text-primary hover:text-text-primary'}`}
                           >
                             <div className="flex flex-col">
-                              <span className="text-sm font-display capitalize tracking-tight">{f.name}</span>
-                              <span className={`text-[9px] capitalize tracking-widest mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/80' : 'text-text-secondary opacity-70'}`}>
+                              <span className="text-xs font-display capitalize tracking-tight">{f.name}</span>
+                              <span className={`text-[9px] capitalize tracking-wider mt-0.5 ${String(selectedFaculty) === String(f.id) ? 'text-white/80' : 'text-text-secondary opacity-70'}`}>
                                 {f.department || 'Faculty'}
                               </span>
                             </div>
-                            {String(selectedFaculty) === String(f.id) && <CheckCircle size={18} />}
+                            {String(selectedFaculty) === String(f.id) && <CheckCircle size={16} />}
                           </div>
                         ))}
                       </div>
@@ -484,7 +487,7 @@ function MobileBooking({ onBack }) {
             <button 
               disabled={loading || !purpose || (isStudent && !selectedFaculty)}
               onClick={handleSubmit}
-              className="w-full bg-primary text-white font-extrabold py-5 rounded-[2rem] shadow-ambient flex items-center justify-center gap-3 active:scale-95 transition-all text-xl disabled:opacity-50 mt-10 font-display capitalize tracking-tight"
+              className="w-full bg-primary text-white font-extrabold py-3.5 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm disabled:opacity-40 mt-4 font-display capitalize tracking-tight"
             >
               {loading ? 'Authenticating...' : (
                 <>

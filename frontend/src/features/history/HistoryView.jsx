@@ -3,7 +3,6 @@ import { X, Clock, User, Hash, Trash2, AlertCircle, Check, ArrowRightLeft } from
 import { AppContext } from '../../context/AppContext';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/modals/ConfirmModal';
-import { getTodayRange, getWeekRange } from '../../utils/dateHelpers';
 import { bookingService } from '../../services/bookingService';
 import { roomService } from '../../services/roomService';
 
@@ -14,7 +13,7 @@ const HistoryView = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
   const [myOverrides, setMyOverrides] = useState([]);
   const [filterMe] = useState(!isAdmin(user));
-  const [timeFilter, setTimeFilter] = useState('WEEK'); // TODAY, WEEK, PAST, TRANSFERS
+  const [timeFilter, setTimeFilter] = useState('UPCOMING'); // UPCOMING, PAST, TRANSFERS
   const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: null });
@@ -58,8 +57,6 @@ const HistoryView = ({ onClose }) => {
   };
 
   const now = new Date();
-  const { start: todayStart, end: todayEnd } = getTodayRange(now);
-  const { start: weekStart, end: weekEnd } = getWeekRange(now);
 
   // Merged History (Bookings + Cancellations)
   const historyItems = [
@@ -89,14 +86,12 @@ const HistoryView = ({ onClose }) => {
       if (!matchesRoom && !matchesClass && !matchesPurpose) return false;
     }
 
-    const bStart = new Date(item.start_time);
     const bEnd = new Date(item.end_time);
     const bStatus = item.status || 'ACTIVE';
 
     if (timeFilter !== 'PAST' && !['ACTIVE', 'PENDING', 'CANCELLED', 'FREED', 'BLOCKED'].includes(bStatus)) return false;
 
-    if (timeFilter === 'TODAY') return bStart >= todayStart && bStart <= todayEnd;
-    if (timeFilter === 'WEEK') return bStart >= weekStart && bStart <= weekEnd;
+    if (timeFilter === 'UPCOMING') return bEnd >= now;
     if (timeFilter === 'PAST') return bEnd < now;
 
     return true;
@@ -132,18 +127,37 @@ const HistoryView = ({ onClose }) => {
 
   return (
     <div className="flex flex-col h-full bg-transparent overflow-hidden rounded-2xl">
-      {/* Page Header (Synced with Calendar/Timetable) */}
-      <div className="p-4 sm:p-6 bg-tonal-secondary/10 backdrop-blur-md shrink-0">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-text-primary tracking-tight capitalize leading-none font-display">
-              {isAdmin(user) ? 'Allocation Registry' : 'My Schedule'}
-            </h2>
-            <p className="text-[10px] sm:text-xs text-text-secondary font-bold capitalize tracking-widest mt-1 opacity-40 font-display">
-              {isAdmin(user) ? 'Review room reservations campus-wide' : 'Track your active room reservations'}
-            </p>
+      {/* Streamlined Filter & Search Bar without redundant page title */}
+      <div className="p-3 sm:p-4 bg-surface-low/80 backdrop-blur-md shrink-0 border-b border-border-subtle">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+          <div className="inline-flex p-1 bg-surface-lowest/70 rounded-xl border border-border-subtle shrink-0">
+            {[
+              { id: 'UPCOMING', label: 'Upcoming' },
+              { id: 'PAST', label: 'Past' },
+              { id: 'TRANSFERS', label: 'Transfers' }
+            ].map(f => (
+              <button
+                key={f.id}
+                onClick={() => setTimeFilter(f.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all duration-150 flex items-center gap-1.5 ${
+                  timeFilter === f.id
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {f.label}
+                {f.id === 'TRANSFERS' && pendingTransferCount > 0 && (
+                  <span className={`inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] rounded-full font-bold ${
+                    timeFilter === 'TRANSFERS' ? 'bg-white text-primary' : 'bg-tertiary text-white'
+                  }`}>
+                    {pendingTransferCount}
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto shrink-0">
+
+          <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
             <PageSearch 
               value={searchText} 
               onChange={setSearchText} 
@@ -153,204 +167,185 @@ const HistoryView = ({ onClose }) => {
             {onClose && (
               <button 
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-full text-text-secondary hover:text-text-primary transition-colors lg:hidden"
+                className="p-2 hover:bg-surface-high rounded-full text-text-secondary hover:text-text-primary transition-colors lg:hidden"
+                aria-label="Close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             )}
           </div>
         </div>
-
-        <div className="flex flex-wrap gap-2 items-center">
-              {[
-                { id: 'TODAY', label: 'Today' },
-                { id: 'WEEK', label: 'This Week' },
-                { id: 'PAST', label: 'Past' },
-                { id: 'TRANSFERS', label: 'Transfers' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setTimeFilter(f.id)}
-                  className={`px-3 sm:px-4 py-2 rounded-xl text-[10px] font-extrabold capitalize tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${timeFilter === f.id ? 'bg-primary text-white shadow-ambient' : 'bg-tonal-secondary/10 text-text-secondary hover:text-text-primary'}`}
-                >
-                  {f.label}
-                  {f.id === 'TRANSFERS' && pendingTransferCount > 0 && (
-                    <span className={`inline-flex items-center justify-center w-5 h-5 text-[10px] rounded-full font-extrabold shadow-tertiary ${timeFilter === 'TRANSFERS' ? 'bg-white text-primary' : 'bg-tertiary text-white'}`}>
-                      {pendingTransferCount}
-                    </span>
-                  )}
-                </button>
-              ))}
-        </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-10 no-scrollbar bg-transparent">
-               {timeFilter === 'TRANSFERS' ? (
-          <div className="space-y-10 animate-in fade-in duration-300">
-            {/* Incoming Transfers */}
+      {/* Content with smooth animated tab transitions */}
+      <div className="flex-1 overflow-y-auto p-3 sm:p-5 no-scrollbar bg-transparent">
+        <div key={timeFilter} className="tab-content-enter space-y-4">
+          {timeFilter === 'TRANSFERS' ? (
             <div className="space-y-6">
-              <h3 className="text-xl font-extrabold text-text-primary flex items-center gap-3 tracking-tight font-display capitalize italic">
-                <ArrowRightLeft size={22} className="text-secondary"/> Incoming Requests
-              </h3>
-              {incomingTransfers.length === 0 ? (
-                <div className="p-16 text-center bg-tonal-secondary/5 rounded-[2.5rem] flex flex-col items-center gap-4">
-                   <ArrowRightLeft size={48} className="text-text-secondary/10" />
-                   <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-20">No pending inbound transfers</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {incomingTransfers.map(t => (
-                    <div key={t.id} className="bg-tonal-secondary/10 rounded-[2rem] p-6 flex items-center justify-between hover:bg-tonal-secondary/15 transition-all">
-                      <div>
-                        <p className="font-extrabold text-text-primary text-lg flex items-center gap-4 truncate tracking-tight capitalize font-display">
-                          {t.room_name} <ArrowRightLeft size={16} className="text-secondary opacity-40 shrink-0"/>
-                          <span className="whitespace-nowrap font-extrabold text-primary">{new Date(t.start_time).toLocaleDateString()} @ {new Date(t.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                        </p>
-                        <p className="text-[10px] text-text-secondary font-extrabold mt-2 max-w-sm truncate capitalize tracking-[0.2em] opacity-30 font-display">From: {t.requester_name} - {t.new_purpose || 'No purpose provided'}</p>
-                      </div>
-                      <div className="shrink-0 ml-6 flex items-center gap-4">
-                        {t.status === 'PENDING' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-tonal-tertiary text-tertiary px-5 py-2 rounded-full shadow-tertiary">Pending</span>}
-                        {t.status === 'REP2_ACCEPTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-amber-500/20 text-amber-500 px-5 py-2 rounded-full shadow-amber">Owner Accepted</span>}
-                        {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-blue-500/20 text-blue-500 px-5 py-2 rounded-full shadow-blue">Slot Released</span>}
-                        {t.status === 'ACCEPTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-green-500/10 text-green-500 px-5 py-2 rounded-full">Synchronized</span>}
-                        {t.status === 'REJECTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-red-500/10 text-red-500 px-5 py-2 rounded-full">Dismissed</span>}
+              {/* Incoming Transfers */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-text-primary flex items-center gap-2 font-display">
+                  <ArrowRightLeft size={16} className="text-secondary"/> Incoming Requests
+                </h3>
+                {incomingTransfers.length === 0 ? (
+                  <div className="p-8 text-center bg-surface-low border border-border-subtle rounded-2xl flex flex-col items-center gap-2">
+                    <ArrowRightLeft size={28} className="text-text-secondary/20" />
+                    <p className="text-xs text-text-secondary font-medium">No pending inbound transfers</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {incomingTransfers.map(t => (
+                      <div key={t.id} className="bg-surface-low border border-border-subtle rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-border transition-all">
+                        <div>
+                          <p className="font-bold text-text-primary text-base flex items-center gap-2 truncate font-display">
+                            {t.room_name} <ArrowRightLeft size={14} className="text-secondary opacity-60 shrink-0"/>
+                            <span className="whitespace-nowrap font-semibold text-primary text-sm">{new Date(t.start_time).toLocaleDateString()} @ {new Date(t.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                          </p>
+                          <p className="text-xs text-text-secondary font-medium mt-1 truncate">From: {t.requester_name} - {t.new_purpose || 'No purpose provided'}</p>
+                        </div>
+                        <div className="shrink-0 flex items-center gap-2 self-end sm:self-auto">
+                          {t.status === 'PENDING' && <span className="text-[10px] font-bold bg-tonal-tertiary text-tertiary px-3 py-1 rounded-full">Pending</span>}
+                          {t.status === 'REP2_ACCEPTED' && <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full">Owner Accepted</span>}
+                          {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-3 py-1 rounded-full">Slot Released</span>}
+                          {t.status === 'ACCEPTED' && <span className="text-[10px] font-bold bg-green-500/10 text-green-500 px-3 py-1 rounded-full">Synchronized</span>}
+                          {t.status === 'REJECTED' && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-3 py-1 rounded-full">Dismissed</span>}
 
-                        {t.status === 'PENDING' && t.booking_status !== 'CANCELLED' && (
-                          <div className="flex gap-2">
-                            <button onClick={() => handleTransferAction(t.id, 'accept')} disabled={loading} className="bg-primary text-white font-extrabold p-2 rounded-xl text-[10px] capitalize tracking-widest flex items-center justify-center gap-2 shadow-ambient active:scale-95 transition-all">
-                              <Check size={16} /> Accept
-                            </button>
-                            <button onClick={() => handleTransferAction(t.id, 'reject')} disabled={loading} className="bg-tonal-secondary/10 text-text-primary font-extrabold p-2 rounded-xl text-[10px] capitalize tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-                              <X size={16} /> Reject
-                            </button>
-                          </div>
-                        )}
+                          {t.status === 'PENDING' && t.booking_status !== 'CANCELLED' && (
+                            <div className="flex gap-1.5 ml-2">
+                              <button onClick={() => handleTransferAction(t.id, 'accept')} disabled={loading} className="bg-primary text-white font-semibold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 active:scale-95 transition-all">
+                                <Check size={14} /> Accept
+                              </button>
+                              <button onClick={() => handleTransferAction(t.id, 'reject')} disabled={loading} className="bg-surface-lowest border border-border-subtle text-text-primary font-semibold px-2.5 py-1.5 rounded-lg text-xs flex items-center gap-1 active:scale-95 transition-all">
+                                <X size={14} /> Reject
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {/* Outgoing Transfers */}
-            <div className="space-y-6">
-              <h3 className="text-xl font-extrabold text-text-primary pt-14 tracking-tight font-display capitalize italic opacity-40">
-                Outgoing Transfers
-              </h3>
-              {outgoingTransfers.length === 0 ? (
-                <div className="p-16 text-center bg-tonal-secondary/5 rounded-[2.5rem] flex flex-col items-center gap-4">
-                   <ArrowRightLeft size={48} className="text-text-secondary/10" />
-                   <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest opacity-20">No outbound active requests</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {outgoingTransfers.map(t => (
-                    <div key={t.id} className="bg-tonal-secondary/10 rounded-[2rem] p-6 flex items-center justify-between hover:bg-tonal-secondary/15 transition-all">
-                      <div>
-                        <p className="font-extrabold text-text-primary text-lg flex items-center gap-4 truncate tracking-tight capitalize font-display">
-                          {t.room_name} <ArrowRightLeft size={16} className="text-secondary opacity-40 shrink-0"/>
-                          <span className="whitespace-nowrap font-extrabold text-primary">{new Date(t.start_time).toLocaleDateString()} @ {new Date(t.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                        </p>
-                        <p className="text-[10px] text-text-secondary font-extrabold mt-2 max-w-sm truncate capitalize tracking-[0.2em] opacity-30 font-display">To: {t.owner_name} - {t.new_purpose}</p>
+              {/* Outgoing Transfers */}
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-text-primary flex items-center gap-2 font-display text-text-secondary">
+                  Outgoing Transfers
+                </h3>
+                {outgoingTransfers.length === 0 ? (
+                  <div className="p-8 text-center bg-surface-low border border-border-subtle rounded-2xl flex flex-col items-center gap-2">
+                    <ArrowRightLeft size={28} className="text-text-secondary/20" />
+                    <p className="text-xs text-text-secondary font-medium">No outbound active requests</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {outgoingTransfers.map(t => (
+                      <div key={t.id} className="bg-surface-low border border-border-subtle rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-border transition-all">
+                        <div>
+                          <p className="font-bold text-text-primary text-base flex items-center gap-2 truncate font-display">
+                            {t.room_name} <ArrowRightLeft size={14} className="text-secondary opacity-60 shrink-0"/>
+                            <span className="whitespace-nowrap font-semibold text-primary text-sm">{new Date(t.start_time).toLocaleDateString()} @ {new Date(t.start_time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                          </p>
+                          <p className="text-xs text-text-secondary font-medium mt-1 truncate">To: {t.owner_name} - {t.new_purpose}</p>
+                        </div>
+                        <div className="shrink-0 self-end sm:self-auto">
+                          {t.status === 'PENDING' && <span className="text-[10px] font-bold bg-tonal-tertiary text-tertiary px-3 py-1 rounded-full">Waiting for Owner</span>}
+                          {t.status === 'REP2_ACCEPTED' && <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full">Owner Accepted</span>}
+                          {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-3 py-1 rounded-full">Slot Released</span>}
+                          {t.status === 'ACCEPTED' && <span className="text-[10px] font-bold bg-green-500/10 text-green-500 px-3 py-1 rounded-full">Synchronized</span>}
+                          {t.status === 'REJECTED' && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-3 py-1 rounded-full">Dismissed</span>}
+                        </div>
                       </div>
-                      <div className="shrink-0 ml-6">
-                        {t.status === 'PENDING' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-tonal-tertiary text-tertiary px-5 py-2 rounded-full shadow-tertiary">Waiting for Owner</span>}
-                        {t.status === 'REP2_ACCEPTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-amber-500/20 text-amber-500 px-5 py-2 rounded-full shadow-amber">Owner Accepted</span>}
-                        {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-blue-500/20 text-blue-500 px-5 py-2 rounded-full shadow-blue">Slot Released</span>}
-                        {t.status === 'ACCEPTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-green-500/10 text-green-500 px-5 py-2 rounded-full">Synchronized</span>}
-                        {t.status === 'REJECTED' && <span className="text-[9px] font-extrabold capitalize tracking-widest bg-red-500/10 text-red-500 px-5 py-2 rounded-full">Dismissed</span>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ) : filteredHistory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-28 text-center animate-in fade-in duration-700">
-            <div className="w-24 h-24 bg-tonal-secondary/5 rounded-[3rem] flex items-center justify-center text-secondary/10 mb-10">
-              <Clock size={48} strokeWidth={1.5} />
+          ) : filteredHistory.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="w-14 h-14 bg-surface-low border border-border-subtle rounded-2xl flex items-center justify-center text-text-secondary/40 mb-4">
+                <Clock size={28} strokeWidth={1.5} />
+              </div>
+              <h4 className="text-base font-bold text-text-primary tracking-tight mb-1 font-display">Timeline Empty</h4>
+              <p className="text-xs text-text-secondary max-w-[280px] leading-relaxed">No matching logs found in this temporal slice.</p>
             </div>
-            <h4 className="text-2xl font-extrabold text-text-primary tracking-tight mb-3 capitalize font-display italic opacity-40">Timeline Empty</h4>
-            <p className="text-[10px] text-text-secondary font-extrabold capitalize tracking-widest max-w-[280px] leading-relaxed opacity-20">No matching logs found in this temporal slice.</p>
-          </div>
-        ) : (
-          <div className="space-y-6">
+          ) : (
+          <div className="space-y-4">
             {/* Desktop View Table */}
-            <div className="hidden md:block">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="text-text-secondary text-[10px] capitalize font-extrabold tracking-[0.2em] opacity-40">
-                    <th className="pb-6 px-6">Room / Type</th>
-                    <th className="pb-6 px-6 text-center">Time</th>
-                    <th className="pb-6 px-6 text-center">Booker/Reference</th>
-                    <th className="pb-6 px-6">Details</th>
-                    <th className="pb-6 px-6 text-right">Actions</th>
+                  <tr className="text-text-secondary text-[10px] font-bold tracking-wider opacity-60 border-b border-border-subtle">
+                    <th className="py-2.5 px-4">Room</th>
+                    <th className="py-2.5 px-4 text-center">Time</th>
+                    <th className="py-2.5 px-4 text-center">Reference</th>
+                    <th className="py-2.5 px-4">Details</th>
+                    <th className="py-2.5 px-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="text-sm">
                   {paginatedHistory.map((item) => (
-                    <tr key={item.id} className="hover:bg-tonal-secondary/5 transition-colors group border-b border-text-secondary/10">
-                      <td className="py-8 px-6">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-ambient shrink-0 ${item.type === 'OVERRIDE' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
-                            {item.type === 'OVERRIDE' ? <Trash2 size={20} strokeWidth={2.5}/> : <Hash size={20} strokeWidth={2.5}/>}
+                    <tr key={item.id} className="hover:bg-surface-low/60 transition-colors border-b border-border-subtle">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${item.type === 'OVERRIDE' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
+                            {item.type === 'OVERRIDE' ? <Trash2 size={16} strokeWidth={2.5}/> : <Hash size={16} strokeWidth={2.5}/>}
                           </div>
-                          <div className="flex flex-col items-start gap-1.5">
-                            <span className="font-extrabold text-text-primary text-lg tracking-tight leading-none capitalize font-display">{item.room_name}</span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="font-bold text-text-primary text-base tracking-tight leading-none font-display">{item.room_name}</span>
                             {(item.status === 'PENDING') && (
-                              <span className="px-3 py-1 rounded-lg bg-tonal-tertiary text-tertiary text-[8px] font-extrabold capitalize tracking-widest shadow-tertiary">
+                              <span className="px-2 py-0.5 rounded-md bg-tonal-tertiary text-tertiary text-[9px] font-bold">
                                 Pending
                               </span>
                             )}
                             {(item.status === 'ACTIVE' || item.status === 'CONFIRMED' || item.status == null) && item.type === 'BOOKING' && (
-                              <span className="px-3 py-1 rounded-lg bg-green-500/10 text-green-500 text-[8px] font-extrabold capitalize tracking-widest">
-                                Validated
+                              <span className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 text-[9px] font-bold">
+                                Valid
                               </span>
                             )}
                             {(item.status === 'FREED') && (
-                              <span className="px-3 py-1 rounded-lg bg-primary/20 text-primary text-[8px] font-extrabold capitalize tracking-widest">
+                              <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary text-[9px] font-bold">
                                 Freed
                               </span>
                             )}
                             {(item.status === 'CANCELLED') && (
-                              <span className="px-3 py-1 rounded-lg bg-red-500/10 text-red-500 text-[8px] font-extrabold capitalize tracking-widest">
+                              <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 text-[9px] font-bold">
                                 Revoked
                               </span>
                             )}
                           </div>
                         </div>
                       </td>
-                      <td className="py-8 px-6 text-center">
+                      <td className="py-3 px-4 text-center">
                         <div className="inline-flex flex-col items-center">
-                          <span className="text-text-primary font-black text-base tracking-tighter leading-none">
+                          <span className="text-text-primary font-bold text-sm leading-none">
                             {new Date(item.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}
                           </span>
-                          <span className="text-accent text-[10px] capitalize font-black tracking-widest mt-2 leading-none opacity-80">
+                          <span className="text-text-secondary text-[11px] font-medium mt-1 leading-none">
                             {new Date(item.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                           </span>
                         </div>
                       </td>
-                      <td className="py-8 px-6 text-center">
-                        <div className="inline-flex items-center gap-3 px-5 py-2.5 rounded-2xl bg-tonal-secondary/10 text-text-primary font-extrabold text-[10px] capitalize tracking-widest">
-                          {item.type === 'OVERRIDE' ? <AlertCircle size={14} className="text-secondary" /> : <User size={14} className="text-primary" />}
+                      <td className="py-3 px-4 text-center">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-lowest border border-border-subtle text-text-primary text-xs font-semibold">
+                          {item.type === 'OVERRIDE' ? <AlertCircle size={13} className="text-secondary" /> : <User size={13} className="text-primary" />}
                           {item.class_name}
                         </div>
                       </td>
-                      <td className="py-8 px-6 max-w-[200px]">
-                        <p className="text-text-secondary text-xs italic line-clamp-2 leading-relaxed font-bold opacity-60">
+                      <td className="py-3 px-4 max-w-[200px]">
+                        <p className="text-text-secondary text-xs italic line-clamp-2 leading-relaxed">
                           {item.purpose || 'No purpose provided'}
                         </p>
                       </td>
-                      <td className="py-8 px-6 text-right">
+                      <td className="py-3 px-4 text-right">
                         {item.type === 'BOOKING' && String(item.created_by) === String(user?.id) && (item.status || 'ACTIVE') === 'ACTIVE' && new Date(item.end_time) > now && (
                           <button 
                             onClick={() => handleCancel(item.id)}
                             disabled={loading}
-                            className="p-3 text-red-500 hover:text-white hover:bg-red-500 rounded-2xl transition-all shadow-ambient active:scale-95"
+                            className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all shadow-sm active:scale-95"
+                            aria-label="Cancel Booking"
                           >
-                            <Trash2 size={20} />
+                            <Trash2 size={16} />
                           </button>
                         )}
                       </td>
@@ -361,55 +356,58 @@ const HistoryView = ({ onClose }) => {
             </div>
 
             {/* Mobile View Cards */}
-            <div className="grid grid-cols-1 gap-6 md:hidden">
+            <div className="grid grid-cols-1 gap-3 md:hidden">
               {paginatedHistory.map((item) => (
-                <div key={item.id} className="bg-tonal-secondary/10 rounded-[2.5rem] p-7 space-y-7 group active:translate-y-1 transition-all shadow-ambient">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-5">
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-ambient shrink-0 ${item.type === 'OVERRIDE' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
-                        {item.type === 'OVERRIDE' ? <Trash2 size={28} strokeWidth={2.5}/> : <Hash size={28} strokeWidth={2.5}/>}
+                <div key={item.id} className="bg-surface-low border border-border-subtle rounded-2xl p-3.5 space-y-3 shadow-sm hover:border-border transition-all">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${item.type === 'OVERRIDE' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
+                        {item.type === 'OVERRIDE' ? <Trash2 size={18} strokeWidth={2.5}/> : <Hash size={18} strokeWidth={2.5}/>}
                       </div>
-                      <div className="flex flex-col gap-2">
-                        <span className="font-extrabold text-text-primary leading-none text-xl tracking-tight font-display capitalize">{item.room_name}</span>
-                        {(item.status === 'PENDING') && (
-                          <span className="text-[9px] font-extrabold capitalize tracking-widest text-tertiary bg-tonal-tertiary px-4 py-1.5 rounded-full inline-block shadow-tertiary">Pending</span>
-                        )}
-                        {(item.status === 'ACTIVE' || item.status === 'CONFIRMED' || item.status == null) && item.type === 'BOOKING' && (
-                          <span className="text-[9px] font-extrabold capitalize tracking-widest text-green-500 bg-green-500/10 px-4 py-1.5 rounded-full inline-block">Valid</span>
-                        )}
-                        {(item.status === 'FREED') && (
-                          <span className="text-[9px] font-extrabold capitalize tracking-widest text-primary bg-primary/20 px-4 py-1.5 rounded-full inline-block">Freed</span>
-                        )}
-                        {(item.status === 'CANCELLED') && (
-                          <span className="text-[9px] font-extrabold capitalize tracking-widest text-red-500 bg-red-500/10 px-4 py-1.5 rounded-full inline-block">Revoked</span>
-                        )}
+                      <div className="flex flex-col min-w-0">
+                        <span className="font-bold text-text-primary text-base truncate font-display capitalize leading-tight">{item.room_name}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {(item.status === 'PENDING') && (
+                            <span className="text-[10px] font-semibold text-tertiary bg-tonal-tertiary px-2 py-0.5 rounded-md inline-block">Pending</span>
+                          )}
+                          {(item.status === 'ACTIVE' || item.status === 'CONFIRMED' || item.status == null) && item.type === 'BOOKING' && (
+                            <span className="text-[10px] font-semibold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md inline-block">Valid</span>
+                          )}
+                          {(item.status === 'FREED') && (
+                            <span className="text-[10px] font-semibold text-primary bg-primary/20 px-2 py-0.5 rounded-md inline-block">Freed</span>
+                          )}
+                          {(item.status === 'CANCELLED') && (
+                            <span className="text-[10px] font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md inline-block">Revoked</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                     {item.type === 'BOOKING' && String(item.created_by) === String(user?.id) && (item.status || 'ACTIVE') === 'ACTIVE' && new Date(item.end_time) > now && (
                       <button 
                         onClick={() => handleCancel(item.id)}
                         disabled={loading}
-                        className="p-4 text-red-500 bg-tonal-secondary/10 rounded-2xl active:bg-red-500 active:text-white transition-all shadow-ambient"
+                        className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all shrink-0"
+                        aria-label="Cancel Booking"
                       >
-                        <Trash2 size={22} />
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
                   
-                  <div className="flex flex-wrap gap-3">
-                     <div className={`px-5 py-2.5 rounded-2xl text-white font-extrabold text-[10px] capitalize tracking-widest shadow-ambient ${item.type === 'OVERRIDE' ? 'bg-secondary' : 'bg-primary'}`}>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                     <div className={`px-2.5 py-1 rounded-lg text-white font-medium ${item.type === 'OVERRIDE' ? 'bg-secondary' : 'bg-primary'}`}>
                        {new Date(item.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}
                      </div>
-                     <div className="px-5 py-2.5 rounded-2xl bg-tonal-secondary/10 text-text-primary font-extrabold text-[10px] capitalize tracking-widest shadow-ambient">
+                     <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-primary font-medium">
                        {new Date(item.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                      </div>
-                     <div className="px-5 py-2.5 rounded-2xl bg-tonal-secondary/10 text-text-primary font-extrabold text-[10px] capitalize tracking-[0.2em] flex items-center gap-2 shadow-ambient opacity-40">
-                       {item.type === 'OVERRIDE' ? <AlertCircle size={12} strokeWidth={3}/> : <User size={12} strokeWidth={3}/>} {item.class_name}
+                     <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-secondary font-medium flex items-center gap-1.5">
+                       {item.type === 'OVERRIDE' ? <AlertCircle size={12} /> : <User size={12} />} {item.class_name}
                      </div>
                   </div>
 
                   {item.purpose && (
-                    <p className="text-sm text-text-secondary italic leading-relaxed bg-tonal-secondary/5 p-6 rounded-[2rem] font-bold opacity-60">
+                    <p className="text-xs text-text-secondary italic leading-relaxed bg-surface-lowest/60 border border-border-subtle/50 p-2.5 rounded-xl font-medium">
                       "{item.purpose}"
                     </p>
                   )}
@@ -420,28 +418,29 @@ const HistoryView = ({ onClose }) => {
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 bg-tonal-secondary/5 rounded-2xl border border-border/10 mt-6 font-display">
-            <span className="text-[10px] font-black capitalize tracking-widest text-text-secondary opacity-50">
+          <div className="flex items-center justify-between p-3 bg-surface-low rounded-xl border border-border-subtle mt-4 font-display">
+            <span className="text-xs font-semibold text-text-secondary">
               Page {currentPage} of {totalPages}
             </span>
             <div className="flex gap-2">
               <button 
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                className="px-4 py-2 bg-bg-secondary rounded-xl text-[10px] font-black capitalize tracking-widest border border-border hover:bg-bg-primary transition-all disabled:opacity-30 disabled:cursor-not-allowed text-text-primary"
+                className="px-3 py-1.5 bg-surface-lowest rounded-lg text-xs font-semibold border border-border-subtle hover:bg-surface-high transition-all disabled:opacity-30 disabled:cursor-not-allowed text-text-primary"
               >
                 Prev
               </button>
               <button 
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                className="px-4 py-2 bg-primary text-white rounded-xl text-[10px] font-black capitalize tracking-widest hover:opacity-90 transition-all shadow-ambient disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-semibold hover:opacity-90 transition-all shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Next
               </button>
             </div>
           </div>
         )}
+        </div>
       </div>
 
       <ConfirmModal 

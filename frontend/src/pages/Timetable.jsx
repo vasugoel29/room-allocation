@@ -137,25 +137,24 @@ const Timetable = () => {
   return (
     <div className="flex flex-col overflow-hidden" style={{ height: '100%' }}>
       {/* ── Header Controls ── */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shrink-0 px-5 sm:px-6 pt-5 pb-5 sm:pt-6 sm:pb-6">
-        <div className="flex flex-col">
-          <h1 className="text-xl font-black text-text-primary tracking-tighter capitalize italic">Academic Timetable</h1>
-          <p className="text-[10px] text-text-secondary font-black capitalize tracking-widest mt-0.5">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shrink-0 px-4 sm:px-6 py-3 sm:py-4 border-b border-border-subtle bg-surface-low/50">
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-xl bg-surface-lowest border border-border-subtle text-xs font-semibold text-text-primary">
             {viewMode === 'day' ? formatDateDisplay(selectedDay) : formatWeekDisplay(selectedDay)}
-          </p>
+          </span>
         </div>
         
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="flex bg-tonal-secondary/15 p-1 rounded-xl shrink-0">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <div className="inline-flex p-1 bg-surface-lowest rounded-xl border border-border-subtle shrink-0">
             <button
               onClick={() => setViewMode('day')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black capitalize tracking-widest transition-all ${viewMode === 'day' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-150 ${viewMode === 'day' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
             >
               Day
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-black capitalize tracking-widest transition-all ${viewMode === 'week' ? 'bg-accent text-white shadow-md' : 'text-text-secondary hover:text-text-primary'}`}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all duration-150 ${viewMode === 'week' ? 'bg-primary text-white shadow-sm' : 'text-text-secondary hover:text-text-primary'}`}
             >
               Week
             </button>
@@ -166,14 +165,15 @@ const Timetable = () => {
             placeholder="Search classes..."
             className="flex-1 sm:w-48"
           />
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button 
               onClick={() => {
                 const d = new Date(selectedDay);
                 d.setDate(d.getDate() - (viewMode === 'day' ? 1 : 7));
                 setSelectedDay(d.toISOString().split('T')[0]);
               }}
-              className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all"
+              className="p-2 bg-surface-lowest border border-border-subtle rounded-xl text-text-secondary hover:text-text-primary transition-all"
+              aria-label="Previous"
             >
               <ChevronLeft size={16} />
             </button>
@@ -183,7 +183,8 @@ const Timetable = () => {
                 d.setDate(d.getDate() + (viewMode === 'day' ? 1 : 7));
                 setSelectedDay(d.toISOString().split('T')[0]);
               }}
-              className="p-2 bg-bg-secondary border border-border rounded-xl text-text-secondary hover:text-text-primary transition-all"
+              className="p-2 bg-surface-lowest border border-border-subtle rounded-xl text-text-secondary hover:text-text-primary transition-all"
+              aria-label="Next"
             >
               <ChevronRight size={16} />
             </button>
@@ -192,28 +193,29 @@ const Timetable = () => {
       </div>
 
       {isRep && (
-        <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex gap-4 shrink-0 animate-in slide-in-from-top-4 duration-500 mx-5 sm:mx-6 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-accent flex items-center justify-center text-white shrink-0 shadow-lg shadow-accent/20">
-            <Lightbulb size={20} />
+        <div className="bg-accent/10 border border-accent/20 rounded-2xl p-3 sm:p-3.5 flex gap-3 shrink-0 mx-4 sm:mx-6 my-3">
+          <div className="w-8 h-8 rounded-xl bg-accent flex items-center justify-center text-white shrink-0 shadow-sm">
+            <Lightbulb size={16} />
           </div>
           <div>
-            <h4 className="text-xs font-black text-accent capitalize tracking-widest">Pro Tip for Reps</h4>
-            <p className="text-[11px] text-text-secondary font-bold leading-relaxed mt-1">Request a class cancellation here. The room becomes available only after the assigned faculty member approves it.</p>
+            <h4 className="text-xs font-bold text-accent capitalize">Pro Tip for Reps</h4>
+            <p className="text-[11px] text-text-secondary font-medium leading-relaxed mt-0.5">Request a class cancellation here. The room becomes available only after the assigned faculty member approves it.</p>
           </div>
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-5 sm:px-6 pb-6">
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 sm:px-6 pb-6 overscroll-contain">
+        <div key={viewMode} className="tab-content-enter">
         {viewMode === 'day' ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {mergedSchedule.length > 0 ? (
               mergedSchedule.map((item, index) => (
                 <div 
                   key={index}
-                  className={`bg-bg-secondary/50 border border-border rounded-2xl p-4 flex items-center justify-between hover:border-accent/30 transition-all shadow-sm ${item.isDynamic ? 'border-l-4 border-l-accent ring-1 ring-accent/5' : ''}`}
+                  className={`bg-surface-low border border-border-subtle rounded-2xl p-3.5 sm:p-4 flex items-center justify-between hover:border-accent/40 transition-all shadow-sm ${item.isDynamic ? 'border-l-4 border-l-accent' : ''}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.isDynamic ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-bg-primary text-text-secondary border border-border'}`}>
+                  <div className="flex items-center gap-3.5 sm:gap-4">
+                    <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shrink-0 ${item.isDynamic ? 'bg-accent text-white shadow-lg shadow-accent/20' : 'bg-surface-lowest text-text-secondary border border-border-subtle'}`}>
                       {item.isDynamic ? <Calendar size={18} /> : <MapPin size={18} />}
                     </div>
                     <div>
@@ -226,16 +228,16 @@ const Timetable = () => {
                           <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">{item.className}</p>
                         </div>
                       )}
-                      <div className="flex items-center gap-3 mt-1.5">
-                        <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 capitalize tracking-tighter">
+                      <div className="flex items-center gap-2.5 sm:gap-3 mt-1.5 flex-wrap">
+                        <span className="text-[11px] text-text-secondary font-bold flex items-center gap-1.5 capitalize tracking-tighter">
                           <Clock size={12} className="text-accent" /> 
                           {item.displayTime}
                         </span>
-                        <span className="text-[11px] text-accent font-black capitalize tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/10">
+                        <span className="text-[11px] text-accent font-black capitalize tracking-tighter bg-accent/5 px-2 py-0.5 rounded-lg border border-accent/15">
                           {item.room}
                         </span>
                         {!isFaculty && item.faculty && (
-                          <span className="text-[11px] text-text-secondary font-black flex items-center gap-1.5 capitalize tracking-tighter">
+                          <span className="text-[11px] text-text-secondary font-bold flex items-center gap-1.5 capitalize tracking-tighter">
                             <User size={12} className="text-accent" />
                             {toTitleCase(item.faculty)}
                           </span>
@@ -248,17 +250,17 @@ const Timetable = () => {
                     <button 
                       onClick={() => handleCancelClass(item)}
                       disabled={isCancelling}
-                      className="p-2.5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all active:scale-90 bg-bg-primary border border-border hover:border-red-500/30"
+                      className="p-2 sm:p-2.5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all active:scale-90 bg-surface-lowest border border-border-subtle hover:border-red-500/30"
                       title={isFaculty ? "Cancel session" : "Mark available"}
                     >
-                      <Trash2 size={18} />
+                      <Trash2 size={16} />
                     </button>
                   )}
                 </div>
               ))
             ) : (
               <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
-                <div className="w-16 h-16 bg-bg-secondary rounded-3xl flex items-center justify-center text-text-secondary mb-4 border border-border">
+                <div className="w-16 h-16 bg-surface-low rounded-3xl flex items-center justify-center text-text-secondary mb-4 border border-border-subtle">
                   <AlertCircle size={32} />
                 </div>
                 <p className="text-xs text-text-secondary font-black capitalize tracking-widest">No classes scheduled for this day</p>
@@ -300,6 +302,7 @@ const Timetable = () => {
             }
           />
         )}
+        </div>
       </div>
 
       {/* Custom Cancellation Modal */}
@@ -328,7 +331,7 @@ const Timetable = () => {
                 </p>
               </div>
 
-              <div className="bg-bg-primary/50 border border-border rounded-2xl p-4 text-left space-y-3">
+              <div className="bg-surface-low border border-border-subtle rounded-2xl p-4 text-left space-y-3">
                  <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
                        <Clock size={16} />
@@ -360,7 +363,7 @@ const Timetable = () => {
                     setIsCancelModalOpen(false);
                     setPendingCancelClass(null);
                   }}
-                  className="w-full bg-bg-secondary border border-border text-text-secondary font-black py-4 rounded-2xl active:scale-95 transition-all text-sm"
+                  className="w-full bg-surface-low border border-border-subtle text-text-secondary font-black py-4 rounded-2xl active:scale-95 transition-all text-sm"
                 >
                   Keep Class
                 </button>

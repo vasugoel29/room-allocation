@@ -54,15 +54,9 @@ beforeEach(() => {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('HistoryView tabs', () => {
-  it('This Week (default): own ACTIVE/PENDING/CANCELLED bookings in Mon..Sun, newest first', () => {
+  it('Upcoming (default): own ACTIVE/PENDING/CANCELLED bookings ending at or after now, newest first', () => {
     setup();
-    expect(tableRooms()).toEqual(['R-6', 'R-2', 'R-1', 'R-3']);
-  });
-
-  it('Today: only bookings on the IST day', async () => {
-    const { ue } = setup();
-    await ue.click(screen.getByRole('button', { name: 'Today' }));
-    expect(tableRooms()).toEqual(['R-1', 'R-3']);
+    expect(tableRooms()).toEqual(['R-6', 'R-2', 'R-1']);
   });
 
   it('Past: anything that already ended', async () => {
@@ -74,7 +68,6 @@ describe('HistoryView tabs', () => {
   it('admins see everyone\'s bookings', () => {
     setup({ user: USERS.ADMIN });
     expect(tableRooms()).toContain('R-5');
-    expect(screen.getByText('Allocation Registry')).toBeInTheDocument();
   });
 
   it('search filters by room/class/purpose', async () => {
@@ -140,12 +133,13 @@ describe('HistoryView tabs', () => {
 describe('HistoryView cancel', () => {
   const cancelButtonFor = (room) => within(screen.getByRole('table')).getByText(room).closest('tr').querySelector('td:last-child button');
 
-  it('only own, ACTIVE, not-yet-ended bookings are cancellable', () => {
-    setup();
+  it('only own, ACTIVE, not-yet-ended bookings are cancellable', async () => {
+    const { ue } = setup();
     expect(cancelButtonFor('R-1')).not.toBeNull();
     expect(cancelButtonFor('R-2')).not.toBeNull();
-    expect(cancelButtonFor('R-3')).toBeNull(); // pending & ended
     expect(cancelButtonFor('R-6')).toBeNull(); // cancelled
+    await ue.click(screen.getByRole('button', { name: 'Past' }));
+    expect(cancelButtonFor('R-3')).toBeNull(); // pending & ended
   });
 
   it('confirming cancels via PATCH and refreshes', async () => {
