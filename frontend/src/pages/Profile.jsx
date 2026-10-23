@@ -22,14 +22,14 @@ function Profile() {
   if (!user) return null;
 
   return (
-    <div className="p-4 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-hidden flex flex-col no-scrollbar pb-2 lg:pb-8">
+    <div className="p-3 sm:p-8 max-w-2xl mx-auto w-full h-full overflow-y-auto no-scrollbar flex flex-col pb-28 lg:pb-8">
       {/* Header with Title */}
-      <div className="flex justify-between items-center mb-6 sm:mb-10 shrink-0">
-        <h1 className="text-3xl sm:text-4xl font-black text-text-primary tracking-tighter capitalize font-display italic">My Profile</h1>
+      <div className="flex justify-between items-center mb-4 sm:mb-8 shrink-0">
+        <h1 className="text-2xl sm:text-4xl font-black text-text-primary tracking-tighter capitalize font-display italic">My Profile</h1>
       </div>
 
       {/* Main Distributed Content Card */}
-      <div className="glass p-6 sm:p-10 rounded-[2.5rem] flex-1 flex flex-col justify-between overflow-hidden shadow-xl ring-1 ring-border/20">
+      <div className="glass p-5 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] flex flex-col gap-6 sm:gap-8 shadow-xl ring-1 ring-border/20">
         
         {/* TOP: User Info Header */}
         <div className="flex items-center gap-6 pb-6 sm:pb-10 border-b border-border/50 shrink-0">

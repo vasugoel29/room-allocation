@@ -117,7 +117,7 @@ export default function NotificationBell() {
           ref={panelRef}
           role="dialog"
           aria-label="Notifications"
-          className="fixed sm:absolute inset-x-2 sm:inset-x-auto top-16 sm:top-full sm:right-0 sm:mt-2 sm:w-96 max-h-[70vh] flex flex-col bg-surface-low border border-border/20 rounded-2xl shadow-2xl z-[200] overflow-hidden"
+          className="fixed sm:absolute inset-x-3 sm:inset-x-auto top-[4.25rem] sm:top-full sm:right-0 sm:mt-2 sm:w-96 max-h-[70vh] flex flex-col bg-surface-low border border-border/20 rounded-2xl shadow-2xl z-[200] overflow-hidden"
         >
           <div className="flex items-center justify-between px-4 py-3 border-b border-border/20">
             <h3 className="text-sm font-black text-text-primary">Notifications</h3>

@@ -229,12 +229,12 @@ function App() {
               {/* Mobile Drawer Overlay */}
               {isSidebarOpen && !isDesktop && (
                 <div 
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 animate-in fade-in duration-300"
+                  className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[75] animate-in fade-in duration-300"
                   onClick={() => setIsSidebarOpen(false)}
                 />
               )}
 
-              <aside className={`fixed inset-y-0 left-0 glass px-6 py-3 sm:py-4 flex flex-col gap-6 z-50 transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'} ${isSidebarOpen ? 'w-[75%] sm:w-72' : ''}`}>
+              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border/20 lg:border-none lg:bg-transparent lg:glass px-6 py-3 sm:py-4 flex flex-col gap-6 z-[80] shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-6'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
                 <div className={`flex items-center text-primary-accent ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'} relative`}>
                   <div className="flex items-center gap-3 overflow-hidden">
                     <button 
@@ -303,11 +303,10 @@ function App() {
                   </div>
                   <div className="flex items-center gap-2">
                     <NotificationBell />
-                    <ThemeToggle theme={theme} setTheme={setTheme} className="lg:hidden" />
                     {location.pathname === '/calendar' && (
                       <div className="flex bg-surface-highest/10 rounded-xl p-1 font-display">
-                        <button onClick={() => setViewMode('day')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
-                        <button onClick={() => setViewMode('week')} className={`px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
+                        <button onClick={() => setViewMode('day')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'day' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><Maximize2 size={12} /> Day</button>
+                        <button onClick={() => setViewMode('week')} className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-extrabold capitalize transition-all flex items-center gap-1.5 ${viewMode === 'week' ? 'bg-primary-accent text-white shadow-ambient' : 'text-text-secondary hover:text-text-primary'}`}><LayoutGrid size={12} /> Week</button>
                       </div>
                     )}
                   </div>
