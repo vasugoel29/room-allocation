@@ -24,7 +24,7 @@ import { AppContext } from '../../context/AppContext';
 import { getRoleLabel } from '../../utils/roleUtils';
 import { P, can, isAdmin as checkIsAdmin, teaches as checkTeaches } from '../../utils/permissions';
 
-export default function InteractiveTutorial() {
+export default function InteractiveTutorial({ isSidebarOpen, setIsSidebarOpen }) {
   const { user, isTutorialOpen, completeTutorial } = useContext(AppContext);
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,6 +35,13 @@ export default function InteractiveTutorial() {
     return typeof window !== 'undefined' ? window.innerWidth < 1024 : false;
   });
   const cardRef = useRef(null);
+
+  const handleComplete = useCallback(() => {
+    if (isMobile && setIsSidebarOpen) {
+      setIsSidebarOpen(false);
+    }
+    completeTutorial();
+  }, [completeTutorial, isMobile, setIsSidebarOpen]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -262,7 +269,7 @@ export default function InteractiveTutorial() {
         },
         {
           id: 'cr-transfers',
-          route: '/calendar',
+          route: isMobile ? '/history' : '/bookings',
           target: 'nav-bookings',
           title: 'Room Transfers & History',
           badge: 'Swaps & Transfers',
@@ -377,6 +384,21 @@ export default function InteractiveTutorial() {
     }
   }, [isTutorialOpen, currentStep?.route, location.pathname, navigate]);
 
+  // Automatically open sidebar on mobile when current step targets sidebar items (e.g. room-filter)
+  useEffect(() => {
+    if (!isTutorialOpen) {
+      return;
+    }
+
+    const isSidebarTarget = currentStep?.target === 'room-filter';
+
+    if (isSidebarTarget && isMobile && setIsSidebarOpen) {
+      setIsSidebarOpen(true);
+    } else if (!isSidebarTarget && isMobile && isSidebarOpen && setIsSidebarOpen) {
+      setIsSidebarOpen(false);
+    }
+  }, [isTutorialOpen, currentStepIndex, currentStep?.target, isMobile, isSidebarOpen, setIsSidebarOpen]);
+
   // Update spotlight target bounding box with progressive retries for asynchronous component mounts
   const updateTargetRect = useCallback(() => {
     if (!currentStep?.target) {
@@ -385,9 +407,21 @@ export default function InteractiveTutorial() {
     }
 
     const findAndSet = () => {
-      const el = document.querySelector(`[data-tour="${currentStep.target}"]`);
-      if (el) {
+      const elements = Array.from(document.querySelectorAll(`[data-tour="${currentStep.target}"]`));
+      if (!elements.length) return false;
+
+      // Find visible element among matches (e.g. visible BottomNav button vs hidden off-screen sidebar NavButton)
+      const visibleEl = elements.find(el => {
         const rect = el.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) return false;
+        // Check if placed offscreen (e.g. sidebar -translate-x-full)
+        if (rect.right <= 0 || rect.bottom <= 0 || rect.left >= window.innerWidth || rect.top >= window.innerHeight) return false;
+        const style = window.getComputedStyle(el);
+        return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+      }) || elements[0];
+
+      if (visibleEl) {
+        const rect = visibleEl.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0) {
           setTargetRect({
             top: rect.top,
@@ -397,7 +431,7 @@ export default function InteractiveTutorial() {
             bottom: rect.bottom,
             right: rect.right
           });
-          el.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+          visibleEl.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
           return true;
         }
       }
@@ -440,12 +474,12 @@ export default function InteractiveTutorial() {
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        completeTutorial();
+        handleComplete();
       } else if (e.key === 'ArrowRight' || e.key === 'Enter') {
         if (currentStepIndex < steps.length - 1) {
           setCurrentStepIndex(prev => prev + 1);
         } else {
-          completeTutorial();
+          handleComplete();
         }
       } else if (e.key === 'ArrowLeft') {
         if (currentStepIndex > 0) {
@@ -456,7 +490,7 @@ export default function InteractiveTutorial() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isTutorialOpen, currentStepIndex, steps.length, completeTutorial]);
+  }, [isTutorialOpen, currentStepIndex, steps.length, handleComplete]);
 
   // Focus trap / manage
   useEffect(() => {
@@ -639,7 +673,7 @@ export default function InteractiveTutorial() {
                 </button>
 
                 <button 
-                  onClick={completeTutorial}
+                  onClick={handleComplete}
                   aria-label="Skip tutorial"
                   className="p-1.5 rounded-xl hover:bg-surface-highest/20 text-text-secondary hover:text-text-primary transition-colors"
                   title="Skip Tutorial"
@@ -695,7 +729,7 @@ export default function InteractiveTutorial() {
                 {isFirstStep ? (
                   <button
                     type="button"
-                    onClick={completeTutorial}
+                    onClick={handleComplete}
                     className="px-2.5 sm:px-3 py-2 text-xs font-bold text-text-secondary hover:text-text-primary transition-colors font-display"
                   >
                     Skip Tour
@@ -718,7 +752,7 @@ export default function InteractiveTutorial() {
                   type="button"
                   onClick={() => {
                     if (isLastStep) {
-                      completeTutorial();
+                      handleComplete();
                     } else {
                       setCurrentStepIndex(prev => prev + 1);
                     }

@@ -37,6 +37,7 @@ function MobileBooking({ onBack }) {
   const [selectedDate, setSelectedDate] = useState(() => getInitialBookingDateObject());
   const [selectedHour, setSelectedHour] = useState(8);
   const [selectedRoom, setSelectedRoom] = useState('');
+  const selectedRoomObj = rooms.find(r => r.id === selectedRoom);
   const [purpose, setPurpose] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState('');
   const [facultySearch, setFacultySearch] = useState('');
@@ -56,8 +57,15 @@ function MobileBooking({ onBack }) {
 
   const isStudent = !booksDirect(user);
 
-  // Extract unique blocks (buildings) from rooms and sort alphabetically
-  const blocks = ['all', ...[...new Set(rooms.map(r => r.building).filter(Boolean))].sort((a, b) => a.localeCompare(b))];
+  // Extract unique blocks (buildings) from rooms and sort alphabetically, excluding test data
+  const blocks = [
+    'all',
+    ...[...new Set(
+      rooms
+        .map(r => r.building)
+        .filter(b => Boolean(b) && b.trim().toLowerCase() !== 'test block')
+    )].sort((a, b) => a.localeCompare(b))
+  ];
 
   const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
@@ -85,6 +93,9 @@ function MobileBooking({ onBack }) {
   const dayName = getDayName(selectedDate);
 
   const availableRooms = rooms.filter(room => {
+    // Exclude dummy test blocks
+    if (room.building && room.building.trim().toLowerCase() === 'test block') return false;
+
     // Comprehensive availability check (Overides + Static Schedule + Bookings)
     if (!isRoomReallyFree(room, dateStr, dayName, selectedHour, bookings, availability)) {
       return false;
@@ -365,7 +376,7 @@ function MobileBooking({ onBack }) {
                         onClick={() => setBlockFilter(b)}
                         className={`px-3 py-1 rounded-lg text-xs transition-all whitespace-nowrap font-display border ${blockFilter === b ? 'bg-primary text-white font-semibold border-primary shadow-sm' : 'bg-surface-low text-text-secondary font-medium border-border-subtle hover:text-text-primary hover:bg-surface-mid/40'}`}
                       >
-                        {b === 'all' ? 'All Blocks' : b}
+                        {b === 'all' ? 'All Blocks' : (b === 'Smart Block' || b === 'Smart' ? 'S-Block' : b)}
                       </button>
                     ))}
                   </div>
@@ -373,11 +384,18 @@ function MobileBooking({ onBack }) {
               </div>
             </div>
 
-            <div className="space-y-2 pt-1">
-              <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-1.5 font-display">
-                <Hash size={13} className="text-primary" />
-                Available Spaces ({availableRooms.length})
-              </label>
+            <div className="space-y-2 pt-1 pb-24">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-text-secondary capitalize flex items-center gap-1.5 font-display">
+                  <Hash size={13} className="text-primary" />
+                  Available Spaces ({availableRooms.length})
+                </label>
+                {selectedRoomObj && (
+                  <span className="text-[11px] font-bold text-primary font-display flex items-center gap-1 bg-primary/10 px-2.5 py-0.5 rounded-full animate-in fade-in">
+                    Selected: {selectedRoomObj.name}
+                  </span>
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 {availableRooms.map(room => {
                   const isSelected = selectedRoom === room.id;
@@ -431,14 +449,37 @@ function MobileBooking({ onBack }) {
               </div>
             </div>
 
-            <button 
-              disabled={!selectedRoom}
-              onClick={() => setStep(3)}
-              className="w-full bg-primary text-white font-semibold py-3.5 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm disabled:opacity-40 font-display capitalize mt-2"
-            >
-              Next: Details
-              <ChevronRight size={18} />
-            </button>
+            {/* Sticky Bottom Action Bar so user never has to scroll through all rooms */}
+            <div className="fixed bottom-0 left-0 right-0 p-3.5 bg-surface-low/95 dark:bg-surface-mid/95 backdrop-blur-xl border-t border-border-subtle shadow-2xl z-30 flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
+              <div className="flex-1 min-w-0 font-display">
+                {selectedRoomObj ? (
+                  <div className="space-y-0.5 truncate">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+                      <p className="text-xs font-bold text-text-primary truncate capitalize">
+                        Room {selectedRoomObj.name}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-text-secondary truncate">
+                      {selectedRoomObj.capacity} seats • {selectedRoomObj.building || 'Room'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-text-secondary font-medium">
+                    Tap any room to select
+                  </p>
+                )}
+              </div>
+
+              <button 
+                disabled={!selectedRoom}
+                onClick={() => setStep(3)}
+                className="px-5 py-3 rounded-xl bg-primary text-white text-xs font-bold shadow-ambient flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 font-display shrink-0"
+              >
+                <span>Continue</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
         )}
 

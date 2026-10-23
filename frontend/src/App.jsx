@@ -245,7 +245,7 @@ function App() {
                 />
               )}
 
-              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border-subtle lg:border-none lg:bg-transparent lg:glass px-4 py-3 sm:py-4 flex flex-col gap-3.5 z-[80] shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-5'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
+              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border-subtle lg:border-none lg:bg-transparent lg:glass px-4 py-3 sm:py-4 pt-[max(env(safe-area-inset-top),0.75rem)] flex flex-col gap-3.5 z-[80] shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-5'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
                 <div className={`flex items-center text-primary-accent ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'} relative`}>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     <button 
@@ -261,7 +261,6 @@ function App() {
 
                 <div className={`transition-opacity duration-200 ${isSidebarCollapsed ? 'lg:opacity-0 lg:hidden' : 'opacity-100'} flex-1 min-h-0 flex flex-col gap-3.5 sm:gap-4 overflow-y-auto no-scrollbar pb-3`}>
                   <div className="space-y-1">
-                    <p className="px-2 text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-1 opacity-60 font-display">Navigation</p>
                     <div className="flex flex-col gap-0.5">
                       {getNavigationTabs().map(tab => (
                         <NavButton 
@@ -302,7 +301,7 @@ function App() {
 
               <main className="flex-1 p-0 flex flex-col w-full overflow-hidden">
                 {/* Header without backdrop-blur that traps fixed-position elements */}
-                <header className="relative z-50 flex flex-row justify-between items-center p-3 sm:p-4 gap-3 bg-surface-low border-b border-border-subtle">
+                <header className={`relative z-50 ${location.pathname === '/book-a-slot' ? 'hidden lg:flex' : 'flex'} flex-row justify-between items-center px-3 sm:px-4 py-3 sm:py-4 pt-[max(env(safe-area-inset-top),0.75rem)] gap-3 bg-surface-low border-b border-border-subtle`}>
                   <div className="flex items-center gap-1 sm:gap-2">
                     <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 hover:bg-surface-high rounded-xl text-primary-accent transition-colors"><Menu size={22} /></button>
                     <h2 className="text-xl lg:text-2xl font-bold tracking-tight text-primary-accent leading-tight capitalize font-display">
@@ -364,7 +363,7 @@ function App() {
               )}
 
               {isModalOpen && canBook(user) && <BookingModal slot={selectedSlot} onClose={() => setIsModalOpen(false)} onSuccess={() => setIsModalOpen(false)} />}
-              <InteractiveTutorial />
+              <InteractiveTutorial isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} />
             </div>
           )
         } />

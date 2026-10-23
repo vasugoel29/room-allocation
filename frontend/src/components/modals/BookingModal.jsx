@@ -27,6 +27,11 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
 
   useEffect(() => {
+    const originalOverflow = document.body.style.overflow;
+    const originalTouchAction = document.body.style.touchAction;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+
     const handleEscape = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -64,6 +69,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
     firstFocusable?.focus();
 
     return () => {
+      document.body.style.overflow = originalOverflow;
+      document.body.style.touchAction = originalTouchAction;
       document.removeEventListener("keydown", handleEscape);
       document.removeEventListener("keydown", handleFocusTrap);
     };
@@ -255,10 +262,11 @@ function BookingModal({ slot, onClose, onSuccess }) {
           }}
         />
       )}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overscroll-contain">
       <div
-        className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-md"
+        className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-md touch-none"
         onClick={onClose}
+        onTouchMove={(e) => e.preventDefault()}
         aria-hidden="true"
         tabIndex="-1"
       ></div>
@@ -268,7 +276,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative w-full max-w-xl mx-4 glass rounded-[2.5rem] p-6 sm:p-10 shadow-ambient border-none overflow-y-auto max-h-[90dvh] no-scrollbar"
+        className="relative w-full max-w-xl mx-4 glass rounded-[2.5rem] p-6 sm:p-10 shadow-ambient border-none overflow-y-auto max-h-[90dvh] no-scrollbar overscroll-contain touch-pan-y"
       >
         <button
           onClick={onClose}

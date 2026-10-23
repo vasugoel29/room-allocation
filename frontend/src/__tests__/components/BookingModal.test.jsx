@@ -249,4 +249,12 @@ describe('BookingModal', () => {
     await ue.click(screen.getByDisplayValue('Extra Class'));
     expect(screen.getByRole('option', { name: 'Reschedule' })).toBeInTheDocument();
   });
+
+  it('locks body scroll when open and restores on unmount', () => {
+    expect(document.body.style.overflow).toBe('');
+    const { unmount } = setup();
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
 });

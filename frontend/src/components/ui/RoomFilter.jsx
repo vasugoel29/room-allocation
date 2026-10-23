@@ -67,7 +67,7 @@ function RoomFilter() {
                 }}
                 className={`py-1.5 rounded-lg text-xs transition-all font-display ${filters.building?.includes(b) ? 'bg-primary text-white font-semibold shadow-sm' : 'text-text-secondary font-medium hover:text-text-primary'}`}
               >
-                {b === 'all' ? 'All' : b.replace(' Block', '')}
+                {b === 'all' ? 'All' : (b === 'Smart Block' || b === 'Smart' ? 'S-Block' : b.replace(' Block', ''))}
               </button>
             ))}
           </div>

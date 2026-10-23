@@ -111,9 +111,9 @@ const Login = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
       {/* Background Ambient Glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-primary-accent/10 blur-[130px] rounded-full pointer-events-none"></div>
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] bg-primary-accent/15 dark:bg-primary-accent/20 blur-[140px] rounded-full pointer-events-none"></div>
 
-      <div className="relative w-full max-w-sm bg-surface-low rounded-[2.5rem] p-8 sm:p-10 shadow-xl ring-1 ring-border/20 space-y-8 animate-in fade-in zoom-in duration-300 text-center">
+      <div className="relative w-full max-w-sm bg-surface-low/90 dark:bg-surface-mid/80 backdrop-blur-2xl rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-border/40 dark:border-white/10 space-y-8 animate-in fade-in zoom-in duration-300 text-center">
         {/* Logo and Titles */}
         <div className="space-y-3">
           <div className="inline-flex">

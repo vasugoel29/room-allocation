@@ -294,4 +294,34 @@ describe('InteractiveTutorial', () => {
       expect(startTutorial).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('Mobile Sidebar Coordination', () => {
+    it('automatically opens sidebar on mobile when reaching room-filter step and closes on complete', () => {
+      window.innerWidth = 480;
+      window.dispatchEvent(new Event('resize'));
+      const setIsSidebarOpen = vi.fn();
+
+      const { unmount } = renderWithContext(
+        <InteractiveTutorial isSidebarOpen={false} setIsSidebarOpen={setIsSidebarOpen} />,
+        {
+          ctx: { isTutorialOpen: true, user: USERS.STUDENT_REP },
+        }
+      );
+
+      // Step 1 -> Step 2
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      // Step 2 -> Step 3 (Filter Smart Classrooms)
+      fireEvent.click(screen.getByRole('button', { name: /Next/i }));
+      expect(screen.getByText('Filter Smart Classrooms')).toBeInTheDocument();
+      expect(setIsSidebarOpen).toHaveBeenCalledWith(true);
+
+      // Complete / skip tour closes sidebar
+      fireEvent.click(screen.getByRole('button', { name: /Skip tutorial/i }));
+      expect(setIsSidebarOpen).toHaveBeenCalledWith(false);
+
+      unmount();
+      window.innerWidth = 1280;
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
 });
