@@ -1,5 +1,5 @@
 import React, { useState, useContext, useEffect } from 'react';
-import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles, MapPin, Sun, Moon } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Clock, Hash, CheckCircle, AlertCircle, User, ChevronRight, Search, Wind, Monitor, Sparkles, MapPin, Sun, Moon, GraduationCap } from 'lucide-react';
 import { AppContext } from '../context/AppContext';
 import { bookingService } from '../services/bookingService';
 import { roomService } from '../services/roomService';
@@ -9,12 +9,12 @@ import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
 import NotificationBell from '../components/ui/NotificationBell';
 import { useSearchDebounce } from '../hooks/useSearchDebounce';
-import { addMinutesToUtc, istDateTimeToUtc } from '../utils/timezone';
+import { addMinutesToUtc, istDateTimeToUtc, getIstDateKey, getIstHour } from '../utils/timezone';
 import { booksDirect, P, can } from '../utils/permissions';
 import { BOOKING_START_HOURS } from '../../../shared/bookingRules.js';
 
 function MobileBooking({ onBack }) {
-  const { user, faculties, bookings, availability, fetchRooms, fetchBookings, fetchAvailability, theme, setTheme } = useContext(AppContext);
+  const { user, faculties, bookings, availability, timetableData, fetchRooms, fetchBookings, fetchAvailability, theme, setTheme } = useContext(AppContext);
   const [rooms, setRooms] = useState([]);
 
   useEffect(() => {
@@ -54,6 +54,26 @@ function MobileBooking({ onBack }) {
 
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [conflictingClass, setConflictingClass] = useState(null);
+
+  const formatErrorMessage = (msg) => {
+    if (!msg) return '';
+    const match = msg.match(/already have (a pending request|another booking) during this time in Room ([^\s.,]+)/i);
+    if (match) {
+      const roomName = match[2];
+      const matchingBkg = bookings?.find(b => 
+        String(b.created_by) === String(user?.id) && 
+        (b.room_name === roomName || String(b.room_id) === String(roomName)) && 
+        ['ACTIVE', 'PENDING'].includes(b.status)
+      );
+      if (matchingBkg) {
+        const facName = matchingBkg.faculty_name || faculties?.find(f => String(f.id) === String(matchingBkg.faculty_id))?.name;
+        if (facName && !msg.toLowerCase().includes('with prof')) {
+          return `${msg} with Prof. ${facName}`;
+        }
+      }
+    }
+    return msg;
+  };
 
   const isStudent = !booksDirect(user);
 
@@ -141,7 +161,7 @@ function MobileBooking({ onBack }) {
     try {
       // 1. Check for Class Conflicts
       const isRep = can(user, P.BOOKINGS);
-      const conflict = getClassConflict(user, dateStr, selectedHour, bookings, availability || []);
+      const conflict = getClassConflict(user, dateStr, selectedHour, bookings, availability || [], timetableData || []);
       
       if (conflict) {
         if (isRep) {
@@ -184,16 +204,16 @@ function MobileBooking({ onBack }) {
       setIsConflictModalOpen(false);
       onBack();
     } catch (err) {
-      setError(err.message || 'Booking failed');
+      setError(formatErrorMessage(err.message || 'Booking failed'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-surface-lowest fixed inset-0 z-[60] overflow-y-auto no-scrollbar pb-20">
+    <div className="flex flex-col h-full w-full bg-surface-lowest fixed inset-0 z-[60] overflow-hidden">
       {/* Header */}
-      <div className="p-4 flex items-center justify-between bg-surface-low sticky top-0 z-10 font-display border-b border-border-subtle shadow-sm">
+      <div className="p-4 flex items-center justify-between bg-surface-low shrink-0 z-10 font-display border-b border-border-subtle shadow-sm">
         <div className="flex items-center gap-3">
           <button onClick={onBack} className="p-2 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-mid/40 transition-colors" aria-label="Go back">
             <ArrowLeft size={22} />
@@ -215,11 +235,12 @@ function MobileBooking({ onBack }) {
         </div>
       </div>
 
-      <div className="p-4 sm:p-5 space-y-4">
+      {/* Scrollable Content Area */}
+      <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-5 space-y-4">
         {error && (
           <div className="p-4 rounded-2xl bg-red-500/10 text-red-600 text-sm flex items-center gap-3 animate-in fade-in zoom-in duration-300">
-            <AlertCircle size={20} />
-            <p className="font-extrabold tracking-tight capitalize text-[11px] font-display">{error}</p>
+            <AlertCircle size={20} className="shrink-0" />
+            <p className="font-extrabold tracking-tight capitalize text-[11px] font-display">{formatErrorMessage(error)}</p>
           </div>
         )}
 
@@ -277,6 +298,39 @@ function MobileBooking({ onBack }) {
                   toast.error("Students are not allowed to book rooms on weekends");
                   return;
                 }
+
+                // 1. Check for Class Conflict right in Step 1
+                const isRep = can(user, P.BOOKINGS);
+                const conflict = getClassConflict(user, dateStr, selectedHour, bookings, availability || [], timetableData || []);
+                if (conflict) {
+                  if (isRep) {
+                    setConflictingClass(conflict);
+                    setIsConflictModalOpen(true);
+                    return;
+                  } else {
+                    setError(`You already have a class "${conflict.subjectName || conflict.subject}" at this time. Please contact your Rep to reschedule.`);
+                    return;
+                  }
+                }
+
+                // 2. Check if the user already has an active or pending request for this time slot
+                const myPendingOrActive = bookings?.find(b => {
+                  if (String(b.created_by) !== String(user?.id)) return false;
+                  if (!['ACTIVE', 'PENDING'].includes(b.status)) return false;
+                  const bStart = new Date(b.start_time);
+                  const bDate = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
+                  const bHour = bStart.getHours();
+                  return bDate === dateStr && bHour === selectedHour;
+                });
+                if (myPendingOrActive) {
+                  const what = myPendingOrActive.status === 'PENDING' ? 'a pending request' : 'another booking';
+                  const facName = myPendingOrActive.faculty_name || faculties?.find(f => String(f.id) === String(myPendingOrActive.faculty_id))?.name;
+                  const facText = facName ? ` with Prof. ${facName}` : '';
+                  setError(`You already have ${what} during this time in Room ${myPendingOrActive.room_name}${facText}`);
+                  return;
+                }
+
+                setError('');
                 setStep(2);
               }}
               className="w-full bg-primary text-white font-semibold py-4 rounded-2xl shadow-ambient flex items-center justify-center gap-2 active:scale-95 transition-all text-sm mt-2 font-display capitalize"
@@ -448,38 +502,6 @@ function MobileBooking({ onBack }) {
                 )}
               </div>
             </div>
-
-            {/* Sticky Bottom Action Bar so user never has to scroll through all rooms */}
-            <div className="fixed bottom-0 left-0 right-0 p-3.5 bg-surface-low/95 dark:bg-surface-mid/95 backdrop-blur-xl border-t border-border-subtle shadow-2xl z-30 flex items-center justify-between gap-3 animate-in slide-in-from-bottom duration-200">
-              <div className="flex-1 min-w-0 font-display">
-                {selectedRoomObj ? (
-                  <div className="space-y-0.5 truncate">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
-                      <p className="text-xs font-bold text-text-primary truncate capitalize">
-                        Room {selectedRoomObj.name}
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-text-secondary truncate">
-                      {selectedRoomObj.capacity} seats • {selectedRoomObj.building || 'Room'}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-text-secondary font-medium">
-                    Tap any room to select
-                  </p>
-                )}
-              </div>
-
-              <button 
-                disabled={!selectedRoom}
-                onClick={() => setStep(3)}
-                className="px-5 py-3 rounded-xl bg-primary text-white text-xs font-bold shadow-ambient flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 font-display shrink-0"
-              >
-                <span>Continue</span>
-                <ChevronRight size={16} />
-              </button>
-            </div>
           </div>
         )}
 
@@ -602,6 +624,40 @@ function MobileBooking({ onBack }) {
           </div>
         )}
       </div>
+
+      {/* Persistent Bottom Action Bar for Step 2 - always pinned at the bottom! */}
+      {step === 2 && (
+        <div className="p-3.5 bg-surface-low/95 dark:bg-surface-mid/95 backdrop-blur-xl border-t border-border-subtle shadow-2xl z-50 flex items-center justify-between gap-3 shrink-0 animate-in slide-in-from-bottom duration-200 font-display">
+          <div className="flex-1 min-w-0">
+            {selectedRoomObj ? (
+              <div className="space-y-0.5 truncate">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 animate-pulse"></span>
+                  <p className="text-xs font-bold text-text-primary truncate capitalize">
+                    Room {selectedRoomObj.name}
+                  </p>
+                </div>
+                <p className="text-[10px] text-text-secondary truncate">
+                  {selectedRoomObj.capacity} seats • {selectedRoomObj.building || 'Room'}
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-text-secondary font-medium">
+                Tap any room to select
+              </p>
+            )}
+          </div>
+
+          <button 
+            disabled={!selectedRoom}
+            onClick={() => setStep(3)}
+            className="px-5 py-3 rounded-xl bg-primary text-white text-xs font-bold shadow-ambient flex items-center gap-1.5 active:scale-95 transition-all disabled:opacity-40 font-display shrink-0"
+          >
+            <span>Continue</span>
+            <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
       {/* Custom Conflict Modal */}
       {isConflictModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
@@ -630,17 +686,38 @@ function MobileBooking({ onBack }) {
 
               <div className="bg-tonal-secondary/10 rounded-3xl p-6 text-left space-y-4">
                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                        <Clock size={20} />
                     </div>
-                    <p className="text-sm font-extrabold text-text-primary capitalize tracking-tight font-display">{conflictingClass?.subjectName || conflictingClass?.subject}</p>
+                    <div className="min-w-0">
+                       <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Subject</p>
+                       <p className="text-sm font-extrabold text-text-primary capitalize tracking-tight font-display truncate">{conflictingClass?.subjectName || conflictingClass?.subject}</p>
+                    </div>
                  </div>
                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
+                    <div className="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary shrink-0">
                        <Hash size={18} />
                     </div>
-                    <p className="text-[10px] font-extrabold text-text-secondary capitalize tracking-widest leading-relaxed">Room {conflictingClass?.room} <span className="opacity-40">@</span> {conflictingClass?.displayTime}</p>
+                    <div className="min-w-0">
+                       <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Location & Time</p>
+                       <p className="text-[11px] font-extrabold text-text-primary capitalize tracking-wide leading-relaxed">Room {conflictingClass?.room} <span className="text-text-secondary opacity-60">@</span> {conflictingClass?.displayTime}</p>
+                    </div>
                  </div>
+                 {conflictingClass?.faculty && conflictingClass.faculty !== 'N/A' && (
+                    <div className="flex items-center gap-4">
+                       <div className="w-10 h-10 rounded-xl bg-tertiary/10 flex items-center justify-center text-tertiary shrink-0">
+                          <GraduationCap size={18} />
+                       </div>
+                       <div className="min-w-0">
+                          <p className="text-[9px] font-bold text-text-secondary uppercase tracking-widest">Faculty</p>
+                          <p className="text-xs font-extrabold text-text-primary capitalize tracking-tight font-display truncate">
+                            {conflictingClass.faculty.toLowerCase().startsWith('prof') || conflictingClass.faculty.toLowerCase().startsWith('dr') 
+                              ? conflictingClass.faculty 
+                              : `Prof. ${conflictingClass.faculty}`}
+                          </p>
+                       </div>
+                    </div>
+                 )}
               </div>
 
               <p className="text-[11px] text-text-secondary font-medium leading-relaxed px-2">

@@ -101,12 +101,14 @@ const HistoryView = ({ onClose }) => {
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   const paginatedHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  const handleCancel = (bookingId) => {
+  const handleCancel = (bookingId, isPending = false, roomName = '') => {
     setConfirmConfig({
       isOpen: true,
-      title: 'Cancel Booking',
-      message: 'Are you sure you want to cancel this booking?',
-      confirmText: 'Cancel Booking',
+      title: isPending ? 'Withdraw Booking Request' : 'Cancel Booking',
+      message: isPending 
+        ? `Are you sure you want to withdraw your booking request${roomName ? ` for Room ${roomName}` : ''}? The request will be cancelled and will no longer appear in the faculty supervisor's approval queue.`
+        : 'Are you sure you want to cancel this booking?',
+      confirmText: isPending ? 'Withdraw Request' : 'Cancel Booking',
       confirmType: 'danger',
       action: async () => {
         setLoading(true);
@@ -116,9 +118,9 @@ const HistoryView = ({ onClose }) => {
           fetchRooms();
           fetchBookings();
           fetchAvailability();
-          toast.success('Booking cancelled');
+          toast.success(isPending ? 'Booking request withdrawn' : 'Booking cancelled');
         } catch (err) {
-          toast.error(err.message || 'Could not cancel the booking'); // FE-11: tell the user
+          toast.error(err.message || (isPending ? 'Could not withdraw request' : 'Could not cancel the booking')); // FE-11: tell the user
         } finally {
           setLoading(false);
         }
@@ -350,15 +352,27 @@ const HistoryView = ({ onClose }) => {
                         </p>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        {item.type === 'BOOKING' && String(item.created_by) === String(user?.id) && (item.status || 'ACTIVE') === 'ACTIVE' && new Date(item.end_time) > now && (
-                          <button 
-                            onClick={() => handleCancel(item.id)}
-                            disabled={loading}
-                            className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all shadow-sm active:scale-95"
-                            aria-label="Cancel Booking"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                        {item.type === 'BOOKING' && String(item.created_by) === String(user?.id) && new Date(item.end_time) > now && (
+                          item.status === 'PENDING' ? (
+                            <button
+                              onClick={() => handleCancel(item.id, true, item.room_name)}
+                              disabled={loading}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-95"
+                              title="Withdraw Booking Request"
+                              aria-label="Withdraw Booking"
+                            >
+                              Withdraw
+                            </button>
+                          ) : (item.status || 'ACTIVE') === 'ACTIVE' ? (
+                            <button 
+                              onClick={() => handleCancel(item.id, false, item.room_name)}
+                              disabled={loading}
+                              className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all shadow-sm active:scale-95"
+                              aria-label="Cancel Booking"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          ) : null
                         )}
                       </td>
                     </tr>
@@ -394,15 +408,26 @@ const HistoryView = ({ onClose }) => {
                         </div>
                       </div>
                     </div>
-                    {item.type === 'BOOKING' && String(item.created_by) === String(user?.id) && (item.status || 'ACTIVE') === 'ACTIVE' && new Date(item.end_time) > now && (
-                      <button 
-                        onClick={() => handleCancel(item.id)}
-                        disabled={loading}
-                        className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all shrink-0"
-                        aria-label="Cancel Booking"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    {item.type === 'BOOKING' && String(item.created_by) === String(user?.id) && new Date(item.end_time) > now && (
+                      item.status === 'PENDING' ? (
+                        <button
+                          onClick={() => handleCancel(item.id, true, item.room_name)}
+                          disabled={loading}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shrink-0 active:scale-95"
+                          aria-label="Withdraw Booking"
+                        >
+                          Withdraw
+                        </button>
+                      ) : (item.status || 'ACTIVE') === 'ACTIVE' ? (
+                        <button 
+                          onClick={() => handleCancel(item.id, false, item.room_name)}
+                          disabled={loading}
+                          className="p-2 text-red-500 hover:text-white hover:bg-red-500 rounded-xl transition-all shrink-0"
+                          aria-label="Cancel Booking"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      ) : null
                     )}
                   </div>
                   

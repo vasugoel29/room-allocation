@@ -109,17 +109,17 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
+    <div className="h-full flex-1 min-h-[100dvh] sm:min-h-0 w-full flex items-center justify-center bg-surface-lowest p-4 relative overflow-hidden">
       {/* Background Ambient Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[540px] h-[540px] bg-primary-accent/15 dark:bg-primary-accent/20 blur-[140px] rounded-full pointer-events-none"></div>
 
-      <div className="relative w-full max-w-sm bg-surface-low/90 dark:bg-surface-mid/80 backdrop-blur-2xl rounded-[2.5rem] p-8 sm:p-10 shadow-2xl border border-border/40 dark:border-white/10 space-y-8 animate-in fade-in zoom-in duration-300 text-center">
+      <div className="relative w-full max-w-sm bg-surface-low/90 dark:bg-surface-mid/80 backdrop-blur-2xl rounded-[2.5rem] p-6 sm:p-8 shadow-2xl border border-border/40 dark:border-white/10 space-y-5 sm:space-y-6 animate-in fade-in zoom-in duration-300 text-center">
         {/* Logo and Titles */}
-        <div className="space-y-3">
+        <div className="space-y-1.5 sm:space-y-2">
           <div className="inline-flex">
-            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-20 h-20 rounded-[1.6rem] shadow-ambient" />
+            <img src="/pwa-192x192.png" alt="CRAS Logo" className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl sm:rounded-[1.4rem] shadow-ambient" />
           </div>
-          <h2 className="text-3xl font-extrabold text-text-primary tracking-tight font-display">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-text-primary tracking-tight font-display">
             CRAS Portal
           </h2>
           <p className="text-xs text-text-secondary font-bold tracking-wider opacity-70 font-display">
@@ -128,16 +128,16 @@ const Login = () => {
         </div>
 
         {error && (
-          <div id="login-error" role="alert" className="p-3.5 rounded-2xl bg-error/10 border border-error/20 text-error text-xs font-semibold flex items-start gap-2.5 text-left animate-in slide-in-from-top-2">
+          <div id="login-error" role="alert" className="p-3 rounded-2xl bg-error/10 border border-error/20 text-error text-xs font-semibold flex items-start gap-2.5 text-left animate-in slide-in-from-top-2">
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-error" />
             <span>{error}</span>
           </div>
         )}
 
         {/* Pure Google SSO Action */}
-        <div className="space-y-4 pt-2">
+        <div className="space-y-3 pt-1">
           {loading && (
-            <div className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 border border-gray-300 py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm">
+            <div className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 border border-gray-300 py-3 px-4 rounded-2xl font-bold text-sm shadow-sm">
               <Loader2 size={18} className="animate-spin text-primary-accent" />
               <span className="text-text-primary text-xs font-bold">Verifying institutional access...</span>
             </div>
@@ -155,7 +155,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={handleDirectGoogleSSO}
-                className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
+                className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 hover:bg-gray-50 border border-gray-300 py-3 sm:py-3.5 px-4 rounded-2xl font-bold text-sm shadow-sm hover:shadow-md transition-all active:scale-[0.98] cursor-pointer"
               >
                 <GoogleIcon />
                 <span>Sign in with Google</span>
@@ -165,7 +165,7 @@ const Login = () => {
         </div>
 
         {devLoginEnabled && (
-          <form onSubmit={handleDevLogin} className="space-y-3 text-left" aria-label="Developer sign-in">
+          <form onSubmit={handleDevLogin} className="space-y-2 sm:space-y-2.5 text-left" aria-label="Developer sign-in">
             <label htmlFor="dev-email" className="block text-[11px] font-bold tracking-wider text-text-secondary">
               Developer sign-in (local only)
             </label>
@@ -176,12 +176,12 @@ const Login = () => {
               value={devEmail}
               onChange={(e) => setDevEmail(e.target.value)}
               placeholder="rollno@nsut.ac.in"
-              className="w-full rounded-2xl border border-border/40 bg-surface-lowest px-4 py-3 text-sm text-text-primary"
+              className="w-full rounded-2xl border border-border/40 bg-surface-lowest px-4 py-2.5 sm:py-3 text-sm text-text-primary"
             />
             <button
               type="submit"
               disabled={loading || !devEmail}
-              className="w-full rounded-2xl bg-primary-accent px-4 py-3 text-sm font-bold text-white disabled:opacity-60"
+              className="w-full rounded-2xl bg-primary-accent px-4 py-2.5 sm:py-3 text-sm font-bold text-white disabled:opacity-60 transition-opacity"
             >
               Dev sign in
             </button>
@@ -189,7 +189,7 @@ const Login = () => {
         )}
 
         {/* Institutional notice */}
-        <div className="pt-2 text-center text-[10px] text-text-secondary/70 font-medium flex items-center justify-center gap-1.5">
+        <div className="pt-1 sm:pt-2 text-center text-[10px] text-text-secondary/70 font-medium flex items-center justify-center gap-1.5">
           <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
           <span>Restricted to authorized @nsut.ac.in accounts</span>
         </div>

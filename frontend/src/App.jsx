@@ -227,7 +227,7 @@ function App() {
   };
 
   return (
-    <div className={`h-screen w-full flex flex-col transition-colors duration-400 font-body ${theme === 'dark' ? 'dark' : ''} bg-surface-lowest`}>
+    <div className={`h-screen h-[100dvh] w-full flex flex-col overflow-hidden transition-colors duration-400 font-body ${theme === 'dark' ? 'dark' : ''} bg-surface-lowest`}>
       <Suspense fallback={<FormLoadingFallback />}>
         <Routes>
         {/* Auth Routes */}
@@ -342,7 +342,9 @@ function App() {
                     </Suspense>
                   </div>
                 </section>
-                <BottomNav user={user} tabs={getNavigationTabs()} pendingTransferCount={pendingTransferCount} setIsSidebarOpen={setIsSidebarOpen} />
+                {location.pathname !== '/book-a-slot' && (
+                  <BottomNav user={user} tabs={getNavigationTabs()} pendingTransferCount={pendingTransferCount} setIsSidebarOpen={setIsSidebarOpen} />
+                )}
               </main>
 
               {location.pathname === '/calendar' && (
