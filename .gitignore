@@ -22,3 +22,5 @@ backend/scripts/seeded_credentials.csv
 Report*.xlsx
 Faculty Details.xlsx
 faculties_data.json
+.vercel
+.env*
