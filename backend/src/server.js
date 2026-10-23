@@ -227,7 +227,7 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-if (process.env.NODE_ENV !== 'test') {
+if (process.env.NODE_ENV !== 'test' && !process.env.VERCEL) {
   // Migrations must finish before the server accepts traffic (OPS-03).
   db.connectAndMigrate()
     .then(() => {

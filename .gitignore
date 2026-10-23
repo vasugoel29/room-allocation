@@ -6,8 +6,11 @@ dist/
 build/
 # Environment files
 **/*.env
+**/*.env.*
 *.env
+*.env.*
 .env
+.env.*
 e2e-report/
 e2e-results/
 load/.data/
