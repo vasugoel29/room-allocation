@@ -85,6 +85,20 @@ export const AppProvider = ({ children }) => {
     return () => { cancelled = true; };
   }, [userId]);
 
+  // Listen for real-time permission updates synchronized from cookies/responses
+  useEffect(() => {
+    const handlePermissionsUpdated = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        setUser((prev) => {
+          if (!prev) return prev;
+          return { ...prev, permissions: e.detail };
+        });
+      }
+    };
+    window.addEventListener('cras:permissions-updated', handlePermissionsUpdated);
+    return () => window.removeEventListener('cras:permissions-updated', handlePermissionsUpdated);
+  }, []);
+
   // Each loader only asks for what this person may see, so nobody collects 403s on app open.
   const fetchTransfers = useCallback(async () => {
     if (!canAny(user, P.BOOKINGS, P.FACULTY_PORTAL, P.ADMIN)) return;

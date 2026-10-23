@@ -2,6 +2,8 @@ import logger from '../utils/logger.js';
 import { AclError, fetchUserAccess } from '../auth/aclClient.js';
 import { GoogleAuthError, verifyGoogleIdToken } from '../auth/google.js';
 import {
+  attachAuthCookies,
+  clearAuthCookies,
   issueSessionToken,
   loadPrincipal,
   publicProfile,
@@ -19,7 +21,8 @@ async function startSession(email, res) {
   const access = await fetchUserAccess(email);
   const user = await upsertUserFromAcl(access);
   const principal = await loadPrincipal(user.id, user.session_version || 0);
-  return res.json({ message: 'Signed in', token: issueSessionToken(user), user: publicProfile(principal) });
+  const token = attachAuthCookies(res, user, principal);
+  return res.json({ message: 'Signed in', token, user: publicProfile(principal) });
 }
 
 function sendAuthError(res, err, context) {
@@ -64,13 +67,20 @@ export const me = (req, res) => res.json({ user: publicProfile(req.user) });
 /** POST /api/auth/logout — revokes all of the caller's sessions when a valid token is sent. */
 export const logout = async (req, res) => {
   const header = req.headers.authorization;
+  let token = null;
   if (header?.startsWith('Bearer ')) {
+    token = header.slice(7);
+  } else if (req.cookies?.token) {
+    token = req.cookies.token;
+  }
+  if (token) {
     try {
-      const { userId } = verifySessionToken(header.slice(7));
+      const { userId } = verifySessionToken(token);
       await revokeSessions(userId);
     } catch {
       // invalid/expired token: nothing to revoke
     }
   }
+  clearAuthCookies(res);
   res.json({ message: 'Logged out successfully' });
 };

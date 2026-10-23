@@ -321,9 +321,9 @@ describe('JWT handling', () => {
     expect((await get(ADMIN_ONLY, `Bearer ${h}.${p}.${s}`)).status).toBe(401);
   });
 
-  test('token in a cookie is not accepted by authenticate (header-only)', async () => {
+  test('token in a cookie is accepted by authenticate', async () => {
     const res = await request(app).get(ANY).set('Cookie', `token=${users.ADMIN.token}`);
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(200);
   });
 
   test('[SEC-09] token of a deleted user is rejected', async () => {

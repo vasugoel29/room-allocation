@@ -11,9 +11,11 @@ import { createFaculty, closeDb } from '../../test/helpers/factories.js';
 afterAll(closeDb);
 
 function mockRes() {
-  const res = { statusCode: 200, body: undefined };
+  const res = { statusCode: 200, body: undefined, cookies: {}, clearedCookies: {} };
   res.status = (code) => { res.statusCode = code; return res; };
   res.json = (payload) => { res.body = payload; return res; };
+  res.cookie = (name, val, opts) => { res.cookies[name] = { val, opts }; return res; };
+  res.clearCookie = (name, opts) => { res.clearedCookies[name] = opts; return res; };
   return res;
 }
 
@@ -43,6 +45,19 @@ describe('authenticate', () => {
     expect(req.user).toMatchObject({ id: user.id, role: 'FACULTY', email: user.email });
     expect(req.user.permissions.has('cras.faculty_portal')).toBe(true);
   });
+
+  test('valid session token in cookie -> req.user is loaded and cookies attached', async () => {
+    const { user } = await createFaculty();
+    const token = jwt.sign({ sub: String(user.id), sv: 0, typ: 'session' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    const req = { headers: {}, cookies: { token } };
+    const out = run(authenticate, req);
+    await out.ret;
+    expect(out.nextCalled).toBe(true);
+    expect(req.user).toMatchObject({ id: user.id, role: 'FACULTY', email: user.email });
+    expect(out.res.cookies.token).toBeDefined();
+    expect(out.res.cookies.permissions).toBeDefined();
+  });
+
 
   test('token for a user that does not exist -> 401', async () => {
     const token = jwt.sign({ sub: '99999999', sv: 0, typ: 'session' }, process.env.JWT_SECRET, { expiresIn: '1h' });

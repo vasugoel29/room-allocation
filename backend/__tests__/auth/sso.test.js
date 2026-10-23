@@ -258,15 +258,14 @@ describe('soft-deleted accounts and the faculty directory', () => {
 });
 
 describe('sessions follow the ACL', () => {
-  test('a role change in the ACL applies at the next refresh', async () => {
+  test('a role change in the ACL applies immediately on the next API call', async () => {
     const email = uniqEmail('promo');
     mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['cras.calendar'] }));
     const { token } = (await devLogin(email)).body;
     expect((await me(token)).body.user.role).toBe('VIEWER');
 
     mockAcl.set(email, aclEntry(email, { role: 'STUDENT_REP' }));
-    expect((await me(token)).body.user.role).toBe('VIEWER'); // snapshot still fresh
-    process.env.ACL_REFRESH_SECONDS = '0';
+    // With ACL confirmed on every API call, role change applies immediately on next call
     const after = await me(token);
     expect(after.body.user.role).toBe('STUDENT_REP');
   });
@@ -344,6 +343,54 @@ describe('sessions follow the ACL', () => {
     mockAcl.set(bare, aclEntry(bare, { role: 'ADMIN', permissions: [] }));
     const t2 = (await devLogin(bare)).body.token;
     expect((await request(app).get('/api/admin/audit-logs').set('Authorization', `Bearer ${t2}`)).status).toBe(403);
+  });
+
+  test('unauthorized request confirms with ACL and refreshes cookie with updated permissions when granted', async () => {
+    const email = uniqEmail('refresh-perm');
+    // Initially only VIEWER with cras.calendar
+    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['cras.calendar'] }));
+    const loginRes = await devLogin(email);
+    const token = loginRes.body.token;
+
+    // Verify cookies were set on login
+    const loginCookies = loginRes.headers['set-cookie'];
+    expect(loginCookies).toBeDefined();
+    expect(loginCookies.some((c) => c.startsWith('token='))).toBe(true);
+    expect(loginCookies.some((c) => c.startsWith('permissions='))).toBe(true);
+
+    // Promote in ACL to ADMIN with cras.admin mid-usage
+    mockAcl.set(email, aclEntry(email, { role: 'ADMIN', permissions: ['cras.admin'] }));
+
+    // Requesting admin route: initially unauthorized in snapshot, but requirePermission verifies with ACL,
+    // sees updated permissions, refreshes cookies and allows the request!
+    const adminRes = await request(app).get('/api/admin/audit-logs').set('Authorization', `Bearer ${token}`);
+    expect(adminRes.status).toBe(200);
+
+    // Verify response refreshed the cookie with cras.admin
+    const refreshedCookies = adminRes.headers['set-cookie'];
+    expect(refreshedCookies).toBeDefined();
+    const permCookie = refreshedCookies.find((c) => c.startsWith('permissions='));
+    expect(decodeURIComponent(permCookie)).toContain('cras.admin');
+  });
+
+  test('unauthorized request still denied if ACL does not grant it, but refreshes cookie with latest permissions', async () => {
+    const email = uniqEmail('still-denied');
+    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: ['cras.calendar'] }));
+    const loginRes = await devLogin(email);
+    const token = loginRes.body.token;
+
+    // Demoted in ACL to empty permissions
+    mockAcl.set(email, aclEntry(email, { role: 'VIEWER', permissions: [] }));
+
+    // Requesting admin route when still not granted
+    const adminRes = await request(app).get('/api/admin/audit-logs').set('Authorization', `Bearer ${token}`);
+    expect(adminRes.status).toBe(403);
+    expect(adminRes.body.error).toBe('Forbidden');
+
+    const refreshedCookies = adminRes.headers['set-cookie'];
+    expect(refreshedCookies).toBeDefined();
+    const permCookie = refreshedCookies.find((c) => c.startsWith('permissions='));
+    expect(decodeURIComponent(permCookie)).toContain('[]');
   });
 });
 

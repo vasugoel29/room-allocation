@@ -145,4 +145,27 @@ describe('utils/api apiFetch', () => {
     await p;
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
+
+  it('sends credentials: include on all requests for cookie authentication', async () => {
+    await apiFetch('/rooms');
+    expect(fetchMock.mock.calls[0][1].credentials).toBe('include');
+  });
+
+  it('synchronizes updated permissions from cookie to localStorage and dispatches cras:permissions-updated', async () => {
+    localStorage.setItem('user', JSON.stringify({ id: 1, permissions: ['cras.calendar'] }));
+    document.cookie = `permissions=${encodeURIComponent(JSON.stringify(['cras.calendar', 'cras.admin']))}; path=/`;
+
+    const listener = vi.fn();
+    window.addEventListener('cras:permissions-updated', listener);
+
+    await apiFetch('/rooms');
+
+    const updatedUser = JSON.parse(localStorage.getItem('user'));
+    expect(updatedUser.permissions).toEqual(['cras.calendar', 'cras.admin']);
+    expect(listener).toHaveBeenCalled();
+    expect(listener.mock.calls[0][0].detail).toEqual(['cras.calendar', 'cras.admin']);
+
+    window.removeEventListener('cras:permissions-updated', listener);
+  });
 });
+

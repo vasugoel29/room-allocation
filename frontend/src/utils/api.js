@@ -3,6 +3,45 @@
 const BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
+ * Extracts and parses permissions from document.cookie if present.
+ */
+export function getPermissionsFromCookie() {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(/(?:^|;\s*)permissions=([^;]+)/);
+  if (!match) return null;
+  try {
+    const parsed = JSON.parse(decodeURIComponent(match[1]));
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Synchronizes local user state with updated permissions from cookie or response.
+ */
+export function syncStoredPermissions(newPermissions) {
+  if (!Array.isArray(newPermissions)) return;
+  try {
+    const rawUser = localStorage.getItem('user');
+    if (!rawUser) return;
+    const user = JSON.parse(rawUser);
+    const existing = user.permissions || [];
+    const isDifferent = existing.length !== newPermissions.length ||
+      existing.some((p) => !newPermissions.includes(p));
+    if (isDifferent) {
+      user.permissions = newPermissions;
+      localStorage.setItem('user', JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('cras:permissions-updated', { detail: newPermissions }));
+      }
+    }
+  } catch {
+    // Ignore storage parse errors
+  }
+}
+
+/**
  * Standardized API fetch wrapper
  */
 export async function apiFetch(endpoint, options = {}) {
@@ -23,9 +62,16 @@ export async function apiFetch(endpoint, options = {}) {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       const response = await fetch(`${BASE_URL}${endpoint}`, {
+        credentials: 'include',
         ...options,
         headers,
       });
+
+      // Synchronize permissions if the server attached refreshed permissions cookie
+      const cookiePerms = getPermissionsFromCookie();
+      if (cookiePerms) {
+        syncStoredPermissions(cookiePerms);
+      }
 
       // If it's a 503 (Render cold start) or 504 (Gateway timeout), retry
       if ((response.status === 503 || response.status === 504) && attempt < MAX_RETRIES) {
@@ -42,6 +88,14 @@ export async function apiFetch(endpoint, options = {}) {
         localStorage.removeItem('token');
         window.location.reload(); // Force App to re-render and show Login
         return response; 
+      }
+
+      if (response.status === 403) {
+        response.clone().json().then((body) => {
+          if (Array.isArray(body?.permissions)) {
+            syncStoredPermissions(body.permissions);
+          }
+        }).catch(() => {});
       }
 
       return response;

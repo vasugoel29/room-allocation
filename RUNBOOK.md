@@ -159,8 +159,8 @@ The outbox worker is already safe to run on several instances (`FOR UPDATE SKIP 
   - `INTERNAL_SYNC_TOKEN` (update the ACL cron at the same time);
   - `SMTP_PASS`;
   - `METRICS_TOKEN`.
-- **Session model:** a 12-hour bearer token in the browser's localStorage. The frontend and API are on different domains (decision FE-04), so the strict CSP in `vercel.json` is what blocks script injection. Don't add inline or third-party scripts without updating it; a test pins `script-src`.
-- **Revoking access:** remove the person in the ACL (takes effect within `ACL_REFRESH_SECONDS`, 15 min), or deactivate them in Admin → Users (takes effect immediately). Signing out invalidates every token issued before it.
+- **Session model:** 12-hour session tokens supported both via `Authorization: Bearer <token>` in localStorage and HTTP-only `token` cookie, accompanied by a client-accessible `permissions` cookie.
+- **Revoking / Updating access:** changes in the central ACL are validated live on every API call. If a user's role or permissions are changed or if an unauthorized request is made, cookies and local access are automatically refreshed with the updated ACL permissions. Removing or deactivating the person in the ACL immediately invalidates their session and clears auth cookies.
 
 ---
 

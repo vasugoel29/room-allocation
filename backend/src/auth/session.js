@@ -37,6 +37,44 @@ export function issueSessionToken(user) {
   });
 }
 
+export function getAuthCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 12 * 60 * 60 * 1000, // 12 hours
+    path: '/',
+  };
+}
+
+export function getPermissionsCookieOptions() {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: false,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 12 * 60 * 60 * 1000,
+    path: '/',
+  };
+}
+
+export function attachAuthCookies(res, user, principal) {
+  if (!res || typeof res.cookie !== 'function') return null;
+  const token = issueSessionToken(user);
+  res.cookie('token', token, getAuthCookieOptions());
+  const perms = principal?.permissions ? [...principal.permissions] : [];
+  res.cookie('permissions', JSON.stringify(perms), getPermissionsCookieOptions());
+  return token;
+}
+
+export function clearAuthCookies(res) {
+  if (!res || typeof res.clearCookie !== 'function') return;
+  res.clearCookie('token', getAuthCookieOptions());
+  res.clearCookie('permissions', getPermissionsCookieOptions());
+}
+
+
 // jsonwebtoken, given a string secret, first tries to parse it as a PEM public key on every
 // verify (a thrown-and-caught createPublicKey) — a quarter of all server CPU at peak (PERF-06).
 // A ready-made HMAC KeyObject skips that.
@@ -219,31 +257,62 @@ async function refreshFromAcl(row) {
 }
 
 /**
- * Resolves the principal for a verified session. Returns null when the user no longer exists,
- * the session was revoked, or the ACL withdrew access.
+ * Loads the principal and validates status/permissions with the central ACL.
+ * If forceRefresh is true or ACL_CONFIRM_ON_API_CALL is not false, it re-queries the ACL.
+ * Returns { principal, user, permissionsChanged }.
  */
-export async function loadPrincipal(userId, sv = 0) {
-  const hit = cache.get(userId);
-  if (hit && hit.sv === sv && Date.now() - hit.at < CACHE_MS()) return hit.principal;
+export async function loadPrincipalWithAcl(userId, sv = 0, { forceRefresh = false } = {}) {
+  const confirmAlways = process.env.ACL_CONFIRM_ON_API_CALL !== 'false';
+  const shouldCheckAcl = forceRefresh || confirmAlways;
+
+  if (!shouldCheckAcl) {
+    const hit = cache.get(userId);
+    if (hit && hit.sv === sv && Date.now() - hit.at < CACHE_MS()) {
+      return { principal: hit.principal, user: hit.user || null, permissionsChanged: false };
+    }
+  }
 
   let row = await readRow(userId);
   if (!row || !row.is_active || (row.session_version || 0) !== sv) {
     cache.delete(userId);
-    return null;
+    return { principal: null, user: null, permissionsChanged: false };
   }
+
+  let permissionsChanged = false;
   if (row.acl_id) {
-    // ACL-backed account: no snapshot means access was revoked; a stale one gets refreshed.
-    if (!row.acl_fetched_at) return null;
-    if (Date.now() - new Date(row.acl_fetched_at).getTime() > REFRESH_MS()) {
-      row = await refreshFromAcl(row);
-      if (!row) {
+    if (!row.acl_fetched_at) {
+      cache.delete(userId);
+      return { principal: null, user: null, permissionsChanged: false };
+    }
+    const isStale = Date.now() - new Date(row.acl_fetched_at).getTime() > REFRESH_MS();
+    if (shouldCheckAcl || isStale) {
+      const oldPerms = new Set(row.acl_permissions || []);
+      const oldRole = row.acl_role;
+
+      const freshRow = await refreshFromAcl(row);
+      if (!freshRow) {
         cache.delete(userId);
-        return null;
+        return { principal: null, user: null, permissionsChanged: true };
       }
+
+      const newPerms = new Set(freshRow.acl_permissions || []);
+      const newRole = freshRow.acl_role;
+      permissionsChanged = oldRole !== newRole || oldPerms.size !== newPerms.size || [...oldPerms].some((p) => !newPerms.has(p));
+      row = freshRow;
     }
   }
+
   const principal = toPrincipal(row);
-  cache.set(userId, { principal, sv, at: Date.now() });
+  cache.set(userId, { principal, user: row, sv, at: Date.now() });
+  return { principal, user: row, permissionsChanged };
+}
+
+/**
+ * Resolves the principal for a verified session. Returns null when the user no longer exists,
+ * the session was revoked, or the ACL withdrew access.
+ */
+export async function loadPrincipal(userId, sv = 0, options = {}) {
+  const { principal } = await loadPrincipalWithAcl(userId, sv, options);
   return principal;
 }
 
