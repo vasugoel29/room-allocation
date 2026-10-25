@@ -1,7 +1,7 @@
 import { timetableRepository as tt, sectionKey } from '../repositories/timetableRepository.js';
 import { notify, personName } from '../notifications/notify.js';
 import { formatIstRange, istDateTimeToUtc } from '../utils/timezone.js';
-import { logActivity } from './loggerService.js';
+import { logActivity } from './auditLogService.js';
 
 /**
  * An admin booking over a timetabled class cancels that class for the booked date (decision

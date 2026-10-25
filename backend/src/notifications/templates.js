@@ -1,4 +1,4 @@
-import { escapeHtml } from '../utils/emailService.js';
+import { escapeHtml } from './emailService.js';
 
 /**
  * Notification templates. Each returns { title, body, subject, html, link }:

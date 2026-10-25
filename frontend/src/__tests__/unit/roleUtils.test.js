@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getRoleLabel } from '../utils/roleUtils';
+import { getRoleLabel } from '../../utils/roleUtils';
 
 describe('roleUtils - getRoleLabel', () => {
   it('should return custom labels for known roles', () => {

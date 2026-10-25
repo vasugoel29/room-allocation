@@ -10,7 +10,7 @@ import { cancelClassesForBooking, restoreClassesForBookings } from './classDispl
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
 import { canBookDirect, isAdmin, PERMISSIONS as P } from '../auth/permissions.js';
 import { scopesFor, allows, OUT_OF_SCOPE } from '../auth/scopes.js';
-import { logActivity } from './loggerService.js';
+import { logActivity } from './auditLogService.js';
 import { dateKeyToDays, isDateKey } from '../utils/timezone.js';
 import {
   checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts, unreleasedClassesAt,

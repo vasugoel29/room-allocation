@@ -6,13 +6,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import { logActivity } from './services/loggerService.js';
+import { logActivity } from './services/auditLogService.js';
 import { redactForAudit } from './utils/redact.js';
 import { verifySessionToken } from './auth/session.js';
 import { invalidateShared } from './utils/sharedCache.js';
 import { CATALOG, SUGGESTED_BUNDLES } from './auth/permissions.js';
 
-import { apiLimiter } from './middleware/leakyBucket.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
 import * as Sentry from "@sentry/node";
 import * as db from './db.js';
 
@@ -47,7 +47,7 @@ if (sentryEnabled) Sentry.init({
 
 // Modular Imports
 import authRoutes from './routes/authRoutes.js';
-import internalRoutes from './routes/internalRoutes.js';
+import aclSyncRoutes from './routes/aclSyncRoutes.js';
 import roomRoutes from './routes/roomRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import facultyRoutes from './routes/facultyRoutes.js';
@@ -56,7 +56,7 @@ import adminRoutes from './routes/adminRoutes.js';
 import timetableRoutes from './routes/timetableRoutes.js';
 import notificationRoutes from './routes/notificationRoutes.js';
 import { startEmailWorker, stopEmailWorker } from './notifications/emailWorker.js';
-import { emailConfigured, verifyEmailTransport } from './utils/emailService.js';
+import { emailConfigured, verifyEmailTransport } from './notifications/emailService.js';
 import { SCOPE_CATALOG } from './auth/scopes.js';
 
 const app = express();
@@ -147,7 +147,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/api/internal', internalRoutes);
+app.use('/api/internal', aclSyncRoutes);
 // CSV imports arrive as JSON ({ csvContent }); a full-college timetable is well over 100 kb (OPS-06).
 // Mounted first so the global parser below sees the body as already parsed and skips it.
 const IMPORT_BODY = express.json({ limit: '5mb' });

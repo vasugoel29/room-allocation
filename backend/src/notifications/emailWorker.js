@@ -1,6 +1,6 @@
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
-import { deliverEmail, emailConfigured } from '../utils/emailService.js';
+import { deliverEmail, emailConfigured } from './emailService.js';
 
 /**
  * Email outbox worker. Claims due `pending` notifications with FOR UPDATE SKIP LOCKED (safe if

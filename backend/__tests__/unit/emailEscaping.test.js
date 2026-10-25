@@ -1,5 +1,5 @@
 // SEC-16: values interpolated into email HTML (student names, room labels, comments) are escaped.
-import { escapeHtml } from '../../src/utils/emailService.js';
+import { escapeHtml } from '../../src/notifications/emailService.js';
 import { csvCell } from '../../src/controllers/adminController.js';
 import { closeDb } from '../../test/helpers/factories.js';
 

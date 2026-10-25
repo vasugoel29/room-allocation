@@ -72,7 +72,7 @@ function FacultySelector({
             id="faculty-options" 
             role="listbox" 
             aria-label="Faculty" 
-            className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest dark:bg-surface-high rounded-2xl shadow-xl z-50 max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-border/20 dark:border-white/10 p-1.5"
+            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 max-h-40 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5"
           >
             {Array.isArray(faculties) && faculties
               ?.filter(f => !debouncedFacultyTerm || 

@@ -6,7 +6,7 @@ import { getDayOfWeek, buildRoomIndex, isRoomFreeIn, bookingAt } from '../../uti
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
 const HOURS = BOOKING_START_HOURS; // 08:00–20:00, the hours the server accepts (shared/bookingRules.js)
 
-import PageSearch from './PageSearch';
+import PageSearch from '../../components/ui/PageSearch';
 import { booksDirect, canBook } from '../../utils/permissions';
 import { BOOKING_START_HOURS } from '../../../../shared/bookingRules.js';
 

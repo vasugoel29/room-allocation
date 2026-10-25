@@ -59,7 +59,7 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
             id="booking-type-options" 
             role="listbox" 
             aria-label="Booking type" 
-            className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest dark:bg-surface-high rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 border border-border/20 dark:border-white/10 p-1.5"
+            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5"
           >
             {TYPES.map((type) => (
               <button

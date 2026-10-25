@@ -276,7 +276,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative w-full max-w-xl mx-4 glass rounded-[2.5rem] p-6 sm:p-10 shadow-ambient border-none overflow-y-auto max-h-[90dvh] no-scrollbar overscroll-contain touch-pan-y"
+        className="relative w-full max-w-xl mx-4 glass rounded-[2.5rem] p-6 sm:p-10 min-h-[440px] shadow-ambient border-none overflow-y-auto max-h-[90dvh] no-scrollbar overscroll-contain touch-pan-y"
       >
         <button
           onClick={onClose}

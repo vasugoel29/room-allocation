@@ -3,7 +3,7 @@ import { getUsers, deleteUser, getFaculties } from '../controllers/authControlle
 import { authenticate, requirePermission } from '../middleware/auth.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
 import { googleLogin, devLogin, me, logout } from '../controllers/sessionController.js';
-import { authIpLimiter, authAccountLimiter } from '../middleware/leakyBucket.js';
+import { authIpLimiter, authAccountLimiter } from '../middleware/rateLimiter.js';
 import { idParam } from '../middleware/validators.js';
 
 // Identity, roles and academic profile come from Google SSO + the central ACL. CRAS has no

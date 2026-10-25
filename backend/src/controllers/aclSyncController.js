@@ -3,7 +3,7 @@ import crypto from 'crypto';
 import * as db from '../db.js';
 import logger from '../utils/logger.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
-import { logActivity } from '../services/loggerService.js';
+import { logActivity } from '../services/auditLogService.js';
 
 /**
  * Service-to-service endpoints called by the central ACL (not by browsers).

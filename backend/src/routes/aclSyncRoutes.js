@@ -1,6 +1,6 @@
 import express from 'express';
-import { requireInternalToken, syncFaculties } from '../controllers/internalController.js';
-import { authIpLimiter } from '../middleware/leakyBucket.js';
+import { requireInternalToken, syncFaculties } from '../controllers/aclSyncController.js';
+import { authIpLimiter } from '../middleware/rateLimiter.js';
 
 // Service-to-service API for the central ACL. Mounted before the browser JSON parser and audit
 // middleware: it has its own body limit and writes its own summarised audit entry.

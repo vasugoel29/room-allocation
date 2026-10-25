@@ -17,7 +17,7 @@ vi.mock('../../pages/Login', () => stub('Login'));
 vi.mock('../../pages/Profile', () => stub('Profile'));
 vi.mock('../../pages/MobileHistory', () => stub('MobileHistory'));
 vi.mock('../../pages/MobileBooking', () => stub('MobileBooking'));
-vi.mock('../../components/ui/Calendar', () => stub('Calendar'));
+vi.mock('../../features/calendar/CalendarView', () => stub('Calendar'));
 
 const go = (route, user, ctx = {}) => renderWithContext(<App />, { route, ctx: { user, ...ctx } });
 const page = async () => (await screen.findByTestId('page')).textContent;

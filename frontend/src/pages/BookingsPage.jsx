@@ -1,15 +1,15 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { X, Clock, User, Hash, Trash2, AlertCircle, Check, ArrowRightLeft, GraduationCap } from 'lucide-react';
-import { AppContext } from '../../context/AppContext';
+import { AppContext } from '../context/AppContext';
 import toast from 'react-hot-toast';
-import ConfirmModal from '../../components/modals/ConfirmModal';
-import { bookingService } from '../../services/bookingService';
-import { roomService } from '../../services/roomService';
+import ConfirmModal from '../components/modals/ConfirmModal';
+import { bookingService } from '../services/bookingService';
+import { roomService } from '../services/roomService';
 
-import PageSearch from '../../components/ui/PageSearch';
-import { canBook, isAdmin, teaches } from '../../utils/permissions';
+import PageSearch from '../components/ui/PageSearch';
+import { canBook, isAdmin, teaches } from '../utils/permissions';
 
-const HistoryView = ({ onClose }) => {
+const BookingsPage = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
   const [myOverrides, setMyOverrides] = useState([]);
   const [filterMe] = useState(!isAdmin(user));
@@ -522,4 +522,4 @@ const HistoryView = ({ onClose }) => {
   );
 };
 
-export default HistoryView;
+export default BookingsPage;

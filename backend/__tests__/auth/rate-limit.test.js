@@ -1,9 +1,9 @@
-// Leaky-bucket limiter (src/middleware/leakyBucket.js): unit tests + mounting on auth routes.
+// Leaky-bucket limiter (src/middleware/rateLimiter.js): unit tests + mounting on auth routes.
 import { jest } from '@jest/globals';
 import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import app from '../../src/server.js';
-import { createLeakyBucket, userOrIpKey, apiLimiter, authIpLimiter, authAccountLimiter } from '../../src/middleware/leakyBucket.js';
+import { createLeakyBucket, userOrIpKey, apiLimiter, authIpLimiter, authAccountLimiter } from '../../src/middleware/rateLimiter.js';
 import { closeDb } from '../../test/helpers/factories.js';
 
 afterAll(closeDb);

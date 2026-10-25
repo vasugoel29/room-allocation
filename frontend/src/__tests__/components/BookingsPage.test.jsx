@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import HistoryView from '../../features/history/HistoryView';
+import BookingsPage from '../../pages/BookingsPage';
 import { renderWithContext, USERS } from '../utils/renderWithContext';
 import { installFetch, fetchCalls, jsonResponse } from '../utils/http';
 import { runInIST, ist } from '../utils/ist';
@@ -37,7 +37,7 @@ const setup = ({ user = REP, ctx = {}, routes = [] } = {}) => {
     ['PATCH', /\/api\/bookings\/\d+\/cancel/, { ok: true }],
     ['PATCH', /\/api\/transfers\/\d+\/(accept|reject)/, { ok: true }],
   ]);
-  const r = renderWithContext(<HistoryView />, { ctx: { user, bookings: BOOKINGS, ...ctx } });
+  const r = renderWithContext(<BookingsPage />, { ctx: { user, bookings: BOOKINGS, ...ctx } });
   return { ...r, f, ue: userEvent.setup() };
 };
 const tableRooms = () => {
@@ -53,7 +53,7 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
-describe('HistoryView tabs', () => {
+describe('BookingsPage tabs', () => {
   it('Upcoming (default): own ACTIVE/PENDING/CANCELLED bookings ending at or after now, newest first', () => {
     setup();
     expect(tableRooms()).toEqual(['R-6', 'R-2', 'R-1']);
@@ -190,7 +190,7 @@ describe('HistoryView tabs', () => {
   });
 });
 
-describe('HistoryView cancel', () => {
+describe('BookingsPage cancel', () => {
   const cancelButtonFor = (room) => within(screen.getByRole('table')).getByText(room).closest('tr').querySelector('td:last-child button');
 
   it('only own, ACTIVE, not-yet-ended bookings are cancellable', async () => {

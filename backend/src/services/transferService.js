@@ -3,7 +3,7 @@ import { invalidateRoomCaches } from '../utils/cache.js';
 import { transferRepository } from '../repositories/transferRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { facultyRepository } from '../repositories/facultyRepository.js';
-import { logActivity } from './loggerService.js';
+import { logActivity } from './auditLogService.js';
 import { checkTimes, checkPeopleTimetables, checkBookingConflicts } from './bookingRules.js';
 import { canBookDirect, isAdmin as hasAdmin, effectivePermissions, PERMISSIONS as P } from '../auth/permissions.js';
 import { scopesFor, allows, OUT_OF_SCOPE } from '../auth/scopes.js';

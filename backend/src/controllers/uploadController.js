@@ -9,7 +9,7 @@ import { scopesFor } from '../auth/scopes.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
 import XLSX from 'xlsx-js-style';
 import logger from '../utils/logger.js';
-import { logActivity } from '../services/loggerService.js';
+import { logActivity } from '../services/auditLogService.js';
 import { startJob, finishJob, failJob, getJob } from '../services/importJobs.js';
 
 // In-memory job store for async CSV uploads

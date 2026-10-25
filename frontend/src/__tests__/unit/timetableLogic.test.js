@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getDayOfWeek, getHourFromTime, getSortableMinutes, formatTo24h } from '../utils/timetableLogic';
+import { getDayOfWeek, getHourFromTime, getSortableMinutes, formatTo24h } from '../../utils/timetableLogic';
 
 describe('timetableLogic utility tests', () => {
   describe('getDayOfWeek', () => {

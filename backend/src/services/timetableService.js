@@ -7,7 +7,7 @@ import { getDayOfWeek, normalizeDay, parseSlotTime } from '../utils/timetableLog
 import { istToday, isDateKey } from '../utils/timezone.js';
 import { invalidateRoomCaches } from '../utils/cache.js';
 import { notify } from '../notifications/notify.js';
-import { logActivity } from './loggerService.js';
+import { logActivity } from './auditLogService.js';
 import { facultyClassAt } from './bookingRules.js';
 import { importSectionSlots } from './timetableImport.js';
 import { scopesFor, allows, mayInclude, OUT_OF_SCOPE } from '../auth/scopes.js';
