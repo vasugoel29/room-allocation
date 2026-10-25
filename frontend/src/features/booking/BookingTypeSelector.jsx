@@ -59,8 +59,11 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
             id="booking-type-options" 
             role="listbox" 
             aria-label="Booking type" 
-            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5"
+            className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest/95 dark:bg-surface-mid/95 backdrop-blur-xl rounded-2xl shadow-[0_18px_40px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.6)] z-50 overflow-hidden animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150 border border-black/10 dark:border-white/10 p-1.5 flex flex-col"
           >
+            <div className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-secondary/60 select-none">
+              Booking Type
+            </div>
             {TYPES.map((type) => (
               <button
                 type="button"
@@ -71,7 +74,7 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
                   setBookingType(type.id);
                   setIsTypeOpen(false);
                 }}
-                className={`w-full text-left px-3.5 py-2.5 rounded-xl cursor-pointer transition-colors flex items-center justify-between text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                className={`w-full text-left px-3 py-2 rounded-xl cursor-pointer transition-colors flex items-center justify-between text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                   bookingType === type.id 
                     ? 'bg-primary text-white shadow-sm hover:bg-primary' 
                     : 'text-text-primary hover:bg-black/5 dark:hover:bg-white/5'

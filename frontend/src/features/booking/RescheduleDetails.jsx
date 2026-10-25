@@ -42,7 +42,7 @@ function RescheduleDetails({
                </div>
              </div>
                           {isDayOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-40 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest/95 dark:bg-surface-mid/95 backdrop-blur-xl rounded-2xl shadow-[0_18px_40px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.6)] z-50 overflow-hidden max-h-40 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150 border border-black/10 dark:border-white/10 p-1.5">
                   {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
                     <div
                       key={d}
@@ -74,7 +74,7 @@ function RescheduleDetails({
                </div>
              </div>
                           {isHourOpen && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 max-h-40 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest/95 dark:bg-surface-mid/95 backdrop-blur-xl rounded-2xl shadow-[0_18px_40px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.6)] z-50 max-h-40 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150 border border-black/10 dark:border-white/10 p-1.5">
                   {HOURS.map(h => (
                     <div
                       key={h}
@@ -120,7 +120,7 @@ function RescheduleDetails({
           </div>
 
           {isRescheduleRoomOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 max-h-40 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest/95 dark:bg-surface-mid/95 backdrop-blur-xl rounded-2xl shadow-[0_18px_40px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.6)] z-50 max-h-40 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150 border border-black/10 dark:border-white/10 p-1.5">
               {rooms
                 .filter(room => {
                   const isStudent = !booksDirect(user);

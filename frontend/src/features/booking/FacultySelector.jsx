@@ -72,8 +72,11 @@ function FacultySelector({
             id="faculty-options" 
             role="listbox" 
             aria-label="Faculty" 
-            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl z-50 max-h-40 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-slate-200/90 dark:border-slate-700/80 ring-1 ring-black/5 dark:ring-white/10 p-1.5"
+            className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest/95 dark:bg-surface-mid/95 backdrop-blur-xl rounded-2xl shadow-[0_18px_40px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.6)] z-50 max-h-44 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150 border border-black/10 dark:border-white/10 p-1.5 flex flex-col"
           >
+            <div className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-secondary/60 select-none">
+              Supervising Faculty
+            </div>
             {Array.isArray(faculties) && faculties
               ?.filter(f => !debouncedFacultyTerm || 
                             f.name.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()) || 
@@ -91,7 +94,7 @@ function FacultySelector({
                       setIsFacultyOpen(false);
                       setFacultySearchTerm('');
                     }}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-xl cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                    className={`w-full text-left px-3 py-2 rounded-xl cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                       isSelected ? 'bg-primary text-white shadow-sm hover:bg-primary' : ''
                     }`}
                   >
@@ -106,7 +109,7 @@ function FacultySelector({
             {(!Array.isArray(faculties) || faculties?.filter(f => !debouncedFacultyTerm || 
                                     f.name.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()) || 
                                     (f.department && f.department.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()))).length === 0) && (
-              <div className="p-3 text-sm text-text-secondary text-center">No faculty found</div>
+              <div className="p-3 text-xs text-text-secondary text-center font-medium">No faculty found</div>
             )}
           </div>
         )}
