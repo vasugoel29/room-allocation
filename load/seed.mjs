@@ -83,9 +83,18 @@ const reps = await bulkUsers('STUDENT_REP', N.reps);
 const faculty = await bulkUsers('FACULTY', N.faculty);
 const admins = await bulkUsers('ADMIN', N.admins);
 // Each faculty account gets its directory entry; student bookings must name one (Phase 4).
-for (const f of faculty) {
+const depts = [
+  'Department of Computer Science & Engineering',
+  'Department of Information Technology',
+  'Department of Electronics & Communication Engineering',
+  'Department of Mechanical Engineering',
+];
+for (let i = 0; i < faculty.length; i++) {
+  const f = faculty[i];
+  const dept = depts[i % depts.length];
   const { rows: [entry] } = await db.query(
-    'INSERT INTO faculties (name, email, user_id) VALUES ($1, $2, $3) RETURNING id', [f.name, f.email, f.id],
+    'INSERT INTO faculties (name, email, department_name, user_id) VALUES ($1, $2, $3, $4) RETURNING id',
+    [f.name, f.email, dept, f.id],
   );
   f.faculty_id = entry.id;
 }

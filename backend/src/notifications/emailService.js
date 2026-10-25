@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import logger from './logger.js';
+import logger from '../utils/logger.js';
 
 /**
  * SMTP transport. Messages are not sent from request handlers: they are queued in the

@@ -56,11 +56,12 @@ export const createAdmin = (o) => createUser({ ...o, role: 'ADMIN' });
 export const createRep = (o) => createUser({ ...o, role: 'STUDENT_REP' });
 /** A directory entry (faculties row). Pass `user` to link it to a sign-in account. */
 export async function createFacultyEntry({ user = null, name, email, department_name = null, is_active = true } = {}) {
+  const dept = department_name ?? user?.department_name ?? 'Department of Computer Science & Engineering';
   const { rows } = await db.query(
     `INSERT INTO faculties (name, email, department_name, is_active, user_id)
      VALUES ($1, $2, $3, $4, $5) RETURNING *`,
     [name || user?.name || `Test Faculty ${uid()}`, (email || user?.email || `t.fac.${uid()}@nsut.ac.in`).toLowerCase(),
-      department_name, is_active, user?.id ?? null],
+      dept, is_active, user?.id ?? null],
   );
   return rows[0];
 }

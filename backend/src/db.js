@@ -1,6 +1,7 @@
 import './config/env.js';
 import pkg from 'pg';
 import logger from './utils/logger.js';
+import { FACULTIES } from '../seed/data/faculties.js';
 const { Pool } = pkg;
 
 let poolConfig = {
@@ -1296,6 +1297,33 @@ const migrations = [
     name: 'Drop role column from users table (managed externally via user_access / ACL)',
     run: async (client) => {
       await client.query('ALTER TABLE users DROP COLUMN IF EXISTS role CASCADE');
+    }
+  },
+  {
+    version: 41,
+    name: 'Backfill faculties department_name from users and faculty directory',
+    run: async (client) => {
+      await client.query(`
+        UPDATE faculties f
+        SET department_name = u.department_name, updated_at = NOW()
+        FROM users u
+        WHERE (f.department_name IS NULL OR f.department_name = 'General')
+          AND u.department_name IS NOT NULL
+          AND (f.user_id = u.id OR lower(f.email) = lower(u.email))
+      `);
+
+      if (Array.isArray(FACULTIES) && FACULTIES.length > 0) {
+        const emails = FACULTIES.map((f) => f.email.toLowerCase());
+        const depts = FACULTIES.map((f) => f.department_name);
+        await client.query(`
+          UPDATE faculties f
+          SET department_name = d.dept, updated_at = NOW()
+          FROM unnest($1::text[], $2::text[]) AS d(email, dept)
+          WHERE lower(f.email) = lower(d.email)
+            AND (f.department_name IS NULL OR f.department_name = 'General')
+            AND d.dept IS NOT NULL
+        `, [emails, depts]);
+      }
     }
   }
 ];

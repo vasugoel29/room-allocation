@@ -54,10 +54,20 @@ async function seedFaculties(client) {
   for (const f of FACULTIES) {
     const { rows: [existing] } = await client.query('SELECT * FROM faculties WHERE lower(email) = lower($1)', [f.email]);
     if (existing && !existing.is_active) { counts.deactivated_kept++; continue; }
-    if (existing && existing.name === f.name && (existing.department_name ?? null) === f.department_name) { counts.unchanged++; continue; }
+    if (existing && existing.name === f.name && (existing.department_name ?? null) === f.department_name && existing.department_name && existing.department_name !== 'General') {
+      counts.unchanged++;
+      continue;
+    }
     const saved = await facultyRepository.upsert(f, client);
     if (saved.inserted) counts.created++; else counts.updated++;
   }
+  // Auto-link any matching user accounts that exist without a directory link
+  await client.query(`
+    UPDATE faculties f
+    SET user_id = u.id, updated_at = NOW()
+    FROM users u
+    WHERE f.user_id IS NULL AND lower(f.email) = lower(u.email);
+  `);
   return counts;
 }
 

@@ -37,7 +37,7 @@ export class Seed {
     if (role === 'FACULTY') {
       const { rows: [entry] } = await this.db.query(
         `INSERT INTO faculties (name, email, department_name, user_id, is_active) VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
-        [user.name, user.email, user.department_name || null, user.id],
+        [user.name, user.email, user.department_name || 'Department of Computer Science & Engineering', user.id],
       );
       user.faculty_id = entry.id;
     }

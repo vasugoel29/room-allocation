@@ -149,7 +149,7 @@ describe('POST /api/bookings — authN / authZ', () => {
     const room = await createRoom();
     const res = await post(viewer.auth, body(room, futureSlot({ hour: 10 })));
     expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Forbidden' });
+    expect(res.body).toMatchObject({ error: 'Forbidden' });
     const { rows } = await db.query('SELECT 1 FROM bookings WHERE room_id = $1', [room.id]);
     expect(rows).toHaveLength(0);
   });

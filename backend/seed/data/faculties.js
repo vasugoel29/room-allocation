@@ -60,7 +60,7 @@ export const FACULTIES = Object.freeze([
   { name: "Dipika Sharma", email: "dipika.sharma@nsut.ac.in", department_name: "Department of Chemistry" },
   { name: "Dinesh Kumar Singh", email: "dksingh@nsut.ac.in", department_name: "Department of Mechanical Engineering" },
   { name: "Dhananjay Vasudeo Gadre", email: "dvgadre@nsut.ac.in", department_name: "Department of Electronics & Communication Engineering" },
-  { name: "Test Faculty", email: "faculty@nsut.ac.in", department_name: null },
+  { name: "Test Faculty", email: "faculty@nsut.ac.in", department_name: "Department of Computer Science & Engineering" },
   { name: "Garima Srivastava", email: "garima.srivastava@nsut.ac.in", department_name: "Department of Electronics & Communication Engineering (East)" },
   { name: "Gaurav Saini", email: "gaurav.saini@nsut.ac.in", department_name: "Department of Civil Engineering" },
   { name: "Gaurav Singal", email: "gaurav.singal@nsut.ac.in", department_name: "Department of Computer Science & Engineering" },

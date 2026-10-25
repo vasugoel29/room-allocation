@@ -149,8 +149,9 @@ export const userRepository = {
     // The faculty directory is CRAS data (faculties table); ids here are faculties.id, which is
     // what bookings.faculty_id references. Soft-deleted entries are hidden.
     const { rows } = await db.query(`
-      SELECT f.id, f.name, f.email, COALESCE(f.department_name, 'General') AS department
+      SELECT f.id, f.name, f.email, COALESCE(f.department_name, u.department_name, 'General') AS department
       FROM faculties f
+      LEFT JOIN users u ON u.id = f.user_id
       WHERE f.is_active
       ORDER BY f.name ASC
     `);

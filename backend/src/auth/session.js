@@ -171,11 +171,14 @@ export async function upsertUserFromAcl(access) {
       ));
     }
 
-    // Link the faculty directory entry with this email to the signed-in account.
+    // Link the faculty directory entry with this email to the signed-in account and sync department.
     await client.query(
-      `UPDATE faculties SET user_id = $1, updated_at = NOW()
+      `UPDATE faculties
+          SET user_id = $1,
+              department_name = COALESCE($3, department_name),
+              updated_at = NOW()
         WHERE lower(email) = lower($2) AND is_active AND (user_id IS NULL OR user_id = $1)`,
-      [user.id, user.email],
+      [user.id, user.email, profile.department_name],
     );
 
     await client.query(
