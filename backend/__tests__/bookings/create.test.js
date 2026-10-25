@@ -504,7 +504,7 @@ describe('POST /api/bookings — conflicts', () => {
     expect((await post(rep.auth, body(roomA, slot, { faculty_id: fac.faculty.id }))).status).toBe(201);
     const res = await post(rep.auth, await studentBody(await createRoom(), { start: plusHours(slot.start, -1), end: slot.end }));
     expect(res.status).toBe(409);
-    expect(res.body).toEqual({ error: `You already have a pending request during this time in Room ${roomA.name}`, conflict: { type: 'person_busy' } });
+    expect(res.body).toEqual({ error: `You already have a pending request with Prof. ${fac.faculty.name} during this time in Room ${roomA.name}`, conflict: { type: 'person_busy' } });
   });
 });
 

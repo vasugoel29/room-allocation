@@ -262,7 +262,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
           }}
         />
       )}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overscroll-contain">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 overscroll-contain">
       <div
         className="absolute inset-0 bg-black/20 dark:bg-black/60 backdrop-blur-md touch-none"
         onClick={onClose}
@@ -305,15 +305,31 @@ function BookingModal({ slot, onClose, onSuccess }) {
             headerTitle = canCancel ? "Booking Details" : "Request Transfer";
           }
 
+          const roomDisplayName = selectedRoomData?.name || (selectedRoom ? `Room ${selectedRoom}` : "");
+          const currentFacultyName = selectedFaculty 
+            ? faculties?.find(f => String(f.id) === String(selectedFaculty))?.name 
+            : (existingBooking?.faculty_name || null);
+
           return (
             <h3
               id="modal-title"
-              className="text-xl sm:text-2xl font-bold text-text-primary mb-2 flex items-center gap-3 flex-wrap font-display tracking-tight"
+              className="text-xl sm:text-2xl font-bold text-text-primary mb-2 flex items-center gap-2.5 flex-wrap font-display tracking-tight"
             >
-              {headerTitle}
+              <span>{headerTitle}</span>
+              {roomDisplayName && (
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                  {roomDisplayName}
+                </span>
+              )}
               <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-tonal-secondary/10 text-primary">
                 {slot.day}{formattedDate ? `, ${formattedDate}` : ""} @ {slot.hour}:00
               </span>
+              {currentFacultyName && (
+                <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-secondary/10 text-secondary border border-secondary/20 flex items-center gap-1.5">
+                  <GraduationCap size={13} className="shrink-0" />
+                  Prof. {currentFacultyName}
+                </span>
+              )}
             </h3>
           );
         })()}

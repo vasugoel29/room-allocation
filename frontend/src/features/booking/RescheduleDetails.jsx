@@ -42,7 +42,7 @@ function RescheduleDetails({
                </div>
              </div>
                           {isDayOpen && (
-                <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 overflow-hidden max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest dark:bg-surface-high rounded-2xl shadow-xl z-50 overflow-hidden max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-border/20 dark:border-white/10 p-1.5">
                   {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
                     <div
                       key={d}
@@ -50,7 +50,7 @@ function RescheduleDetails({
                         setRescheduleDay(d);
                         setIsDayOpen(false);
                       }}
-                      className={`px-5 py-3.5 cursor-pointer transition-colors text-[11px] font-extrabold capitalize tracking-widest ${rescheduleDay === d ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+                      className={`px-3.5 py-2 rounded-xl cursor-pointer transition-colors text-xs font-bold capitalize tracking-wider ${rescheduleDay === d ? 'bg-primary text-white shadow-sm' : 'text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       {d}
                     </div>
@@ -74,7 +74,7 @@ function RescheduleDetails({
                </div>
              </div>
                           {isHourOpen && (
-                <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest dark:bg-surface-high rounded-2xl shadow-xl z-50 max-h-56 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-border/20 dark:border-white/10 p-1.5">
                   {HOURS.map(h => (
                     <div
                       key={h}
@@ -82,7 +82,7 @@ function RescheduleDetails({
                         setRescheduleHour(h);
                         setIsHourOpen(false);
                       }}
-                      className={`px-5 py-3.5 cursor-pointer transition-colors text-[11px] font-extrabold capitalize tracking-widest ${rescheduleHour === h ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+                      className={`px-3.5 py-2 rounded-xl cursor-pointer transition-colors text-xs font-bold capitalize tracking-wider ${rescheduleHour === h ? 'bg-primary text-white shadow-sm' : 'text-text-primary hover:bg-black/5 dark:hover:bg-white/5'}`}
                     >
                       {h}:00
                     </div>
@@ -120,7 +120,7 @@ function RescheduleDetails({
           </div>
 
           {isRescheduleRoomOpen && (
-            <div className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 max-h-64 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest dark:bg-surface-high rounded-2xl shadow-xl z-50 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200 border border-border/20 dark:border-white/10 p-1.5">
               {rooms
                 .filter(room => {
                   const isStudent = !booksDirect(user);
@@ -137,11 +137,11 @@ function RescheduleDetails({
                       setRescheduleSearchTerm(room.name);
                       setIsRescheduleRoomOpen(false);
                     }}
-                    className={`p-5 cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 ${rescheduleRoom === room.name ? 'bg-primary text-white shadow-ambient' : ''}`}
+                    className={`px-3.5 py-2.5 rounded-xl cursor-pointer transition-colors flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 ${rescheduleRoom === room.name ? 'bg-primary text-white shadow-sm hover:bg-primary' : ''}`}
                   >
                     <div className="flex flex-col gap-0.5 max-w-[70%]">
-                      <span className={`font-extrabold text-lg tracking-tight capitalize font-display ${rescheduleRoom === room.name ? 'text-white' : 'text-text-primary'}`}>{room.name}</span>
-                      <span className={`text-[10px] capitalize tracking-widest font-extrabold truncate ${rescheduleRoom === room.name ? 'text-white/60' : 'text-text-secondary opacity-40'}`}>{room.building} &bull; {room.type}</span>
+                      <span className={`text-sm font-semibold tracking-tight truncate ${rescheduleRoom === room.name ? 'text-white' : 'text-text-primary'}`}>{room.name}</span>
+                      <span className={`text-xs truncate ${rescheduleRoom === room.name ? 'text-white/70' : 'text-text-secondary'}`}>{room.building} &bull; {room.type}</span>
                     </div>
                     <div className="flex gap-2 items-center opacity-80">
                       {room.has_ac && <Wind size={14} className={rescheduleRoom === room.name ? 'text-white' : 'text-primary'} />}

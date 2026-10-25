@@ -245,7 +245,7 @@ function App() {
                 />
               )}
 
-              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border-subtle lg:border-none lg:bg-transparent lg:glass px-4 py-3 sm:py-4 pt-[max(env(safe-area-inset-top),0.75rem)] flex flex-col gap-3.5 z-[80] shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-5'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
+              <aside className={`fixed inset-y-0 left-0 bg-surface-lowest sm:bg-surface-low border-r border-border-subtle lg:border-none lg:bg-transparent lg:glass px-4 py-3 sm:py-4 pt-[max(env(safe-area-inset-top),0.75rem)] flex flex-col gap-3.5 z-[80] lg:z-10 shadow-2xl transition-all duration-300 transform lg:relative lg:translate-x-0 ${isSidebarOpen ? 'translate-x-[0px]' : '-translate-x-full'} ${isSidebarCollapsed ? 'lg:w-20 lg:px-4' : 'lg:w-72 lg:px-5'} ${isSidebarOpen ? 'w-[80%] max-w-sm' : ''}`}>
                 <div className={`flex items-center text-primary-accent ${isSidebarCollapsed ? 'justify-center w-full' : 'justify-between w-full'} relative`}>
                   <div className="flex items-center gap-2.5 overflow-hidden">
                     <button 

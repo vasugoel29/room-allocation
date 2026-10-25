@@ -207,7 +207,10 @@ export async function checkBookingConflicts(client, { roomId, personId, personFa
 
   if (personId) {
     const mine = await client.query(
-      `SELECT r.name AS room_name, b.status FROM bookings b JOIN rooms r ON r.id = b.room_id
+      `SELECT r.name AS room_name, b.status, f.name AS faculty_name 
+        FROM bookings b 
+        JOIN rooms r ON r.id = b.room_id
+        LEFT JOIN faculties f ON f.id = b.faculty_id
         WHERE ((b.created_by = $1 AND b.status IN ('ACTIVE','PENDING'))
                OR ($5::int IS NOT NULL AND b.faculty_id = $5 AND b.status = 'ACTIVE'))
           AND ${overlap} LIMIT 1`,
@@ -215,7 +218,8 @@ export async function checkBookingConflicts(client, { roomId, personId, personFa
     );
     if (mine.rowCount) {
       const what = mine.rows[0].status === 'PENDING' ? 'a pending request' : 'another booking';
-      return bad(`You already have ${what} during this time in Room ${mine.rows[0].room_name}`, 409, { conflict: { type: 'person_busy' } });
+      const facultyText = mine.rows[0].faculty_name ? ` with Prof. ${mine.rows[0].faculty_name}` : '';
+      return bad(`You already have ${what}${facultyText} during this time in Room ${mine.rows[0].room_name}`, 409, { conflict: { type: 'person_busy' } });
     }
   }
 

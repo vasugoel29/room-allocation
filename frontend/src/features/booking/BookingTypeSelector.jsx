@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
+import { Check } from 'lucide-react';
 
 const TYPES = [
   { id: 'EXTRA', label: 'Extra Class' },
@@ -7,6 +8,19 @@ const TYPES = [
 
 // Keyboard-operable (FE-07): the field opens with Enter/Space/ArrowDown, options are buttons.
 function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTypeOpen }) {
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (!isTypeOpen) return;
+    const handleClickOutside = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsTypeOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isTypeOpen, setIsTypeOpen]);
+
   const onKeyDown = (e) => {
     if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
       e.preventDefault();
@@ -18,7 +32,7 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" ref={containerRef}>
       <label htmlFor="booking-type" className="text-sm font-bold text-text-primary">Booking Type</label>
       <div className="relative">
         <div className="relative cursor-pointer">
@@ -41,7 +55,12 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
         </div>
 
         {isTypeOpen && (
-          <div id="booking-type-options" role="listbox" aria-label="Booking type" className="absolute top-full left-0 right-0 mt-3 bg-surface-low dark:bg-surface-mid rounded-3xl shadow-ambient z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300 border border-black/5 dark:border-white/5">
+          <div 
+            id="booking-type-options" 
+            role="listbox" 
+            aria-label="Booking type" 
+            className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest dark:bg-surface-high rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200 border border-border/20 dark:border-white/10 p-1.5"
+          >
             {TYPES.map((type) => (
               <button
                 type="button"
@@ -52,9 +71,14 @@ function BookingTypeSelector({ bookingType, setBookingType, isTypeOpen, setIsTyp
                   setBookingType(type.id);
                   setIsTypeOpen(false);
                 }}
-                className={`w-full text-left p-5 cursor-pointer transition-colors flex items-center font-extrabold text-[11px] capitalize tracking-widest focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${bookingType === type.id ? 'bg-primary text-white shadow-ambient' : 'text-text-secondary hover:bg-black/5 dark:hover:bg-white/5'}`}
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl cursor-pointer transition-colors flex items-center justify-between text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  bookingType === type.id 
+                    ? 'bg-primary text-white shadow-sm hover:bg-primary' 
+                    : 'text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
               >
-                {type.label}
+                <span>{type.label}</span>
+                {bookingType === type.id && <Check size={16} className="text-white shrink-0" />}
               </button>
             ))}
           </div>

@@ -278,7 +278,7 @@ describe('PATCH /api/faculty/:id/approve', () => {
       const r3 = await request(app).post('/api/bookings').set('Authorization', student.auth)
         .send(body(await createRoom(), { start: plusHours(slot.start, -1), end: slot.end }));
       expect([r1.status, r2.status, r3.status]).toEqual([201, 409, 409]);
-      expect(r2.body).toEqual({ error: `You already have a pending request during this time in Room ${roomA.name}`, conflict: { type: 'person_busy' } });
+      expect(r2.body).toEqual({ error: `You already have a pending request with Prof. ${fac.faculty.name} during this time in Room ${roomA.name}`, conflict: { type: 'person_busy' } });
     });
 
     test('[BKG-09] the database refuses a second overlapping PENDING row for the same student (same start or not)', async () => {
