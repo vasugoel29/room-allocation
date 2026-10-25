@@ -74,9 +74,6 @@ function FacultySelector({
             aria-label="Faculty" 
             className="absolute top-full left-0 right-0 mt-2 bg-surface-lowest/95 dark:bg-surface-mid/95 backdrop-blur-xl rounded-2xl shadow-[0_18px_40px_-8px_rgba(0,0,0,0.18)] dark:shadow-[0_18px_40px_-8px_rgba(0,0,0,0.6)] z-50 max-h-44 overflow-y-auto no-scrollbar animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-150 border border-black/10 dark:border-white/10 p-1.5 flex flex-col"
           >
-            <div className="px-3 pt-1.5 pb-1 text-[10px] font-bold uppercase tracking-wider text-text-secondary/60 select-none">
-              Supervising Faculty
-            </div>
             {Array.isArray(faculties) && faculties
               ?.filter(f => !debouncedFacultyTerm || 
                             f.name.toLowerCase().includes(debouncedFacultyTerm.toLowerCase()) || 
