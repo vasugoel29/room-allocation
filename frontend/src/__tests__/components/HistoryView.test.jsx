@@ -112,13 +112,56 @@ describe('HistoryView tabs', () => {
     expect(f2).not.toHaveBeenCalled();
   });
 
-  it('paginates 5 per page', async () => {
-    const many = Array.from({ length: 7 }, (_, i) => b(100 + i, 22, 8 + i));
+  it('STUDENT_REP hides Reference column and shows Faculty column', () => {
+    setup({
+      user: USERS.STUDENT_REP,
+      ctx: { bookings: [b(1, 21, 14, { faculty_name: 'Dr Mukherjee', class_name: 'IT-4' })] },
+    });
+    expect(screen.queryByText('Reference')).toBeNull();
+    expect(screen.getByText('Faculty')).toBeInTheDocument();
+    expect(screen.getAllByText('Dr Mukherjee').length).toBeGreaterThan(0);
+    expect(screen.queryByText('IT-4')).toBeNull();
+  });
+
+  it('FACULTY hides Faculty column and shows Reference column', () => {
+    setup({
+      user: USERS.FACULTY,
+      ctx: { bookings: [b(1, 21, 14, { faculty_id: USERS.FACULTY.faculty_id, faculty_name: 'Prof Fay', class_name: 'IT-4' })] },
+    });
+    expect(screen.queryByText('Faculty')).toBeNull();
+    expect(screen.getByText('Reference')).toBeInTheDocument();
+    expect(screen.getAllByText('IT-4').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Prof Fay')).toBeNull();
+  });
+
+  it('ADMIN shows both Reference and Faculty columns', () => {
+    setup({
+      user: USERS.ADMIN,
+      ctx: { bookings: [b(1, 21, 14, { faculty_name: 'Dr Mukherjee', class_name: 'IT-4' })] },
+    });
+    expect(screen.getByText('Reference')).toBeInTheDocument();
+    expect(screen.getByText('Faculty')).toBeInTheDocument();
+    expect(screen.getAllByText('IT-4').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Dr Mukherjee').length).toBeGreaterThan(0);
+  });
+
+  it('hides pagination bar when total items fit on a single page', () => {
+    const few = Array.from({ length: 6 }, (_, i) => b(100 + i, 22, 8 + i));
+    setup({ ctx: { bookings: few } });
+    expect(tableRooms()).toHaveLength(6);
+    expect(screen.queryByText(/Page 1 of/)).toBeNull();
+  });
+
+  it('paginates 10 per page and displays range indicator', async () => {
+    const many = Array.from({ length: 12 }, (_, i) => b(100 + i, 22, 8 + i));
     const { ue } = setup({ ctx: { bookings: many } });
-    expect(tableRooms()).toHaveLength(5);
-    expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
+    expect(tableRooms()).toHaveLength(10);
+    expect(screen.getByText(/Showing/)).toBeInTheDocument();
+    expect(screen.getByText(/1–10/)).toBeInTheDocument();
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
     await ue.click(screen.getByRole('button', { name: 'Next' }));
     expect(tableRooms()).toHaveLength(2);
+    expect(screen.getByText(/11–12/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
   });
 

@@ -7,7 +7,7 @@ import { bookingService } from '../../services/bookingService';
 import { roomService } from '../../services/roomService';
 
 import PageSearch from '../../components/ui/PageSearch';
-import { canBook, isAdmin } from '../../utils/permissions';
+import { canBook, isAdmin, teaches } from '../../utils/permissions';
 
 const HistoryView = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
@@ -18,7 +18,16 @@ const HistoryView = ({ onClose }) => {
   const [loading, setLoading] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ isOpen: false, title: '', message: '', action: null });
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
+
+  const isUserAdmin = isAdmin(user);
+  const isFaculty = user?.role === 'FACULTY' || teaches(user);
+  const isStudent = !isUserAdmin && !isFaculty;
+
+  // Students do not need their own class name (Reference); Faculty do not need their own name.
+  // Admins manage all classes & faculties, so they see both.
+  const showReference = isUserAdmin || isFaculty;
+  const showFaculty = isUserAdmin || isStudent;
 
   useEffect(() => {
     setCurrentPage(1);
@@ -75,7 +84,11 @@ const HistoryView = ({ onClose }) => {
   ];
 
   const filteredHistory = historyItems.filter(item => {
-    if (filterMe && String(item.created_by) !== String(user?.id)) return false;
+    if (filterMe) {
+      const isCreator = String(item.created_by) === String(user?.id);
+      const isSupervisingFaculty = user?.faculty_id != null && String(item.faculty_id) === String(user.faculty_id);
+      if (!isCreator && !isSupervisingFaculty) return false;
+    }
 
     // Contextual Search Filter
     if (searchText) {
@@ -100,6 +113,8 @@ const HistoryView = ({ onClose }) => {
 
   const totalPages = Math.ceil(filteredHistory.length / itemsPerPage);
   const paginatedHistory = filteredHistory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const startIndex = filteredHistory.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
+  const endIndex = Math.min(currentPage * itemsPerPage, filteredHistory.length);
 
   const handleCancel = (bookingId, isPending = false, roomName = '') => {
     setConfirmConfig({
@@ -281,8 +296,8 @@ const HistoryView = ({ onClose }) => {
                   <tr className="text-text-secondary text-xs font-semibold uppercase tracking-wider border-b border-border-subtle">
                     <th className="py-2.5 px-4">Room</th>
                     <th className="py-2.5 px-4 text-center">Time</th>
-                    <th className="py-2.5 px-4 text-center">Reference</th>
-                    <th className="py-2.5 px-4 text-center">Faculty</th>
+                    {showReference && <th className="py-2.5 px-4 text-center">Reference</th>}
+                    {showFaculty && <th className="py-2.5 px-4 text-center">Faculty</th>}
                     <th className="py-2.5 px-4">Details</th>
                     <th className="py-2.5 px-4 text-right">Actions</th>
                   </tr>
@@ -330,22 +345,26 @@ const HistoryView = ({ onClose }) => {
                           </span>
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-lowest border border-border-subtle text-text-primary text-xs font-semibold">
-                          {item.type === 'OVERRIDE' ? <AlertCircle size={13} className="text-secondary" /> : <User size={13} className="text-primary" />}
-                          {item.class_name}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {item.faculty_name ? (
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-lowest border border-border-subtle text-text-secondary text-xs font-semibold">
-                            <GraduationCap size={13} className="text-secondary" />
-                            {item.faculty_name}
+                      {showReference && (
+                        <td className="py-3 px-4 text-center">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-lowest border border-border-subtle text-text-primary text-xs font-semibold">
+                            {item.type === 'OVERRIDE' ? <AlertCircle size={13} className="text-secondary" /> : <User size={13} className="text-primary" />}
+                            {item.class_name}
                           </div>
-                        ) : (
-                          <span className="text-text-secondary opacity-40 text-xs">—</span>
-                        )}
-                      </td>
+                        </td>
+                      )}
+                      {showFaculty && (
+                        <td className="py-3 px-4 text-center">
+                          {item.faculty_name ? (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-lowest border border-border-subtle text-text-secondary text-xs font-semibold">
+                              <GraduationCap size={13} className="text-secondary" />
+                              {item.faculty_name}
+                            </div>
+                          ) : (
+                            <span className="text-text-secondary opacity-40 text-xs">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="py-3 px-4 max-w-[200px]">
                         <p className="text-text-secondary text-xs italic line-clamp-2 leading-relaxed">
                           {item.purpose || 'No purpose provided'}
@@ -438,10 +457,12 @@ const HistoryView = ({ onClose }) => {
                      <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-primary font-medium">
                        {new Date(item.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
                      </div>
-                     <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-secondary font-medium flex items-center gap-1.5">
-                       {item.type === 'OVERRIDE' ? <AlertCircle size={12} /> : <User size={12} />} {item.class_name}
-                     </div>
-                     {item.faculty_name && (
+                     {showReference && (
+                       <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-secondary font-medium flex items-center gap-1.5">
+                         {item.type === 'OVERRIDE' ? <AlertCircle size={12} /> : <User size={12} />} {item.class_name}
+                       </div>
+                     )}
+                     {showFaculty && item.faculty_name && (
                        <div className="px-2.5 py-1 rounded-lg bg-surface-lowest border border-border-subtle text-text-secondary font-medium flex items-center gap-1.5">
                          <GraduationCap size={12} className="text-secondary" /> {item.faculty_name}
                        </div>
@@ -460,11 +481,11 @@ const HistoryView = ({ onClose }) => {
         )}
 
         {totalPages > 1 && (
-          <div className="flex items-center justify-between p-3 bg-surface-low rounded-xl border border-border-subtle mt-4 font-display">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-surface-low rounded-xl border border-border-subtle mt-4 font-display">
             <span className="text-xs font-semibold text-text-secondary">
-              Page {currentPage} of {totalPages}
+              Showing <span className="text-text-primary font-bold">{startIndex}–{endIndex}</span> of <span className="text-text-primary font-bold">{filteredHistory.length}</span> bookings
             </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <button 
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
@@ -472,6 +493,9 @@ const HistoryView = ({ onClose }) => {
               >
                 Prev
               </button>
+              <span className="text-xs font-semibold text-text-secondary px-1">
+                Page {currentPage} of {totalPages}
+              </span>
               <button 
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
