@@ -51,10 +51,22 @@ export async function importSections(slots, actor) {
   return ok({ message: `Timetable imported for ${result.sections} section(s)`, ...result });
 }
 
-/** The caller's faculty timetable slots, grouped by day (the Faculty Portal view). */
+/**
+ * The caller's own teaching timetable, grouped by day (the faculty Timetable page). A teacher's
+ * classes come from two imports: the section timetables that name them, and their faculty
+ * timetable slots. Both count when booking (facultyClasses), so both are shown; a class present
+ * in both is listed once, from the section timetable.
+ */
 export async function ownFacultySlots(principal, day) {
   if (principal.faculty_id == null) return ok({});
-  const rows = await tt.facultySlotsOf(principal.faculty_id, day ? normalizeDay(day) : null);
+  const d = day ? normalizeDay(day) : null;
+  const [sectionClasses, facultySlots] = await Promise.all([
+    tt.sectionClassesOfFaculty(principal.faculty_id, d),
+    tt.facultySlotsOf(principal.faculty_id, d),
+  ]);
+  const taken = new Set(sectionClasses.map((c) => `${c.day_of_week}|${c.start_min}`));
+  const rows = [...sectionClasses, ...facultySlots.filter((s) => !taken.has(`${s.day_of_week}|${s.start_min}`))]
+    .sort((a, b) => (a.start_min ?? 0) - (b.start_min ?? 0));
   return ok(rows.reduce((acc, slot) => {
     (acc[slot.day_of_week] ||= []).push(slot);
     return acc;

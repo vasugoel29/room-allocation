@@ -53,6 +53,13 @@ export const timetableRepository = {
     [facultyId, day],
   )).rows,
 
+  /** Section-timetable classes taught by a faculty-directory entry. */
+  sectionClassesOfFaculty: async (facultyId, day = null, client = db) => (await client.query(
+    `${SECTION_CLASSES} AND t.faculty_id = $1 AND ${dayFilter('t', 2)}
+     ORDER BY t.day_of_week, t.start_min`,
+    [facultyId, day],
+  )).rows,
+
   /** A section's classes; `key` from sectionKey(). */
   sectionClasses: async (key, day = null, client = db) => (key ? (await client.query(
     `${SECTION_CLASSES} AND t.department = $1 AND t.semester = $2 AND t.section = $3 AND ${dayFilter('t', 4)}
