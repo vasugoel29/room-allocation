@@ -12,6 +12,7 @@ import RescheduleDetails from "../../features/booking/RescheduleDetails";
 import FacultySelector from "../../features/booking/FacultySelector";
 import ConflictResolutionDialog from "./ConflictResolutionDialog";
 import { P, can, canBook, booksDirect, isAdmin } from '../../utils/permissions';
+import { BOOKING, isOpen, statusTone } from '../../../../shared/stateMachines.js';
 
 function BookingModal({ slot, onClose, onSuccess }) {
   const {
@@ -105,8 +106,7 @@ function BookingModal({ slot, onClose, onSuccess }) {
 
   const getRoomBooking = (roomId) => {
     return bookings?.find((b) => {
-      const bStatus = b.status || "ACTIVE";
-      if (bStatus !== "ACTIVE" && bStatus !== "PENDING") return false;
+      if (!isOpen(BOOKING, b.status || "ACTIVE")) return false;
       const bStart = new Date(b.start_time);
       const bHour = getIstHour(bStart);
 
@@ -380,8 +380,8 @@ function BookingModal({ slot, onClose, onSuccess }) {
                         Status
                       </span>
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize inline-block ${
-                        existingBooking.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500' :
-                        existingBooking.status === 'CANCELLED' ? 'bg-red-500/10 text-red-500' :
+                        statusTone(BOOKING, existingBooking.status) === 'pending' ? 'bg-amber-500/10 text-amber-500' :
+                        statusTone(BOOKING, existingBooking.status) === 'danger' ? 'bg-red-500/10 text-red-500' :
                         'bg-green-500/10 text-green-500'
                       }`}>
                         {existingBooking.status}

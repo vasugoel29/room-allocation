@@ -1,6 +1,7 @@
 import { istDateTimeToUtc } from '../utils/timezone.js';
 import * as db from '../db.js';
 import { scopeSql } from '../auth/scopes.js';
+import { BOOKING, sourcesOf } from '../../../shared/stateMachines.js';
 
 /**
  * ACL scope filter for booking lists: `scope = { scopes, people }` — rooms always, and the booker
@@ -196,11 +197,14 @@ export const bookingRepository = {
   },
 
   /**
-   * Update booking status
+   * Move a booking to `status`. Only the moves in shared/stateMachines.js (BOOKING) are applied;
+   * anything else is a bug in the caller and throws instead of corrupting the row.
    */
   updateStatus: async (id, status, client = db) => {
-    const query = `UPDATE bookings SET status = $1, updated_at = NOW()${status === 'CANCELLED' ? ', cancelled_at = NOW()' : ''} WHERE id = $2 RETURNING *`;
-    const result = await client.query(query, [status, id]);
+    const query = `UPDATE bookings SET status = $1, updated_at = NOW()${status === 'CANCELLED' ? ', cancelled_at = NOW()' : ''}
+      WHERE id = $2 AND status = ANY($3) RETURNING *`;
+    const result = await client.query(query, [status, id, sourcesOf(BOOKING, status)]);
+    if (!result.rows[0]) throw new Error(`Booking ${id} cannot move to ${status} from its current status`);
     return result.rows[0];
   },
 

@@ -73,7 +73,7 @@ export const getMergedSchedule = (user, dateStr, bookings = [], availability = [
       const bStart = new Date(b.start_time);
       const bDateStr = getIstDateKey(bStart);
       if (bDateStr !== dateStr) return false;
-      if (b.status !== 'ACTIVE' && b.status !== 'CONFIRMED' && b.status != null) return false;
+      if (b.status !== 'ACTIVE' && b.status != null) return false;
 
       if (teaches(user)) {
         // Faculty's own bookings or bookings they accepted
@@ -184,7 +184,7 @@ export const buildRoomIndex = (bookings = [], availability = []) => {
   }
   for (const b of Array.isArray(bookings) ? bookings : []) {
     const status = (b.status || 'ACTIVE').toUpperCase();
-    if (status !== 'ACTIVE' && status !== 'CONFIRMED') continue;
+    if (status !== 'ACTIVE') continue;
     const start = new Date(b.start_time).getTime();
     const end = b.end_time ? new Date(b.end_time).getTime() : start + HOUR_MS;
     for (let t = start; t < end; t += HOUR_MS) {

@@ -10,6 +10,7 @@ import { notify } from '../notifications/notify.js';
 import { logActivity } from './auditLogService.js';
 import { facultyClassAt } from './bookingRules.js';
 import { importSectionSlots } from './timetableImport.js';
+import { closeCancelledBookings } from './classDisplacement.js';
 import { scopesFor, allows, mayInclude, OUT_OF_SCOPE } from '../auth/scopes.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
 
@@ -50,10 +51,22 @@ export async function importSections(slots, actor) {
   return ok({ message: `Timetable imported for ${result.sections} section(s)`, ...result });
 }
 
-/** The caller's faculty timetable slots, grouped by day (the Faculty Portal view). */
+/**
+ * The caller's own teaching timetable, grouped by day (the faculty Timetable page). A teacher's
+ * classes come from two imports: the section timetables that name them, and their faculty
+ * timetable slots. Both count when booking (facultyClasses), so both are shown; a class present
+ * in both is listed once, from the section timetable.
+ */
 export async function ownFacultySlots(principal, day) {
   if (principal.faculty_id == null) return ok({});
-  const rows = await tt.facultySlotsOf(principal.faculty_id, day ? normalizeDay(day) : null);
+  const d = day ? normalizeDay(day) : null;
+  const [sectionClasses, facultySlots] = await Promise.all([
+    tt.sectionClassesOfFaculty(principal.faculty_id, d),
+    tt.facultySlotsOf(principal.faculty_id, d),
+  ]);
+  const taken = new Set(sectionClasses.map((c) => `${c.day_of_week}|${c.start_min}`));
+  const rows = [...sectionClasses, ...facultySlots.filter((s) => !taken.has(`${s.day_of_week}|${s.start_min}`))]
+    .sort((a, b) => (a.start_min ?? 0) - (b.start_min ?? 0));
   return ok(rows.reduce((acc, slot) => {
     (acc[slot.day_of_week] ||= []).push(slot);
     return acc;
@@ -168,7 +181,8 @@ export async function reviewCancellationRequest(principal, id, action) {
     if (approved) {
       if (request.booking_id) {
         // Only the still-open booking the request was made for (soft cancel; history kept).
-        await bookingRepository.cancelIfOpen(request.booking_id, client);
+        const { rowCount } = await bookingRepository.cancelIfOpen(request.booking_id, client);
+        if (rowCount) await closeCancelledBookings(client, request.booking_id, { actorId: principal.id, reason: 'cancelled' });
       } else {
         if (!request.room_id || !request.room_active) return bad('The room for this class no longer exists.', 409);
         // The class doesn't happen on this one date: release that hour for that date only (BKG-05).

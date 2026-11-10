@@ -160,14 +160,33 @@ All SQL here. Parameterised queries only (`$1`, `$2`, etc.).
 ```
 users              — id, name, email, role, department_id, year, section, is_approved
 rooms              — id, name, capacity, floor, building, has_ac, has_projector, room_type
-bookings           — id, room_id, created_by, start_time, end_time, purpose, class_name, user_role, status
-booking_transfers  — id, booking_id, requested_by, target_faculty_id, owner_id, status
+bookings           — id, room_id, created_by, faculty_id, start_time, end_time, purpose, status (PENDING | ACTIVE | CANCELLED | REJECTED)
+booking_transfers  — id, booking_id, requested_by, target_faculty_id, owner_id, status (PENDING | REP2_ACCEPTED | FACULTY2_ACCEPTED | ACCEPTED | REJECTED | CANCELLED)
 promotion_requests — id, user_id, status, reason, admin_comment
 departments        — id, name
 timetable_slots    — department, semester, section, day_of_week, slot_time, subject_name, room_name, faculty_name
 faculty_slots      — (faculty-specific timetable data)
 audit_logs         — actor, action, target_id, details, created_at
 ```
+
+### State Machines (`shared/stateMachines.js`) — read before touching any `status`
+Every lifecycle is declared once in `shared/stateMachines.js` and imported by the backend, the frontend and the tests. The file's header has the diagrams.
+
+| Machine | Column | States (open → terminal) |
+|---|---|---|
+| `BOOKING` | `bookings.status` | PENDING ⇄ ACTIVE → CANCELLED, REJECTED |
+| `TRANSFER` | `booking_transfers.status` | PENDING → REP2_ACCEPTED → FACULTY2_ACCEPTED → ACCEPTED, REJECTED (declined), CANCELLED (withdrawn) |
+| `CANCELLATION_REQUEST` | `class_cancellation_requests.status` | PENDING → APPROVED, REJECTED |
+| `EMAIL` | `notifications.email_status` | pending ⇄ sending → sent, failed, logged; `none` = in-app only |
+| `IMPORT_JOB` | `import_jobs.status` | processing → completed, failed |
+
+Rules:
+- **New state or move:** add it to the machine first, then a migration for the table's CHECK constraint. `backend/__tests__/bookings/stateMachines.test.js` fails if the two disagree.
+- **Changing a status:** go through `bookingRepository.updateStatus` / `transferRepository.updateStatus`. They apply only the moves the machine lists and throw otherwise, so lock the row (`FOR UPDATE`) and check its status first, as the services do.
+- **"Is it still open?"** use `isOpen(MACHINE, status)` / `openStates(MACHINE)`, not literal arrays.
+- **A booking became CANCELLED** (any path): call `closeCancelledBookings` in `services/classDisplacement.js`. It closes open transfers, withdraws the reschedule release and restores displaced classes.
+- **Showing a status:** `<StatusBadge machine={BOOKING} status={…} />` (`components/ui/StatusBadge.jsx`). Labels and tones live in the machine; colours only in `StatusBadge`.
+- `FREED` / `BLOCKED` on the Bookings page are admin room overrides, not booking states.
 
 ### Middleware
 - `authenticate.js` — JWT verification, attaches `req.user`

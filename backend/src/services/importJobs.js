@@ -3,7 +3,8 @@ import * as db from '../db.js';
 
 /**
  * Background import jobs (faculty CSV, timetable CSV), recorded in import_jobs so their status
- * survives a restart and is the same on every instance. Rows are kept as a record.
+ * survives a restart and is the same on every instance. Rows are kept as a record. A finished job
+ * never changes again (IMPORT_JOB in shared/stateMachines.js).
  */
 
 /** A job still "processing" after this long was cut off (e.g. a restart); its transaction rolled back. */
@@ -17,11 +18,11 @@ export async function startJob(kind, userId) {
 }
 
 export const finishJob = (id, result) => db.query(
-  "UPDATE import_jobs SET status = 'completed', result = $2, finished_at = NOW() WHERE id = $1", [id, JSON.stringify(result)],
+  "UPDATE import_jobs SET status = 'completed', result = $2, finished_at = NOW() WHERE id = $1 AND status = 'processing'", [id, JSON.stringify(result)],
 );
 
 export const failJob = (id, error) => db.query(
-  "UPDATE import_jobs SET status = 'failed', result = $2, finished_at = NOW() WHERE id = $1", [id, JSON.stringify({ error })],
+  "UPDATE import_jobs SET status = 'failed', result = $2, finished_at = NOW() WHERE id = $1 AND status = 'processing'", [id, JSON.stringify({ error })],
 );
 
 /** { status, ...result } for the polling endpoint, or null for an unknown id. */

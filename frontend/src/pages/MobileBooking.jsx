@@ -9,9 +9,10 @@ import toast from 'react-hot-toast';
 import DatePickerDropdown from '../components/ui/DatePickerDropdown';
 import NotificationBell from '../components/ui/NotificationBell';
 import { useSearchDebounce } from '../hooks/useSearchDebounce';
-import { addMinutesToUtc, istDateTimeToUtc, getIstDateKey, getIstHour } from '../utils/timezone';
+import { addMinutesToUtc, istDateTimeToUtc } from '../utils/timezone';
 import { booksDirect, P, can } from '../utils/permissions';
 import { BOOKING_START_HOURS } from '../../../shared/bookingRules.js';
+import { BOOKING, isOpen } from '../../../shared/stateMachines.js';
 
 function MobileBooking({ onBack }) {
   const { user, faculties, bookings, availability, timetableData, fetchRooms, fetchBookings, fetchAvailability, theme, setTheme } = useContext(AppContext);
@@ -63,7 +64,7 @@ function MobileBooking({ onBack }) {
       const matchingBkg = bookings?.find(b => 
         String(b.created_by) === String(user?.id) && 
         (b.room_name === roomName || String(b.room_id) === String(roomName)) && 
-        ['ACTIVE', 'PENDING'].includes(b.status)
+        isOpen(BOOKING, b.status)
       );
       if (matchingBkg) {
         const facName = matchingBkg.faculty_name || faculties?.find(f => String(f.id) === String(matchingBkg.faculty_id))?.name;
@@ -316,7 +317,7 @@ function MobileBooking({ onBack }) {
                 // 2. Check if the user already has an active or pending request for this time slot
                 const myPendingOrActive = bookings?.find(b => {
                   if (String(b.created_by) !== String(user?.id)) return false;
-                  if (!['ACTIVE', 'PENDING'].includes(b.status)) return false;
+                  if (!isOpen(BOOKING, b.status)) return false;
                   const bStart = new Date(b.start_time);
                   const bDate = `${bStart.getFullYear()}-${String(bStart.getMonth() + 1).padStart(2, '0')}-${String(bStart.getDate()).padStart(2, '0')}`;
                   const bHour = bStart.getHours();

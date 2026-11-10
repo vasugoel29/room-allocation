@@ -152,3 +152,14 @@ export { DAYS };
 
 /** Ends the shared pg pool; call from afterAll in every test file. */
 export const closeDb = () => db.pool.end();
+
+/**
+ * The 403 body: "Forbidden" plus the caller's own permissions as the ACL currently grants them
+ * (the frontend uses the list to refresh what it shows). Nothing else may be in it.
+ */
+export function expectForbidden(res, role) {
+  expect(res.status).toBe(403);
+  expect(Object.keys(res.body).sort()).toEqual(['error', 'permissions']);
+  expect(res.body.error).toBe('Forbidden');
+  expect([...res.body.permissions].sort()).toEqual([...(SUGGESTED_BUNDLES[role] ?? [])].sort());
+}

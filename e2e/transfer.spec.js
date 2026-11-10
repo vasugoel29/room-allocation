@@ -35,7 +35,7 @@ test.describe('Booking transfer', () => {
     // 2. Rep A accepts on /bookings -> Transfers
     await signIn(page, request, repA, '/bookings');
     await page.getByRole('button', { name: /^transfers/i }).click();
-    const incoming = page.locator('div.rounded-\\[2rem\\]').filter({ hasText: room.name }).filter({ hasText: newPurpose });
+    const incoming = page.getByTestId('incoming-transfer').filter({ hasText: room.name }).filter({ hasText: newPurpose });
     await expect(incoming).toBeVisible();
     await incoming.getByRole('button', { name: /accept/i }).click();
     await expect(toast(page, /transfer accepted/i)).toBeVisible();
@@ -45,14 +45,14 @@ test.describe('Booking transfer', () => {
 
     // 3. Owner faculty approves on the faculty portal
     await signIn(page, request, facultyA, '/faculty');
-    let card = page.locator('div.ring-1').filter({ hasText: newPurpose });
+    let card = page.getByTestId('faculty-request-card').filter({ hasText: newPurpose });
     await card.getByRole('button', { name: /approve/i }).click();
     await expect(toast(page, /owner faculty approved/i)).toBeVisible();
     expect((await transfer()).status).toBe('FACULTY2_ACCEPTED');
 
     // 4. Requester's faculty gives final approval
     await signIn(page, request, facultyB, '/faculty');
-    card = page.locator('div.ring-1').filter({ hasText: newPurpose });
+    card = page.getByTestId('faculty-request-card').filter({ hasText: newPurpose });
     await card.getByRole('button', { name: /approve/i }).click();
     await expect(toast(page, /transfer completed successfully/i)).toBeVisible();
 
@@ -78,11 +78,34 @@ test.describe('Booking transfer', () => {
 
     await signIn(page, request, repA, '/bookings');
     await page.getByRole('button', { name: /^transfers/i }).click();
-    const incoming = page.locator('div.rounded-\\[2rem\\]').filter({ hasText: t.new_purpose });
+    const incoming = page.getByTestId('incoming-transfer').filter({ hasText: t.new_purpose });
     await incoming.getByRole('button', { name: /reject/i }).click();
     await expect(toast(page, /transfer rejected/i)).toBeVisible();
-    await expect(incoming.getByText(/dismissed/i)).toBeVisible();
+    await expect(incoming.getByText(/declined/i)).toBeVisible();
     expect((await seed.one('SELECT status FROM booking_transfers WHERE id = $1', [t.id])).status).toBe('REJECTED');
+    expect(await seed.one('SELECT status, created_by FROM bookings WHERE id = $1', [booking.id])).toEqual({ status: 'ACTIVE', created_by: repA.id });
+  });
+  test('the requester withdraws their own open request -> CANCELLED, shown as Withdrawn, booking untouched', async ({ page, request, seed }) => {
+    const repA = await seed.user({ role: 'STUDENT_REP' });
+    const repB = await seed.user({ role: 'STUDENT_REP' });
+    const room = await seed.room();
+    const slot = nextWeekdaySlot(14);
+    const booking = await seed.booking({ room_id: room.id, created_by: repA.id, start_time: slot.start, purpose: `Stays ${tag()}` });
+    const t = await seed.one(
+      `INSERT INTO booking_transfers (booking_id, requested_by, owner_id, new_purpose) VALUES ($1,$2,$3,$4) RETURNING *`,
+      [booking.id, repB.id, repA.id, `Changed my mind ${tag()}`],
+    );
+
+    await signIn(page, request, repB, '/bookings');
+    await page.getByRole('button', { name: /^transfers/i }).click();
+    const outgoing = page.getByTestId('outgoing-transfer').filter({ hasText: t.new_purpose });
+    await expect(outgoing.getByText(/waiting for owner/i)).toBeVisible();
+    await outgoing.getByRole('button', { name: 'Withdraw Transfer Request' }).click();
+    await page.getByRole('dialog', { name: 'Withdraw Transfer Request' }).getByRole('button', { name: 'Withdraw Request' }).click();
+    await expect(toast(page, /transfer request withdrawn/i)).toBeVisible();
+    await expect(outgoing.getByText(/withdrawn/i)).toBeVisible();
+    await expect(outgoing.getByRole('button', { name: 'Withdraw Transfer Request' })).toHaveCount(0);
+    expect((await seed.one('SELECT status FROM booking_transfers WHERE id = $1', [t.id])).status).toBe('CANCELLED');
     expect(await seed.one('SELECT status, created_by FROM bookings WHERE id = $1', [booking.id])).toEqual({ status: 'ACTIVE', created_by: repA.id });
   });
 });

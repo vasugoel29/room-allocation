@@ -182,6 +182,34 @@ describe('BookingsPage tabs', () => {
     expect(toast.success).toHaveBeenCalledWith('Transfer accepted');
   });
 
+  it('every transfer state has a badge; only open outgoing requests can be withdrawn', async () => {
+    const t = (id, status) => ({ id, room_name: `R-${id}`, start_time: b(0, 22, 9).start_time, owner_name: 'Ann', status });
+    const outgoing = [t(51, 'PENDING'), t(52, 'FACULTY2_ACCEPTED'), t(53, 'ACCEPTED'), t(54, 'REJECTED'), t(55, 'CANCELLED')];
+    const { ue, f, ctx } = setup({ ctx: { outgoingTransfers: outgoing } });
+    await ue.click(screen.getByRole('button', { name: /transfers/i }));
+    for (const label of ['Waiting for Owner', 'Awaiting faculty approval', 'Transferred', 'Declined', 'Withdrawn']) {
+      expect(screen.getByText(label)).toBeInTheDocument();
+    }
+    const withdraw = screen.getAllByRole('button', { name: 'Withdraw Transfer Request' });
+    expect(withdraw).toHaveLength(2); // PENDING and FACULTY2_ACCEPTED only
+    await ue.click(withdraw[0]);
+    const dlg = screen.getByRole('dialog', { name: 'Withdraw Transfer Request' });
+    await ue.click(within(dlg).getByRole('button', { name: 'Withdraw Request' }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Transfer request withdrawn'));
+    expect(fetchCalls(f)).toContainEqual(['PATCH', '/api/transfers/51/reject', undefined]);
+    expect(ctx.fetchTransfers).toHaveBeenCalled();
+  });
+
+  it('a rejected request stays visible under Upcoming with its badge, and cannot be cancelled', () => {
+    setup({ ctx: { bookings: [b(7, 22, 10, { status: 'REJECTED' }), b(8, 22, 11, { status: 'CANCELLED' }), b(9, 22, 12)] } });
+    expect(tableRooms()).toEqual(['R-9', 'R-8', 'R-7']);
+    const row = (room) => within(screen.getByRole('table')).getByText(room).closest('tr');
+    expect(within(row('R-7')).getByText('Rejected')).toBeInTheDocument();
+    expect(within(row('R-8')).getByText('Revoked')).toBeInTheDocument();
+    expect(within(row('R-9')).getByText('Valid')).toBeInTheDocument();
+    expect(row('R-7').querySelector('td:last-child button')).toBeNull();
+  });
+
   it('no accept/reject for a transfer whose booking was cancelled', async () => {
     const incoming = [{ id: 32, room_name: 'R-32', start_time: b(0, 22, 9).start_time, status: 'PENDING', booking_status: 'CANCELLED' }];
     const { ue } = setup({ ctx: { incomingTransfers: incoming } });

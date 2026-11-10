@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { 
   Search, 
   MapPin, 
@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { getDatesOfWeek } from '../utils/dateHelpers';
 import { toTitleCase, getShortDept } from '../utils/roleUtils';
-import { WeekView } from '../components/ui/WeekView';
+import WeekView from '../components/ui/WeekView';
 import CustomSelect from '../components/ui/CustomSelect';
 import { getIstDateKey, getIstHour, getIstWeekday } from '../utils/timezone';
 import { getHourFromTime, formatTo24h } from '../../../shared/timetable.js';
@@ -38,6 +38,9 @@ function AdminTimetable() {
 
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  // The name the admin last picked or searched: the box holds a finished answer, not a query,
+  // so it must not look up suggestions (and reopen the list) until the text is edited again.
+  const settledName = useRef(null);
 
   // Branches as the ACL names them, from the imported section timetables.
   useEffect(() => {
@@ -56,11 +59,12 @@ function AdminTimetable() {
       setSuggestions([]);
       return;
     }
+    if (facultyName === settledName.current) return;
 
     const delayDebounceFn = setTimeout(async () => {
       try {
         const response = await api.get(`/timetable/autocomplete/faculty?query=${encodeURIComponent(facultyName)}`);
-        if (response.ok) {
+        if (response.ok && facultyName !== settledName.current) {
           const suggestionsList = await response.json();
           setSuggestions(suggestionsList);
           setShowSuggestions(true);
@@ -236,7 +240,12 @@ function AdminTimetable() {
                 <input 
                   value={facultyName}
                   onChange={(e) => setFacultyName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  onKeyPress={(e) => {
+                    if (e.key !== 'Enter') return;
+                    settledName.current = facultyName;
+                    setShowSuggestions(false);
+                    handleSearch();
+                  }}
                   placeholder="Enter faculty name (e.g. DEEPIKA KUKREJA)"
                   className="w-full bg-bg-primary/50 border border-border rounded-2xl py-4 pl-12 pr-6 text-sm font-bold focus:outline-none focus:border-primary transition-all text-text-primary placeholder:text-text-secondary/20"
                 />
@@ -248,6 +257,7 @@ function AdminTimetable() {
                         <button
                           key={idx}
                           onClick={() => {
+                            settledName.current = name;
                             setFacultyName(name);
                             setShowSuggestions(false);
                             handleSearch(name);

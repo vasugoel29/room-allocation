@@ -9,16 +9,11 @@ import { canBookDirect, isAdmin as hasAdmin, effectivePermissions, PERMISSIONS a
 import { scopesFor, allows, OUT_OF_SCOPE } from '../auth/scopes.js';
 import { inTransaction } from './bookingService.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
+import { TRANSFER, openStates } from '../../../shared/stateMachines.js';
 
 /**
- * Booking transfers: a student asks for someone else's upcoming booking.
- *
- *   PENDING ──owner accepts──▶ REP2_ACCEPTED (if the booking has a supervising faculty)
- *          └─────────────────▶ FACULTY2_ACCEPTED (no owner faculty, requester named one)
- *          └─────────────────▶ ACCEPTED (neither)
- *   REP2_ACCEPTED ──owner's faculty approves──▶ FACULTY2_ACCEPTED | ACCEPTED
- *   FACULTY2_ACCEPTED ──requester's faculty approves──▶ ACCEPTED
- *   any open state ──reject (owner / a faculty in the chain / admin) or withdraw (requester)──▶ REJECTED / CANCELLED
+ * Booking transfers: a student asks for someone else's upcoming booking. The states and the moves
+ * between them are the TRANSFER machine in shared/stateMachines.js.
  *
  * The booking stays ACTIVE with its owner until the final step, which moves ownership in one
  * locked transaction after re-checking the booking is still ACTIVE and upcoming and the requester
@@ -26,7 +21,7 @@ import { notify, bookingFacts, personName } from '../notifications/notify.js';
  * and a completed transfer can't resurrect a cancelled one (BKG-06).
  */
 
-const OPEN = ['PENDING', 'REP2_ACCEPTED', 'FACULTY2_ACCEPTED'];
+const OPEN = openStates(TRANSFER); // PENDING, REP2_ACCEPTED, FACULTY2_ACCEPTED
 const fail = (error, status = 400, extra = {}) => ({ error, status, ...extra });
 
 async function lockTransfer(client, transferId) {

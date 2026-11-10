@@ -214,6 +214,26 @@ describe('GET /api/timetable/faculty (own faculty timetable)', () => {
     expect(Object.keys(wed.body)).toEqual(['Wed']);
   });
 
+  test('classes from the section timetables that name the teacher are included, once each', async () => {
+    const name = `RTT Both ${tag()}`;
+    const fac = await createFaculty({ name });
+    const room = await createRoom();
+    const section = { department: `RTTDEPT${tag()}`.toUpperCase(), semester: 4, section: 2, faculty_name: name, faculty_id: fac.faculty.id, room_name: room.name, room_id: room.id };
+    await insertTimetableSlot({ ...section, day_of_week: 'Tue', slot_time: '09:00-10:00', subject_name: 'Artificial Intelligence' });
+    await insertTimetableSlot({ ...section, day_of_week: 'Tue', slot_time: '11:00-12:00', subject_name: 'Compilers' });
+    // The same 09:00 class also arrives through the faculty CSV; a 14:00 slot exists only there.
+    await insertFacultySlot({ faculty_name: name.toUpperCase(), day_of_week: 'Tue', slot_time: '09:00-10:00', content: 'AI (faculty csv)' });
+    await insertFacultySlot({ faculty_name: name.toUpperCase(), day_of_week: 'Tue', slot_time: '02:00-03:00', content: 'Office hour' });
+    // Someone else's section class never appears.
+    await insertTimetableSlot({ ...section, faculty_name: 'Another Teacher', faculty_id: null, day_of_week: 'Tue', slot_time: '10:00-11:00', subject_name: 'Not mine' });
+
+    const res = await request(app).get('/api/timetable/faculty').set('Authorization', fac.auth);
+    expect(res.status).toBe(200);
+    expect(Object.keys(res.body)).toEqual(['Tue']);
+    expect(res.body.Tue.map((s) => s.subject_name || s.content)).toEqual(['Artificial Intelligence', 'Compilers', 'Office hour']);
+    expect(res.body.Tue[0]).toMatchObject({ room_name: room.name, department: section.department, semester: '4', section: '2' });
+  });
+
   test('a faculty with no slots gets {}', async () => {
     const res = await request(app).get('/api/timetable/faculty').set('Authorization', faculty.auth);
     expect(res.body).toEqual({});

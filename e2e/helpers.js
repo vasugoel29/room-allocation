@@ -35,10 +35,15 @@ export const test = base.extend({
 export async function signIn(page, request, user, path = '/') {
   const { token, user: u } = await apiLogin(request, user.email);
   if (!page.url().startsWith(WEB_URL)) await page.goto('/login');
+  // A real sign-in replaces the previous person's `token` and `permissions` cookies; swapping
+  // localStorage alone would leave them, and the UI would show the previous person's permissions.
+  await page.context().clearCookies();
   await page.evaluate(([t, json]) => {
     localStorage.clear();
     localStorage.setItem('token', t);
     localStorage.setItem('user', json);
+    // The first-sign-in tutorial is a full-screen dialog that would cover every page under test.
+    localStorage.setItem(`cras_tutorial_seen_${JSON.parse(json).id}`, 'true');
   }, [token, JSON.stringify(u)]);
   await page.goto(path);
   return { token, user: u };
@@ -110,8 +115,9 @@ export async function focusCalendarOn(page, roomName) {
 export function calendarCell(page, dateKey, hour) {
   const col = calendarWeekKeys().indexOf(dateKey);
   if (col < 0) throw new Error(`${dateKey} is not visible in the calendar week (${calendarWeekKeys()})`);
-  const row = page.locator('div.group.layout-transition').nth(hour - 8);
-  return row.locator(':scope > div').nth(col + 1);
+  // The grid is a table: one row per hour, the first cell is the time label.
+  const row = page.locator('[data-tour="calendar-grid"] tbody tr').nth(hour - 8);
+  return row.locator(':scope > td').nth(col + 1);
 }
 
 export function roomCard(page, room, dateKey, hour) {
@@ -133,6 +139,20 @@ export async function pickFaculty(dialog, faculty) {
   await input.fill(faculty.name);
   await dialog.getByText(faculty.name, { exact: true }).click();
   await expect(input).toHaveAttribute('placeholder', faculty.name);
+}
+
+/** Picks `dateKey` in DatePickerDropdown (only needed when it differs from the preselected day). */
+export async function pickDate(page, dateKey) {
+  const [y, m, d] = dateKey.split('-');
+  const trigger = page.getByRole('button', { name: /^\d{2}\/\d{2}\/\d{4}$/ });
+  if ((await trigger.innerText()).trim() === `${d}/${m}/${y}`) return;
+  await trigger.click();
+  const picker = page.locator('div.glass').filter({ has: page.getByText(/^(Su)$/) }).last();
+  const monthLabel = new Date(Date.UTC(+y, +m - 1, 15)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  if (!(await picker.getByText(monthLabel).count())) await picker.getByRole('button').nth(1).click(); // next month
+  await expect(picker.getByText(monthLabel)).toBeVisible();
+  await picker.getByRole('button', { name: String(Number(d)), exact: true }).click();
+  await expect(trigger).toHaveText(`${d}/${m}/${y}`);
 }
 
 /** Toast lookup (react-hot-toast renders role=status). */

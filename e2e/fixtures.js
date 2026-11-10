@@ -8,8 +8,8 @@ const uid = () => `${Date.now().toString(36)}${(seq++).toString(36)}`;
 /**
  * Thin data-seeding helper bound to the e2e database. Seeded users have no password: the e2e
  * backend runs the ACL in mock mode backed by this users table (ACL_MOCK_SOURCE=db), so a seeded
- * user is found by email at sign-in. After sign-in the server trusts the ACL snapshot
- * (user_access) for the role, so changing `users.role` mid-test does not change what they can do.
+ * user is found by email at sign-in. The role lives in the ACL snapshot (user_access), not on the
+ * users row: the mock directory reads it from there and grants that role's suggested permissions.
  */
 export class Seed {
   constructor(client) {
@@ -25,7 +25,6 @@ export class Seed {
     const fields = {
       name: `E2E ${role.replace('_', ' ')} ${uid()}`,
       email: `e2e.${role.toLowerCase()}.${uid()}@nsut.ac.in`,
-      role,
       ...overrides,
     };
     const cols = Object.keys(fields);
@@ -34,6 +33,12 @@ export class Seed {
       cols.map((c) => fields[c]),
     );
     const user = rows[0];
+    // Same acl_id the db-backed mock directory reports (aclClient.js), so sign-in updates this row.
+    await this.db.query(
+      `INSERT INTO user_access (user_id, acl_id, role, roles) VALUES ($1, $2, $3::text, jsonb_build_array($3::text))`,
+      [user.id, `mockdb_${user.id}`, role],
+    );
+    user.role = role;
     if (role === 'FACULTY') {
       const { rows: [entry] } = await this.db.query(
         `INSERT INTO faculties (name, email, department_name, user_id, is_active) VALUES ($1, $2, $3, $4, TRUE) RETURNING id`,
@@ -128,6 +133,8 @@ export const test = base.extend({
         if (window !== window.top) return;
         localStorage.setItem('token', t);
         localStorage.setItem('user', json);
+        // The first-sign-in tutorial is a full-screen dialog that would cover every page under test.
+        localStorage.setItem(`cras_tutorial_seen_${JSON.parse(json).id}`, 'true');
       }, [token, JSON.stringify(u)]);
       if (path) await page.goto(path);
       return { token, user: u };

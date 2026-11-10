@@ -1,8 +1,7 @@
 import * as db from '../db.js';
-import { timetableRepository } from './timetableRepository.js';
 import { scopeSql } from '../auth/scopes.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
-import { restoreClassesForBookings } from '../services/classDisplacement.js';
+import { closeCancelledBookings } from '../services/classDisplacement.js';
 
 /**
  * Repository for User-related database operations
@@ -131,12 +130,9 @@ export const userRepository = {
             { ...facts.data, studentName: facts.data.ownerName, by: 'An administrator', reason: 'the booker\'s account was deactivated' },
             { entityType: 'booking', entityId: bookingId });
         }
-        // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
-        if (rows.length) {
-          await timetableRepository.withdrawReleases('reschedule', rows.map((r) => r.id), client);
-          // Classes those bookings had replaced go ahead after all.
-          await restoreClassesForBookings(client, rows.map((r) => r.id), { reason: 'cancelled', quiet: false });
-        }
+        // Open transfers on them are closed, class releases from reschedule bookings are withdrawn
+        // (NEW-P4-3) and classes those bookings had replaced go ahead after all.
+        await closeCancelledBookings(client, rows.map((r) => r.id), { reason: 'cancelled', quiet: false });
       });
     }
     return result.rows[0];

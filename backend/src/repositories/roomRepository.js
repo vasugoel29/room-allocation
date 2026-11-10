@@ -2,7 +2,7 @@ import * as db from '../db.js';
 import { timetableRepository } from './timetableRepository.js';
 import { scopeSql } from '../auth/scopes.js';
 import { notify, bookingFacts } from '../notifications/notify.js';
-import { restoreClassesForBookings } from '../services/classDisplacement.js';
+import { closeCancelledBookings } from '../services/classDisplacement.js';
 
 /** The room types CRAS knows (rooms_type_check). Committee Rooms and Auditoriums are restricted. */
 export const ROOM_TYPES = Object.freeze(['Lecture Room', 'Lab', 'Auditorium', 'Committee Room']);
@@ -291,12 +291,9 @@ export const roomRepository = {
           await notify(client, [{ userId: facts.booking.created_by }], 'booking_cancelled', data, meta);
           if (facts.booking.faculty_id) await notify(client, [{ facultyId: facts.booking.faculty_id }], 'supervised_booking_cancelled', data, meta);
         }
-        // Withdraw class releases created by cancelled reschedule bookings (NEW-P4-3).
-        if (rows.length) {
-          await timetableRepository.withdrawReleases('reschedule', rows.map((r) => r.id), client);
-          // Classes those bookings had replaced go ahead after all.
-          await restoreClassesForBookings(client, rows.map((r) => r.id), { reason: 'cancelled', quiet: true });
-        }
+        // Open transfers on them are closed, class releases from reschedule bookings are withdrawn
+        // (NEW-P4-3) and classes those bookings had replaced go ahead after all.
+        await closeCancelledBookings(client, rows.map((r) => r.id), { reason: 'cancelled', quiet: true });
       });
     }
     return result.rows[0];
