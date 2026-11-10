@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { adminService } from '../../services/adminService';
 import { toast } from 'react-hot-toast';
 import { Search, Clock, User, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { describeAudit } from '../../utils/auditText';
 
 const AdminAuditLog = () => {
     const [logs, setLogs] = useState([]);
@@ -111,9 +112,10 @@ const AdminAuditLog = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="max-w-xs truncate text-xs text-gray-500 font-mono bg-black/20 p-2 rounded-lg group-hover:bg-black/40 transition-colors">
-                                                {JSON.stringify(log.details)}
-                                            </div>
+                                            {/* A sentence, not the stored JSON; the raw record stays on hover for debugging. */}
+                                            <p className="max-w-md text-sm text-gray-300 leading-snug" title={JSON.stringify(log.details)}>
+                                                {describeAudit(log)}
+                                            </p>
                                         </td>
                                     </tr>
                                 ))
