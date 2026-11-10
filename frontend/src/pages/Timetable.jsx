@@ -204,7 +204,7 @@ const Timetable = () => {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 sm:px-6 pb-6 overscroll-contain">
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-4 sm:px-6 pt-3 sm:pt-4 pb-6 overscroll-contain">
         <div key={viewMode} className="tab-content-enter">
         {viewMode === 'day' ? (
           <div className="space-y-2.5">
@@ -223,7 +223,8 @@ const Timetable = () => {
                         <h3 className="text-sm font-black text-text-primary leading-none">{item.subjectName || item.subject}</h3>
                         {item.isDynamic && <span className="text-[8px] font-black bg-accent/20 text-accent px-1.5 py-0.5 rounded-full capitalize tracking-tighter">Updated</span>}
                       </div>
-                      {item.isDynamic && item.className && (teaches(user) || isAdmin(user)) && (
+                      {/* Which section the class is for: teachers and admins see many sections. */}
+                      {item.className && (teaches(user) || isAdmin(user)) && (
                         <div className="mt-1">
                           <p className="text-[10px] font-bold text-text-secondary capitalize tracking-widest">{item.className}</p>
                         </div>
@@ -280,7 +281,7 @@ const Timetable = () => {
                   {item.className && (admin || isFaculty) && (
                     <p className="text-[10px] font-semibold text-text-secondary mt-1">{item.className}</p>
                   )}
-                  {item.faculty && (isAdmin || isStudent) && (
+                  {item.faculty && (admin || isStudent) && (
                     <p className="text-[10px] font-semibold text-text-secondary mt-1 flex items-center gap-1">
                       <User size={10} className="shrink-0 text-text-secondary/60" />
                       {toTitleCase(item.faculty)}
