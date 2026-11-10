@@ -1,1 +1,1 @@
-export * from '../../features/calendar/WeekView';
+export { default } from '../../features/calendar/WeekView';

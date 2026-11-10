@@ -13,6 +13,7 @@ build/
 .env.*
 e2e-report/
 e2e-results/
+test-results/
 load/.data/
 load/results/
 

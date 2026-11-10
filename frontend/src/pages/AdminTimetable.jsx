@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { getDatesOfWeek } from '../utils/dateHelpers';
 import { toTitleCase, getShortDept } from '../utils/roleUtils';
-import { WeekView } from '../components/ui/WeekView';
+import WeekView from '../components/ui/WeekView';
 import CustomSelect from '../components/ui/CustomSelect';
 import { getIstDateKey, getIstHour, getIstWeekday } from '../utils/timezone';
 import { getHourFromTime, formatTo24h } from '../../../shared/timetable.js';

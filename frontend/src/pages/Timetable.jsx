@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import PageSearch from '../components/ui/PageSearch';
 
 import { getDatesOfWeek } from '../utils/dateHelpers';
-import { WeekView } from '../components/ui/WeekView';
+import WeekView from '../components/ui/WeekView';
 import { toTitleCase } from '../utils/roleUtils';
 import { P, can, teaches, isAdmin } from '../utils/permissions';
 

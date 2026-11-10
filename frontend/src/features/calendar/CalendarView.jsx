@@ -77,23 +77,6 @@ function Calendar({ onSlotClick }) {
     return true;
   });
 
-  const getCurrentTimePosition = () => {
-    const hour = now.getHours();
-    const minutes = now.getMinutes();
-    
-    // Find index of current hour in filteredHours
-    const hourIndex = filteredHours.indexOf(hour);
-    if (hourIndex === -1) return null;
-
-    // Each row is 100% / total rows
-    const rowPercentage = 100 / filteredHours.length;
-    const percentage = (hourIndex + minutes / 60) * rowPercentage;
-    
-    return { percentage };
-  };
-
-  const timePos = getCurrentTimePosition();
-
   const isStudent = !booksDirect(user);
 
   const filteredRooms = useMemo(() => {
