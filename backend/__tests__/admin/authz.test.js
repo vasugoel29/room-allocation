@@ -4,7 +4,7 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
-import { createAdmin, createViewer, createRep, createFaculty, tokenFor, closeDb } from '../../test/helpers/factories.js';
+import { createAdmin, createViewer, createRep, createFaculty, tokenFor, expectForbidden, closeDb } from '../../test/helpers/factories.js';
 
 const ROUTES = [
   ['get', '/api/admin/export/bookings'],
@@ -55,9 +55,7 @@ describe.each(ROUTES)('%s %s', (method, path) => {
   });
 
   test.each(['VIEWER', 'STUDENT_REP', 'FACULTY'])('403 for %s', async (role) => {
-    const res = await call(method, path, users[role].auth);
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Forbidden' });
+    expectForbidden(await call(method, path, users[role].auth), role);
   });
 });
 

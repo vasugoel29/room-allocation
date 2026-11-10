@@ -6,7 +6,7 @@ import { authenticate, requirePermission } from '../../src/middleware/auth.js';
 import { jwtSecret } from '../../src/auth/session.js';
 import { validateRequest } from '../../src/middleware/validate.js';
 import { sendServerError } from '../../src/utils/httpErrors.js';
-import { createFaculty, closeDb } from '../../test/helpers/factories.js';
+import { createFaculty, createUser, closeDb } from '../../test/helpers/factories.js';
 
 afterAll(closeDb);
 
@@ -83,7 +83,6 @@ describe('authenticate', () => {
 
   test.each([
     ['garbage', () => 'not.a.jwt'],
-    ['empty token after scheme', () => ''],
     ['wrong secret', () => jwt.sign({ id: 1, role: 'ADMIN' }, 'some-other-secret')],
     ['expired', () => jwt.sign({ id: 1, role: 'ADMIN' }, process.env.JWT_SECRET, { expiresIn: -1 })],
     ['alg=none', () => jwt.sign({ id: 1, role: 'ADMIN' }, null, { algorithm: 'none' })],
@@ -100,21 +99,44 @@ describe('authenticate', () => {
   });
 });
 
+describe('authenticate without a token', () => {
+  test.each([
+    ['no Authorization header', {}],
+    ['empty token after scheme', { authorization: 'Bearer ' }],
+  ])('%s -> 401 Missing or invalid token', (_label, headers) => {
+    const req = { headers };
+    const { res, nextCalled } = run(authenticate, req);
+    expect(nextCalled).toBe(false);
+    expect(res.statusCode).toBe(401);
+    expect(res.body).toEqual({ error: 'Missing or invalid token' });
+    expect(req.user).toBeUndefined();
+  });
+});
+
 describe('requirePermission', () => {
-  test('passes with any one of the listed permissions; 403 otherwise', () => {
+  // A refused caller is re-checked with the ACL before the 403, so these use real accounts.
+  const principalOf = ({ user }, permissions) => ({ id: user.id, session_version: 0, role: user.role, permissions });
+
+  test('passes with any one of the listed permissions; 403 otherwise', async () => {
     const gate = requirePermission('cras.bookings', 'cras.admin');
     expect(run(gate, { user: { permissions: ['cras.admin'] } }).nextCalled).toBe(true);
     expect(run(gate, { user: { permissions: new Set(['cras.bookings']) } }).nextCalled).toBe(true);
-    const denied = run(gate, { user: { permissions: ['cras.calendar'] } });
+    const account = await createUser({ permissions: ['cras.calendar'] });
+    const denied = run(gate, { user: principalOf(account, ['cras.calendar']) });
+    await denied.ret;
     expect(denied.nextCalled).toBe(false);
     expect(denied.res.statusCode).toBe(403);
-    expect(denied.res.body).toEqual({ error: 'Forbidden' });
+    // The body tells the caller their own current permissions and nothing else.
+    expect(denied.res.body).toEqual({ error: 'Forbidden', permissions: ['cras.calendar'] });
   });
 
-  test('a role alone grants nothing (ADMIN role, no permissions → 403)', () => {
-    const { res, nextCalled } = run(requirePermission('cras.admin'), { user: { role: 'ADMIN', permissions: [] } });
-    expect(nextCalled).toBe(false);
-    expect(res.statusCode).toBe(403);
+  test('a role alone grants nothing (ADMIN role, no permissions → 403)', async () => {
+    const account = await createUser({ role: 'ADMIN', permissions: [] });
+    const out = run(requirePermission('cras.admin'), { user: principalOf(account, []) });
+    await out.ret;
+    expect(out.nextCalled).toBe(false);
+    expect(out.res.statusCode).toBe(403);
+    expect(out.res.body).toEqual({ error: 'Forbidden', permissions: [] });
   });
 
   test('defining a gate without a permission throws', () => {

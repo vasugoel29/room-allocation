@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '../../src/server.js';
 import {
-  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, closeDb,
+  createAdmin, createRep, createFaculty, createViewer, createRoom, insertBooking, futureSlot, expectForbidden, closeDb,
 } from '../../test/helpers/factories.js';
 import { ist } from '../../test/helpers/bookings.js';
 
@@ -153,10 +153,8 @@ describe('GET /api/bookings/admin/all', () => {
   });
 
   test('FACULTY / STUDENT_REP / VIEWER → 403; no token → 401', async () => {
-    for (const who of [fac, owner, viewer]) {
-      const res = await get(who.auth, '/api/bookings/admin/all');
-      expect(res.status).toBe(403);
-      expect(res.body).toEqual({ error: 'Forbidden' });
+    for (const [who, role] of [[fac, 'FACULTY'], [owner, 'STUDENT_REP'], [viewer, 'VIEWER']]) {
+      expectForbidden(await get(who.auth, '/api/bookings/admin/all'), role);
     }
     expect((await get(null, '/api/bookings/admin/all')).status).toBe(401);
   });

@@ -4,7 +4,7 @@
 import request from 'supertest';
 import app from '../../src/server.js';
 import * as db from '../../src/db.js';
-import { createAdmin, createFaculty, createRep, createViewer, createRoom, insertBooking, futureSlot, closeDb } from '../../test/helpers/factories.js';
+import { createAdmin, createFaculty, createRep, createViewer, createRoom, insertBooking, futureSlot, expectForbidden, closeDb } from '../../test/helpers/factories.js';
 
 afterAll(closeDb);
 
@@ -60,9 +60,7 @@ describe('GET /api/auth/users', () => {
 
   test.each(['VIEWER', 'STUDENT_REP', 'FACULTY'])('%s → 403', async (role) => {
     const { auth } = await { VIEWER: createViewer, STUDENT_REP: createRep, FACULTY: createFaculty }[role]();
-    const res = await request(app).get('/api/auth/users').set('Authorization', auth);
-    expect(res.status).toBe(403);
-    expect(res.body).toEqual({ error: 'Forbidden' });
+    expectForbidden(await request(app).get('/api/auth/users').set('Authorization', auth), role);
   });
 
   test('no token → 401', async () => {
