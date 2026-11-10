@@ -1,22 +1,15 @@
 import { Clock, ArrowRight, Trash2 } from 'lucide-react';
 import { CAMPUS_TIME_ZONE, getIstHour } from '../../utils/timezone';
+import { BOOKING, statusTone } from '../../../../shared/stateMachines.js';
 
-const getStatusClasses = (status) => {
-  switch (status) {
-    case 'ACTIVE':
-      return 'bg-green-500/10 text-green-500 border-green-500/20';
-    case 'PENDING':
-      return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-    case 'CANCELLED':
-      return 'bg-red-500/10 text-red-500 border-red-500/20';
-    case 'FREED':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-    case 'BLOCKED':
-      return 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20';
-    default:
-      return 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20';
-  }
+// Colours follow the booking state's tone (shared/stateMachines.js), so every state is covered.
+const TONE_CLASSES = {
+  success: 'bg-green-500/10 text-green-500 border-green-500/20',
+  pending: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
+  danger: 'bg-red-500/10 text-red-500 border-red-500/20',
+  neutral: 'bg-neutral-500/10 text-neutral-500 border-neutral-500/20',
 };
+const getStatusClasses = (status) => TONE_CLASSES[statusTone(BOOKING, status)] || TONE_CLASSES.neutral;
 
 function AdminBookings({ bookings, searchTerm, onCancel }) {
   const filteredBookings = bookings

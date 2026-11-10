@@ -7,7 +7,9 @@ import { bookingService } from '../services/bookingService';
 import { roomService } from '../services/roomService';
 
 import PageSearch from '../components/ui/PageSearch';
-import { canBook, isAdmin, teaches } from '../utils/permissions';
+import StatusBadge from '../components/ui/StatusBadge';
+import { BOOKING, TRANSFER, isOpen, stateIds } from '../../../shared/stateMachines.js';
+import { isAdmin, teaches } from '../utils/permissions';
 
 const BookingsPage = ({ onClose }) => {
   const { user, bookings, fetchRooms, fetchBookings, fetchAvailability, incomingTransfers, outgoingTransfers, fetchTransfers, pendingTransferCount } = useContext(AppContext);
@@ -38,7 +40,7 @@ const BookingsPage = ({ onClose }) => {
     try {
       const overrides = await roomService.getMyAvailability();
       setMyOverrides(overrides);
-    } catch (err) {
+    } catch {
       setMyOverrides([]);
     }
   };
@@ -50,11 +52,11 @@ const BookingsPage = ({ onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleTransferAction = async (id, action) => {
+  const handleTransferAction = async (id, action, doneMessage = `Transfer ${action}ed`) => {
     setLoading(true);
     try {
       await bookingService.handleTransferAction(id, action);
-      toast.success(`Transfer ${action}ed`);
+      toast.success(doneMessage);
       fetchTransfers();
       fetchBookings();
       fetchAvailability();
@@ -63,6 +65,18 @@ const BookingsPage = ({ onClose }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // The requester closing their own open request: the server records it as a withdrawal.
+  const handleWithdrawTransfer = (t) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: 'Withdraw Transfer Request',
+      message: `Withdraw your request for Room ${t.room_name}? ${t.owner_name || 'The owner'} will be told and the booking stays with them.`,
+      confirmText: 'Withdraw Request',
+      confirmType: 'danger',
+      action: () => handleTransferAction(t.id, 'reject', 'Transfer request withdrawn'),
+    });
   };
 
   const now = new Date();
@@ -103,7 +117,9 @@ const BookingsPage = ({ onClose }) => {
     const bEnd = new Date(item.end_time);
     const bStatus = item.status || 'ACTIVE';
 
-    if (timeFilter !== 'PAST' && !['ACTIVE', 'PENDING', 'CANCELLED', 'FREED', 'BLOCKED'].includes(bStatus)) return false;
+    // Every booking state is listed (a rejected request stays visible); FREED / BLOCKED are the
+    // admin's room overrides, which are not bookings.
+    if (timeFilter !== 'PAST' && !stateIds(BOOKING).includes(bStatus) && !['FREED', 'BLOCKED'].includes(bStatus)) return false;
 
     if (timeFilter === 'UPCOMING') return bEnd >= now;
     if (timeFilter === 'PAST') return bEnd < now;
@@ -213,7 +229,7 @@ const BookingsPage = ({ onClose }) => {
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5">
                     {incomingTransfers.map(t => (
-                      <div key={t.id} className="bg-surface-low border border-border-subtle rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-border transition-all">
+                      <div key={t.id} data-testid="incoming-transfer" className="bg-surface-low border border-border-subtle rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-border transition-all">
                         <div>
                           <p className="font-bold text-text-primary text-base flex items-center gap-2 truncate font-display">
                             {t.room_name} <ArrowRightLeft size={14} className="text-secondary opacity-60 shrink-0"/>
@@ -222,11 +238,7 @@ const BookingsPage = ({ onClose }) => {
                           <p className="text-xs text-text-secondary font-medium mt-1 truncate">From: {t.requester_name} - {t.new_purpose || 'No purpose provided'}</p>
                         </div>
                         <div className="shrink-0 flex items-center gap-2 self-end sm:self-auto">
-                          {t.status === 'PENDING' && <span className="text-[10px] font-bold bg-tonal-tertiary text-tertiary px-3 py-1 rounded-full">Pending</span>}
-                          {t.status === 'REP2_ACCEPTED' && <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full">Owner Accepted</span>}
-                          {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-3 py-1 rounded-full">Slot Released</span>}
-                          {t.status === 'ACCEPTED' && <span className="text-[10px] font-bold bg-green-500/10 text-green-500 px-3 py-1 rounded-full">Synchronized</span>}
-                          {t.status === 'REJECTED' && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-3 py-1 rounded-full">Dismissed</span>}
+                          <StatusBadge machine={TRANSFER} status={t.status} />
 
                           {t.status === 'PENDING' && t.booking_status !== 'CANCELLED' && (
                             <div className="flex gap-1.5 ml-2">
@@ -258,7 +270,7 @@ const BookingsPage = ({ onClose }) => {
                 ) : (
                   <div className="grid grid-cols-1 gap-2.5">
                     {outgoingTransfers.map(t => (
-                      <div key={t.id} className="bg-surface-low border border-border-subtle rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-border transition-all">
+                      <div key={t.id} data-testid="outgoing-transfer" className="bg-surface-low border border-border-subtle rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-border transition-all">
                         <div>
                           <p className="font-bold text-text-primary text-base flex items-center gap-2 truncate font-display">
                             {t.room_name} <ArrowRightLeft size={14} className="text-secondary opacity-60 shrink-0"/>
@@ -266,12 +278,18 @@ const BookingsPage = ({ onClose }) => {
                           </p>
                           <p className="text-xs text-text-secondary font-medium mt-1 truncate">To: {t.owner_name} - {t.new_purpose}</p>
                         </div>
-                        <div className="shrink-0 self-end sm:self-auto">
-                          {t.status === 'PENDING' && <span className="text-[10px] font-bold bg-tonal-tertiary text-tertiary px-3 py-1 rounded-full">Waiting for Owner</span>}
-                          {t.status === 'REP2_ACCEPTED' && <span className="text-[10px] font-bold bg-amber-500/20 text-amber-500 px-3 py-1 rounded-full">Owner Accepted</span>}
-                          {t.status === 'FACULTY2_ACCEPTED' && <span className="text-[10px] font-bold bg-blue-500/20 text-blue-500 px-3 py-1 rounded-full">Slot Released</span>}
-                          {t.status === 'ACCEPTED' && <span className="text-[10px] font-bold bg-green-500/10 text-green-500 px-3 py-1 rounded-full">Synchronized</span>}
-                          {t.status === 'REJECTED' && <span className="text-[10px] font-bold bg-red-500/10 text-red-500 px-3 py-1 rounded-full">Dismissed</span>}
+                        <div className="shrink-0 flex items-center gap-2 self-end sm:self-auto">
+                          <StatusBadge machine={TRANSFER} status={t.status} viewer="requester" />
+                          {isOpen(TRANSFER, t.status) && (
+                            <button
+                              onClick={() => handleWithdrawTransfer(t)}
+                              disabled={loading}
+                              className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm active:scale-95"
+                              aria-label="Withdraw Transfer Request"
+                            >
+                              Withdraw
+                            </button>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -312,24 +330,10 @@ const BookingsPage = ({ onClose }) => {
                           </div>
                           <div className="flex flex-col items-start gap-1">
                             <span className="font-bold text-text-primary text-base tracking-tight leading-none font-display">{item.room_name}</span>
-                            {(item.status === 'PENDING') && (
-                              <span className="px-2 py-0.5 rounded-md bg-tonal-tertiary text-tertiary text-[10px] font-semibold">
-                                Pending
-                              </span>
-                            )}
-                            {(item.status === 'ACTIVE' || item.status === 'CONFIRMED' || item.status == null) && item.type === 'BOOKING' && (
-                              <span className="px-2 py-0.5 rounded-md bg-green-500/10 text-green-500 text-[10px] font-semibold">
-                                Valid
-                              </span>
-                            )}
+                            {item.type === 'BOOKING' && <StatusBadge machine={BOOKING} status={item.status || 'ACTIVE'} variant="tag" />}
                             {(item.status === 'FREED') && (
                               <span className="px-2 py-0.5 rounded-md bg-primary/20 text-primary text-[10px] font-semibold">
                                 Freed
-                              </span>
-                            )}
-                            {(item.status === 'CANCELLED') && (
-                              <span className="px-2 py-0.5 rounded-md bg-red-500/10 text-red-500 text-[10px] font-semibold">
-                                Revoked
                               </span>
                             )}
                           </div>
@@ -403,7 +407,7 @@ const BookingsPage = ({ onClose }) => {
             {/* Mobile View Cards */}
             <div className="grid grid-cols-1 gap-3 md:hidden">
               {paginatedHistory.map((item) => (
-                <div key={item.id} className="bg-surface-low border border-border-subtle rounded-2xl p-3.5 space-y-3 shadow-sm hover:border-border transition-all">
+                <div key={item.id} data-testid="booking-card" className="bg-surface-low border border-border-subtle rounded-2xl p-3.5 space-y-3 shadow-sm hover:border-border transition-all">
                   <div className="flex justify-between items-start gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${item.type === 'OVERRIDE' ? 'bg-secondary text-white' : 'bg-primary text-white'}`}>
@@ -412,17 +416,9 @@ const BookingsPage = ({ onClose }) => {
                       <div className="flex flex-col min-w-0">
                         <span className="font-bold text-text-primary text-base truncate font-display capitalize leading-tight">{item.room_name}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          {(item.status === 'PENDING') && (
-                            <span className="text-[10px] font-semibold text-tertiary bg-tonal-tertiary px-2 py-0.5 rounded-md inline-block">Pending</span>
-                          )}
-                          {(item.status === 'ACTIVE' || item.status === 'CONFIRMED' || item.status == null) && item.type === 'BOOKING' && (
-                            <span className="text-[10px] font-semibold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-md inline-block">Valid</span>
-                          )}
+                          {item.type === 'BOOKING' && <StatusBadge machine={BOOKING} status={item.status || 'ACTIVE'} variant="tag" />}
                           {(item.status === 'FREED') && (
                             <span className="text-[10px] font-semibold text-primary bg-primary/20 px-2 py-0.5 rounded-md inline-block">Freed</span>
-                          )}
-                          {(item.status === 'CANCELLED') && (
-                            <span className="text-[10px] font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md inline-block">Revoked</span>
                           )}
                         </div>
                       </div>

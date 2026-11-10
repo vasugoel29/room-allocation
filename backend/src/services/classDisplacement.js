@@ -2,6 +2,7 @@ import { timetableRepository as tt, sectionKey } from '../repositories/timetable
 import { notify, personName } from '../notifications/notify.js';
 import { formatIstRange, istDateTimeToUtc } from '../utils/timezone.js';
 import { logActivity } from './auditLogService.js';
+import { TRANSFER, openStates } from '../../../shared/stateMachines.js';
 
 /**
  * An admin booking over a timetabled class cancels that class for the booked date (decision
@@ -108,4 +109,24 @@ export async function restoreClassesForBookings(client, bookingIds, { actorId = 
         { actorId, entityType: 'booking', entityId: ids[0] });
     }
   }
+}
+
+/**
+ * Everything that follows from bookings entering CANCELLED, whichever way they got there (the
+ * owner, faculty or admin cancelled; the room or the booker's account was removed; a class
+ * cancellation request was approved). Callers set the status; this keeps the rest consistent:
+ *  - open transfer requests on them are closed (withdrawn and finished ones keep their status),
+ *  - the class release a reschedule booking created is withdrawn,
+ *  - classes an admin booking had replaced go ahead after all (people are told unless `quiet`).
+ */
+export async function closeCancelledBookings(client, bookingIds, { actorId = null, reason = 'cancelled', quiet = false } = {}) {
+  const ids = [].concat(bookingIds).filter((id) => id != null);
+  if (!ids.length) return;
+  await client.query(
+    `UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW()
+      WHERE booking_id = ANY($1) AND status = ANY($2)`,
+    [ids, openStates(TRANSFER)],
+  );
+  await tt.withdrawReleases('reschedule', ids, client);
+  await restoreClassesForBookings(client, ids, { actorId, reason, quiet });
 }

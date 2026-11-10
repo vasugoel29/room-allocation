@@ -10,6 +10,7 @@ import { notify } from '../notifications/notify.js';
 import { logActivity } from './auditLogService.js';
 import { facultyClassAt } from './bookingRules.js';
 import { importSectionSlots } from './timetableImport.js';
+import { closeCancelledBookings } from './classDisplacement.js';
 import { scopesFor, allows, mayInclude, OUT_OF_SCOPE } from '../auth/scopes.js';
 import { PERMISSIONS as P } from '../auth/permissions.js';
 
@@ -168,7 +169,8 @@ export async function reviewCancellationRequest(principal, id, action) {
     if (approved) {
       if (request.booking_id) {
         // Only the still-open booking the request was made for (soft cancel; history kept).
-        await bookingRepository.cancelIfOpen(request.booking_id, client);
+        const { rowCount } = await bookingRepository.cancelIfOpen(request.booking_id, client);
+        if (rowCount) await closeCancelledBookings(client, request.booking_id, { actorId: principal.id, reason: 'cancelled' });
       } else {
         if (!request.room_id || !request.room_active) return bad('The room for this class no longer exists.', 409);
         // The class doesn't happen on this one date: release that hour for that date only (BKG-05).

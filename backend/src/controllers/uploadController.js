@@ -12,8 +12,7 @@ import logger from '../utils/logger.js';
 import { logActivity } from '../services/auditLogService.js';
 import { startJob, finishJob, failJob, getJob } from '../services/importJobs.js';
 
-// In-memory job store for async CSV uploads
-// Map<jobId, { status: 'processing'|'completed'|'failed', message?: string, error?: string }>
+// Async CSV uploads run as import jobs (services/importJobs.js): processing → completed | failed.
 
 // Simple custom CSV parser
 /**

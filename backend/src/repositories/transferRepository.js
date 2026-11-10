@@ -1,4 +1,5 @@
 import * as db from '../db.js';
+import { TRANSFER, sourcesOf } from '../../../shared/stateMachines.js';
 
 /**
  * Repository for Booking Transfer database operations
@@ -15,15 +16,6 @@ export const transferRepository = {
       WHERE t.id = $1
     `;
     const result = await client.query(query, [id]);
-    return result.rows[0];
-  },
-
-  /**
-   * Find a pending transfer request for a specific booking and user
-   */
-  findPending: async (bookingId, userId) => {
-    const query = "SELECT * FROM booking_transfers WHERE booking_id = $1 AND requested_by = $2 AND status NOT IN ('ACCEPTED', 'REJECTED')";
-    const result = await db.query(query, [bookingId, userId]);
     return result.rows[0];
   },
 
@@ -78,20 +70,13 @@ export const transferRepository = {
   },
 
   /**
-   * Update transfer status
+   * Move a transfer to `status`. Only the moves in shared/stateMachines.js (TRANSFER) are applied;
+   * anything else is a bug in the caller and throws instead of reopening a closed request.
    */
   updateStatus: async (id, status, client = db) => {
-    const query = "UPDATE booking_transfers SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *";
-    const result = await client.query(query, [status, id]);
+    const query = 'UPDATE booking_transfers SET status = $1, updated_at = NOW() WHERE id = $2 AND status = ANY($3) RETURNING *';
+    const result = await client.query(query, [status, id, sourcesOf(TRANSFER, status)]);
+    if (!result.rows[0]) throw new Error(`Transfer ${id} cannot move to ${status} from its current status`);
     return result.rows[0];
   },
-
-  /**
-   * Update other pending transfers for the same booking
-   */
-  rejectOtherPending: async (bookingId, excludeId, client = db) => {
-    const query = "UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW() WHERE booking_id = $1 AND id != $2 AND status = 'PENDING'";
-    return client.query(query, [bookingId, excludeId]);
-  }
-
 };

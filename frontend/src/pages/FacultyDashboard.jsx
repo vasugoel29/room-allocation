@@ -8,9 +8,10 @@ import toast from 'react-hot-toast';
 import { useFacultyRequests } from '../hooks/useFacultyRequests';
 import { api } from '../utils/api';
 import { getIstDateKey, getIstHour } from '../utils/timezone';
+import { BOOKING, isOpen } from '../../../shared/stateMachines.js';
 
 // Mirrors the server rule: only open (ACTIVE/PENDING) bookings that haven't ended (FE-19).
-const isCancellable = (b) => ['ACTIVE', 'PENDING'].includes(b.status ?? 'ACTIVE') && new Date(b.end_time).getTime() > Date.now();
+const isCancellable = (b) => isOpen(BOOKING, b.status ?? 'ACTIVE') && new Date(b.end_time).getTime() > Date.now();
 
 function FacultyDashboard() {
   const { user, bookings, refreshAllData } = useContext(AppContext);
@@ -202,7 +203,7 @@ function FacultyDashboard() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {DISPLAY_BOOKINGS.map(req => (
-            <div key={req.id} className="bg-surface-low rounded-2xl p-4 shadow-sm border border-border-subtle flex flex-col gap-3 hover:border-border transition-all">
+            <div key={req.id} data-testid="faculty-request-card" className="bg-surface-low rounded-2xl p-4 shadow-sm border border-border-subtle flex flex-col gap-3 hover:border-border transition-all">
               <div className="flex justify-between items-start gap-3 pb-1">
                 <div className="flex-1">
                   {activeTab === 'PENDING' && (

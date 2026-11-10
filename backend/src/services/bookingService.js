@@ -6,7 +6,7 @@ import { facultyRepository } from '../repositories/facultyRepository.js';
 import { roomRepository } from '../repositories/roomRepository.js';
 import { userRepository } from '../repositories/userRepository.js';
 import { timetableRepository } from '../repositories/timetableRepository.js';
-import { cancelClassesForBooking, restoreClassesForBookings } from './classDisplacement.js';
+import { cancelClassesForBooking, restoreClassesForBookings, closeCancelledBookings } from './classDisplacement.js';
 import { notify, bookingFacts, personName } from '../notifications/notify.js';
 import { canBookDirect, isAdmin, PERMISSIONS as P } from '../auth/permissions.js';
 import { scopesFor, allows, OUT_OF_SCOPE } from '../auth/scopes.js';
@@ -16,6 +16,7 @@ import {
   checkTimes, checkRoom, checkFaculty, checkRoomTimetable, checkPeopleTimetables, checkBookingConflicts, unreleasedClassesAt,
   constraintConflict, dateInSameWeek, istDateTimeToUtc, DAYS,
 } from './bookingRules.js';
+import { BOOKING, isOpen } from '../../../shared/stateMachines.js';
 
 export const MAX_BOOKINGS_PAGE = 1000;
 
@@ -225,20 +226,14 @@ export const cancelBooking = async (client, bookingId, userId, isAdmin, actorFac
     // An admin cancelling someone else's booking: the booker and the room must be in scope.
     if (!(await adminScopeAllowsBooking(client, actor, booking))) return OUT_OF_SCOPE_ERROR;
   }
-  if (!['ACTIVE', 'PENDING'].includes(booking.status)) {
+  if (!isOpen(BOOKING, booking.status)) {
     return { error: `This booking is already ${String(booking.status).toLowerCase()}`, status: 409 };
   }
   if (new Date(booking.end_time).getTime() <= Date.now()) return { error: 'Past bookings cannot be cancelled', status: 400 };
 
   await bookingRepository.updateStatus(bookingId, 'CANCELLED', client);
-  await client.query(
-    `UPDATE booking_transfers SET status = 'REJECTED', updated_at = NOW()
-      WHERE booking_id = $1 AND status NOT IN ('ACCEPTED', 'REJECTED')`,
-    [bookingId],
-  );
-  await deactivateReleasesFor(client, 'reschedule', booking.id);
-  // Classes this booking had replaced go ahead after all.
-  await restoreClassesForBookings(client, booking.id, { actorId: userId, reason: 'cancelled' });
+  // Open transfers are closed, its class release is withdrawn, classes it had replaced go ahead.
+  await closeCancelledBookings(client, booking.id, { actorId: userId, reason: 'cancelled' });
 
   await logActivity({
     userId,
@@ -282,7 +277,7 @@ export const rescheduleBooking = async (client, bookingId, data, user) => {
   // The owner, or an admin on their behalf (decision 2026-10-20). The owner's own commitments still apply.
   const byAdmin = booking.created_by !== user.id;
   if (byAdmin && !isAdmin(user)) return { error: 'Not authorized', status: 403 };
-  if (!['ACTIVE', 'PENDING'].includes(booking.status)) return { error: `A ${String(booking.status).toLowerCase()} booking can't be moved`, status: 409 };
+  if (!isOpen(BOOKING, booking.status)) return { error: `A ${String(booking.status).toLowerCase()} booking can't be moved`, status: 409 };
   if (new Date(booking.start_time).getTime() <= Date.now()) return { error: 'Bookings that have started cannot be moved', status: 400 };
 
   const startTime = data.start_time || booking.start_time;

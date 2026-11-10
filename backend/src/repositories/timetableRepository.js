@@ -258,7 +258,7 @@ export const timetableRepository = {
   )).rows[0],
 
   decideCancellationRequest: async (id, status, by, client) => client.query(
-    'UPDATE class_cancellation_requests SET status = $2, reviewed_at = NOW(), reviewed_by = $3 WHERE id = $1',
+    "UPDATE class_cancellation_requests SET status = $2, reviewed_at = NOW(), reviewed_by = $3 WHERE id = $1 AND status = 'PENDING'",
     [id, status, by],
   ),
 };
