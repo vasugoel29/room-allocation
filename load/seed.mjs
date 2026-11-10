@@ -49,19 +49,20 @@ async function bulkUsers(role, n) {
     const params = [];
     for (let i = 0; i < k; i++) {
       const j = off + i;
-      params.push(`Load ${role} ${j}`, `load.${role.toLowerCase()}.${j}@nsut.ac.in`, role);
-      const b = params.length - 2;
-      vals.push(`($${b}, $${b + 1}, $${b + 2})`);
+      params.push(`Load ${role} ${j}`, `load.${role.toLowerCase()}.${j}@nsut.ac.in`);
+      const b = params.length - 1;
+      vals.push(`($${b}, $${b + 1})`);
     }
     const { rows } = await db.query(
-      `INSERT INTO users (name, email, role) VALUES ${vals.join(',')} RETURNING id, name, email, role`,
+      `INSERT INTO users (name, email) VALUES ${vals.join(',')} RETURNING id, name, email`,
       params,
     );
     ids.push(...rows);
+    // The role lives in the ACL snapshot (user_access), not on the users row.
     await db.query(
       `INSERT INTO user_access (user_id, acl_id, role, roles, permissions, fetched_at)
-       SELECT u.id, 'load_' || u.id, u.role, jsonb_build_array(u.role), $2::jsonb, NOW() FROM users u WHERE u.id = ANY($1)`,
-      [rows.map((r) => r.id), JSON.stringify(SUGGESTED_BUNDLES[role])],
+       SELECT u.id, 'load_' || u.id, $3::text, jsonb_build_array($3::text), $2::jsonb, NOW() FROM users u WHERE u.id = ANY($1)`,
+      [rows.map((r) => r.id), JSON.stringify(SUGGESTED_BUNDLES[role]), role],
     );
   }
   return ids;

@@ -30,7 +30,7 @@ test.describe('Booking flow (desktop calendar)', () => {
 
     // Faculty approves from the portal
     await signIn(page, request, faculty, '/faculty');
-    const card = page.locator('div.ring-1').filter({ hasText: purpose });
+    const card = page.getByTestId('faculty-request-card').filter({ hasText: purpose });
     await expect(card).toBeVisible();
     await card.getByRole('button', { name: /approve/i }).click();
     await expect(toast(page, /booking approved/i)).toBeVisible();
@@ -56,7 +56,7 @@ test.describe('Booking flow (desktop calendar)', () => {
 
     await signIn(page, request, faculty, '/faculty');
     await expect(page.getByRole('button', { name: /pending \(1\)/i })).toBeVisible();
-    const card = page.locator('div.ring-1').filter({ hasText: b.purpose });
+    const card = page.getByTestId('faculty-request-card').filter({ hasText: b.purpose });
     await card.getByRole('button', { name: /reject/i }).click();
     await expect(card).toBeHidden();
     await expect.poll(async () => (await seed.one('SELECT status FROM bookings WHERE id = $1', [b.id])).status).toBe('REJECTED');
@@ -131,9 +131,9 @@ test.describe('Booking flow (desktop calendar)', () => {
     const b = await seed.booking({ room_id: room.id, created_by: rep.id, start_time: slot.start, purpose: `Cancel via list ${tag()}` });
 
     await signIn(page, request, rep, '/bookings');
-    await page.getByRole('button', { name: /^this week$/i }).click();
+    // Upcoming is the default tab.
     const row = page.locator('tr').filter({ hasText: room.name });
-    await expect(row).toContainText(/validated/i);
+    await expect(row).toContainText(/valid/i);
     await row.getByRole('button').click();
     const confirm = page.getByRole('dialog').filter({ hasText: /are you sure/i });
     await confirm.getByRole('button', { name: /cancel booking/i }).click();
@@ -142,15 +142,18 @@ test.describe('Booking flow (desktop calendar)', () => {
     expect((await seed.one('SELECT status FROM bookings WHERE id = $1', [b.id])).status).toBe('CANCELLED');
   });
 
-  test('viewer gets a read-only modal with no submit', async ({ page, request, seed }) => {
+  test('viewer sees the calendar read-only: slots cannot be opened', async ({ page, request, seed }) => {
     const viewer = await seed.user({ role: 'VIEWER' });
     const room = await seed.room();
     const slot = nextWeekdaySlot(10);
 
     await signIn(page, request, viewer, '/calendar');
-    const dialog = await openSlot(page, room, slot);
-    await expect(dialog.getByText(/read only registry/i)).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /finalize allocation|request transfer/i })).toHaveCount(0);
+    await focusCalendarOn(page, room.name);
+    const card = roomCard(page, room, slot.dateKey, slot.hour);
+    await expect(card).toBeVisible();
+    await expect(card).toHaveAttribute('aria-disabled', 'true');
+    await card.click({ force: true });
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(await seed.one('SELECT count(*)::int AS n FROM bookings WHERE room_id = $1', [room.id])).toEqual({ n: 0 });
   });
 

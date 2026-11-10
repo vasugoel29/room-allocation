@@ -61,6 +61,10 @@ test.describe('Authentication', () => {
     const user = await seed.user({ role: 'STUDENT_REP' });
     await devSignIn(page, user.email);
     await expect(page).toHaveURL(/\/calendar/);
+    // The e2e ACL is a mock that reads the role from this same snapshot row, and every API call
+    // re-confirms with it and writes the row back. Let the page's own requests finish first, or
+    // one still in flight would write the old role over the change below.
+    await page.waitForLoadState('networkidle');
     // Simulate the ACL demoting the user: the snapshot is what the server trusts.
     await seed.db.query(`UPDATE user_access SET role = 'VIEWER' WHERE user_id = $1`, [user.id]);
     await page.reload();

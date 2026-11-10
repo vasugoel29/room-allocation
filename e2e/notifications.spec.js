@@ -27,7 +27,7 @@ test.describe('Notifications (Phase 7)', () => {
     await expect(page).toHaveURL(/\/faculty$/);
     await expect(page.getByRole('button', { name: 'Notifications' })).toBeVisible(); // read now
 
-    const card = page.locator('div.ring-1').filter({ hasText: room.name });
+    const card = page.getByTestId('faculty-request-card').filter({ hasText: room.name });
     await card.getByRole('button', { name: /approve/i }).click();
     await expect(toast(page, /approved/i)).toBeVisible();
 

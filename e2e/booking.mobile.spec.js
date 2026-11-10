@@ -1,18 +1,4 @@
-import { test, expect, signIn, toast, tag, nextWeekdaySlot, slotThisWeek } from './helpers.js';
-
-/** Picks `dateKey` in DatePickerDropdown (only needed when it differs from the preselected day). */
-async function pickDate(page, dateKey) {
-  const [y, m, d] = dateKey.split('-');
-  const trigger = page.getByRole('button', { name: /^\d{2}\/\d{2}\/\d{4}$/ });
-  if ((await trigger.innerText()).trim() === `${d}/${m}/${y}`) return;
-  await trigger.click();
-  const picker = page.locator('div.glass').filter({ has: page.getByText(/^(Su)$/) }).last();
-  const monthLabel = new Date(Date.UTC(+y, +m - 1, 15)).toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  if (!(await picker.getByText(monthLabel).count())) await picker.getByRole('button').nth(1).click(); // next month
-  await expect(picker.getByText(monthLabel)).toBeVisible();
-  await picker.getByRole('button', { name: String(Number(d)), exact: true }).click();
-  await expect(trigger).toHaveText(`${d}/${m}/${y}`);
-}
+import { test, expect, signIn, toast, tag, nextWeekdaySlot, slotThisWeek, pickDate } from './helpers.js';
 
 test.describe('Mobile booking & history', () => {
   test('rep books through the 3-step /book-a-slot flow -> PENDING request', async ({ page, request, seed }) => {
@@ -33,7 +19,7 @@ test.describe('Mobile booking & history', () => {
     await expect(page.getByText(/step 2 of 3/i)).toBeVisible();
     await page.getByPlaceholder('Quick search room...').fill(room.name);
     await page.getByRole('button', { name: new RegExp(room.name) }).click();
-    await page.getByRole('button', { name: /next: details/i }).click();
+    await page.getByRole('button', { name: /continue/i }).click();
 
     await expect(page.getByText(/step 3 of 3/i)).toBeVisible();
     await expect(page.getByRole('heading', { name: `Room ${room.name}` })).toBeVisible();
@@ -78,9 +64,8 @@ test.describe('Mobile booking & history', () => {
     await signIn(page, request, rep, '/calendar');
     await page.getByRole('navigation').getByRole('link', { name: /bookings/i }).click();
     await expect(page).toHaveURL(/\/history$/);
-    await expect(page.getByRole('heading', { name: /my bookings/i })).toBeVisible();
-    await page.getByRole('button', { name: /^this week$/i }).click();
-    const card = page.locator('div.rounded-\\[2\\.5rem\\]').filter({ hasText: b.purpose });
+    // Upcoming is the default tab.
+    const card = page.getByTestId('booking-card').filter({ hasText: b.purpose });
     await expect(card).toContainText(room.name);
     await expect(card).toContainText(/valid/i);
     await card.getByRole('button').click();

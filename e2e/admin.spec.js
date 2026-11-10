@@ -1,7 +1,7 @@
 import fs from 'fs';
 import {
   test, expect, signIn, toast, tag, firstSortingName, smartTodayKey, istToUtc, istDateKey, istDow, addDays,
-  DOW_LONG, API_URL, apiLogin,
+  DOW_LONG, API_URL, apiLogin, nextWeekdaySlot, pickDate,
 } from './helpers.js';
 
 // Noise that is not an app error (dev-only / environment), everything else fails the tab smoke test.
@@ -159,9 +159,12 @@ test.describe('Admin console', () => {
     for (let i = 0; i < 20; i++) await seed.user({ role: 'ADMIN' });
     const rep = await seed.user({ role: 'STUDENT_REP' });
     const room = await seed.room({ name: firstSortingName() }); // sorts onto page 1 of the status table
-    const dateKey = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10); // useAdminQuickBook default: today in IST
+    // The form defaults to today; pick the next weekday on which 16:00 is still ahead, so the
+    // test does not depend on the time of day it runs.
+    const { dateKey } = nextWeekdaySlot(16, 1);
 
     await signIn(page, request, admin, '/admin?tab=quick');
+    await pickDate(page, dateKey);
     await page.getByRole('button', { name: /^08:00 - 09:00$/ }).click();
     await page.getByRole('button', { name: /^16:00 - 17:00$/ }).click();
 
@@ -307,6 +310,25 @@ test.describe('Admin console', () => {
     expect(await seed.one('SELECT is_active FROM faculties WHERE id = $1', [leaving.id])).toEqual({ is_active: false });
     // No sign-in accounts are created by the import.
     expect(await seed.one('SELECT id FROM users WHERE lower(email) = $1', [fresh])).toBeUndefined();
+  });
+  test('Timetable: picking a faculty suggestion closes the list and it stays closed', async ({ page, request, seed }) => {
+    const admin = await seed.user({ role: 'ADMIN' });
+    const key = `Zed${tag()}`;
+    await seed.user({ role: 'FACULTY', name: `Prof ${key}` });
+
+    await signIn(page, request, admin, '/admin?tab=timetable');
+    const box = page.getByPlaceholder(/enter faculty name/i);
+    await box.fill(key);
+    const suggestion = page.getByRole('button', { name: new RegExp(`^prof ${key}$`, 'i') });
+    await suggestion.click();
+    await expect(box).toHaveValue(new RegExp(`^prof ${key}$`, 'i'));
+    await expect(suggestion).toHaveCount(0);
+    // The lookup is debounced by 300 ms; it used to reopen the list after the pick.
+    await page.waitForTimeout(1200);
+    await expect(suggestion).toHaveCount(0);
+    // Editing the text is a new search, so suggestions come back.
+    await box.fill(`Prof ${key.slice(0, -1)}`);
+    await expect(page.getByRole('button', { name: new RegExp(`^prof ${key}$`, 'i') })).toBeVisible();
   });
 });
 

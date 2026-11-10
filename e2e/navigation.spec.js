@@ -78,7 +78,7 @@ test.describe('Route guards & navigation', () => {
     await expect(page.getByRole('button', { name: /^save$/i })).toHaveCount(0);
     await expect(page.locator('main input, main select, main textarea')).toHaveCount(0);
     await expect(page.getByRole('button', { name: /logout securely/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Toggle Theme' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /switch to (dark|light) mode/i }).first()).toBeVisible();
     expect(writes).toEqual([]);
   });
 

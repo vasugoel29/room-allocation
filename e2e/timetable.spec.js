@@ -55,7 +55,7 @@ test.describe('Timetable & class cancellation', () => {
     );
 
     await signIn(page, request, faculty, '/faculty');
-    const card = page.locator('div.ring-1').filter({ hasText: `Cancel class: ${subject}` });
+    const card = page.getByTestId('faculty-request-card').filter({ hasText: `Cancel class: ${subject}` });
     await expect(card).toContainText(/cancellation request/i);
     const [resp] = await Promise.all([
       page.waitForResponse((r) => r.url().includes(`/cancellation-requests/${req.id}/approve`)),
@@ -83,7 +83,7 @@ test.describe('Timetable & class cancellation', () => {
     );
 
     await signIn(page, request, faculty, '/faculty');
-    const card = page.locator('div.ring-1').filter({ hasText: `Cancel class: ${subject}` });
+    const card = page.getByTestId('faculty-request-card').filter({ hasText: `Cancel class: ${subject}` });
     await card.getByRole('button', { name: /reject/i }).click();
     await expect(toast(page, /cancellation request rejected/i)).toBeVisible();
     await expect(card).toBeHidden();
