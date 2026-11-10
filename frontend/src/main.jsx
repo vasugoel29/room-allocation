@@ -36,6 +36,29 @@ Sentry.init({
   enableLogs: true,
 });
 
+// Vite emits 'vite:preloadError' on window when a dynamic import fails (e.g. after a new
+// deployment renders previous chunk hashes obsolete on the CDN). Automatically refresh
+// the page with debounce protection to load the new deployment assets cleanly.
+if (typeof window !== 'undefined') {
+  window.addEventListener('vite:preloadError', (event) => {
+    try {
+      const KEY = 'cras_last_preload_reload';
+      const last = Number(sessionStorage.getItem(KEY) || '0');
+      const now = Date.now();
+      // Protect against infinite refresh loops (e.g. true offline or broken build)
+      if (!last || now - last > 15000) {
+        sessionStorage.setItem(KEY, String(now));
+        if (event && typeof event.preventDefault === 'function') {
+          event.preventDefault();
+        }
+        window.location.reload();
+      }
+    } catch {
+      window.location.reload();
+    }
+  });
+}
+
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
